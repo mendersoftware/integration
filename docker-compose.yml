@@ -1,0 +1,42 @@
+version: '2'
+services:
+    #
+    # mender-artifacts
+    #
+    mender-artifacts:
+        extends:
+            file: common.yml
+            service: mender-base
+        build:
+            context: .
+            dockerfile: artifacts/Dockerfile
+            args:
+                S3_BIN_PATH: "mendersoftware/artifacts/latest/master/linux_amd64/artifacts"
+                S3_CONFIG_PATH: "mendersoftware/artifacts/latest/master/linux_amd64/config.yaml"
+        ports:
+            - "8080:8080"
+        container_name: mender-artifacts
+
+    #
+    # mender-api-gateway (dummy impl.)
+    #
+    mender-api-gateway:
+        extends:
+            file: common.yml
+            service: mender-base
+        build:
+            context: .
+            dockerfile: api-gateway/Dockerfile
+        container_name: mender-api-gateway
+
+    #
+    # mender-device-auth (dummy impl.)
+    #
+    mender-device-auth:
+        extends:
+            file: common.yml
+            service: mender-base
+        build:
+            context: .
+            dockerfile: device-auth/Dockerfile
+        container_name: mender-device-auth

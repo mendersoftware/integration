@@ -7,6 +7,8 @@ services:
         image: mendersoftware/deployments:latest
         ports:
             - "8080:8080"
+        networks:
+            - mender
 
     #
     # mender-etcd
@@ -23,6 +25,10 @@ services:
         command:
             - -data-dir=/data
             - -name=mender-etcd
+        networks:
+            mender:
+                aliases:
+                    - etcd
 
     #
     # mender-gui
@@ -31,6 +37,8 @@ services:
         image: mendersoftware/gui:latest
         ports:
             - "8081:80"
+        networks:
+            - mender
 
     #
     # mender-api-gateway (dummy impl.)
@@ -42,6 +50,10 @@ services:
         build:
             context: .
             dockerfile: api-gateway/Dockerfile
+        networks:
+            mender:
+                aliases:
+                    - gateway
 
     #
     # mender-device-auth (dummy impl.)
@@ -53,3 +65,8 @@ services:
         build:
             context: .
             dockerfile: device-auth/Dockerfile
+        networks:
+            - mender
+
+networks:
+    mender:

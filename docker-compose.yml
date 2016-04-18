@@ -1,21 +1,13 @@
 version: '2'
 services:
     #
-    # mender-artifacts
+    # mender-deployments
     #
-    mender-artifacts:
-        extends:
-            file: common.yml
-            service: mender-base
-        build:
-            context: .
-            dockerfile: artifacts/Dockerfile
-            args:
-                S3_BIN_PATH: "mendersoftware/artifacts/latest/master/linux_amd64/artifacts"
-                S3_CONFIG_PATH: "mendersoftware/artifacts/latest/master/linux_amd64/config.yaml"
+    mender-deployments:
+        image: mendersoftware/deployments:latest
         ports:
             - "8080:8080"
-        container_name: mender-artifacts
+        container_name: mender-deployments
 
     #
     # mender-api-gateway (dummy impl.)

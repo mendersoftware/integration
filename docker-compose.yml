@@ -41,20 +41,28 @@ services:
             - mender
 
     #
-    # mender-api-gateway (dummy impl.)
+    # mender-api-gateway
     #
     mender-api-gateway:
-        extends:
-            file: common.yml
-            service: mender-base
-        build:
-            context: .
-            dockerfile: api-gateway/Dockerfile
+        image: mendersoftware/api-gateway:latest
+        ports:
+            - "9080:8080"
         networks:
             mender:
                 aliases:
                     - gateway
 
+    redis:
+        image: redis:latest
+        hostname: redis
+        ports:
+            - "6379:6379"
+        networks:
+            mender:
+                aliases:
+                    # API gateway looks for host named
+                    # `api-gateway-redis`
+                    - api-gateway-redis
     #
     # mender-device-auth (dummy impl.)
     #

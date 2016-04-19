@@ -12,33 +12,30 @@ backend services as a single system.
 
 The solution is based on the following assumptions:
 
-* each service has a dedicated Dockerfile
-* upon building, each Dockerfile pulls the service's latest build artifacts
-  from Mender's S3 storage
-* upon running, the Docker container starts the service
-* coordinated building and running of all Docker containers is performed by
+* each service has a dedicated Dockerfile, typically living in the service's
+  github repo
+* for each service, Travis automatically builds a docker image and pushes it to
+  a dedicated Dockerhub repo
+* coordinated pulling/running of all Docker containers is performed by
   `docker-compose` via the master `docker-compose.yml` file
 * common service configuration is included in `common.yml/mender-base`, which
   can be extended by any new service
 
 ##Basic Usage
 
-Before building, set the following environment variables (credentials for
-the `mender-buildsystem` S3 bucket).
-
-* `S3_KEY`
-* `S3_SECRET`
-
-Next, build the environment:
+First build the environment:
 
 ```
-sudo -E docker-compose build
+sudo docker-compose build
 ```
+
+(NOTE: this step is only necessary since device-auth is still a dummy service,
+and does not have a dedicated Dockerhub repo; this step will be removed soon)
 
 Run the environment:
 
 ```
-sudo -E docker-compose up -d
+sudo docker-compose up -d
 ```
 
 At this point all services should be up and running, which can be verified by:
@@ -54,9 +51,6 @@ mender-device-auth   ./dummy-entrypoint   Up
 ...
 
 ```
-
-(NOTE: for now only the `mender-artifacts` service is implemented - other
-containers run 'dummy' entrypoints just to demonstrate the idea).
 
 A couple of important points to notice:
 
@@ -83,6 +77,7 @@ ip a
 Adding a new service to the setup involves:
 
 * creating a dedicated Dockerfile
+* setting up a Dockerhub repo + Travis image build
 * adding the service's config under `docker-compose.yml`
 
 Guidelines/things to consider:
@@ -91,8 +86,6 @@ Guidelines/things to consider:
 * extend the service `mender-common/common.yml`
 * include a port mapping to make the service available via `localhost`
     * important in development for quick requests via curl/DHC/etc.
-* include the S3 build paths as `build args` in `docker-compose.yml`
-    * enables the image to pull a different build than `latest`, if necessary
 * mount log destinations to Docker host's folder, e.g.:
 
 ```
@@ -109,48 +102,34 @@ The simple build & run procedure sets up a complete system of services in their
 latest versions. As such it can readily be used for testing, staging or production
 environments.
 
-In development however, it might be necessary to do some tweaking to e.g. work
-with a different build than `latest`, or substitute one of the services with a
-locally developed (not-yet-dockerized) version.
-
-Below are some tips on using this setup in such scenarios.
-
-### Specifying a different build version
-Provided that a service correctly parametrizes its build artifacts' S3 paths,
-selecting a different build is a matter of tweaking the build args, e.g. setting:
-
-```
-    build:
-        args:
-            S3_BIN_PATH: "mender-buildsystem/mendersoftware/artifacts/dev/master/216/linux_amd64/artifacts"
-```
-
-instead of:
-
-```
-    build:
-        args:
-            S3_BIN_PATH: "mendersoftware/artifacts/latest/master/linux_amd64/artifacts"
-```
-
-### Providing a customized service config
-A service's downloaded config file can be overriden by mounting a modified
-version in its place:
-
-```
-    myservice:
-        volumes:
-            - ./some/localhost/folder/config.yaml:/usr/bin/config.yaml
-```
+In development scenarios however some additional strategies apply, described in
+the following sections.
 
 ### Developing a new service
 When developing a new service (not included in `docker-compose` yet) against an
 existing system:
 
 * build and run the environment
-* use `localhost` and exposed/mapped service ports to access existing services
+* temporarily use `localhost` and exposed/mapped service ports to access
+  existing services
 
 ### Troubleshooting/developing an existing service
+It's important to note that for every docker image, the embedded binaries and
+configs can be overriden by mounting a local version in their place, e.g.:
+
+```
+    myservice:
+        volumes:
+            - /some/localhost/folder/config.yaml:/usr/bin/config.yaml
+            - /some/localhost/folder/mybinary:/usr/bin/mybinary
+```
+The primary strategy of developing existing services should be:
+* make the necessary local modifications
+* compile the service
+* mount the compiled binary
+* run the environemt as usual via ```docker-compose up```
+
+An alternative, but more complex approach:
 * disable the service in `docker-compose` (comment the relevant section)
 * modify the service and run it from its binary
 * all other services should be temporarily configured to access the developed
@@ -158,7 +137,7 @@ existing system:
 * as above, the service under dev should access other services via ports exposed
   on `localhost`
 
-##TODOs, next steps, etc.
-* agree on configuration management strategy across all services and environments
-    * config files?
-    * environment vars?
+## Configuration management
+* currently some default configuration is embedded in built images
+* eventually configuration will be managed by etcd, so services should gradually
+migrate to use it instead

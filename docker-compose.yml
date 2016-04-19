@@ -27,6 +27,15 @@ services:
         container_name: mender-etcd
 
     #
+    # mender-gui
+    #
+    mender-gui:
+        image: mendersoftware/gui:latest
+        ports:
+            - "8081:80"
+        container_name: mender-gui
+
+    #
     # mender-api-gateway (dummy impl.)
     #
     mender-api-gateway:

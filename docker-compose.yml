@@ -7,7 +7,8 @@ services:
         image: mendersoftware/deployments:latest
         ports:
             - "8080:8080"
-        container_name: mender-deployments
+        networks:
+            - mender
 
     #
     # mender-etcd
@@ -24,7 +25,10 @@ services:
         command:
             - -data-dir=/data
             - -name=mender-etcd
-        container_name: mender-etcd
+        networks:
+            mender:
+                aliases:
+                    - etcd
 
     #
     # mender-gui
@@ -33,20 +37,32 @@ services:
         image: mendersoftware/gui:latest
         ports:
             - "8081:80"
-        container_name: mender-gui
+        networks:
+            - mender
 
     #
-    # mender-api-gateway (dummy impl.)
+    # mender-api-gateway
     #
     mender-api-gateway:
-        extends:
-            file: common.yml
-            service: mender-base
-        build:
-            context: .
-            dockerfile: api-gateway/Dockerfile
-        container_name: mender-api-gateway
+        image: mendersoftware/api-gateway:latest
+        ports:
+            - "9080:8080"
+        networks:
+            mender:
+                aliases:
+                    - gateway
 
+    redis:
+        image: redis:latest
+        hostname: redis
+        ports:
+            - "6379:6379"
+        networks:
+            mender:
+                aliases:
+                    # API gateway looks for host named
+                    # `api-gateway-redis`
+                    - api-gateway-redis
     #
     # mender-device-auth (dummy impl.)
     #
@@ -57,4 +73,8 @@ services:
         build:
             context: .
             dockerfile: device-auth/Dockerfile
-        container_name: mender-device-auth
+        networks:
+            - mender
+
+networks:
+    mender:

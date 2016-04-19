@@ -10,6 +10,23 @@ services:
         container_name: mender-deployments
 
     #
+    # mender-etcd
+    #
+    mender-etcd:
+        image: microbox/etcd:latest
+        ports:
+            - "4001:4001"
+            - "7001:7001"
+        volumes:
+            - /var/etcd/:/data
+        #override command since the image entrypoint requires
+        #these two args
+        command:
+            - -data-dir=/data
+            - -name=mender-etcd
+        container_name: mender-etcd
+
+    #
     # mender-api-gateway (dummy impl.)
     #
     mender-api-gateway:

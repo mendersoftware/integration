@@ -23,15 +23,6 @@ The solution is based on the following assumptions:
 
 ##Basic Usage
 
-First build the environment:
-
-```
-sudo docker-compose build
-```
-
-(NOTE: this step is only necessary since device-auth is still a dummy service,
-and does not have a dedicated Dockerhub repo; this step will be removed soon)
-
 Run the environment:
 
 ```
@@ -47,7 +38,7 @@ sudo docker-compose ps
 ------------------------------------------------------------------------
 mender-api-gateway   ./dummy-entrypoint   Up
 mender-artifacts     ./artifacts          Up      0.0.0.0:8080->8080/tcp
-mender-device-auth   ./dummy-entrypoint   Up
+mender-device-auth   ./deviceauth         Up
 ...
 
 ```

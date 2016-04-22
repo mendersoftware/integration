@@ -64,15 +64,13 @@ services:
                     # `api-gateway-redis`
                     - api-gateway-redis
     #
-    # mender-device-auth (dummy impl.)
+    # mender-device-auth
     #
     mender-device-auth:
+        image: mendersoftware/deviceauth:latest
         extends:
             file: common.yml
             service: mender-base
-        build:
-            context: .
-            dockerfile: device-auth/Dockerfile
         networks:
             - mender
 

@@ -85,6 +85,18 @@ services:
             - "8082:8080"
         networks:
             - mender
+    #
+    # mender-mongo
+    #
+    mender-mongo-device-adm:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-adm
+
+        ports:
+            - "27017:27017"
 
 networks:
     mender:

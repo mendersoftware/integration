@@ -73,6 +73,18 @@ services:
             service: mender-base
         networks:
             - mender
+    #
+    # mender-device-adm
+    #
+    mender-device-adm:
+        image: mendersoftware/deviceadm:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        ports:
+            - "8082:8080"
+        networks:
+            - mender
 
 networks:
     mender:

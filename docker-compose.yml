@@ -73,6 +73,30 @@ services:
             service: mender-base
         networks:
             - mender
+    #
+    # mender-device-adm
+    #
+    mender-device-adm:
+        image: mendersoftware/deviceadm:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        ports:
+            - "8082:8080"
+        networks:
+            - mender
+    #
+    # mender-mongo
+    #
+    mender-mongo-device-adm:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-adm
+
+        ports:
+            - "27017:27017"
 
 networks:
     mender:

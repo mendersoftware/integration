@@ -86,7 +86,7 @@ services:
         networks:
             - mender
     #
-    # mender-mongo
+    # mender-mongo-device-adm
     #
     mender-mongo-device-adm:
         image: mongo:latest
@@ -97,6 +97,18 @@ services:
 
         ports:
             - "27017:27017"
+    #
+    # mender-mongo-deployments
+    #
+    mender-mongo-deployments:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
+
+        ports:
+            - "27018:27017"
 
 networks:
     mender:

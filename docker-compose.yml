@@ -109,6 +109,18 @@ services:
 
         ports:
             - "27018:27017"
+    #
+    # mender-mongo-device-auth
+    #
+    mender-mongo-device-auth:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-auth
+
+        ports:
+            - "27019:27017"
 
 networks:
     mender:

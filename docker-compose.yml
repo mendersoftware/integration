@@ -64,7 +64,7 @@ services:
                 aliases:
                     - gateway
         depends_on:
-            - api-gateway-redis
+            - redis
 
     redis:
         image: redis:latest

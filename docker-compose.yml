@@ -12,6 +12,16 @@ services:
         depends_on:
             - mender-mongo-deployments
 
+    mender-mongo-deployments:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
+
+        ports:
+            - "27018:27017"
+
     #
     # mender-etcd
     #
@@ -67,6 +77,7 @@ services:
                     # API gateway looks for host named
                     # `api-gateway-redis`
                     - api-gateway-redis
+
     #
     # mender-device-auth
     #
@@ -79,6 +90,16 @@ services:
             - mender
         depends_on:
             - mongo-device-auth
+
+    mender-mongo-device-auth:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-auth
+
+        ports:
+            - "27019:27017"
 
     #
     # mender-device-adm
@@ -94,9 +115,7 @@ services:
             - mender
         depends_on:
             - mongo-device-adm
-    #
-    # mender-mongo-device-adm
-    #
+
     mender-mongo-device-adm:
         image: mongo:latest
         networks:
@@ -106,30 +125,6 @@ services:
 
         ports:
             - "27017:27017"
-    #
-    # mender-mongo-deployments
-    #
-    mender-mongo-deployments:
-        image: mongo:latest
-        networks:
-            mender:
-                aliases:
-                    - mongo-deployments
-
-        ports:
-            - "27018:27017"
-    #
-    # mender-mongo-device-auth
-    #
-    mender-mongo-device-auth:
-        image: mongo:latest
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-auth
-
-        ports:
-            - "27019:27017"
 
 networks:
     mender:

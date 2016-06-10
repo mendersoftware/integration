@@ -9,6 +9,25 @@ services:
             - "8080:8080"
         networks:
             - mender
+        depends_on:
+            - mender-mongo-deployments
+        # Application requires S3 access.
+        # For convinience access can be configured here to overide config file.
+        # Keys have to grant access to default bucket: mender-artifact-storage
+        # Otherwhise provide config file though volume.
+        # environment:
+        #     AWS_ACCESS_KEY_ID: my-key-123
+        #     AWS_SECRET_ACCESS_KEY: my-key-123
+
+    mender-mongo-deployments:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
+
+        ports:
+            - "27018:27017"
 
     #
     # mender-etcd
@@ -51,6 +70,8 @@ services:
             mender:
                 aliases:
                     - gateway
+        depends_on:
+            - api-gateway-redis
 
     redis:
         image: redis:latest
@@ -63,6 +84,7 @@ services:
                     # API gateway looks for host named
                     # `api-gateway-redis`
                     - api-gateway-redis
+
     #
     # mender-device-auth
     #
@@ -73,6 +95,19 @@ services:
             service: mender-base
         networks:
             - mender
+        depends_on:
+            - mongo-device-auth
+
+    mender-mongo-device-auth:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-auth
+
+        ports:
+            - "27019:27017"
+
     #
     # mender-device-adm
     #
@@ -85,9 +120,9 @@ services:
             - "8082:8080"
         networks:
             - mender
-    #
-    # mender-mongo-device-adm
-    #
+        depends_on:
+            - mongo-device-adm
+
     mender-mongo-device-adm:
         image: mongo:latest
         networks:
@@ -97,30 +132,6 @@ services:
 
         ports:
             - "27017:27017"
-    #
-    # mender-mongo-deployments
-    #
-    mender-mongo-deployments:
-        image: mongo:latest
-        networks:
-            mender:
-                aliases:
-                    - mongo-deployments
-
-        ports:
-            - "27018:27017"
-    #
-    # mender-mongo-device-auth
-    #
-    mender-mongo-device-auth:
-        image: mongo:latest
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-auth
-
-        ports:
-            - "27019:27017"
 
 networks:
     mender:

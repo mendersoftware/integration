@@ -11,6 +11,13 @@ services:
             - mender
         depends_on:
             - mender-mongo-deployments
+        # Application requires S3 access.
+        # For convinience access can be configured here to overide config file.
+        # Keys have to grant access to default bucket: mender-artifact-storage
+        # Otherwhise provide config file though volume.
+        # environment:
+        #     AWS_ACCESS_KEY_ID: my-key-123
+        #     AWS_SECRET_ACCESS_KEY: my-key-123
 
     mender-mongo-deployments:
         image: mongo:latest

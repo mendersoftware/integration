@@ -9,6 +9,8 @@ services:
             - "8080:8080"
         networks:
             - mender
+        depends_on:
+            - mender-mongo-deployments
 
     #
     # mender-etcd
@@ -51,6 +53,8 @@ services:
             mender:
                 aliases:
                     - gateway
+        depends_on:
+            - api-gateway-redis
 
     redis:
         image: redis:latest
@@ -73,6 +77,9 @@ services:
             service: mender-base
         networks:
             - mender
+        depends_on:
+            - mongo-device-auth
+
     #
     # mender-device-adm
     #
@@ -85,6 +92,8 @@ services:
             - "8082:8080"
         networks:
             - mender
+        depends_on:
+            - mongo-device-adm
     #
     # mender-mongo-device-adm
     #

@@ -89,7 +89,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mongo-device-auth
+            - mender-mongo-device-auth
 
     mender-mongo-device-auth:
         image: mongo:latest
@@ -114,7 +114,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mongo-device-adm
+            - mender-mongo-device-adm
 
     mender-mongo-device-adm:
         image: mongo:latest

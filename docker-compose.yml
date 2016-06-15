@@ -94,6 +94,8 @@ services:
         extends:
             file: common.yml
             service: mender-base
+        ports:
+            - "8083:8080"
         networks:
             - mender
         depends_on:

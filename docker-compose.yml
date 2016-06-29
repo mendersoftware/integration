@@ -134,5 +134,15 @@ services:
         ports:
             - "27017:27017"
 
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:latest
+        networks:
+            - mender
+        ports:
+            - "8822"
+
 networks:
     mender:

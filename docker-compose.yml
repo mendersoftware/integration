@@ -9,7 +9,7 @@ services:
             - "8080:8080"
         networks:
             - mender
-        # Application requires S3 access. 
+        # Application requires S3 access.
         # For convinience access can be configured here to overide config file.
         # Keys have to grant access to default bucket: mender-artifact-storage
         # Otherwhise provide config file though volume.
@@ -66,25 +66,23 @@ services:
     mender-api-gateway:
         image: mendersoftware/api-gateway:latest
         ports:
-            - "9080:8080"
+            - "9080:80"
         networks:
             mender:
                 aliases:
                     - gateway
+        # nginx doesn't know the actual outside port
+        # could be solved with introspection (mapping daemon socket + 'docker ps')
+        # the easier way is an env var
+        environment:
+            MAPPED_PORT: 9080
+        # critical - otherwise nginx may not detect
+        # these servers and exits with 'upstream server not found'
         depends_on:
-            - redis
-
-    redis:
-        image: redis:latest
-        hostname: redis
-        ports:
-            - "6379:6379"
-        networks:
-            mender:
-                aliases:
-                    # API gateway looks for host named
-                    # `api-gateway-redis`
-                    - api-gateway-redis
+            - mender-device-auth
+            - mender-device-adm
+            - mender-deployments
+            - mender-gui
 
     #
     # mender-device-auth

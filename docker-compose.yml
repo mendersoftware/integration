@@ -66,7 +66,7 @@ services:
     mender-api-gateway:
         image: mendersoftware/api-gateway:latest
         ports:
-            - "9080:80"
+            - "9080:443"
         networks:
             mender:
                 aliases:

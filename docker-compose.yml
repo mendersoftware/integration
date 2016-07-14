@@ -59,6 +59,10 @@ services:
             - "8081:80"
         networks:
             - mender
+        # when run via ./up, this env var will contain the host's IP
+        # the app serving the js must pick it up and override its default config value
+        environment:
+            - DOCKER_HOST_IP
 
     #
     # mender-api-gateway

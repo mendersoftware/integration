@@ -9,6 +9,14 @@ services:
             - "8080:8080"
         networks:
             - mender
+        # Application requires S3 access.
+        # For convinience access can be configured here to overide config file.
+        # Keys have to grant access to default bucket: mender-artifact-storage
+        # Otherwhise provide config file though volume.
+        #
+        # environment:
+        #     AWS_ACCESS_KEY_ID: my-key-123
+        #     AWS_SECRET_ACCESS_KEY: my-key-123
         depends_on:
             - mender-mongo-deployments
 
@@ -51,6 +59,10 @@ services:
             - "8081:80"
         networks:
             - mender
+        # when run via ./up, this env var will contain the host's IP
+        # the app serving the js must pick it up and override its default config value
+        environment:
+            - DOCKER_HOST_IP
 
     #
     # mender-api-gateway
@@ -58,25 +70,24 @@ services:
     mender-api-gateway:
         image: mendersoftware/api-gateway:latest
         ports:
-            - "9080:8080"
+            - "9080:443"
         networks:
             mender:
                 aliases:
                     - gateway
+                    - mender.io
+        # nginx doesn't know the actual outside port
+        # could be solved with introspection (mapping daemon socket + 'docker ps')
+        # the easier way is an env var
+        environment:
+            MAPPED_PORT: 9080
+        # critical - otherwise nginx may not detect
+        # these servers and exits with 'upstream server not found'
         depends_on:
-            - redis
-
-    redis:
-        image: redis:latest
-        hostname: redis
-        ports:
-            - "6379:6379"
-        networks:
-            mender:
-                aliases:
-                    # API gateway looks for host named
-                    # `api-gateway-redis`
-                    - api-gateway-redis
+            - mender-device-auth
+            - mender-device-adm
+            - mender-deployments
+            - mender-gui
 
     #
     # mender-device-auth
@@ -86,6 +97,8 @@ services:
         extends:
             file: common.yml
             service: mender-base
+        ports:
+            - "8083:8080"
         networks:
             - mender
         depends_on:
@@ -125,6 +138,16 @@ services:
 
         ports:
             - "27017:27017"
+
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:latest
+        networks:
+            - mender
+        ports:
+            - "8822:8822"
 
 networks:
     mender:

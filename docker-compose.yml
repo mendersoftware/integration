@@ -75,6 +75,7 @@ services:
             mender:
                 aliases:
                     - gateway
+                    - mender.io
         # nginx doesn't know the actual outside port
         # could be solved with introspection (mapping daemon socket + 'docker ps')
         # the easier way is an env var

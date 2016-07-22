@@ -1,5 +1,21 @@
 version: '2'
 services:
+
+
+    #
+    # fake-s3
+    #
+
+    fake-s3:
+        image: lphoward/fake-s3
+        ports:
+            - "4569:4569"
+        networks:
+            mender:
+                aliases:
+                     # mender-artifact-storage.localhost must be mapped to 127.0.0.1
+                     # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
+                    - mender-artifact-storage.localhost
     #
     # mender-deployments
     #
@@ -14,9 +30,11 @@ services:
         # Keys have to grant access to default bucket: mender-artifact-storage
         # Otherwhise provide config file though volume.
         #
-        # environment:
-        #     AWS_ACCESS_KEY_ID: my-key-123
-        #     AWS_SECRET_ACCESS_KEY: my-key-123
+        # The default docker-compose setup uses a fakes3 server, specified by the AWS_URI env. variable.
+        environment:
+             AWS_ACCESS_KEY_ID: abc
+             AWS_SECRET_ACCESS_KEY: 123
+             AWS_URI: http://localhost:4569
         depends_on:
             - mender-mongo-deployments
 

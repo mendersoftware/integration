@@ -54,7 +54,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:test
+        image: mendersoftware/gui:latest
         ports:
             - "8081:80"
         networks:

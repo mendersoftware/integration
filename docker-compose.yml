@@ -54,7 +54,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:latest
+        image: mendersoftware/gui:test
         ports:
             - "8081:80"
         networks:
@@ -62,7 +62,8 @@ services:
         # when run via ./up, this env var will contain the host's IP
         # the app serving the js must pick it up and override its default config value
         environment:
-            - DOCKER_HOST_IP
+            GATEWAY_IP: ${DOCKER_HOST_IP}
+            GATEWAY_PORT: 9080
 
     #
     # mender-api-gateway

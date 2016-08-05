@@ -3,6 +3,24 @@
 # env vars important for dev environments on OSX
 
 # using docker-machine, assuming just one vm is started through it
-export DOCKER_HOST_IP=$(docker-machine ip)
+
+hash docker-machine 2>/dev/null
+
+if [ $? -eq 0 ]; then
+    export DOCKER_HOST_IP=$(docker-machine ip)
+else
+    echo "docker-machine not found, DOCKER_HOST_IP not exported"
+fi
+
+REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}
+
+if [ $(getent hosts | grep -c "${REQUIRED_HOSTFILE_IP}"'\s*'mender-artifact-storage.localhost) -eq 0 ]; then
+    # delete all lines referencing mender-artifact-storage.localhost
+    TMP_FILE=$(mktemp)
+    awk '!/mender-artifact-storage.localhost/' /etc/hosts > "$TMP_FILE" && cat "$TMP_FILE" > /etc/hosts
+
+    echo "required mender-artifact-storage.localhost mapping not found in localhost, setting.."
+    echo "${REQUIRED_HOSTFILE_IP} mender-artifact-storage.localhost" | sudo -u root tee --append /etc/hosts > /dev/null
+fi
 
 sudo -E docker-compose up

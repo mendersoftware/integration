@@ -10,6 +10,9 @@ services:
         image: lphoward/fake-s3
         ports:
             - "4569:4569"
+        volumes:
+             - ./fakes3-entry.sh:/fakes3-entry.sh
+        entrypoint: /fakes3-entry.sh
         networks:
             mender:
                 aliases:

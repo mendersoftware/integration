@@ -162,6 +162,31 @@ services:
             - "27017:27017"
 
     #
+    # mender-inventory
+    #
+    mender-inventory:
+        image: mendersoftware/inventory:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        ports:
+            - "8084:8080"
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo-inventory
+
+    mender-mongo-inventory:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-inventory
+
+        ports:
+            - "27020:27017"
+
+    #
     # mender-client
     #
     mender-client:

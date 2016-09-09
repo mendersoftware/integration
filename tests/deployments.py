@@ -111,7 +111,7 @@ class Deployments(object):
             if data[expected_status] != expected_count:
                 continue
             else:
-                break
+                return
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (expected_status, expected_count, str(seen)))

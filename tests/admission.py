@@ -86,7 +86,7 @@ class Admission(object):
             if count != expected_value:
                 continue
             else:
-                break
+                return
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))

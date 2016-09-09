@@ -75,19 +75,18 @@ class Admission(object):
         while time.time() <= timeout:
             time.sleep(polling_frequency)
 
-            try:
-                data = Admission.get_devices_status(status)
-                seen.add(str(data))
+            data = Admission.get_devices_status(status)
+            seen.add(str(data))
 
-                count = 0
-                for device in data:
-                    if device["status"] == status:
-                        count += 1
-                assert count == expected_value
-                return
+            count = 0
+            for device in data:
+                if device["status"] == status:
+                    count += 1
 
-            except AssertionError:
+            if count != expected_value:
                 continue
+            else:
+                break
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))

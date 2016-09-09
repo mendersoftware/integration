@@ -105,14 +105,13 @@ class Deployments(object):
         while time.time() <= timeout:
             time.sleep(polling_frequency)
 
-            try:
-                data = Deployments.get_statistics(deployment_id)
-                seen.add(str(data))
-                assert data[expected_status] == expected_count
-                return
+            data = Deployments.get_statistics(deployment_id)
+            seen.add(str(data))
 
-            except AssertionError:
+            if data[expected_status] != expected_count:
                 continue
+            else:
+                break
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (expected_status, expected_count, str(seen)))

@@ -105,8 +105,8 @@ DEVICE_TYPE = vexpress-qemu
                         run("iptables -D OUTPUT -s %s -j DROP" % (gateway_ip))
                     else:
                         logger.info("Disallowing network communication to %s" % h)
-                        run("iptables -A INPUT -s %s -j DROP" % gateway_ip)
-                        run("iptables -A OUTPUT -s %s -j DROP" % gateway_ip)
+                        run("iptables -I INPUT -s %s -j DROP" % gateway_ip)
+                        run("iptables -I OUTPUT -s %s -j DROP" % gateway_ip)
         except Exception, e:
             logging.info("Exception while messing with network connectivity: " + e)
 

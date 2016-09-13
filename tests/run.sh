@@ -18,11 +18,12 @@ else
 fi
 
 if [[ ! -f large_image.dat ]]; then
-  dd if=/dev/zero of=large_image.dat bs=1G count=0 seek=1
+    dd if=/dev/zero of=large_image.dat bs=1G count=0 seek=1
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]]; then
-      cp "${IMAGE}" .
+    echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was found in the current working directory, will download the latest !!"
+    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3-eu-west-1.amazonaws.com/yocto-integration-builds/latest/core-image-full-cmdline-vexpress-qemu.ext4"
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu-broken-network.ext4 ]]; then

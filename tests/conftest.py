@@ -62,6 +62,8 @@ def pytest_configure(config):
 
     env.user = "root"
 
+    env.connection_attempts = 10
+
 
 def get_mender_clients():
     return env.clients

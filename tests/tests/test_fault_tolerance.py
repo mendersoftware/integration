@@ -59,8 +59,8 @@ class TestFaultTolerance(object):
                     install_image=install_image)
             return
 
-        deployment_id = base_update_proceduce(install_image, name=None)
         inactive_part = Helpers.get_passive_partition()
+        deployment_id = base_update_proceduce(install_image, name=None)
         active_part = Helpers.get_active_partition()
 
         for i in range(60):

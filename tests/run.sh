@@ -18,10 +18,10 @@ else
 fi
 
 if [[ ! -f large_image.dat ]]; then
-    dd if=/dev/zero of=large_image.dat bs=1G count=0 seek=1
+    dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi
 
-if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]]; then
+if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] || [[ "$INSIDE_DOCKER" -eq 1 ]] ; then
     echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was found in the current working directory, will download the latest !!"
     curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3-eu-west-1.amazonaws.com/yocto-integration-builds/latest/core-image-full-cmdline-vexpress-qemu.ext4"
 fi
@@ -35,4 +35,4 @@ if [[ ! -f broken_image.dat ]]; then
     dd if=/dev/zero of=broken_image.dat bs=10M count=0 seek=1
 fi
 
-py.test -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/
+py.test -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}

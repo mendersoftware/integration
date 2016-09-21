@@ -37,9 +37,9 @@ class TestFaultTolerance(object):
             The expected status is the update will rollback, and be considered a failure
         """
         if not env.host_string:
-            execute(self.test_update_image_breaks_networking,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_update_image_breaks_networking,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
         deployment_id = base_update_proceduce(install_image, name=None)
@@ -54,13 +54,15 @@ class TestFaultTolerance(object):
             The test should result in a failure.
         """
         if not env.host_string:
-            execute(self.test_update_image_recovery,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_update_image_recovery,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
+        installed_yocto_id = Helpers.yocto_id_installed_on_machine()
+
         inactive_part = Helpers.get_passive_partition()
-        deployment_id = base_update_proceduce(install_image, name=None)
+        deployment_id, _ = base_update_proceduce(install_image, name=None)
         active_part = Helpers.get_active_partition()
 
         for i in range(60):
@@ -79,6 +81,8 @@ class TestFaultTolerance(object):
         Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()
 
+        assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
+
     @slow
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_deployed_during_network_outage(self, install_image=conftest.get_valid_image()):
@@ -89,15 +93,13 @@ class TestFaultTolerance(object):
             Emulate a flaky network connection, and ensure that the deployment still succeeds.
         """
         if not env.host_string:
-            execute(self.test_deployed_during_network_outage,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_deployed_during_network_outage,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
         Helpers.gateway_connectivity(False)
-
-        deployment_id = base_update_proceduce(install_image, name=None)
-
+        deployment_id, expected_yocto_id = base_update_proceduce(install_image, name=None)
         time.sleep(60)
 
         for i in range(5):
@@ -108,3 +110,4 @@ class TestFaultTolerance(object):
         logging.info("Network stabilized")
         Helpers.verify_reboot_performed()
         Deployments.checked_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
+        assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id

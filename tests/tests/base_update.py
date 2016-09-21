@@ -40,10 +40,9 @@ def base_update_proceduce(install_image, name, regnerate_image_id=True, device_t
                                                      yocto_id=yocto_id)
 
     Deployments.upload_image(upload_request_url, install_image)
-
     devices_accepted_id = [device["id"] for device in Admission.get_devices_status("accepted")]
 
     deployment_id = Deployments.trigger_deployment(name="New valid update",
                                                    artifact_name=name,
                                                    devices=devices_accepted_id)
-    return deployment_id
+    return deployment_id, yocto_id

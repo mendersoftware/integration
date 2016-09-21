@@ -19,6 +19,8 @@ services:
                      # mender-artifact-storage.localhost must be mapped to 127.0.0.1
                      # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
                     - mender-artifact-storage.localhost
+                    - mender-artifact-storage.s3.docker.mender.io
+                    - s3.docker.mender.io
     #
     # mender-deployments
     #
@@ -37,7 +39,7 @@ services:
         environment:
              AWS_ACCESS_KEY_ID: abc
              AWS_SECRET_ACCESS_KEY: 123
-             AWS_URI: http://localhost:4569
+             AWS_URI: http://s3.docker.mender.io:4569
         depends_on:
             - mender-mongo-deployments
 
@@ -97,7 +99,8 @@ services:
             mender:
                 aliases:
                     - gateway
-                    - mender.io
+                    - docker.mender.io
+
         # nginx doesn't know the actual outside port
         # could be solved with introspection (mapping daemon socket + 'docker ps')
         # the easier way is an env var

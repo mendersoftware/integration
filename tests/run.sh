@@ -35,4 +35,5 @@ if [[ ! -f broken_image.dat ]]; then
     dd if=/dev/zero of=broken_image.dat bs=10M count=0 seek=1
 fi
 
+
 py.test -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}

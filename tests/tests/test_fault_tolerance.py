@@ -44,7 +44,7 @@ class TestFaultTolerance(object):
 
         deployment_id = base_update_proceduce(install_image, name=None)
         Helpers.verify_reboot_performed()
-        Deployments.checked_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
@@ -109,5 +109,5 @@ class TestFaultTolerance(object):
 
         logging.info("Network stabilized")
         Helpers.verify_reboot_performed()
-        Deployments.checked_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
+        Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id

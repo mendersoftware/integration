@@ -172,6 +172,6 @@ DEVICE_TYPE = vexpress-qemu
             try:
                 execute(func, *args, **kwargs)
                 return
-            except (paramiko.SSHException) as e:
-                print "Fabric throw an exception <%s>, try again.." % (str(e))
+            except SystemExit as e:
+                print "!!! Fabric threw a SystemExit exception <%s>, trying again.." % (str(e))
                 continue

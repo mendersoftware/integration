@@ -28,7 +28,6 @@ class TestFaultTolerance(object):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")
 
-    @pytest.mark.skip("MEN-630 - should be considered a failure.")
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-vexpress-qemu-broken-network.ext4"):
         """

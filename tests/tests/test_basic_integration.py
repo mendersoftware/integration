@@ -80,24 +80,39 @@ class TestBasicIntegration(object):
             assert "running rollback image" in Deployments.get_logs(d["id"], deployment_id)
 
     @slow
-    @pytest.mark.skip("MEN-609 - network connectivity issues prevent the second update")
     def test_double_update(self):
         "Upload a device with two consecutive upgrade images"
+
+        if not env.host_string:
+            execute(self.test_double_update,
+                    hosts=conftest.get_mender_clients())
+            return
+
         self.test_update_image_successful()
         self.test_update_image_successful()
         Helpers.verify_reboot_not_performed()
 
     @slow
-    @pytest.mark.skip("MEN-609 - network connectivity issues prevent the second update")
     def test_failed_updated_and_valid_update(self):
         "Upload a device with a broken image, followed by a valid image"
+
+        if not env.host_string:
+            execute(self.test_failed_updated_and_valid_update,
+                    hosts=conftest.get_mender_clients())
+            return
+
         self.test_update_image_failed()
         self.test_update_image_successful()
         Helpers.verify_reboot_not_performed()
 
-    @pytest.mark.skip("MEN-626 - deployment is stuck in pending")
     def test_image_already_installed(self):
         "Attempt to install an upgade that is already installed (matching imageID)"
+
+        if not env.host_string:
+            execute(self.test_image_already_installed,
+                    hosts=conftest.get_mender_clients())
+            return
+
         self.test_update_image_successful()
         deployment_id = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
         Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))

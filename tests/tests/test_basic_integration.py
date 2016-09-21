@@ -44,9 +44,10 @@ class TestBasicIntegration(object):
                     regnerate_image_id=regnerate_image_id)
             return
 
-        deployment_id = base_update_proceduce(install_image, name, regnerate_image_id)
+
 
         previous_inactive_part = Helpers.get_passive_partition()
+        deployment_id = base_update_proceduce(install_image, name, regnerate_image_id)
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_inactive_part
         Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
@@ -68,9 +69,10 @@ class TestBasicIntegration(object):
             return
 
         devices_accepted = conftest.get_mender_clients()
-        deployment_id = base_update_proceduce(install_image, name, broken_image=True)
 
         previous_active_part = Helpers.get_active_partition()
+        deployment_id = base_update_proceduce(install_image, name, broken_image=True)
+
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_active_part
 

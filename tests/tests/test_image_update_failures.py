@@ -48,12 +48,12 @@ class TestFailures(object):
         Deployments.upload_image(upload_request_url, install_image)
         devices_accepted_id = [d["id"] for d in Admission.get_devices_status("accepted")]
 
+        inital_partition = Helpers.get_active_partition()
+        previous_inactive_part = Helpers.get_passive_partition()
+
         deployment_id = Deployments.trigger_deployment(name="New invalid update - non matching yocotoid",
                                                        artifact_name=name,
                                                        devices=devices_accepted_id)
-
-        inital_partition = Helpers.get_active_partition()
-        previous_inactive_part = Helpers.get_passive_partition()
 
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_inactive_part

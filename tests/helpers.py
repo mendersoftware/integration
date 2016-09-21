@@ -118,8 +118,10 @@ DEVICE_TYPE = vexpress-qemu
         try:
             with settings(quiet(), warn_only=True):
                 run(cmd)
-        except paramiko.SSHException:
+        except:
             logging.warning("Failed to touch /tmp/ folder, is the device already rebooting?")
+            time.sleep(120)
+            return
 
         timeout = time.time() + max_wait
 

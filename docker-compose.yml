@@ -59,8 +59,8 @@ services:
         ports:
             - "4001:4001"
             - "7001:7001"
-        volumes:
-            - /var/etcd/:/data
+        #volumes:
+        #    - /var/etcd/:/data
         #override command since the image entrypoint requires
         #these two args
         command:

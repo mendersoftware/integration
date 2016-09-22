@@ -17,6 +17,7 @@ from fabric.api import *
 import logging
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logger = logging.getLogger()
@@ -47,7 +48,6 @@ def pytest_configure(config):
     env.disable_known_hosts = True
 
     env.abort_on_prompts = True
-
     # Don't allocate pseudo-TTY by default, since it is not fully functional.
     # It can still be overriden on a case by case basis by passing
     # "pty = True/False" to the various fabric functions. See

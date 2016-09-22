@@ -7,6 +7,8 @@ set -e -o pipefail
 # host entries we need to add
 REQHOSTS="s3.docker.mender.io docker.mender.io mender-artifact-storage.s3.docker.mender.io"
 
+DOCKER_HOST_IP="127.0.0.1"
+
 log() {
     echo "--" $*
 }
@@ -24,9 +26,8 @@ addhost() {
 
 setuphosts() {
     if hash docker-machine 2>/dev/null; then
+        # override default
         DOCKER_HOST_IP=$(docker-machine ip)
-    else
-        log "docker-machine not found, DOCKER_HOST_IP not exported"
     fi
 
     REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}
@@ -50,7 +51,7 @@ setuphosts() {
 }
 
 rundocker() {
-    docker-compose up
+    DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
 }
 
 showhelp() {

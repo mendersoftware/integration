@@ -17,11 +17,7 @@ addhost() {
     ip=$1
     h=$2
     tmpfile=$3
-
-    hline="$ip $h"
-    if ! grep "\s$h" $tmpfile >/dev/null 2>&1 ; then
-        echo "$ip $h # added by mender integration" >> $tmpfile
-    fi
+    echo "$ip $h # added by mender integration" >> $tmpfile
 }
 
 setuphosts() {
@@ -33,25 +29,23 @@ setuphosts() {
     REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}
 
     tmpfile=$(mktemp /tmp/mender.XXXXX)
-    # preserve permission bits from original /etc/hosts file
-    chmod $(stat -c '%a' /etc/hosts) $tmpfile
-
-    cp /etc/hosts $tmpfile
     # add hosts as needed
     for h in $REQHOSTS; do
-        addhost $REQUIRED_HOSTFILE_IP $h $tmpfile
+        if ! grep "\s$h" /etc/hosts >/dev/null 2>&1 ; then
+            addhost $REQUIRED_HOSTFILE_IP $h $tmpfile
+        fi
     done
 
-    if ! cmp /etc/hosts $tmpfile >/dev/null 2>&1 ; then
+    if [ -s $tmpfile ] ; then
        log "adding the following entries to /etc/hosts:"
-       diff /etc/hosts $tmpfile || true
-       mv $tmpfile /etc/hosts
+       cat $tmpfile
+       cat $tmpfile | sudo tee -a /etc/hosts >/dev/null
     fi
     rm -f $tmpfile
 }
 
 rundocker() {
-    DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
+    sudo DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
 }
 
 showhelp() {
@@ -71,11 +65,6 @@ case "$1" in
     *)
         ;;
 esac
-
-[ "$(whoami)" == "root" ] || {
-    echo "error: run this script as root or use sudo"
-    exit 1
-}
 
 setuphosts
 if [ "$nodocker" != "y" ]; then

@@ -120,7 +120,7 @@ class TestBasicIntegration(object):
         "Attempt to install an upgade that is already installed (matching imageID)"
 
         if not env.host_string:
-            Helpers.execute(self.test_image_already_installed,
+            Helpers.execute_wrapper(self.test_image_already_installed,
                             hosts=conftest.get_mender_clients())
             return
 

@@ -45,7 +45,7 @@ setuphosts() {
 }
 
 rundocker() {
-    sudo DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
+    sudo -E DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
 }
 
 showhelp() {

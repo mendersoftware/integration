@@ -42,7 +42,7 @@ class TestFaultTolerance(object):
                                     install_image=install_image)
             return
 
-        deployment_id = base_update_proceduce(install_image, name=None)
+        deployment_id, _ = base_update_proceduce(install_image, name=None)
         Helpers.verify_reboot_performed()
         Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
 

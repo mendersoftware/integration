@@ -22,8 +22,6 @@ from common import *
 from helpers import Helpers
 from base_update import base_update_proceduce
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
 
 @pytest.mark.usefixtures("bootstrapped_successfully")
 class TestBasicIntegration(object):
@@ -39,13 +37,12 @@ class TestBasicIntegration(object):
             Logs will not be retrieved, and result in 404.
         """
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_update_image_successful,
+            execute(self.test_update_image_successful,
                     hosts=conftest.get_mender_clients(),
                     install_image=install_image,
                     name=name,
                     regnerate_image_id=regnerate_image_id)
             return
-
         previous_inactive_part = Helpers.get_passive_partition()
         deployment_id, expected_image_id = base_update_proceduce(install_image, name, regnerate_image_id)
 
@@ -66,7 +63,7 @@ class TestBasicIntegration(object):
             The resulting upgrade will be considered a failure.
         """
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_update_image_failed,
+            execute(self.test_update_image_failed,
                     hosts=conftest.get_mender_clients(),
                     install_image=install_image,
                     name=name)
@@ -95,7 +92,7 @@ class TestBasicIntegration(object):
         "Upload a device with two consecutive upgrade images"
 
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_double_update,
+            execute(self.test_double_update,
                                     hosts=conftest.get_mender_clients())
             return
 
@@ -108,8 +105,8 @@ class TestBasicIntegration(object):
         "Upload a device with a broken image, followed by a valid image"
 
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_failed_updated_and_valid_update,
-                                   hosts=conftest.get_mender_clients())
+            execute(self.test_failed_updated_and_valid_update,
+                    hosts=conftest.get_mender_clients())
             return
 
         self.test_update_image_failed()
@@ -118,13 +115,12 @@ class TestBasicIntegration(object):
 
     def test_image_already_installed(self):
         "Attempt to install an upgade that is already installed (matching imageID)"
-
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_image_already_installed,
-                            hosts=conftest.get_mender_clients())
+            execute(self.test_image_already_installed,
+                    hosts=conftest.get_mender_clients())
             return
 
         self.test_update_image_successful()
-        deployment_id = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
+        deployment_id, _ = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
         Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()

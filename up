@@ -2,35 +2,81 @@
 # wraps 'docker-compose up', first setting the
 # env vars important for dev environments on OSX
 # using docker-machine, assuming just one vm is started through it
-set -u
+set -e -o pipefail
 
-hash docker-machine 2>/dev/null
+# host entries we need to add
+REQHOSTS="s3.docker.mender.io docker.mender.io mender-artifact-storage.s3.docker.mender.io"
 
-if [ $? -eq 0 ]; then
-    export DOCKER_HOST_IP=$(docker-machine ip)
-else
-    echo "docker-machine not found, DOCKER_HOST_IP not exported"
+log() {
+    echo "--" $*
+}
+
+addhost() {
+    ip=$1
+    h=$2
+    tmpfile=$3
+
+    hline="$ip $h"
+    if ! grep "\s$h" $tmpfile >/dev/null 2>&1 ; then
+        echo "$ip $h # added by mender integration" >> $tmpfile
+    fi
+}
+
+setuphosts() {
+    if hash docker-machine 2>/dev/null; then
+        DOCKER_HOST_IP=$(docker-machine ip)
+    else
+        log "docker-machine not found, DOCKER_HOST_IP not exported"
+    fi
+
+    REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}
+
+    tmpfile=$(mktemp /tmp/mender.XXXXX)
+    # preserve permission bits from original /etc/hosts file
+    chmod $(stat -c '%a' /etc/hosts) $tmpfile
+
+    cp /etc/hosts $tmpfile
+    # add hosts as needed
+    for h in $REQHOSTS; do
+        addhost $REQUIRED_HOSTFILE_IP $h $tmpfile
+    done
+
+    if ! cmp /etc/hosts $tmpfile >/dev/null 2>&1 ; then
+       log "adding the following entries to /etc/hosts:"
+       diff /etc/hosts $tmpfile || true
+       mv $tmpfile /etc/hosts
+    fi
+    rm -f $tmpfile
+}
+
+rundocker() {
+    docker-compose up
+}
+
+showhelp() {
+    echo "usage: $(basename $0) [-n] [-h]"
+    echo "   -n   do run start docker-compose"
+    echo "   -h   show help"
+}
+
+case "$1" in
+    -h|--help)
+        showhelp
+        exit 0
+        ;;
+    -n)
+        nodocker=y
+        ;;
+    *)
+        ;;
+esac
+
+[ "$(whoami)" == "root" ] || {
+    echo "error: run this script as root or use sudo"
+    exit 1
+}
+
+setuphosts
+if [ "$nodocker" != "y" ]; then
+    rundocker
 fi
-
-REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}
-
-if [ $(grep -c "${REQUIRED_HOSTFILE_IP}"'\s*'mender-artifact-storage.localhost /etc/hosts) -eq 0 ]; then
-    # delete all lines referencing mender-artifact-storage.localhost
-
-    echo "Since docker-compose is running inside a private network, and the fakeS3 server needs to be accessed, we need to modify /etc/hosts as a workaround"
-    echo "Please enter your super user password below, when prompted."
-
-    # OSX workaround
-    TMP_DIR=$(mktemp -d "/tmp/mender.XXXXX")
-    touch "$TMP_DIR"/tmp
-    TMP_FILE=$TMP_DIR/tmp
-
-    sudo awk '!/mender-artifact-storage.localhost/' /etc/hosts > "$TMP_FILE" && cat "$TMP_FILE" | sudo tee /etc/hosts >/dev/null
-
-
-    echo "required mender-artifact-storage.localhost mapping not found in localhost, setting.."
-    echo "${REQUIRED_HOSTFILE_IP} mender-artifact-storage.localhost"| sudo tee -a /etc/hosts >/dev/null
-
-fi
-
-sudo -E docker-compose up

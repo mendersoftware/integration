@@ -43,6 +43,14 @@ class Helpers(object):
         except Exception, e:
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
+
+    @staticmethod
+    def yocto_id_installed_on_machine():
+        cmd = "cat /etc/mender/build_mender | grep -m 1 -E -o 'core-image-full-cmdline-.*'"
+        output = run(cmd)
+        return output.strip()
+
+
     @staticmethod
     def yocto_id_randomize(install_image):
         imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
@@ -68,7 +76,7 @@ DEVICE_TYPE = vexpress-qemu
             pytest.fail("Trying to modify ext4 image failed, probably because it's not a valid image.")
 
         except Exception, e:
-            pytest.fail("Unexpted error trying to modify ext4 image: %s, error: %s" %(install_image, str(e)))
+            pytest.fail("Unexpted error trying to modify ext4 image: %s, error: %s" % (install_image, str(e)))
 
         finally:
             os.remove(tfile.name)
@@ -89,6 +97,11 @@ DEVICE_TYPE = vexpress-qemu
         with quiet():
             passive = run(cmd)
         return passive.strip()
+
+    @staticmethod
+    def verify_installed_imageid(imageid):
+        cmd = "grep '%s' /etc/mender/build_mender" % (imageid)
+        run(cmd)
 
     @staticmethod
     # simulate broken internet by drop packets to gateway and fakes3 server
@@ -118,7 +131,7 @@ DEVICE_TYPE = vexpress-qemu
         try:
             with settings(quiet(), warn_only=True):
                 run(cmd)
-        except:
+        except (SystemExit, Exception):
             logging.warning("Failed to touch /tmp/ folder, is the device already rebooting?")
             time.sleep(120)
             return
@@ -133,21 +146,32 @@ DEVICE_TYPE = vexpress-qemu
                     assert not exists(tfile)
                     return
 
-                except AssertionError:
-                    continue
-
-                except Exception:
+                except (SystemExit, Exception):
                     continue
 
         if time.time() > timeout:
             pytest.fail("Device never rebooted!")
 
     @staticmethod
-    def verify_reboot_not_performed(wait=120):
+    def verify_reboot_not_performed(wait=90):
         with quiet():
-            cmd = "cat /proc/uptime | awk {'print $1'}"
-            t1 = float(run(cmd).strip())
-            time.sleep(wait)
-            t2 = float(run(cmd).strip())
-
+            try:
+                cmd = "cat /proc/uptime | awk {'print $1'}"
+                t1 = float(run(cmd).strip())
+                time.sleep(wait)
+                t2 = float(run(cmd).strip())
+            except:
+                pytest.fail("A reboot was performed when it was not expected")
         assert t2 > t1
+
+
+    @staticmethod
+    def execute_wrapper(func, *args, **kwargs):
+        for c, i in enumerate(range(5)):
+            time.sleep(c * 5)
+            try:
+                execute(func, *args, **kwargs)
+                return
+            except SystemExit as e:
+                print "!!! Fabric threw a SystemExit exception <%s>, trying again.." % (str(e))
+                continue

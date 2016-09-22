@@ -26,7 +26,7 @@ The solution is based on the following assumptions:
 Run the environment:
 
 ```
-sudo docker-compose up -d
+bash up
 ```
 
 At this point all services should be up and running, which can be verified by:

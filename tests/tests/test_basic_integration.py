@@ -125,6 +125,6 @@ class TestBasicIntegration(object):
             return
 
         self.test_update_image_successful()
-        deployment_id = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
+        deployment_id, _ = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
         Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()

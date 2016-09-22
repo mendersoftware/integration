@@ -31,7 +31,7 @@ class TestBootstrapping(object):
     def test_bootstrap(self):
         "Simply make sure we are able to bootstrap a device"
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_bootstrap, hosts=conftest.get_mender_clients())
+            execute(self.test_bootstrap, hosts=conftest.get_mender_clients())
             return
 
         Admission.check_expected_status("pending", len(conftest.get_mender_clients()))
@@ -52,13 +52,11 @@ class TestBootstrapping(object):
         time.sleep(60)
         assert exists("/data/mender/authtoken")
 
-    @pytest.mark.skip(reason="see MEN-530")
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_reject_bootstrap(self):
         "Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_reject_bootstrap,
-                                    hosts=conftest.get_mender_clients())
+            execute(self.test_reject_bootstrap, hosts=conftest.get_mender_clients())
             return
 
         # iterate over devices and reject them
@@ -68,7 +66,6 @@ class TestBootstrapping(object):
 
         Admission.check_expected_status("rejected", len(conftest.get_mender_clients()))
 
-        deployment_id = ""
         try:
             deployment_id, _ = base_update_proceduce(install_image=conftest.get_valid_image(), name=None)
         except AssertionError:

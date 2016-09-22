@@ -132,3 +132,15 @@ An alternative, but more complex approach:
 * currently some default configuration is embedded in built images
 * eventually configuration will be managed by etcd, so services should gradually
 migrate to use it instead
+
+## Helpers & `/etc/hosts`
+
+Script `up` can be used to automate augmenting `/etc/hosts` with required
+entries (as needed) and running `docker-compose` in one shot.
+
+...note
+
+    `up` script modifies `/etc/hosts`, thus it requires root privileges to run
+
+Running `up -n` will only update `/etc/hosts`, without starting docker
+environment.

@@ -42,7 +42,7 @@ class TestFailures(object):
 
         upload_request_url = Deployments.post_image_meta(name=name,
                                                          checksum="ccab1cd123",
-                                                         device_type="TestDevice",
+                                                         device_type="vexpress-qemu",
                                                          yocto_id="invalid")
 
         Deployments.upload_image(upload_request_url, install_image)

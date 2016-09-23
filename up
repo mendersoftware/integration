@@ -50,7 +50,7 @@ rundocker() {
 
 showhelp() {
     echo "usage: $(basename $0) [-n] [-h]"
-    echo "   -n   do run start docker-compose"
+    echo "   -n   do not run docker-compose"
     echo "   -h   show help"
 }
 

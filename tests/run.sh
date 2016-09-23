@@ -10,7 +10,7 @@ if [[ $INSIDE_DOCKER -eq 1 ]]; then
 
     # remove cached file and setup fakes3 hack
     find . -iname '*.pyc' -delete || true
-    echo "${DOCKER_GATEWAY}" "mender-artifact-storage.localhost" | tee -a /etc/hosts >/dev/null
+    echo "${DOCKER_GATEWAY}" "mender-artifact-storage.s3.docker.mender.io" | tee -a /etc/hosts >/dev/null
 else
     # allows you to override the client ip when not using docker
     CLIENT_IP_PORT=${CLIENT_IP_PORT:-"127.0.0.1:8822"}

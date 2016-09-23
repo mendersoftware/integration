@@ -21,8 +21,11 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-requests.packages.urllib3.disable_warnings()
 
+try:
+    requests.packages.urllib3.disable_warnings()
+except:
+    pass
 
 def pytest_addoption(parser):
     parser.addoption("--clients", action="store",

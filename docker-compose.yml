@@ -26,8 +26,6 @@ services:
     #
     mender-deployments:
         image: mendersoftware/deployments:latest
-        ports:
-            - "8080:8080"
         networks:
             - mender
         # Application requires S3 access.
@@ -50,17 +48,12 @@ services:
                 aliases:
                     - mongo-deployments
 
-        ports:
-            - "27018:27017"
 
     #
     # mender-etcd
     #
     mender-etcd:
         image: microbox/etcd:latest
-        ports:
-            - "4001:4001"
-            - "7001:7001"
         #volumes:
         #    - /var/etcd/:/data
         #override command since the image entrypoint requires
@@ -78,8 +71,6 @@ services:
     #
     mender-gui:
         image: mendersoftware/gui:latest
-        ports:
-            - "8081:80"
         networks:
             - mender
         # when run via ./up, this env var will contain the host's IP
@@ -122,8 +113,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8083:8080"
         networks:
             - mender
         depends_on:
@@ -136,9 +125,6 @@ services:
                 aliases:
                     - mongo-device-auth
 
-        ports:
-            - "27019:27017"
-
     #
     # mender-device-adm
     #
@@ -147,8 +133,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8082:8080"
         networks:
             - mender
         depends_on:
@@ -161,9 +145,6 @@ services:
                 aliases:
                     - mongo-device-adm
 
-        ports:
-            - "27017:27017"
-
     #
     # mender-inventory
     #
@@ -172,8 +153,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8084:8080"
         networks:
             - mender
         depends_on:
@@ -185,9 +164,6 @@ services:
             mender:
                 aliases:
                     - mongo-inventory
-
-        ports:
-            - "27020:27017"
 
     #
     # mender-client

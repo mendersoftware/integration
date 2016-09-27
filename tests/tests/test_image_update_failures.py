@@ -34,15 +34,15 @@ class TestFailures(object):
         "Uploading an image with an incorrect yocto_id set results in failure and rollback."
 
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_update_image_id_incorrect,
-                                    hosts=conftest.get_mender_clients(),
-                                    install_image=install_image,
-                                    name=name)
+            execute(self.test_update_image_id_incorrect,
+                    hosts=conftest.get_mender_clients(),
+                    install_image=install_image,
+                    name=name)
             return
 
         upload_request_url = Deployments.post_image_meta(name=name,
                                                          checksum="ccab1cd123",
-                                                         device_type="TestDevice",
+                                                         device_type="vexpress-qemu",
                                                          yocto_id="invalid")
 
         Deployments.upload_image(upload_request_url, install_image)
@@ -70,8 +70,7 @@ class TestFailures(object):
     def test_large_update_image(self):
         "Installing an image larger than the passive/active parition size should result in a failure."
         if not env.host_string:
-            Helpers.execute_wrapper(self.test_large_update_image,
-                                    hosts=conftest.get_mender_clients())
+            execute(self.test_large_update_image, hosts=conftest.get_mender_clients())
             return
 
         deployment_id, _ = base_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)

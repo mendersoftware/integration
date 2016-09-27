@@ -15,12 +15,13 @@
 
 from fabric.api import *
 import logging
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-logger = logging.getLogger()
+requests.packages.urllib3.disable_warnings()
 
 
 def pytest_addoption(parser):
@@ -63,7 +64,6 @@ def pytest_configure(config):
     env.user = "root"
 
     env.connection_attempts = 20
-
 
 def get_mender_clients():
     return env.clients

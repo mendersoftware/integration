@@ -22,7 +22,7 @@ from helpers import Helpers
 import random
 
 
-def base_update_proceduce(install_image, name, regnerate_image_id=True, device_type="TestDevice", checksum="abc123", broken_image=False):
+def base_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
 
     if broken_image:
         yocto_id = "broken_image_" + str(random.randint(0, 999999))

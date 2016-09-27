@@ -45,6 +45,7 @@ setuphosts() {
 }
 
 rundocker() {
+    sudo -E DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose scale mender-client=3
     sudo -E DOCKER_HOST_IP=$DOCKER_HOST_IP docker-compose up
 }
 

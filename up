@@ -23,7 +23,8 @@ addhost() {
 setuphosts() {
     if hash docker-machine 2>/dev/null; then
         # override default
-        DOCKER_HOST_IP=$(docker-machine ip)
+        DOCKER_MACHINE_IP=$(docker-machine ip 2>/dev/null || true)
+        if [ -n "$DOCKER_MACHINE_IP" ]; then DOCKER_HOST_IP=$DOCKER_MACHINE_IP; fi
     fi
 
     REQUIRED_HOSTFILE_IP=${DOCKER_HOST_IP:-"127.0.0.1"}

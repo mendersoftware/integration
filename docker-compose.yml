@@ -26,6 +26,9 @@ services:
     #
     mender-deployments:
         image: mendersoftware/deployments:latest
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
         # Application requires S3 access.

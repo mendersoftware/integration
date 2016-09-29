@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # wraps 'docker-compose up', first setting the
 # env vars important for dev environments on OSX
 # using docker-machine, assuming just one vm is started through it

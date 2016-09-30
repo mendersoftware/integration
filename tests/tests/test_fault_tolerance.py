@@ -37,9 +37,9 @@ class TestFaultTolerance(object):
             The expected status is the update will rollback, and be considered a failure
         """
         if not env.host_string:
-            execute(self.test_update_image_breaks_networking,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_update_image_breaks_networking,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
         deployment_id, _ = base_update_proceduce(install_image, name=None)
@@ -54,9 +54,9 @@ class TestFaultTolerance(object):
             The test should result in a failure.
         """
         if not env.host_string:
-            execute(self.test_update_image_recovery,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_update_image_recovery,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
         installed_yocto_id = Helpers.yocto_id_installed_on_machine()
@@ -93,9 +93,9 @@ class TestFaultTolerance(object):
             Emulate a flaky network connection, and ensure that the deployment still succeeds.
         """
         if not env.host_string:
-            execute(self.test_deployed_during_network_outage,
-                    hosts=conftest.get_mender_clients(),
-                    install_image=install_image)
+            Helpers.execute_wrapper(self.test_deployed_during_network_outage,
+                                    hosts=conftest.get_mender_clients(),
+                                    install_image=install_image)
             return
 
         Helpers.gateway_connectivity(False)

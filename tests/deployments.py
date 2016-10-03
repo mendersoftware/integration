@@ -24,35 +24,19 @@ import logging
 class Deployments(object):
 
     @staticmethod
-    def post_image_meta(name, device_type, yocto_id, description=None, checksum=None):
-        meta_upload_path = "https://%s/api/integrations/%s/deployments/images" % (
+    def upload_image(name, device_type, yocto_id, filename, description="", checksum=""):
+        upload_path = "https://%s/api/integrations/%s/deployments/images" % (
             env.mender_gateway, env.api_version)
 
-        image_meta = {"name": name,
-                      "description": description,
-                      "checksum": checksum,
-                      "device_type": device_type,
-                      "yocto_id": yocto_id}
 
-        r = requests.post(meta_upload_path,
-                          data=json.dumps(image_meta),
-                          headers={'Content-Type': 'application/json'},
-                          verify=False)
-        print meta_upload_path, json.dumps(image_meta)
+
+        r = requests.post(upload_path, verify=False, files=(("name", (None, name)), ("description", (None, description)), ("checksum", (None, checksum)), ("device_type", (None,device_type)), ("yocto_id", (None, yocto_id)), ("firmware", (filename, open(filename), "application/octet-stream"))))
+
+
+
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]
 
-    @staticmethod
-    def upload_image(upload_request_url, filename):
-        upload_location = requests.get(
-            "https://%s/%s/upload" % (env.mender_gateway, upload_request_url),
-            verify=False)
-
-        assert upload_location.status_code == requests.status_codes.codes.ok
-        aws_uri = upload_location.json()["uri"]
-        aws_uri = aws_uri.replace("\u0026", "&")
-        r = requests.put(str(aws_uri), data=open(filename, 'rb'), headers={'content-type': 'application/octet-stream'})
-        assert r.status_code == requests.status_codes.codes.ok
 
     @staticmethod
     def trigger_deployment(name, artifact_name, devices):

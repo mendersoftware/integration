@@ -15,13 +15,13 @@
 
 import time
 from fabric.api import *
+from fabric.network import disconnect_all
 import subprocess
 import logging
 import random
 import tempfile
 import pytest
 import os
-import paramiko
 from fabric.contrib.files import exists
 
 
@@ -132,26 +132,28 @@ DEVICE_TYPE = vexpress-qemu
     def verify_reboot_performed(max_wait=60*5):
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
-
         try:
-            with settings(quiet(), warn_only=True):
+            with settings(quiet()):
                 run(cmd)
-        except (SystemExit, Exception):
-            logging.warning("Failed to touch /tmp/ folder, is the device already rebooting?")
+        except BaseException:
+            logging.critical("Failed to touch /tmp/ folder, is the device already rebooting?")
             time.sleep(120)
             return
 
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            time.sleep(1)
+            disconnect_all()
+            time.sleep(5)
 
             with settings(warn_only=True):
                 try:
                     assert not exists(tfile)
+                    # required for SSH connection issues
+                    time.sleep(30)
                     return
 
-                except (SystemExit, Exception):
+                except BaseException:
                     continue
 
         if time.time() > timeout:
@@ -159,6 +161,7 @@ DEVICE_TYPE = vexpress-qemu
 
     @staticmethod
     def verify_reboot_not_performed(wait=90):
+
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"
@@ -168,15 +171,3 @@ DEVICE_TYPE = vexpress-qemu
             except:
                 pytest.fail("A reboot was performed when it was not expected")
         assert t2 > t1
-
-
-    @staticmethod
-    def execute_wrapper(func, *args, **kwargs):
-        for c, i in enumerate(range(5)):
-            time.sleep(c * 5)
-            try:
-                execute(func, *args, **kwargs)
-                return
-            except SystemExit as e:
-                print "!!! Fabric threw a SystemExit exception <%s>, trying again.." % (str(e))
-                continue

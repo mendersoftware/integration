@@ -15,18 +15,22 @@
 
 from fabric.api import *
 import logging
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-logger = logging.getLogger()
 
+try:
+    requests.packages.urllib3.disable_warnings()
+except:
+    pass
 
 def pytest_addoption(parser):
     parser.addoption("--clients", action="store",
                      help="Comma-seperate mender hosts, example: 10.100.10.11:8822, 10.100.10.12:8822")
-    parser.addoption("--gateway", action="store", default="127.0.0.1:9080",
+    parser.addoption("--gateway", action="store", default="127.0.0.1:8080",
                      help="Host of mender gateway")
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
     parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
@@ -63,7 +67,6 @@ def pytest_configure(config):
     env.user = "root"
 
     env.connection_attempts = 20
-
 
 def get_mender_clients():
     return env.clients

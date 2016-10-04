@@ -1,7 +1,0 @@
-#!/bin/sh
-#for keeping dummy containers alive
-
-while true;
-do
-    sleep 1m
-done

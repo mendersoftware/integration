@@ -19,13 +19,17 @@ services:
                      # mender-artifact-storage.localhost must be mapped to 127.0.0.1
                      # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
                     - mender-artifact-storage.localhost
+                    - mender-artifact-storage.s3.docker.mender.io
+                    - s3.docker.mender.io
     #
     # mender-deployments
     #
     mender-deployments:
         image: mendersoftware/deployments:stable
-        ports:
-            - "8080:8080"
+        image: mendersoftware/deployments:latest
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
         # Application requires S3 access.
@@ -37,7 +41,7 @@ services:
         environment:
              AWS_ACCESS_KEY_ID: abc
              AWS_SECRET_ACCESS_KEY: 123
-             AWS_URI: http://localhost:4569
+             AWS_URI: http://s3.docker.mender.io:4569
         depends_on:
             - mender-mongo-deployments
 
@@ -48,17 +52,12 @@ services:
                 aliases:
                     - mongo-deployments
 
-        ports:
-            - "27018:27017"
 
     #
     # mender-etcd
     #
     mender-etcd:
         image: microbox/etcd:latest
-        ports:
-            - "4001:4001"
-            - "7001:7001"
         #volumes:
         #    - /var/etcd/:/data
         #override command since the image entrypoint requires
@@ -76,15 +75,8 @@ services:
     #
     mender-gui:
         image: mendersoftware/gui:stable
-        ports:
-            - "8081:80"
         networks:
             - mender
-        # when run via ./up, this env var will contain the host's IP
-        # the app serving the js must pick it up and override its default config value
-        environment:
-            GATEWAY_IP: ${DOCKER_HOST_IP}
-            GATEWAY_PORT: 9080
 
     #
     # mender-api-gateway
@@ -92,17 +84,18 @@ services:
     mender-api-gateway:
         image: mendersoftware/api-gateway:stable
         ports:
-            - "9080:443"
+            - "8080:443"
         networks:
             mender:
                 aliases:
                     - gateway
-                    - mender.io
+                    - docker.mender.io
+
         # nginx doesn't know the actual outside port
         # could be solved with introspection (mapping daemon socket + 'docker ps')
         # the easier way is an env var
         environment:
-            MAPPED_PORT: 9080
+            MAPPED_PORT: 8080
         # critical - otherwise nginx may not detect
         # these servers and exits with 'upstream server not found'
         depends_on:
@@ -119,8 +112,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8083:8080"
         networks:
             - mender
         depends_on:
@@ -133,9 +124,6 @@ services:
                 aliases:
                     - mongo-device-auth
 
-        ports:
-            - "27019:27017"
-
     #
     # mender-device-adm
     #
@@ -144,8 +132,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8082:8080"
         networks:
             - mender
         depends_on:
@@ -158,9 +144,6 @@ services:
                 aliases:
                     - mongo-device-adm
 
-        ports:
-            - "27017:27017"
-
     #
     # mender-inventory
     #
@@ -169,8 +152,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8084:8080"
         networks:
             - mender
         depends_on:
@@ -183,9 +164,6 @@ services:
                 aliases:
                     - mongo-inventory
 
-        ports:
-            - "27020:27017"
-
     #
     # mender-client
     #
@@ -193,8 +171,6 @@ services:
         image: mendersoftware/mender-client-qemu:stable
         networks:
             - mender
-        ports:
-            - "8822:8822"
 
 networks:
     mender:

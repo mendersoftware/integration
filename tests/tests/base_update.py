@@ -13,8 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import pytest
-import time
 from deployments import Deployments
 from admission import Admission
 from common import *
@@ -22,7 +20,7 @@ from helpers import Helpers
 import random
 
 
-def base_update_proceduce(install_image, name, regnerate_image_id=True, device_type="TestDevice", checksum="abc123", broken_image=False):
+def base_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
 
     if broken_image:
         yocto_id = "broken_image_" + str(random.randint(0, 999999))
@@ -34,12 +32,7 @@ def base_update_proceduce(install_image, name, regnerate_image_id=True, device_t
     if name is None:
         name = "imageid-" + str(random.randint(1, 9999999999))
 
-    upload_request_url = Deployments.post_image_meta(name=name,
-                                                     checksum=checksum,
-                                                     device_type=device_type,
-                                                     yocto_id=yocto_id)
-
-    Deployments.upload_image(upload_request_url, install_image)
+    Deployments.upload_image(name, device_type, yocto_id, install_image)
     devices_accepted_id = [device["id"] for device in Admission.get_devices_status("accepted")]
 
     deployment_id = Deployments.trigger_deployment(name="New valid update",

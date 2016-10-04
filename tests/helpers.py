@@ -52,13 +52,8 @@ class Helpers(object):
 
 
     @staticmethod
-    def yocto_id_randomize(install_image, specific_image_id=None):
-
-        if specific_image_id:
-            imageid = specific_image_id
-        else:
-            imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
-
+    def yocto_id_randomize(install_image):
+        imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
         config_file = r"""------------------------
 Mender device manifest:|
 ------------------------

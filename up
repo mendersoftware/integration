@@ -5,7 +5,7 @@
 set -e -o pipefail
 
 # host entries we need to add
-REQHOSTS="s3.docker.mender.io docker.mender.io mender-artifact-storage.s3.docker.mender.io"
+REQHOSTS="s3.docker.mender.io docker.mender.io"
 
 DOCKER_HOST_IP="127.0.0.1"
 

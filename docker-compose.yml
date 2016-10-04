@@ -25,7 +25,6 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:stable
         image: mendersoftware/deployments:latest
         extends:
             file: common.yml
@@ -74,7 +73,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:stable
+        image: mendersoftware/gui:latest
         networks:
             - mender
 
@@ -82,7 +81,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:stable
+        image: mendersoftware/api-gateway:latest
         ports:
             - "8080:443"
         networks:
@@ -108,7 +107,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:stable
+        image: mendersoftware/deviceauth:latest
         extends:
             file: common.yml
             service: mender-base
@@ -128,7 +127,7 @@ services:
     # mender-device-adm
     #
     mender-device-adm:
-        image: mendersoftware/deviceadm:stable
+        image: mendersoftware/deviceadm:latest
         extends:
             file: common.yml
             service: mender-base
@@ -148,7 +147,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:stable
+        image: mendersoftware/inventory:latest
         extends:
             file: common.yml
             service: mender-base
@@ -168,7 +167,7 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:stable
+        image: mendersoftware/mender-client-qemu:latest
         networks:
             - mender
 

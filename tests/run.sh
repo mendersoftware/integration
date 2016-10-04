@@ -23,7 +23,7 @@ fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] || [[ "$INSIDE_DOCKER" -eq 1 ]] ; then
     echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was found in the current working directory, will download the latest !!"
-    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3-eu-west-1.amazonaws.com/yocto-integration-builds/latest/core-image-full-cmdline-vexpress-qemu.ext4"
+    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3-eu-west-1.amazonaws.com/yocto-integration-stable/latest/core-image-full-cmdline-vexpress-qemu.ext4"
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu-broken-network.ext4 ]]; then

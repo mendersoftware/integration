@@ -26,7 +26,6 @@ services:
     #
     mender-deployments:
         image: mendersoftware/deployments:stable
-        image: mendersoftware/deployments:latest
         extends:
             file: common.yml
             service: mender-base

@@ -5,8 +5,8 @@ set -x -e
 if [[ $INSIDE_DOCKER -eq 1 ]]; then
     # will assume if running inside docker, you are testing with the docker-compose setup
     DOCKER_GATEWAY=$(/sbin/ip route|awk '/default/ { print $3 }')
-    CLIENT_IP_PORT=$DOCKER_GATEWAY":8822"
-    GATEWAY_IP_PORT="mender-client:8080"
+    CLIENT_IP_PORT="mender-client:8822"
+    GATEWAY_IP_PORT=$DOCKER_GATEWAY":8080"
 
     # remove cached file and setup fakes3 hack
     find . -iname '*.pyc' -delete || true

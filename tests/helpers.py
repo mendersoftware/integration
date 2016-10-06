@@ -52,8 +52,13 @@ class Helpers(object):
 
 
     @staticmethod
-    def yocto_id_randomize(install_image):
-        imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
+    def yocto_id_randomize(install_image, device_type="vexpress-qemu", specific_image_id=None):
+
+        if specific_image_id:
+            imageid = specific_image_id
+        else:
+            imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
+
         config_file = r"""------------------------
 Mender device manifest:|
 ------------------------
@@ -61,8 +66,8 @@ DISTRO = poky
 DATETIME = 99990905092231
 PN = core-image-full-cmdline
 IMAGE_ID = %s
-DEVICE_TYPE = vexpress-qemu
-------------------------""" % (imageid)
+DEVICE_TYPE = %s
+------------------------""" % (imageid, device_type)
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(config_file)
         tfile.close()

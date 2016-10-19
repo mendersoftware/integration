@@ -3,27 +3,26 @@ services:
 
 
     #
-    # fake-s3
+    # minio
     #
-
-    fake-s3:
-        image: lphoward/fake-s3
+    minio:
+        image: minio/minio
         ports:
-            - "4569:4569"
-        volumes:
-             - ./fakes3-entry.sh:/fakes3-entry.sh
-        entrypoint: /fakes3-entry.sh
+            - "9000:9000"
         networks:
             mender:
                 aliases:
-                     # mender-artifact-storage.localhost must be mapped to 127.0.0.1
-                     # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
+                    # mender-artifact-storage.localhost must be mapped to 127.0.0.1
+                    # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
                     - mender-artifact-storage.localhost
                     - mender-artifact-storage.s3.docker.mender.io
                     - s3.docker.mender.io
+        environment:
+            MINIO_ACCESS_KEY: minio
+            MINIO_SECRET_KEY: minio123
     #
     # mender-deployments
-    #
+    
     mender-deployments:
         image: mendersoftware/deployments:latest
         extends:
@@ -38,9 +37,9 @@ services:
         #
         # The default docker-compose setup uses a fakes3 server, specified by the AWS_URI env. variable.
         environment:
-             AWS_ACCESS_KEY_ID: abc
-             AWS_SECRET_ACCESS_KEY: 123
-             AWS_URI: http://s3.docker.mender.io:4569
+             AWS_ACCESS_KEY_ID: minio
+             AWS_SECRET_ACCESS_KEY: minio123
+             AWS_URI: http://s3.docker.mender.io:9000
         depends_on:
             - mender-mongo-deployments
 

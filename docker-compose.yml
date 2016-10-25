@@ -6,7 +6,7 @@ services:
     # minio
     #
     minio:
-        image: minio/minio
+        image: minio/minio:RELEASE.2016-10-07T01-16-39Z
         ports:
             - "9000:9000"
         networks:

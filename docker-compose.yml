@@ -163,6 +163,26 @@ services:
                     - mongo-inventory
 
     #
+    # mender-useradm
+    #
+    mender-useradm:
+        image: mendersoftware/useradm:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo-useradm
+
+    mender-mongo-useradm:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-useradm
+
+    #
     # mender-client
     #
     mender-client:

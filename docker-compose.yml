@@ -22,7 +22,7 @@ services:
             MINIO_SECRET_KEY: minio123
     #
     # mender-deployments
-    
+    #
     mender-deployments:
         image: mendersoftware/deployments:latest
         extends:

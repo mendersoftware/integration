@@ -22,7 +22,7 @@ services:
             MINIO_SECRET_KEY: minio123
     #
     # mender-deployments
-    
+    #
     mender-deployments:
         image: mendersoftware/deployments:latest
         extends:
@@ -161,6 +161,26 @@ services:
             mender:
                 aliases:
                     - mongo-inventory
+
+    #
+    # mender-useradm
+    #
+    mender-useradm:
+        image: mendersoftware/useradm:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo-useradm
+
+    mender-mongo-useradm:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-useradm
 
     #
     # mender-client

@@ -4,10 +4,22 @@ services:
     mender-useradm:
         volumes:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
+        depends_on:
+            - mongo-common
 
     mender-device-auth:
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+        depends_on:
+            - mongo-common
+
+    mender-inventory:
+        depends_on:
+            - mongo-common
+
+    mender-device-adm:
+        depends_on:
+            - mongo-common
 
     mender-api-gateway:
         ports:
@@ -48,6 +60,8 @@ services:
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
             DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000
+        depends_on:
+            - mongo-common
 
     minio:
         networks:
@@ -72,3 +86,22 @@ services:
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
+    #
+    # single mongo instance for all services, extend as required
+    # during deployment
+    #
+    mongo-common:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
+                    - mongo-device-adm
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
+                    - mender-mongo-deployments
+                    - mender-mongo-device-adm
+                    - mender-mongo-device-auth
+                    - mender-mongo-inventory
+                    - mender-mongo-useradm

@@ -131,18 +131,48 @@ services:
             - "8080:8080"
 
     mender-mongo-deployments:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
         volumes:
             - mender-deployments-db:/data:rw
+
     mender-mongo-device-adm:
+        image: mongo:3.4
+        networks:
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-adm
         volumes:
             - mender-deviceadm-db:/data:rw
+
     mender-mongo-device-auth:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-device-auth
         volumes:
             - mender-deviceauth-db:/data:rw
+
     mender-mongo-inventory:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-inventory
         volumes:
             - mender-inventory-db:/data:rw
+
     mender-mongo-useradm:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-useradm
         volumes:
             - mender-useradm-db:/data:rw
     mender-elasticsearch:

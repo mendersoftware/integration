@@ -101,6 +101,7 @@ services:
             - mender-device-adm
             - mender-deployments
             - mender-gui
+            - mender-useradm
 
     #
     # mender-device-auth

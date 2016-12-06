@@ -22,17 +22,18 @@ import pytest
 import logging
 
 class Deployments(object):
+    upload_path="https://%s/api/integrations/%s/deployments/images"
 
-    @staticmethod
-    def upload_image(name, device_type, yocto_id, filename, description="", checksum=""):
-        upload_path = "https://%s/api/integrations/%s/deployments/images" % (
-            env.mender_gateway, env.api_version)
+    @classmethod
+    def upload_image(self, name, filename, description=""):
+        path = self.upload_path % (env.mender_gateway, env.api_version)
 
+        r = requests.post(path, verify=False, files=(("name", (None, name)),
+                          ("description", (None, description)),
+                          ("firmware", (filename, open(filename),
+                          "multipart/form-data"))))
 
-
-        r = requests.post(upload_path, verify=False, files=(("name", (None, name)), ("description", (None, description)), ("checksum", (None, checksum)), ("device_type", (None,device_type)), ("yocto_id", (None, yocto_id)), ("firmware", (filename, open(filename), "application/octet-stream"))))
-
-
+        logging.info("Received image upload status code [%d]", r.status_code)
 
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]

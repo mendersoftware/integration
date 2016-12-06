@@ -27,12 +27,17 @@ from fabric.contrib.files import exists
 
 logger = logging.getLogger()
 
-class Helpers(object):
+class Helpers:
+    artifact_info_file = "/etc/mender/artifact_info"
+    artifact_prefix = "artifact_name"
+    artifact_regex_match = "%s=.*$" % (artifact_prefix)
 
-    @staticmethod
-    def yocto_id_from_ext4(filename):
+    @classmethod
+    def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "e2tail %s:/etc/mender/build_mender | grep -m 1 -E -o 'core-image-full-cmdline-.*'" % (filename)
+            cmd = "e2tail %s:%s | grep -m 1 -E -o '%s'" % (filename,
+                                                           self.artifact_info_file,
+                                                           slef.artifacti_regex_match)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output
@@ -44,36 +49,28 @@ class Helpers(object):
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
 
-    @staticmethod
-    def yocto_id_installed_on_machine():
-        cmd = "cat /etc/mender/build_mender | grep -m 1 -E -o 'core-image-full-cmdline-.*'"
+    @classmethod
+    def yocto_id_installed_on_machine(self):
+        cmd = "cat %s | grep -m 1 -E -o '%s'" % (self.artifact_info_file, self.artifact_regex_match)
         output = run(cmd)
         return output.strip()
 
 
-    @staticmethod
-    def yocto_id_randomize(install_image, device_type="vexpress-qemu", specific_image_id=None):
+    @classmethod
+    def artifact_id_randomize(self, install_image, device_type="vexpress-qemu", specific_image_id=None):
 
         if specific_image_id:
             imageid = specific_image_id
         else:
-            imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
+            imageid = "mender-%s" % str(random.randint(0,99999999))
 
-        config_file = r"""------------------------
-Mender device manifest:|
-------------------------
-DISTRO = poky
-DATETIME = 99990905092231
-PN = core-image-full-cmdline
-IMAGE_ID = %s
-DEVICE_TYPE = %s
-------------------------""" % (imageid, device_type)
+        config_file = r"""%s=%s""" % (self.artifact_prefix, imageid)
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(config_file)
         tfile.close()
 
         try:
-            cmd = "e2cp %s %s:/etc/mender/build_mender" % (tfile.name, install_image)
+            cmd = "e2cp %s %s:%s" % (tfile.name, install_image, self.artifact_info_file)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
 
@@ -103,9 +100,9 @@ DEVICE_TYPE = %s
             passive = run(cmd)
         return passive.strip()
 
-    @staticmethod
-    def verify_installed_imageid(imageid):
-        cmd = "grep '%s' /etc/mender/build_mender" % (imageid)
+    @classmethod
+    def verify_installed_imageid(self, imageid):
+        cmd = "grep '%s' %s" % (imageid, self.artifact_info_file)
         run(cmd)
 
     @staticmethod

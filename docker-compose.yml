@@ -22,7 +22,7 @@ services:
             MINIO_SECRET_KEY: minio123
     #
     # mender-deployments
-    
+    #
     mender-deployments:
         image: mendersoftware/deployments:latest
         extends:
@@ -49,24 +49,6 @@ services:
             mender:
                 aliases:
                     - mongo-deployments
-
-
-    #
-    # mender-etcd
-    #
-    mender-etcd:
-        image: microbox/etcd:latest
-        #volumes:
-        #    - /var/etcd/:/data
-        #override command since the image entrypoint requires
-        #these two args
-        command:
-            - -data-dir=/data
-            - -name=mender-etcd
-        networks:
-            mender:
-                aliases:
-                    - etcd
 
     #
     # mender-gui

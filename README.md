@@ -52,7 +52,7 @@ Guidelines and things to consider:
 ## How to use in development
 
 Running the integration setup brings up a complete system of services; as such
-it can readily be used for testing, staging or production environments.
+it can readily be used for testing, staging or demo environments.
 
 In development scenarios however some additional strategies apply, described in
 the following sections.

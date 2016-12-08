@@ -2,10 +2,14 @@ Mender: Integration
 ==============================================
 
 Mender is an open source over-the-air (OTA) software updater for embedded Linux
-devices. Mender comprises a client running at the embedded device, as well as
-a server that manages deployments across many devices.
+devices. Mender comprises a client running at the embedded device, as well as a
+server that manages deployments across many devices.
 
-This repository contains a Docker-based environment allowing to run all Mender backend services as a single system. Each service has a dedicated Dockerhub repository, where tagged Docker builds are stored. Images are pulled and started in a coordinated fashion via `docker-compose` and the associated `docker-compose.yml` file.
+This repository contains a Docker-based environment allowing to run all Mender
+backend services as a single system. Each service has a dedicated Dockerhub
+repository, where tagged Docker builds are stored. Images are pulled and started
+in a coordinated fashion via `docker-compose` and the associated
+`docker-compose.yml` file.
 
 Requirements:
 
@@ -59,9 +63,9 @@ the following sections.
 
 ### Developing a new service
 
-The default approach to integrating a service, involving the full build pipeline, is not conducive to
-quick develop/build/test cycles. Therefore, when prototyping a new service against an existing system,
-it can be useful to:
+The default approach to integrating a service, involving the full build
+pipeline, is not conducive to quick develop/build/test cycles. Therefore, when
+prototyping a new service against an existing system, it can be useful to:
 
 * create a dedicated Dockerfile for your service and build it locally:
 ```
@@ -69,7 +73,9 @@ cd FOLDER_WITH_DOCKERFILE
 docker build -t MY_DOCKER_TAG  .
 ```
 
-* include the service as usual in `docker-compose.yml`, paying attention to the image tag you just created:
+* include the service as usual in `docker-compose.yml`, paying attention to the
+  image tag you just created:
+
 ```
     #
     # myservice
@@ -78,8 +84,10 @@ docker build -t MY_DOCKER_TAG  .
         image: MY_DOCKER_TAG
 ```
 
-* add any number of [volumes](https://docs.docker.com/compose/compose-file/#/volumes-volume-driver) to your service,
-to mount your local binaries and config files into the Docker container, e.g.:
+* add any number of [volumes](https://docs.docker.com/compose/compose-file/#/volumes-volume-driver)
+to your service, to mount your local binaries and config files into the Docker
+container, e.g.:
+
 ```
     myservice:
         ...
@@ -89,14 +97,18 @@ to mount your local binaries and config files into the Docker container, e.g.:
             ...
 ```
 
-When you run the setup, your new service will be a part of it; also, it will be running
-binaries from your local machine, which means you can quickly recompile them and restart `integration`
-for changes to take effect.
+When you run the setup, your new service will be a part of it; also, it will be
+running binaries from your local machine, which means you can quickly recompile
+them and restart `integration` for changes to take effect.
 
 Note that the correct routing and auth still have to be set up in the Mender API Gateway for the service
 to be accessible from the outside. To experiment with new configuration:
-* copy the [Gateway's main config file](https://github.com/mendersoftware/mender-api-gateway-docker/blob/master/nginx.conf) locally
+
+* copy the [Gateway's main config file](https://github.com/mendersoftware/mender-api-gateway-docker/blob/master/nginx.conf)
+locally
+
 * in `docker-compose.yml`, again mount your local version inside the Gateway container:
+
 ```
     #
     # mender-api-gateway
@@ -125,9 +137,10 @@ machine, mount your local binaries and config files via `docker-compose.yml`:
 To obtain the locations of both binaries and config files, refer the service's
 dedicated Dcokerfile.
 
-Again, recompiling your local binary and restarting `integration` will make
-your changes take effect. Note that the correct API Gateway config is probably already
-set up for an existing service; if not, refer the previous section on how to modify it.
+Again, recompiling your local binary and restarting `integration` will make your
+changes take effect. Note that the correct API Gateway config is probably
+already set up for an existing service; if not, refer the previous section on
+how to modify it.
 
 ## Demo client
 
@@ -146,8 +159,9 @@ docker-compose -f docker-compose.yml -f docker-compose.client.yml up
 
 ## Contributing
 
-We welcome and ask for your contribution. If you would like to contribute to Mender, please read our guide on how to best get started [contributing code or
-documentation](https://github.com/mendersoftware/mender/blob/master/CONTRIBUTING.md).
+We welcome and ask for your contribution. If you would like to contribute to
+Mender, please read our guide on how to best get started
+[contributing code or documentation](https://github.com/mendersoftware/mender/blob/master/CONTRIBUTING.md).
 
 ## License
 

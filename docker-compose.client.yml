@@ -1,0 +1,10 @@
+version: '2'
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:latest
+        networks:
+            - mender

@@ -129,6 +129,21 @@ Again, recompiling your local binary and restarting `integration` will make
 your changes take effect. Note that the correct API Gateway config is probably already
 set up for an existing service; if not, refer the previous section on how to modify it.
 
+## Demo client
+
+The setup comes with a predefined client service (mender-client) that runs a
+qemu VM in a container. The client will connect to the backend by accessing
+`docker.mender.io` host (an alias assigned to `mender-api-gateway` service). The
+client container will not be started by default and needs to be included
+explicitly when running docker compose by listing multiple compose files as
+described in [compose manual](https://docs.docker.com/compose/extends/#/multiple-compose-files).
+
+To start the backend and a demo client run the following command:
+
+```
+docker-compose -f docker-compose.yml -f docker-compose.client.yml up
+```
+
 ## Contributing
 
 We welcome and ask for your contribution. If you would like to contribute to Mender, please read our guide on how to best get started [contributing code or

@@ -165,13 +165,5 @@ services:
                 aliases:
                     - mongo-useradm
 
-    #
-    # mender-client
-    #
-    mender-client:
-        image: mendersoftware/mender-client-qemu:latest
-        networks:
-            - mender
-
 networks:
     mender:

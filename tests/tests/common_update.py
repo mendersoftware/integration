@@ -13,21 +13,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from deployments import Deployments
-from admission import Admission
 from common import *
 from helpers import Helpers
-from artifacts import Artifacts
+from MenderAPI import adm, deploy, image, logger
 import random
 
 
-def base_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
+def common_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
     elif regnerate_image_id:
         artifact_id = Helpers.artifact_id_randomize(install_image)
-        logging.debug("Randomized image id: " + artifact_id)
+        logger.debug("Randomized image id: " + artifact_id)
     else:
         artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
@@ -36,17 +34,17 @@ def base_update_proceduce(install_image, name, regnerate_image_id=True, device_t
 
     # create atrifact
     artifact_file = "artifact.mender"
-    created = Artifacts.make_artifact(install_image, device_type, artifact_id, artifact_file)
+    created = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
 
     if created:
-        Deployments.upload_image(name, "artifact.mender")
-        devices_accepted_id = [device["id"] for device in Admission.get_devices_status("accepted")]
-        deployment_id = Deployments.trigger_deployment(name="New valid update",
-                                                       artifact_name=name,
-                                                       devices=devices_accepted_id)
+        deploy.upload_image(name, "artifact.mender")
+        devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
+        deployment_id = deploy.trigger_deployment(name="New valid update",
+                                                  artifact_name=name,
+                                                  devices=devices_accepted_id)
 
         # remove the artifact file
         os.remove(artifact_file)
         return deployment_id, artifact_id
 
-    logging.error("error creating artifact")
+    logger.error("error creating artifact")

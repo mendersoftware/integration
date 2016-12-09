@@ -20,30 +20,29 @@ import json
 from fabric.api import *
 import time
 import pytest
-import logging
+from MenderAPI import gateway, api_version, logger
 
-class Admission(object):
+class Admission():
+    def __init__(self):
+        self.admission_base_path = "https://%s/api/integrations/%s/admission/" % (gateway, api_version)
 
-    @staticmethod
-    def get_devices():
-        return Admission.get_devices_status()
+    def get_devices(self):
+        return self.get_devices_status()
 
     # return devices with the specified status
-    @staticmethod
-    def get_devices_status(status=None):
-        deviceadm_devices_path = "https://%s/api/integrations/%s/admission/devices" % \
-            (env.mender_gateway, env.api_version)
+    def get_devices_status(self, status=None):
+        device_status_path = self.admission_base_path + "devices"
 
         tries = 5
         for c, i in enumerate(range(tries)):
             time.sleep(c*5+5)
             try:
-                devices = requests.get(deviceadm_devices_path, verify=False)
+                devices = requests.get(device_status_path, verify=False)
                 assert devices.status_code == requests.status_codes.codes.ok
                 assert len(devices.json()) > 0
                 break
             except AssertionError:
-                logging.info("Fail to get devices, will try #%d times" % (tries-c-1))
+                logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
                 continue
 
         devices_json = devices.json()
@@ -57,25 +56,23 @@ class Admission(object):
                 matching.append(d)
         return matching
 
-    @staticmethod
-    def set_device_status(id, status):
-        r = requests.put("https://%s/api/integrations/%s/admission/devices/%s/status" %
-                         (env.mender_gateway,
-                          env.api_version, id),
+
+    def set_device_status(self, device_id, status):
+        r = requests.put(self.admission_base_path + "devices/%s/status" % device_id,
                          headers={'Content-Type': 'application/json'},
                          data=json.dumps({"status": status}),
                          verify=False)
         assert r.status_code == requests.status_codes.codes.ok
 
-    @staticmethod
-    def check_expected_status(status, expected_value, max_wait=60, polling_frequency=0.2):
+
+    def check_expected_status(self, status, expected_value, max_wait=60, polling_frequency=0.2):
         timeout = time.time() + max_wait
         seen = set()
 
         while time.time() <= timeout:
             time.sleep(polling_frequency)
 
-            data = Admission.get_devices_status(status)
+            data = self.get_devices_status(status)
             seen.add(str(data))
 
             count = 0

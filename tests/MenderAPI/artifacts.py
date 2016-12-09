@@ -14,13 +14,12 @@
 #    limitations under the License.
 
 import subprocess
-import logging
 import pytest
+from MenderAPI import logger
 
-class Artifacts(object):
+class Artifacts():
     artifacts_tool_path = "./artifacts"
 
-    @classmethod
     def make_artifact(self, image, device_type, artifact_name, artifact_file_created):
 
         if artifact_name.startswith("artifact_name="):
@@ -31,7 +30,7 @@ class Artifacts(object):
                                                                  device_type,
                                                                  artifact_name,
                                                                  artifact_file_created)
-        logging.info("Running: " + cmd)
+        logger.info("Running: " + cmd)
 
         try:
             subprocess.check_output(cmd, shell=True).strip()

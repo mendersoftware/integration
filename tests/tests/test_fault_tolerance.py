@@ -44,6 +44,8 @@ class TestFaultTolerance(object):
 
         deployment_id, _ = base_update_proceduce(install_image, name=None)
         Helpers.verify_reboot_performed()
+
+        Helpers.verify_reboot_performed()
         Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
 
     @pytest.mark.usefixtures("bootstrapped_successfully")

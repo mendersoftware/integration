@@ -37,7 +37,8 @@ def base_update_proceduce(install_image, name, regnerate_image_id=True, device_t
     # create atrifact
     artifact_file = "artifact.mender"
     created = Artifacts.make_artifact(install_image, device_type, artifact_id, artifact_file)
-    if (created):
+
+    if created:
         Deployments.upload_image(name, "artifact.mender")
         devices_accepted_id = [device["id"] for device in Admission.get_devices_status("accepted")]
         deployment_id = Deployments.trigger_deployment(name="New valid update",

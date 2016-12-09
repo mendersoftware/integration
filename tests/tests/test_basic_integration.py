@@ -43,6 +43,7 @@ class TestBasicIntegration(object):
                     name=name,
                     regnerate_image_id=regnerate_image_id)
             return
+
         previous_inactive_part = Helpers.get_passive_partition()
         deployment_id, expected_image_id = base_update_proceduce(install_image, name, regnerate_image_id)
 
@@ -56,7 +57,7 @@ class TestBasicIntegration(object):
         Helpers.verify_reboot_not_performed()
         Helpers.verify_installed_imageid(expected_image_id)
 
-    def test_update_image_failed(self, install_image="broken_image.dat", name=None):
+    def test_update_image_failed(self, install_image="broken_update.ext4", name=None):
         """
             Perform a upgrade using a broken image (random data)
             The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
@@ -71,6 +72,7 @@ class TestBasicIntegration(object):
 
         devices_accepted = conftest.get_mender_clients()
         original_image_id = Helpers.yocto_id_installed_on_machine()
+
 
         previous_active_part = Helpers.get_active_partition()
         deployment_id, _ = base_update_proceduce(install_image, name, broken_image=True)
@@ -111,16 +113,4 @@ class TestBasicIntegration(object):
 
         self.test_update_image_failed()
         self.test_update_image_successful()
-        Helpers.verify_reboot_not_performed()
-
-    def test_image_already_installed(self):
-        "Attempt to install an upgade that is already installed (matching imageID)"
-        if not env.host_string:
-            execute(self.test_image_already_installed,
-                    hosts=conftest.get_mender_clients())
-            return
-
-        self.test_update_image_successful()
-        deployment_id, _ = base_update_proceduce(install_image=conftest.get_valid_image(), name="duplicate update", regnerate_image_id=False)
-        Deployments.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()

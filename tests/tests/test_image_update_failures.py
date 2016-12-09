@@ -16,12 +16,10 @@
 from fabric.api import *
 import pytest
 import time
-from deployments import Deployments
-from admission import Admission
 from common import *
 from helpers import Helpers
-from base_update import base_update_proceduce
-
+from MenderAPI import adm, deploy, image, logger
+from common_update import common_update_proceduce
 
 @pytest.mark.usefixtures("ssh_is_opened")
 class TestFailures(object):
@@ -40,15 +38,15 @@ class TestFailures(object):
 
         previous_inactive_part = Helpers.get_passive_partition()
 
-        deployment_id, expected_image_id = base_update_proceduce(install_image, name, True)
+        deployment_id, expected_image_id = common_update_proceduce(install_image, name, True)
         Helpers.verify_reboot_performed()
 
-        devices_accepted_id = [device["id"] for device in Admission.get_devices_status("accepted")]
-        deployment_id = Deployments.trigger_deployment(name="New valid update",
+        devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
+        deployment_id = deploy.trigger_deployment(name="New valid update",
                                                        artifact_name=name,
                                                        devices=devices_accepted_id)
 
-        Deployments.check_expected_status(deployment_id, "already-installed", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "already-installed", len(conftest.get_mender_clients()))
 
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
@@ -58,6 +56,6 @@ class TestFailures(object):
             execute(self.test_large_update_image, hosts=conftest.get_mender_clients())
             return
 
-        deployment_id, _ = base_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
-        Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        deployment_id, _ = common_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
+        deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()

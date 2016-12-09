@@ -15,6 +15,11 @@
             - [Scaling](#scaling)
             - [Troubleshooting](#troubleshooting)
 - [Kubernetes](#kubernetes)
+    - [`minikube`](#minikube)
+    - [Deploying mender to Kubernetes cluster](#deploying-mender-to-kubernetes-cluster)
+        - [Converting `docker-compose.yaml` with `kompose`](#converting-docker-composeyaml-with-kompose)
+        - [Deploying Mender](#deploying-mender)
+        - [Publishing Mender services](#publishing-mender-services)
 
 <!-- markdown-toc end -->
 
@@ -514,3 +519,358 @@ Second instance of `mender-device-adm` was scheduled to run on `localhost` node.
 
 # Kubernetes
 
+Required components:
+
+* [kubectl](https://storage.googleapis.com/kubernetes-release/release/v1.4.6/bin/linux/amd64/kubectl), version 1.4.6
+* [minikube](https://github.com/kubernetes/minikube), version 0.13.1
+* [kompose](https://github.com/kubernetes-incubator/kompose), version 0.1.2 (92ea047)
+* (optional)
+  [docker-machine-driver-kvm](https://github.com/dhiltgen/docker-machine-kvm),
+  version 0.7.0, build a3882af
+
+## `minikube`
+
+Setup described here uses `minikube` to create and provision a local Kubernetes
+cluster. The tool, similarly to `docker-machine`, sets up a VM running
+boot2docker Linux distibution. In this case, a clean boot2docker distibution has
+been provisioned with necessary services. The ISO is hosted
+https://storage.googleapis.com/minikube/minikube-0.7.iso and comes with an older
+version of Docker Engine, namely 1.11.
+
+Setup is performed by running:
+
+```
+user@localhost# minikube start 
+Starting local Kubernetes cluster...
+Kubectl is now configured to use the cluster.
+```
+
+`minikube` sets up a namespace called `default`:
+
+```
+user@localhost# kubectl get namespaces
+NAME          STATUS    AGE
+default       Active    2h
+kube-system   Active    2h
+```
+
+Once setup, a single node becomes available:
+
+```
+user@localhost# kubectl get nodes
+NAME       STATUS    AGE
+minikube   Ready     2h
+```
+
+
+## Deploying mender to Kubernetes cluster
+
+### Converting `docker-compose.yaml` with `kompose`
+
+`kompose` is a tool for converting `docker-compose` deployment into Kubernetes
+deployments/services/pods.
+
+Conversion, assuming one is at the root of Mender `integration` repository, is
+performed like this:`
+
+```
+user@localhost# mkdir kubernetes
+user@localhost# cd kubernetes
+user@localhost# kompose -f ../docker-compose.yml convert -y
+WARN[0000] Unsupported network configuration of compose v2 - ignoring
+WARN[0000] Unsupported key networks - ignoring
+WARN[0000] Unsupported key depends_on - ignoring
+WARN[0000] Unsupported key extends - ignoring
+WARN[0000] [mender-inventory] Service cannot be created because of missing port.
+WARN[0000] [mender-client] Service cannot be created because of missing port.
+WARN[0000] [mender-device-auth] Service cannot be created because of missing port.
+WARN[0000] [mender-gui] Service cannot be created because of missing port.
+WARN[0000] [mender-deployments] Service cannot be created because of missing port.
+WARN[0000] [mender-mongo-deployments] Service cannot be created because of missing port.
+WARN[0000] [mender-mongo-device-adm] Service cannot be created because of missing port.
+WARN[0000] [mender-device-adm] Service cannot be created because of missing port.
+WARN[0000] [mender-mongo-inventory] Service cannot be created because of missing port.
+WARN[0000] [mender-mongo-useradm] Service cannot be created because of missing port.
+WARN[0000] [mender-mongo-device-auth] Service cannot be created because of missing port.
+WARN[0000] [mender-etcd] Service cannot be created because of missing port.
+WARN[0000] [mender-useradm] Service cannot be created because of missing port.
+INFO[0000] file "minio-service.yaml" created
+INFO[0000] file "mender-api-gateway-service.yaml" created
+INFO[0000] file "mender-inventory-deployment.yaml" created
+INFO[0000] file "mender-client-deployment.yaml" created
+INFO[0000] file "mender-device-auth-deployment.yaml" created
+INFO[0000] file "mender-gui-deployment.yaml" created
+INFO[0000] file "minio-deployment.yaml" created
+INFO[0000] file "mender-api-gateway-deployment.yaml" created
+INFO[0000] file "mender-deployments-deployment.yaml" created
+INFO[0000] file "mender-mongo-deployments-deployment.yaml" created
+INFO[0000] file "mender-mongo-device-adm-deployment.yaml" created
+INFO[0000] file "mender-device-adm-deployment.yaml" created
+INFO[0000] file "mender-mongo-inventory-deployment.yaml" created
+INFO[0000] file "mender-mongo-useradm-deployment.yaml" created
+INFO[0000] file "mender-mongo-device-auth-deployment.yaml" created
+INFO[0000] file "mender-etcd-deployment.yaml" created
+INFO[0000] file "mender-useradm-deployment.yaml" created
+user@localhost# ls -1
+mender-api-gateway-deployment.yaml
+mender-api-gateway-service.yaml
+mender-client-deployment.yaml
+mender-deployments-deployment.yaml
+mender-device-adm-deployment.yaml
+mender-device-auth-deployment.yaml
+mender-etcd-deployment.yaml
+mender-gui-deployment.yaml
+mender-inventory-deployment.yaml
+mender-mongo-deployments-deployment.yaml
+mender-mongo-device-adm-deployment.yaml
+mender-mongo-device-auth-deployment.yaml
+mender-mongo-inventory-deployment.yaml
+mender-mongo-useradm-deployment.yaml
+mender-useradm-deployment.yaml
+minio-deployment.yaml
+minio-service.yaml
+```
+
+`kompose` raises warnings about inability to create a Service definition for all
+containers with exception of `mender-api-gateway` and `minio`. This is expected
+because only these 2 services publishes their ports to the outside world.
+
+Due to `kompose` issue #318, generated deployment definition files set a
+disallowed restartPolicy of in a pod template spec. This can be fixed by
+running:
+
+```
+sed -e 's/ restartPolicy:/# restartPolicy:/' -i *-deployment.yaml
+```
+
+Outstanding issues:
+- [kompose #318](https://github.com/kubernetes-incubator/kompose/issues/318)
+
+#### Defining services
+
+Services in a Mender cluster need to be able to find each other by DNS names.
+Each service is started in a separate pod, hence we need to device `Service`
+objects that expose services to the whole cluster.
+
+Define the following service template in `templates/service.template.yaml`:
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${SERVICE}
+spec:
+  ports:
+  - port: ${PORT}
+    protocol: TCP
+  selector:
+    service: ${SERVICE}
+```
+
+Then run the following command:
+
+```
+for service in mender-deployments mender-inventory mender-device-auth mender-device-adm mender-useradm; do \
+    SERVICE=$service PORT=8080 envsubst < templates/service.template.yml > $service-service.yaml; \
+done
+```
+
+GUI service uses a different port:
+
+```
+SERVICE=mender-gui PORT=80 envsubst < templates/service.template.yml > mender-gui-service.yaml
+```
+
+Similarly, Mender services need to locate their database instances. We need to
+generate `Service` definitions for mongo:
+
+```
+for service in mongo-deployments mongo-mender-inventory mongo-mender-device-auth mongo-device-adm mongo-mender-useradm; do \
+    SERVICE=$service PORT=27017 envsubst < templates/service.template.yml > $service-service.yaml; \
+done
+```
+
+### Publishing Mender services
+
+Create services:
+
+```
+user@localhost# for f in  *-service.yaml; do kubectl create -f $f; done
+service "mender-api-gateway" created
+service "minio" created
+...
+```
+
+Verify their status:
+
+```
+user@localhost# kubectl get svc
+NAME                       CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
+kubernetes                 10.0.0.1     <none>        443/TCP     19m
+mender-api-gateway         10.0.0.171   <nodes>       8080/TCP    12m
+mender-deployments         10.0.0.110   <none>        8080/TCP    12m
+mender-device-adm          10.0.0.111   <none>        8080/TCP    12m
+mender-device-auth         10.0.0.46    <none>        8080/TCP    12m
+mender-gui                 10.0.0.74    <none>        80/TCP      12m
+mender-inventory           10.0.0.226   <none>        8080/TCP    12m
+mender-useradm             10.0.0.77    <none>        8080/TCP    12m
+minio                      10.0.0.161   <none>        9000/TCP    12m
+mongo-deployments          10.0.0.251   <none>        27017/TCP   12m
+mongo-device-adm           10.0.0.44    <none>        27017/TCP   12m
+mongo-mender-device-auth   10.0.0.16    <none>        27017/TCP   12m
+mongo-mender-inventory     10.0.0.248   <none>        27017/TCP   12m
+mongo-mender-useradm       10.0.0.120   <none>        27017/TCP   12m
+```
+
+### Deploying Mender
+
+Deploy Mender services and minio storage backend:
+
+```
+user@localhost# for f in  mender*-deployment.yaml; do kubectl create -f $f; done
+deployment "mender-api-gateway" created
+deployment "mender-client" created
+deployment "mender-deployments" created
+deployment "mender-device-adm" created
+deployment "mender-device-auth" created
+deployment "mender-etcd" created
+deployment "mender-gui" created
+deployment "mender-inventory" created
+deployment "mender-mongo-deployments" created
+deployment "mender-mongo-device-adm" created
+deployment "mender-mongo-device-auth" created
+deployment "mender-mongo-inventory" created
+deployment "mender-mongo-useradm" created
+deployment "mender-useradm" created
+user@localhost# kubectl create -f minio-deployment.yaml; done
+```
+
+Verify status of deployments:
+
+```
+user@localhost#
+NAME                       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+mender-api-gateway         1         1         1            1           10m
+mender-client              1         1         1            1           10m
+mender-deployments         1         1         1            1           10m
+mender-device-adm          1         1         1            1           10m
+mender-device-auth         1         1         1            1           10m
+mender-etcd                1         1         1            1           10m
+mender-gui                 1         1         1            1           10m
+mender-inventory           1         1         1            1           10m
+mender-mongo-deployments   1         1         1            1           10m
+mender-mongo-device-adm    1         1         1            1           10m
+mender-mongo-device-auth   1         1         1            1           10m
+mender-mongo-inventory     1         1         1            1           10m
+mender-mongo-useradm       1         1         1            1           10m
+mender-useradm             1         1         1            1           10m
+minio                      1         1         1            1           10m
+```
+
+Pods:
+
+```
+user@localhost# kubectl get pods
+NAME                                        READY     STATUS    RESTARTS   AGE
+mender-api-gateway-1307175598-33pcj         1/1       Running   0          10m
+mender-client-753708454-13jlq               1/1       Running   0          10m
+mender-deployments-3147238546-7hc3o         1/1       Running   3          10m
+mender-device-adm-1517661404-vkk36          1/1       Running   1          10m
+mender-device-auth-1830858332-4y4r3         1/1       Running   0          10m
+mender-etcd-2806034080-bx2zp                1/1       Running   0          10m
+mender-gui-1131980139-oyz5m                 1/1       Running   0          10m
+mender-inventory-1458285926-yjpvd           1/1       Running   0          10m
+mender-mongo-deployments-2272570281-u9k0y   1/1       Running   0          10m
+mender-mongo-device-adm-3231427039-ufvn0    1/1       Running   0          10m
+mender-mongo-device-auth-2107026143-2m173   1/1       Running   0          10m
+mender-mongo-inventory-1573235229-eiwsl     1/1       Running   0          10m
+mender-mongo-useradm-156543011-1m1hr        1/1       Running   0          10m
+mender-useradm-1803790959-w4jj4             1/1       Running   0          10m
+minio-82903772-w5ha7                        1/1       Running   0          10m
+```
+
+Once all service have their containers running, endpoints listing should show up
+to date in-cluster IP addresses:
+
+```
+] kubectl get endpoints
+NAME                       ENDPOINTS             AGE
+kubernetes                 192.168.122.42:8443   25m
+mender-api-gateway         172.17.0.4:443        18m
+mender-deployments         172.17.0.6:8080       18m
+mender-device-adm          172.17.0.7:8080       18m
+mender-device-auth         172.17.0.8:8080       18m
+mender-gui                 172.17.0.10:80        18m
+mender-inventory           172.17.0.11:8080      18m
+mender-useradm             172.17.0.17:8080      18m
+minio                      172.17.0.18:9000      18m
+mongo-deployments          172.17.0.12:27017     18m
+mongo-device-adm           172.17.0.13:27017     18m
+mongo-mender-device-auth   172.17.0.14:27017     18m
+mongo-mender-inventory     172.17.0.16:27017     18m
+mongo-mender-useradm       172.17.0.15:27017     18m
+```
+
+Finally, access the UI:
+
+```
+user@localhost# minikube service mender-api-gateway             
+Opening kubernetes service default/mender-api-gateway in default browser...
+```
+
+NOTE: due to API gateway redirect, the browser will be first directed to the
+correct address and then redirected to port 8080 which may or may not work on a
+particular setup. To workaround this problem first inspect details of
+`mender-api-gateway`:
+
+```
+kubectl describe service mender-api-gateway
+Name:                   mender-api-gateway
+Namespace:              default
+Labels:                 service=mender-api-gateway
+Selector:               service=mender-api-gateway
+Type:                   NodePort
+IP:                     10.0.0.171
+Port:                   8080    8080/TCP
+NodePort:               8080    30961/TCP   <---- this port
+Endpoints:              172.17.0.4:443
+Session Affinity:       None
+```
+
+Next, find out the IP of `minikube` node:
+
+```
+user@localhost# minikube ip
+192.168.42.173
+```
+
+Now, direct your browser to `https://192.168.42.173:30961`.
+
+### Files
+
+All deployment and service definitions are found in `kubernetes` directory.
+
+# Followups
+
+- deployments service DB name is `mongo-deployments`, other services use
+  `mender-mongo-<service-name>` pattern
+  
+- device admission serice DB name is `mongo-device-adm` (same issue as above)
+
+- API gateway fails to start if some service names cannot be resolved (though it
+  continues to work if services go away after it has started) - explore using
+  `upstream` config in `nginx.conf`
+  
+- uniform logging, services start and go down in case of trouble, it is hard to
+  track down the reason for service dying unexpectedly
+
+- need a large number of services and multiple mongo instances, even for a tiny
+  setup
+
+- network aliases in `docker-compose` do not have a similiar functionality in
+  kubernetes, this causes problems when setting up `mender-deployments` to work
+  with `minio` as deployments service uses `http://s3.docker.mender.io:9000` as
+  `AWS_URI`
+  
+- API gateway automatically redirects to port 8080, this is not desired as the
+  service may be exposed on a different port

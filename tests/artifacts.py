@@ -15,11 +15,17 @@
 
 import subprocess
 import logging
+import pytest
 
 class Artifacts(object):
     artifacts_tool_path = "./artifacts"
+
     @classmethod
     def make_artifact(self, image, device_type, artifact_name, artifact_file_created):
+
+        if artifact_name.startswith("artifact_name="):
+            artifact_name = artifact_name.split('=')[1]
+
         cmd = "%s write rootfs-image -u %s -t %s -n %s -o %s" % (self.artifacts_tool_path,
                                                                  image,
                                                                  device_type,
@@ -28,7 +34,7 @@ class Artifacts(object):
         logging.info("Running: " + cmd)
 
         try:
-            output = subprocess.check_output(cmd, shell=True).strip()
+            subprocess.check_output(cmd, shell=True).strip()
 
         except subprocess.CalledProcessError:
             pytest.fail("Trying to create artifact failed.")

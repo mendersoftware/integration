@@ -31,10 +31,9 @@ class Deployments(object):
         r = requests.post(path, verify=False, files=(("name", (None, name)),
                           ("description", (None, description)),
                           ("firmware", (filename, open(filename),
-                          "multipart/form-data"))))
+                           "multipart/form-data"))))
 
-        logging.info("Received image upload status code [%d]", r.status_code)
-
+        logging.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]
 

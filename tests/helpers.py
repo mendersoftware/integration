@@ -32,12 +32,13 @@ class Helpers:
     artifact_prefix = "artifact_name"
     artifact_regex_match = "%s=.*$" % (artifact_prefix)
 
+
     @classmethod
     def yocto_id_from_ext4(self, filename):
         try:
             cmd = "e2tail %s:%s | grep -m 1 -E -o '%s'" % (filename,
                                                            self.artifact_info_file,
-                                                           slef.artifacti_regex_match)
+                                                           self.artifact_regex_match)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output
@@ -126,7 +127,7 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*5):
+    def verify_reboot_performed(max_wait=60*10):
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
         try:
@@ -134,7 +135,7 @@ class Helpers:
                 run(cmd)
         except BaseException:
             logging.critical("Failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(120)
+            time.sleep(max_wait)
             return
 
         timeout = time.time() + max_wait
@@ -158,7 +159,6 @@ class Helpers:
 
     @staticmethod
     def verify_reboot_not_performed(wait=90):
-
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"

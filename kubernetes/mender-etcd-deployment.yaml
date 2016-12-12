@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-etcd
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-etcd
+    spec:
+      containers:
+      - args:
+        - -data-dir=/data
+        - -name=mender-etcd
+        image: microbox/etcd:latest
+        name: mender-etcd
+        resources: {}
+     # restartPolicy: Always
+status: {}

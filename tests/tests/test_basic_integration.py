@@ -55,7 +55,8 @@ class TestBasicIntegration(object):
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
         Helpers.verify_reboot_not_performed()
-        Helpers.verify_installed_imageid(expected_image_id)
+        assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+
 
     def test_update_image_failed(self, install_image="broken_update.ext4", name=None):
         """

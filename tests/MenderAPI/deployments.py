@@ -31,11 +31,11 @@ class Deployments(object):
         self.deployments_base_path = "https://%s/api/integrations/%s/deployments/" % (gateway, api_version)
 
     def upload_image(self, name, filename, description=""):
-        image_path_url = self.deployments_base_path + "images"
+        image_path_url = self.deployments_base_path + "artifacts"
 
         r = requests.post(image_path_url, verify=False, files=(("name", (None, name)),
                           ("description", (None, description)),
-                          ("firmware", (filename, open(filename),
+                          ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
 
         logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))

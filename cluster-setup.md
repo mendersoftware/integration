@@ -18,8 +18,11 @@
     - [`minikube`](#minikube)
     - [Deploying mender to Kubernetes cluster](#deploying-mender-to-kubernetes-cluster)
         - [Converting `docker-compose.yaml` with `kompose`](#converting-docker-composeyaml-with-kompose)
-        - [Deploying Mender](#deploying-mender)
+            - [Defining services](#defining-services)
         - [Publishing Mender services](#publishing-mender-services)
+        - [Deploying Mender](#deploying-mender)
+        - [Files](#files)
+- [Followups & issues](#followups--issues)
 
 <!-- markdown-toc end -->
 
@@ -850,7 +853,7 @@ Now, direct your browser to `https://192.168.42.173:30961`.
 
 All deployment and service definitions are found in `kubernetes` directory.
 
-# Followups
+# Followups & issues
 
 - deployments service DB name is `mongo-deployments`, other services use
   `mender-mongo-<service-name>` pattern

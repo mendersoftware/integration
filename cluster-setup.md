@@ -693,6 +693,16 @@ for service in mongo-deployments mongo-mender-inventory mongo-mender-device-auth
 done
 ```
 
+NOTE: services: `mongo-mender-inventory`, `mongo-mender-device-auth`,
+`mongo-mender-useradm` will be generated with an incorrect selector that needs
+to be updated manually. The incorrect selector is
+`service=mongo-mender-inventory` and should be changed to
+`service=mender-mongo-inventory` (similarly for `device-auth` and `useradm`
+definitions).
+
+NOTE: `mender-api-gateway` needs to be modified by adding `spec.type=NodePort`
+in `mender-api-gateway-service.yaml`.
+
 ### Publishing Mender services
 
 Create services:

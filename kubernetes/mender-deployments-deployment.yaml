@@ -19,7 +19,7 @@ spec:
         - name: AWS_SECRET_ACCESS_KEY
           value: minio123
         - name: AWS_URI
-          value: http://s3.docker.mender.io:9000
+          value: http://minio:9000
         image: mendersoftware/deployments:latest
         name: mender-deployments
         resources: {}

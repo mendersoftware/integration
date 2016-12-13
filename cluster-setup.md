@@ -31,6 +31,10 @@
 This guide details installation of Mender backend using a two clustering setups:
 Docker Swarm and Kubernetes.
 
+**NOTE**: the setup described here is for demonstration purposes only with the main
+goal of giving the readers a head start if they want to explore possibilities of
+deploying Mender to a cluster.
+
 # Docker Swarm
 
 Required components:
@@ -265,7 +269,7 @@ respective services had to be altered.
 
 * Minio storage
 
-NOTE: minio is expected to be found under `s3.docker.mender.io` alias, however
+**NOTE**: minio is expected to be found under `s3.docker.mender.io` alias, however
 Docker does not allow names to include other characters than [a-zA-Z0-9]. Hence,
 the services is named `minio` instead. Configuration of deployments service
 needs to be updated accordingly.
@@ -352,7 +356,7 @@ docker service create --with-registry-auth \
  mendersoftware/deviceadm:latest
 ```
 
-NOTE: device admission expects its mongo instance to be named
+**NOTE**: device admission expects its mongo instance to be named
 `mongo-device-adm`.
 
 ```
@@ -366,10 +370,10 @@ mongo:latest
 
 * Deployments service
 
-NOTE: we're directing deployments service to use `minio` instead of
+**NOTE**: we're directing deployments service to use `minio` instead of
 `s3.docker.mender.io`.
 
-NOTE2: mongo instance is named `mongo-deployments`.
+**NOTE2**: mongo instance is named `mongo-deployments`.
 
 ```
 docker service create --with-registry-auth \
@@ -693,14 +697,14 @@ for service in mongo-deployments mongo-mender-inventory mongo-mender-device-auth
 done
 ```
 
-NOTE: services: `mongo-mender-inventory`, `mongo-mender-device-auth`,
+**NOTE**: services: `mongo-mender-inventory`, `mongo-mender-device-auth`,
 `mongo-mender-useradm` will be generated with an incorrect selector that needs
 to be updated manually. The incorrect selector is
 `service=mongo-mender-inventory` and should be changed to
 `service=mender-mongo-inventory` (similarly for `device-auth` and `useradm`
 definitions).
 
-NOTE: `mender-api-gateway` needs to be modified by adding `spec.type=NodePort`
+**NOTE**: `mender-api-gateway` needs to be modified by adding `spec.type=NodePort`
 in `mender-api-gateway-service.yaml`.
 
 ### Publishing Mender services
@@ -831,7 +835,7 @@ user@localhost# minikube service mender-api-gateway
 Opening kubernetes service default/mender-api-gateway in default browser...
 ```
 
-NOTE: due to API gateway redirect, the browser will be first directed to the
+**NOTE**: due to API gateway redirect, the browser will be first directed to the
 correct address and then redirected to port 8080 which may or may not work on a
 particular setup. To workaround this problem first inspect details of
 `mender-api-gateway`:

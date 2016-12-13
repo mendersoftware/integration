@@ -6,6 +6,7 @@ metadata:
     service: mender-api-gateway
   name: mender-api-gateway
 spec:
+  type: NodePort
   ports:
   - name: "8080"
     port: 8080

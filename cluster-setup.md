@@ -891,3 +891,8 @@ All deployment and service definitions are found in `kubernetes` directory.
   
 - API gateway automatically redirects to port 8080, this is not desired as the
   service may be exposed on a different port
+
+- services `mender-deployments`, `mender-useradm`, `mender-device-auth`,
+  `mender-device-adm`, `mender-inventory` make use of `iron/base`, that in
+  turned is based on Alpine Linux 3.3, this version is known to cause issues
+  with Kubernets DNS name resolution

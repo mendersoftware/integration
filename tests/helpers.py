@@ -138,11 +138,11 @@ class Helpers:
             with settings(warn_only=True):
                 try:
                     assert not exists(tfile)
-                    # required for SSH connection issues
-                    time.sleep(30)
+                    time.sleep(30)  # required for SSH connection issues
                     return
 
-                except BaseException:
+                except Exception, BaseException:
+                    time.sleep(15)  # wait even more before retrying
                     continue
 
         if time.time() > timeout:

@@ -28,7 +28,7 @@ class TestFailures(object):
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_id_already_installed(self, install_image=conftest.get_valid_image(), name="duplicate_id"):
-        "Uploading an image with an incorrect yocto_id set results in failure and rollback."
+        """Uploading an image with an incorrect yocto_id set results in failure and rollback."""
 
         if not env.host_string:
             execute(self.test_update_image_id_already_installed,
@@ -51,7 +51,7 @@ class TestFailures(object):
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_large_update_image(self):
-        "Installing an image larger than the passive/active parition size should result in a failure."
+        """Installing an image larger than the passive/active parition size should result in a failure."""
         if not env.host_string:
             execute(self.test_large_update_image, hosts=conftest.get_mender_clients())
             return

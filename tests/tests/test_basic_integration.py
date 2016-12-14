@@ -92,7 +92,7 @@ class TestBasicIntegration(object):
 
     @slow
     def test_double_update(self):
-        "Upload a device with two consecutive upgrade images"
+        """Upload a device with two consecutive upgrade images"""
 
         if not env.host_string:
             execute(self.test_double_update,
@@ -105,7 +105,7 @@ class TestBasicIntegration(object):
 
     @slow
     def test_failed_updated_and_valid_update(self):
-        "Upload a device with a broken image, followed by a valid image"
+        """Upload a device with a broken image, followed by a valid image"""
 
         if not env.host_string:
             execute(self.test_failed_updated_and_valid_update,

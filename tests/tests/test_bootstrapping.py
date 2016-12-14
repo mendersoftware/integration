@@ -28,7 +28,7 @@ class TestBootstrapping(object):
                               reason="need --runslow option to run")
 
     def test_bootstrap(self):
-        "Simply make sure we are able to bootstrap a device"
+        """Simply make sure we are able to bootstrap a device"""
         if not env.host_string:
             execute(self.test_bootstrap, hosts=conftest.get_mender_clients())
             return
@@ -47,13 +47,10 @@ class TestBootstrapping(object):
         for device in adm.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
-        # device contains authtoken
-        time.sleep(60)
-        assert exists("/data/mender/authtoken")
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_reject_bootstrap(self):
-        "Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"
+        """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
         if not env.host_string:
             execute(self.test_reject_bootstrap, hosts=conftest.get_mender_clients())
             return

@@ -12,6 +12,7 @@ if [[ $INSIDE_DOCKER -eq 1 ]]; then
     find . -iname '*.pyc' -delete || true
     echo "${DOCKER_GATEWAY}" "mender-artifact-storage.s3.docker.mender.io" | tee -a /etc/hosts >/dev/null
 else
+    while [ ! $(docker ps | grep mender-client-qemu | wc -l) -eq 1 ]; do echo "Mender docker container not running.." && sleep 5; done
     CLIENT_IP_PORT=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps | grep "mender-client-qemu" | awk '{ print $1 }')):8822
     GATEWAY_IP_PORT=${GATEWAY_IP_PORT:-"127.0.0.1:8080"}
 fi

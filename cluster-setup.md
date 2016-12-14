@@ -870,7 +870,7 @@ All deployment and service definitions are found in `kubernetes` directory.
 # Followups & issues
 
 - deployments service DB name is `mongo-deployments`, other services use
-  `mender-mongo-<service-name>` pattern
+  `mender-mongo-<service-name>` pattern - needs verification
   
 - device admission serice DB name is `mongo-device-adm` (same issue as above)
 

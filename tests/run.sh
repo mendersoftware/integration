@@ -12,13 +12,17 @@ if [[ $INSIDE_DOCKER -eq 1 ]]; then
     find . -iname '*.pyc' -delete || true
     echo "${DOCKER_GATEWAY}" "mender-artifact-storage.s3.docker.mender.io" | tee -a /etc/hosts >/dev/null
 else
-    # allows you to override the client ip when not using docker
-    CLIENT_IP_PORT=${CLIENT_IP_PORT:-"127.0.0.1:8822"}
+    CLIENT_IP_PORT=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps | grep "mender-client-qemu" | awk '{ print $1 }')):8822
     GATEWAY_IP_PORT=${GATEWAY_IP_PORT:-"127.0.0.1:8080"}
 fi
 
 if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
+fi
+
+if [[ ! -f artifacts ]]; then
+    curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/artifacts" -o artifacts
+    chmod +x artifacts
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] || [[ "$INSIDE_DOCKER" -eq 1 ]] ; then
@@ -31,8 +35,8 @@ if [[ ! -f core-image-full-cmdline-vexpress-qemu-broken-network.ext4 ]]; then
     e2rm core-image-full-cmdline-vexpress-qemu-broken-network.ext4:/lib/systemd/systemd-networkd
 fi
 
-if [[ ! -f broken_image.dat ]]; then
-    dd if=/dev/zero of=broken_image.dat bs=10M count=0 seek=1
+if [[ ! -f broken_update.ext4 ]]; then
+    dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 fi
 
 

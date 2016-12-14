@@ -19,30 +19,31 @@ import json
 from fabric.api import *
 import time
 import pytest
-import logging
+import mender
+from MenderAPI import gateway, api_version, logger
+
 
 class Deployments(object):
-    upload_path="https://%s/api/integrations/%s/deployments/images"
+    # track the last statistic for a deployment id
+    last_statistic = {}
 
-    @classmethod
+    def __init__(self):
+        self.deployments_base_path = "https://%s/api/integrations/%s/deployments/" % (gateway, api_version)
+
     def upload_image(self, name, filename, description=""):
-        path = self.upload_path % (env.mender_gateway, env.api_version)
+        image_path_url = self.deployments_base_path + "artifacts"
 
-        r = requests.post(path, verify=False, files=(("name", (None, name)),
+        r = requests.post(image_path_url, verify=False, files=(("name", (None, name)),
                           ("description", (None, description)),
-                          ("firmware", (filename, open(filename),
-                          "multipart/form-data"))))
+                          ("artifact", (filename, open(filename),
+                           "multipart/form-data"))))
 
-        logging.info("Received image upload status code [%d]", r.status_code)
-
+        logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]
 
-
-    @staticmethod
-    def trigger_deployment(name, artifact_name, devices):
-        trigger_deploy_path = "https://%s/api/integrations/%s/deployments/deployments" % (
-            env.mender_gateway, env.api_version)
+    def trigger_deployment(self, name, artifact_name, devices):
+        deployments_path_url = self.deployments_base_path + "deployments"
 
         trigger_data = {"name": name,
                         "artifact_name": artifact_name,
@@ -50,28 +51,28 @@ class Deployments(object):
 
         headers = {'Content-Type': 'application/json'}
 
-        r = requests.post(trigger_deploy_path, headers=headers,
+        r = requests.post(deployments_path_url, headers=headers,
                           data=json.dumps(trigger_data), verify=False)
-        print trigger_deploy_path, json.dumps(trigger_data)
+
+        logger.debug("triggering deployment with: " + json.dumps(trigger_data))
         assert r.status_code == requests.status_codes.codes.created
 
         deployment_id = str(r.headers['Location'].split("/")[-1])
-        logging.info("Deployment id is: " + deployment_id)
+        logger.info("Deployment id is: " + deployment_id)
 
         return deployment_id
 
-    @staticmethod
-    def get_logs(device, deployment_id, expected_status=200):
-        get_logs_url = "https://%s/api/integrations/%s/deployments/deployments/%s/devices/%s/log" % (env.mender_gateway, env.api_version, deployment_id, device)
-        r = requests.get(get_logs_url, verify=False)
+    def get_logs(self, device, deployment_id, expected_status=200):
+        deployments_logs_url = self.deployments_base_path + "deployments/%s/devices/%s/log" % (deployment_id, device)
+        r = requests.get(deployments_logs_url, verify=False)
         assert r.status_code == expected_status
 
-        logging.info("Logs contain " + str(r.text))
+        logger.info("Logs contain " + str(r.text))
         return r.text
 
-    @staticmethod
-    def get_statistics(deployment_id):
-        r = requests.get("https://%s/api/integrations/%s/deployments/deployments/%s/statistics" % (env.mender_gateway, env.api_version, deployment_id), verify=False)
+    def get_statistics(self, deployment_id):
+        deployments_statistics_url = self.deployments_base_path + "deployments/%s/statistics" % (deployment_id)
+        r = requests.get(deployments_statistics_url, verify=False)
         assert r.status_code == requests.status_codes.codes.ok
 
         try:
@@ -79,18 +80,21 @@ class Deployments(object):
         except Exception, e:
             assert e is None
 
-        logging.info("Statistics contain: " + str(r.text))
+        if not self.last_statistic.setdefault(deployment_id, []) or \
+            self.last_statistic[deployment_id][-1] != str(r.text):
+                self.last_statistic[deployment_id].append(str(r.text))
+                logger.info("Statistics contains new entry: " + str(r.text))
+
         return json.loads(r.text)
 
-    @staticmethod
-    def check_expected_status(deployment_id, expected_status, expected_count, max_wait=120, polling_frequency=0.2):
+    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=120, polling_frequency=0.2):
         timeout = time.time() + max_wait
         seen = set()
 
         while time.time() <= timeout:
             time.sleep(polling_frequency)
 
-            data = Deployments.get_statistics(deployment_id)
+            data = self.get_statistics(deployment_id)
             seen.add(str(data))
 
             if data[expected_status] != expected_count:

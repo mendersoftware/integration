@@ -16,11 +16,10 @@
 from fabric.api import *
 import pytest
 import time
-from deployments import Deployments
-from admission import Admission
 from common import *
 from helpers import Helpers
-from base_update import base_update_proceduce
+from MenderAPI import adm, deploy, image, logger
+from common_update import common_update_proceduce
 
 
 @pytest.mark.usefixtures("ssh_is_opened")
@@ -29,45 +28,42 @@ class TestBootstrapping(object):
                               reason="need --runslow option to run")
 
     def test_bootstrap(self):
-        "Simply make sure we are able to bootstrap a device"
+        """Simply make sure we are able to bootstrap a device"""
         if not env.host_string:
             execute(self.test_bootstrap, hosts=conftest.get_mender_clients())
             return
 
-        Admission.check_expected_status("pending", len(conftest.get_mender_clients()))
+        adm.check_expected_status("pending", len(conftest.get_mender_clients()))
 
         # iterate over devices and accept them
-        for d in Admission.get_devices():
-            Admission.set_device_status(d["id"], "accepted")
+        for d in adm.get_devices():
+            adm.set_device_status(d["id"], "accepted")
             logging.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
-        Admission.check_expected_status("accepted", len(conftest.get_mender_clients()))
+        adm.check_expected_status("accepted", len(conftest.get_mender_clients()))
 
         # print all device ids
-        for device in Admission.get_devices_status("accepted"):
+        for device in adm.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
-        # device contains authtoken
-        time.sleep(60)
-        assert exists("/data/mender/authtoken")
 
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_reject_bootstrap(self):
-        "Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"
+        """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
         if not env.host_string:
             execute(self.test_reject_bootstrap, hosts=conftest.get_mender_clients())
             return
 
         # iterate over devices and reject them
-        for device in Admission.get_devices():
-            Admission.set_device_status(device["id"], "rejected")
+        for device in adm.get_devices():
+            adm.set_device_status(device["id"], "rejected")
             logging.info("Rejecting DeviceID: %s" % device["id"])
 
-        Admission.check_expected_status("rejected", len(conftest.get_mender_clients()))
+        adm.check_expected_status("rejected", len(conftest.get_mender_clients()))
 
         try:
-            deployment_id, _ = base_update_proceduce(install_image=conftest.get_valid_image(), name=None)
+            deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image(), name=None)
         except AssertionError:
             logging.info("Failed to deploy upgrade to rejected device.")
             Helpers.verify_reboot_not_performed()

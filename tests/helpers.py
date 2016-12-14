@@ -30,14 +30,13 @@ logger = logging.getLogger()
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
     artifact_prefix = "artifact_name"
-    artifact_regex_match = "%s=.*$" % (artifact_prefix)
+
+
 
     @classmethod
     def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "e2tail %s:%s | grep -m 1 -E -o '%s'" % (filename,
-                                                           self.artifact_info_file,
-                                                           slef.artifacti_regex_match)
+            cmd = "e2tail %s:%s | sed -n 's/^%s=//p'" % (filename, abself.artifact_info_file)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output
@@ -48,13 +47,11 @@ class Helpers:
         except Exception, e:
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
-
     @classmethod
     def yocto_id_installed_on_machine(self):
-        cmd = "cat %s | grep -m 1 -E -o '%s'" % (self.artifact_info_file, self.artifact_regex_match)
-        output = run(cmd)
-        return output.strip()
-
+        cmd = "cat %s | sed -n 's/^%s=//p'" % (self.artifact_info_file, self.artifact_prefix)
+        output = run(cmd).strip()
+        return output
 
     @classmethod
     def artifact_id_randomize(self, install_image, device_type="vexpress-qemu", specific_image_id=None):
@@ -100,11 +97,6 @@ class Helpers:
             passive = run(cmd)
         return passive.strip()
 
-    @classmethod
-    def verify_installed_imageid(self, imageid):
-        cmd = "grep '%s' %s" % (imageid, self.artifact_info_file)
-        run(cmd)
-
     @staticmethod
     # simulate broken internet by drop packets to gateway and fakes3 server
     def gateway_connectivity(accessible):
@@ -126,7 +118,7 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*5):
+    def verify_reboot_performed(max_wait=60*10):
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
         try:
@@ -134,7 +126,7 @@ class Helpers:
                 run(cmd)
         except BaseException:
             logging.critical("Failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(120)
+            time.sleep(max_wait)
             return
 
         timeout = time.time() + max_wait
@@ -158,7 +150,6 @@ class Helpers:
 
     @staticmethod
     def verify_reboot_not_performed(wait=90):
-
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"

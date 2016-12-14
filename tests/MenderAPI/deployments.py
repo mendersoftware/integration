@@ -19,7 +19,6 @@ import json
 from fabric.api import *
 import time
 import pytest
-import mender
 from MenderAPI import gateway, api_version, logger
 
 

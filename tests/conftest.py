@@ -68,6 +68,7 @@ def pytest_configure(config):
 
     env.connection_attempts = 50
     env.eagerly_disconnect = True
+    env.banner_timeout = 60
 
 
 def get_mender_clients():

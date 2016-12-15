@@ -21,7 +21,7 @@ from helpers import Helpers
 from common_update import common_update_proceduce
 from MenderAPI import adm, deploy, image
 
-@pytest.mark.usefixtures("bootstrapped_successfully")
+@pytest.mark.usefixtures("bootstrapped_successfully", "ssh_is_opened")
 class TestBasicIntegration(object):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")

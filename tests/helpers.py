@@ -132,7 +132,6 @@ class Helpers:
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            disconnect_all()
             time.sleep(15)
 
             with settings(warn_only=True):
@@ -142,13 +141,11 @@ class Helpers:
                         continue
                     else:
                         logging.info("temp. file no longer exists, device has rebooted.")
-
-                    time.sleep(30)  # required for SSH connection issues
                     return
 
                 except SystemExit:
                     logging.info("system exit was caught")
-                    time.sleep(15)  # wait even more before retrying
+                    time.sleep(30)  # wait even more before retrying
                     continue
 
         if time.time() > timeout:

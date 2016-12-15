@@ -143,16 +143,15 @@ class Helpers:
                         logging.info("temp. file no longer exists, device has rebooted.")
                     return
 
-                except SystemExit:
+                except BaseException:
                     logging.info("system exit was caught")
-                    time.sleep(30)  # wait even more before retrying
                     continue
 
         if time.time() > timeout:
             pytest.fail("Device never rebooted!")
 
     @staticmethod
-    def verify_reboot_not_performed(wait=90):
+    def verify_reboot_not_performed(wait=60):
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"

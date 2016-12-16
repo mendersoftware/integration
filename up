@@ -47,7 +47,10 @@ setuphosts() {
 
 rundocker() {
     # sudo -E docker-compose scale mender-client=3
-    sudo -E docker-compose up
+    sudo -E docker-compose \
+         -f docker-compose.yml \
+         -f docker-compose.client.yml \
+         up
 }
 
 showhelp() {

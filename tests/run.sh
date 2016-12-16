@@ -21,9 +21,9 @@ if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi
 
-if [[ ! -f artifacts ]]; then
-    curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/artifacts" -o artifacts
-    chmod +x artifacts
+if [[ ! -f mender-artifact ]]; then
+    curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/mender-artifact" -o mender-artifact
+    chmod +x mender-artifact
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] || [[ "$INSIDE_DOCKER" -eq 1 ]] ; then

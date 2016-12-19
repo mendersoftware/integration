@@ -50,24 +50,6 @@ services:
                 aliases:
                     - mongo-deployments
 
-
-    #
-    # mender-etcd
-    #
-    mender-etcd:
-        image: microbox/etcd:latest
-        #volumes:
-        #    - /var/etcd/:/data
-        #override command since the image entrypoint requires
-        #these two args
-        command:
-            - -data-dir=/data
-            - -name=mender-etcd
-        networks:
-            mender:
-                aliases:
-                    - etcd
-
     #
     # mender-gui
     #

@@ -132,24 +132,27 @@ class Helpers:
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            disconnect_all()
-            time.sleep(5)
+            time.sleep(15)
 
             with settings(warn_only=True):
                 try:
-                    assert not exists(tfile)
-                    time.sleep(30)  # required for SSH connection issues
+                    if exists(tfile):
+                        logging.debug("temp. file still exists, device hasn't rebooted.")
+                        continue
+                    else:
+                        logging.debug("temp. file no longer exists, device has rebooted.")
+                        time.sleep(5)
                     return
 
-                except Exception, BaseException:
-                    time.sleep(15)  # wait even more before retrying
+                except BaseException:
+                    logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
                     continue
 
         if time.time() > timeout:
             pytest.fail("Device never rebooted!")
 
     @staticmethod
-    def verify_reboot_not_performed(wait=90):
+    def verify_reboot_not_performed(wait=60):
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"

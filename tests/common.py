@@ -80,6 +80,7 @@ def bootstrapped_successfully_impl():
 
     logger.info("Successfully bootstrap all clients")
 
+
 def run_after_connect(cmd):
     return ssh_is_opened_impl(cmd)
 
@@ -98,7 +99,7 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             # no point in printing this with each test
             with quiet():
                 return run(cmd)
-        except:
+        except BaseException:
             time.sleep(1)
             count += 1
             continue

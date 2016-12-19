@@ -41,4 +41,6 @@ if [[ ! -f broken_update.ext4 ]]; then
 fi
 
 
-py.test -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
+
+py.test --maxfail=1 -s --tb=short --runfast --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
+py.test --maxfail=1 -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}

@@ -20,10 +20,12 @@ from common import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_proceduce
+from mendertesting import MenderTesting
 
 
+@MenderTesting.fast
 @pytest.mark.usefixtures("ssh_is_opened")
-class TestBootstrapping(object):
+class TestBootstrapping(MenderTesting):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")
 
@@ -47,7 +49,7 @@ class TestBootstrapping(object):
         for device in adm.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
-
+    @MenderTesting.slow
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_reject_bootstrap(self):
         """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
@@ -69,7 +71,6 @@ class TestBootstrapping(object):
             Helpers.verify_reboot_not_performed()
 
             # authtoken has been removed
-            time.sleep(60)
             assert not exists("/data/mender/authtoken")
 
         else:

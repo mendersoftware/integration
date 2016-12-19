@@ -35,6 +35,7 @@ def pytest_addoption(parser):
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
     parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
+    parser.addoption("--runfast", action="store_true", help="run fast tests")
 
 
 def pytest_configure(config):
@@ -66,7 +67,10 @@ def pytest_configure(config):
 
     env.user = "root"
 
-    env.connection_attempts = 20
+    env.connection_attempts = 50
+    env.eagerly_disconnect = True
+    env.banner_timeout = 60
+
 
 def get_mender_clients():
     return env.clients

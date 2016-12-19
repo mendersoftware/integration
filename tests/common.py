@@ -80,6 +80,7 @@ def bootstrapped_successfully_impl():
 
     logger.info("Successfully bootstrap all clients")
 
+
 def run_after_connect(cmd):
     return ssh_is_opened_impl(cmd)
 

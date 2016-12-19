@@ -20,13 +20,12 @@ from common import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_proceduce
+from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("ssh_is_opened")
-class TestFailures(object):
-    slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
-                              reason="need --runslow option to run")
+@pytest.mark.usefixtures("ssh_is_opened", "bootstrapped_successfully")
+class TestFailures(MenderTesting):
 
-    @pytest.mark.usefixtures("bootstrapped_successfully")
+    @MenderTesting.slow
     def test_update_image_id_already_installed(self, install_image=conftest.get_valid_image(), name="duplicate_id"):
         """Uploading an image with an incorrect yocto_id set results in failure and rollback."""
 
@@ -48,8 +47,7 @@ class TestFailures(object):
 
         deploy.check_expected_status(deployment_id, "already-installed", len(conftest.get_mender_clients()))
 
-
-    @pytest.mark.usefixtures("bootstrapped_successfully")
+    @MenderTesting.fast
     def test_large_update_image(self):
         """Installing an image larger than the passive/active parition size should result in a failure."""
         if not env.host_string:

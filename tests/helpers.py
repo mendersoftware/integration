@@ -137,14 +137,15 @@ class Helpers:
             with settings(warn_only=True):
                 try:
                     if exists(tfile):
-                        logging.info("temp. file still exists, device hasn't rebooted.")
+                        logging.debug("temp. file still exists, device hasn't rebooted.")
                         continue
                     else:
-                        logging.info("temp. file no longer exists, device has rebooted.")
+                        logging.debug("temp. file no longer exists, device has rebooted.")
+                        time.sleep(5)
                     return
 
                 except BaseException:
-                    logging.info("system exit was caught")
+                    logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
                     continue
 
         if time.time() > timeout:

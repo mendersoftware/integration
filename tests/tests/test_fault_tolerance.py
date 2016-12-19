@@ -20,12 +20,12 @@ from common import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_proceduce
+from mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("ssh_is_opened", "bootstrapped_successfully")
-class TestFaultTolerance(object):
-    slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
-                              reason="need --runslow option to run")
+class TestFaultTolerance(MenderTesting):
 
+    @MenderTesting.slow
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-vexpress-qemu-broken-network.ext4"):
         """
@@ -41,11 +41,10 @@ class TestFaultTolerance(object):
             return
 
         deployment_id, _ = common_update_proceduce(install_image, name=None)
-        Helpers.verify_reboot_performed()
-
-        Helpers.verify_reboot_performed()
+        Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
         deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
 
+    @MenderTesting.fast
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
         """
@@ -66,24 +65,25 @@ class TestFaultTolerance(object):
         active_part = Helpers.get_active_partition()
 
         for i in range(60):
-            time.sleep(1)
+            time.sleep(0.5)
             with quiet():
                 # make sure we are writing to the inactive partition
                 output = run("fuser -mv %s" % (inactive_part))
             if output.return_code == 0:
                 run("killall -s 9 mender")
                 with settings(warn_only=True):
-                    reboot(use_sudo=False)
-                run_after_connect("true")
+                    run("( sleep 3 ; reboot ) 2>/dev/null >/dev/null &")
                 break
 
+        logging.info("Waiting for system to finish reboot")
+        Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == active_part
         deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()
 
         assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
 
-    @slow
+    @MenderTesting.slow
     @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_deployed_during_network_outage(self, install_image=conftest.get_valid_image()):
         """

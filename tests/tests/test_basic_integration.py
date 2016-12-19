@@ -20,12 +20,12 @@ from common import *
 from helpers import Helpers
 from common_update import common_update_proceduce
 from MenderAPI import adm, deploy, image
+from mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("bootstrapped_successfully", "ssh_is_opened")
-class TestBasicIntegration(object):
-    slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
-                              reason="need --runslow option to run")
+class TestBasicIntegration(MenderTesting):
 
+    @MenderTesting.fast
     def test_update_image_successful(self, install_image=conftest.get_valid_image(), name=None, regnerate_image_id=True):
         """
             Perform a successful upgrade, and assert that deployment status/logs are correct.
@@ -58,6 +58,7 @@ class TestBasicIntegration(object):
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
 
 
+    @MenderTesting.fast
     def test_update_image_failed(self, install_image="broken_update.ext4", name=None):
         """
             Perform a upgrade using a broken image (random data)
@@ -90,7 +91,7 @@ class TestBasicIntegration(object):
         Helpers.verify_reboot_not_performed()
 
 
-    @slow
+    @MenderTesting.slow
     def test_double_update(self):
         """Upload a device with two consecutive upgrade images"""
 
@@ -103,7 +104,7 @@ class TestBasicIntegration(object):
         self.test_update_image_successful()
 
 
-    @slow
+    @MenderTesting.slow
     def test_failed_updated_and_valid_update(self):
         """Upload a device with a broken image, followed by a valid image"""
 
@@ -114,4 +115,3 @@ class TestBasicIntegration(object):
 
         self.test_update_image_failed()
         self.test_update_image_successful()
-        Helpers.verify_reboot_not_performed()

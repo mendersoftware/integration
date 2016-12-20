@@ -85,6 +85,10 @@ services:
             - mender-deployments
             - mender-gui
             - mender-useradm
+        #mount production SSL cert/key from selected location
+        #volumes:
+        #    - /path/to/ssl/cert:/var/www/mendersoftware/cert/cert.pem
+        #    - /path/to/ssl/key:/var/www/mendersoftware/cert/key.pem
 
     #
     # mender-device-auth

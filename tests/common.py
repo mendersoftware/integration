@@ -18,10 +18,10 @@ import time
 import pytest
 import conftest
 import logging
-from admission import Admission
+from MenderAPI import adm, deploy, image
 
 logger = logging.getLogger()
-
+logger.setLevel(logging.DEBUG)
 
 def put(file, local_path=".", remote_path="."):
     (scp, host, port) = scp_prep_args()
@@ -71,14 +71,15 @@ def bootstrapped_successfully():
 
 @parallel
 def bootstrapped_successfully_impl():
-    if len(Admission.get_devices_status("accepted")) == len(conftest.get_mender_clients()):
+    if len(adm.get_devices_status("accepted")) == len(conftest.get_mender_clients()):
         return
 
     # iterate over devices and accept them
-    for d in Admission.get_devices():
-        Admission.set_device_status(d["id"], "accepted")
+    for d in adm.get_devices():
+        adm.set_device_status(d["id"], "accepted")
 
     logger.info("Successfully bootstrap all clients")
+
 
 def run_after_connect(cmd):
     return ssh_is_opened_impl(cmd)
@@ -98,7 +99,7 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             # no point in printing this with each test
             with quiet():
                 return run(cmd)
-        except:
+        except BaseException:
             time.sleep(1)
             count += 1
             continue

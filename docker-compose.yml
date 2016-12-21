@@ -3,24 +3,24 @@ services:
 
 
     #
-    # fake-s3
+    # minio
     #
-
-    fake-s3:
-        image: lphoward/fake-s3
+    minio:
+        image: minio/minio:RELEASE.2016-12-13T17-19-42Z
         ports:
-            - "4569:4569"
-        volumes:
-             - ./fakes3-entry.sh:/fakes3-entry.sh
-        entrypoint: /fakes3-entry.sh
+            - "9000:9000"
         networks:
             mender:
                 aliases:
-                     # mender-artifact-storage.localhost must be mapped to 127.0.0.1
-                     # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
+                    # mender-artifact-storage.localhost must be mapped to 127.0.0.1
+                    # running the 'up' script (found in this dir.) will add the required entry to /etc/hosts
                     - mender-artifact-storage.localhost
                     - mender-artifact-storage.s3.docker.mender.io
                     - s3.docker.mender.io
+        environment:
+            MINIO_ACCESS_KEY: minio
+            MINIO_SECRET_KEY: minio123
+        command: server /export
     #
     # mender-deployments
     #
@@ -38,9 +38,9 @@ services:
         #
         # The default docker-compose setup uses a fakes3 server, specified by the AWS_URI env. variable.
         environment:
-             AWS_ACCESS_KEY_ID: abc
-             AWS_SECRET_ACCESS_KEY: 123
-             AWS_URI: http://s3.docker.mender.io:4569
+             AWS_ACCESS_KEY_ID: minio
+             AWS_SECRET_ACCESS_KEY: minio123
+             AWS_URI: http://s3.docker.mender.io:9000
         depends_on:
             - mender-mongo-deployments
 
@@ -50,24 +50,6 @@ services:
             mender:
                 aliases:
                     - mongo-deployments
-
-
-    #
-    # mender-etcd
-    #
-    mender-etcd:
-        image: microbox/etcd:latest
-        #volumes:
-        #    - /var/etcd/:/data
-        #override command since the image entrypoint requires
-        #these two args
-        command:
-            - -data-dir=/data
-            - -name=mender-etcd
-        networks:
-            mender:
-                aliases:
-                    - etcd
 
     #
     # mender-gui
@@ -102,6 +84,7 @@ services:
             - mender-device-adm
             - mender-deployments
             - mender-gui
+            - mender-useradm
 
     #
     # mender-device-auth
@@ -162,6 +145,26 @@ services:
             mender:
                 aliases:
                     - mongo-inventory
+
+    #
+    # mender-useradm
+    #
+    mender-useradm:
+        image: mendersoftware/useradm:latest
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo-useradm
+
+    mender-mongo-useradm:
+        image: mongo:latest
+        networks:
+            mender:
+                aliases:
+                    - mongo-useradm
 
     #
     # mender-client

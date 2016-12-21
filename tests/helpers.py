@@ -27,12 +27,16 @@ from fabric.contrib.files import exists
 
 logger = logging.getLogger()
 
-class Helpers(object):
+class Helpers:
+    artifact_info_file = "/etc/mender/artifact_info"
+    artifact_prefix = "artifact_name"
 
-    @staticmethod
-    def yocto_id_from_ext4(filename):
+
+
+    @classmethod
+    def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "e2tail %s:/etc/mender/build_mender | grep -m 1 -E -o 'core-image-full-cmdline-.*'" % (filename)
+            cmd = "e2tail %s:%s | sed -n 's/^%s=//p'" % (filename, abself.artifact_info_file)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output
@@ -43,37 +47,27 @@ class Helpers(object):
         except Exception, e:
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
+    @classmethod
+    def yocto_id_installed_on_machine(self):
+        cmd = "cat %s | sed -n 's/^%s=//p'" % (self.artifact_info_file, self.artifact_prefix)
+        output = run(cmd).strip()
+        return output
 
-    @staticmethod
-    def yocto_id_installed_on_machine():
-        cmd = "cat /etc/mender/build_mender | grep -m 1 -E -o 'core-image-full-cmdline-.*'"
-        output = run(cmd)
-        return output.strip()
-
-
-    @staticmethod
-    def yocto_id_randomize(install_image, device_type="vexpress-qemu", specific_image_id=None):
+    @classmethod
+    def artifact_id_randomize(self, install_image, device_type="vexpress-qemu", specific_image_id=None):
 
         if specific_image_id:
             imageid = specific_image_id
         else:
-            imageid = "core-image-full-cmdline-%s" % str(random.randint(0,99999999))
+            imageid = "mender-%s" % str(random.randint(0,99999999))
 
-        config_file = r"""------------------------
-Mender device manifest:|
-------------------------
-DISTRO = poky
-DATETIME = 99990905092231
-PN = core-image-full-cmdline
-IMAGE_ID = %s
-DEVICE_TYPE = %s
-------------------------""" % (imageid, device_type)
+        config_file = r"""%s=%s""" % (self.artifact_prefix, imageid)
         tfile = tempfile.NamedTemporaryFile(delete=False)
         tfile.write(config_file)
         tfile.close()
 
         try:
-            cmd = "e2cp %s %s:/etc/mender/build_mender" % (tfile.name, install_image)
+            cmd = "e2cp %s %s:%s" % (tfile.name, install_image, self.artifact_info_file)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
 
@@ -104,11 +98,6 @@ DEVICE_TYPE = %s
         return passive.strip()
 
     @staticmethod
-    def verify_installed_imageid(imageid):
-        cmd = "grep '%s' /etc/mender/build_mender" % (imageid)
-        run(cmd)
-
-    @staticmethod
     # simulate broken internet by drop packets to gateway and fakes3 server
     def gateway_connectivity(accessible):
         try:
@@ -129,7 +118,7 @@ DEVICE_TYPE = %s
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*5):
+    def verify_reboot_performed(max_wait=60*10):
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
         try:
@@ -137,31 +126,33 @@ DEVICE_TYPE = %s
                 run(cmd)
         except BaseException:
             logging.critical("Failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(120)
+            time.sleep(max_wait)
             return
 
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            disconnect_all()
-            time.sleep(5)
+            time.sleep(15)
 
             with settings(warn_only=True):
                 try:
-                    assert not exists(tfile)
-                    # required for SSH connection issues
-                    time.sleep(30)
+                    if exists(tfile):
+                        logging.debug("temp. file still exists, device hasn't rebooted.")
+                        continue
+                    else:
+                        logging.debug("temp. file no longer exists, device has rebooted.")
+                        time.sleep(5)
                     return
 
                 except BaseException:
+                    logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
                     continue
 
         if time.time() > timeout:
             pytest.fail("Device never rebooted!")
 
     @staticmethod
-    def verify_reboot_not_performed(wait=90):
-
+    def verify_reboot_not_performed(wait=60):
         with quiet():
             try:
                 cmd = "cat /proc/uptime | awk {'print $1'}"

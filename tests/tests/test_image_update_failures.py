@@ -16,63 +16,44 @@
 from fabric.api import *
 import pytest
 import time
-from deployments import Deployments
-from admission import Admission
 from common import *
 from helpers import Helpers
-from base_update import base_update_proceduce
+from MenderAPI import adm, deploy, image, logger
+from common_update import common_update_proceduce
+from mendertesting import MenderTesting
 
+@pytest.mark.usefixtures("ssh_is_opened", "bootstrapped_successfully")
+class TestFailures(MenderTesting):
 
-@pytest.mark.usefixtures("ssh_is_opened")
-class TestFailures(object):
-    slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
-                              reason="need --runslow option to run")
-
-    @pytest.mark.skip("MEN-632 - no rollback is performed")
-    @pytest.mark.usefixtures("bootstrapped_successfully")
-    def test_update_image_id_incorrect(self, install_image=conftest.get_valid_image(), name="incorrect_id"):
-        "Uploading an image with an incorrect yocto_id set results in failure and rollback."
+    @MenderTesting.slow
+    def test_update_image_id_already_installed(self, install_image=conftest.get_valid_image(), name="duplicate_id"):
+        """Uploading an image with an incorrect yocto_id set results in failure and rollback."""
 
         if not env.host_string:
-            execute(self.test_update_image_id_incorrect,
+            execute(self.test_update_image_id_already_installed,
                     hosts=conftest.get_mender_clients(),
-                    install_image=install_image,
-                    name=name)
+                    install_image=install_image)
             return
 
-        upload_request_url = Deployments.post_image_meta(name=name,
-                                                         checksum="ccab1cd123",
-                                                         device_type="vexpress-qemu",
-                                                         yocto_id="invalid")
-
-        Deployments.upload_image(upload_request_url, install_image)
-        devices_accepted_id = [d["id"] for d in Admission.get_devices_status("accepted")]
-
-        inital_partition = Helpers.get_active_partition()
         previous_inactive_part = Helpers.get_passive_partition()
 
-        deployment_id = Deployments.trigger_deployment(name="New invalid update - non matching yocotoid",
+        deployment_id, expected_image_id = common_update_proceduce(install_image, name, True)
+        Helpers.verify_reboot_performed()
+
+        devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
+        deployment_id = deploy.trigger_deployment(name="New valid update",
                                                        artifact_name=name,
                                                        devices=devices_accepted_id)
 
-        Helpers.verify_reboot_performed()
-        assert Helpers.get_active_partition() == previous_inactive_part
+        deploy.check_expected_status(deployment_id, "already-installed", len(conftest.get_mender_clients()))
 
-        Helpers.verify_reboot_performed()
-        assert Helpers.get_active_partition() == inital_partition
-
-        Deployments.check_expected_status(deployment_id, "failure", len(devices_accepted))
-
-        for d in Admission.get_devices():
-            Deployments.get_logs(d["id"], deployment_id, expected_status=200)
-
-    @pytest.mark.usefixtures("bootstrapped_successfully")
+    @MenderTesting.fast
     def test_large_update_image(self):
-        "Installing an image larger than the passive/active parition size should result in a failure."
+        """Installing an image larger than the passive/active parition size should result in a failure."""
         if not env.host_string:
             execute(self.test_large_update_image, hosts=conftest.get_mender_clients())
             return
 
-        deployment_id, _ = base_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
-        Deployments.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        deployment_id, _ = common_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
+        deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
         Helpers.verify_reboot_not_performed()

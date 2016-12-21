@@ -1,0 +1,6 @@
+version: '2'
+services:
+
+    mender-api-gateway:
+        ports:
+            - "8090:80"

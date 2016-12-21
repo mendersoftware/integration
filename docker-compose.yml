@@ -150,7 +150,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:latest
+        image: mendersoftware/useradm:stable
         extends:
             file: common.yml
             service: mender-base

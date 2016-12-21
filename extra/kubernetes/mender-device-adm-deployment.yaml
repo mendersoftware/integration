@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-device-adm
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-device-adm
+    spec:
+      containers:
+      - image: mendersoftware/deviceadm:latest
+        name: mender-device-adm
+        resources: {}
+     # restartPolicy: OnFailure
+status: {}

@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-client
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-client
+    spec:
+      containers:
+      - image: mendersoftware/mender-client-qemu:latest
+        name: mender-client
+        resources: {}
+     # restartPolicy: Always
+status: {}

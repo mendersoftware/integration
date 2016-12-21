@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-inventory
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-inventory
+    spec:
+      containers:
+      - image: mendersoftware/inventory:latest
+        name: mender-inventory
+        resources: {}
+     # restartPolicy: OnFailure
+status: {}

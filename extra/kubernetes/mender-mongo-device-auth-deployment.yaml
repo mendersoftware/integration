@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-mongo-device-auth
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-mongo-device-auth
+    spec:
+      containers:
+      - image: mongo:latest
+        name: mender-mongo-device-auth
+        resources: {}
+     # restartPolicy: Always
+status: {}

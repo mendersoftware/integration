@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-mongo-useradm
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-mongo-useradm
+    spec:
+      containers:
+      - image: mongo:latest
+        name: mender-mongo-useradm
+        resources: {}
+     # restartPolicy: Always
+status: {}

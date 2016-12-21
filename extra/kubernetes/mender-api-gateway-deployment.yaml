@@ -1,0 +1,26 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: mender-api-gateway
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        service: mender-api-gateway
+    spec:
+      containers:
+      - env:
+        - name: MAPPED_PORT
+          value: "8080"
+        image: mendersoftware/api-gateway:latest
+        name: mender-api-gateway
+        ports:
+        - containerPort: 443
+          protocol: TCP
+        resources: {}
+     # restartPolicy: Always
+status: {}

@@ -1,0 +1,7 @@
+version: '2'
+services:
+
+    mender-api-gateway:
+        volumes:
+            - ./ssl/mender-api-gateway/cert.pem:/var/www/mendersoftware/cert/cert.pem
+            - ./ssl/mender-api-gateway/key.pem:/var/www/mendersoftware/cert/key.pem

@@ -24,7 +24,7 @@ from MenderAPI import gateway, api_version, logger
 
 class Admission():
     def __init__(self):
-        self.admission_base_path = "https://%s/api/integrations/%s/admission/" % (gateway, api_version)
+        self.admission_base_path = "https://%s/api/management/%s/admission/" % (gateway, api_version)
 
     def get_devices(self):
         return self.get_devices_status()

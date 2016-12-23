@@ -27,7 +27,7 @@ class Deployments(object):
     last_statistic = {}
 
     def __init__(self):
-        self.deployments_base_path = "https://%s/api/integrations/%s/deployments/" % (gateway, api_version)
+        self.deployments_base_path = "https://%s/api/management/%s/deployments/" % (gateway, api_version)
 
     def upload_image(self, name, filename, description=""):
         image_path_url = self.deployments_base_path + "artifacts"

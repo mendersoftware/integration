@@ -110,6 +110,7 @@ services:
             - mender-deployments
             - mender-gui
             - mender-useradm
+            - mender-inventory
         #mount production SSL cert/key from selected location
         #volumes:
         #    - /path/to/ssl/cert:/var/www/mendersoftware/cert/cert.pem

@@ -2,7 +2,7 @@ import os
 import logging
 
 api_version = os.getenv("MENDER_API_VERSION", "0.1")
-gateway = os.getenv("MENDER_API_GATEWAY", "127.0.0.1:8080")
+gateway = os.getenv("GATEWAY_IP_PORT", "127.0.0.1:8080")
 
 logger = logging.getLogger()
 

@@ -19,6 +19,8 @@ else
     GATEWAY_IP_PORT=${GATEWAY_IP_PORT:-"127.0.0.1:8080"}
 fi
 
+export GATEWAY_IP_PORT
+
 if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi

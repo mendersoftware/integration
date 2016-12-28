@@ -1,6 +1,8 @@
 #!/bin/bash
 set -x -e
 
+# Tip: use "docker run -v $BUILDDIR:/mnt/build" to get build artifacts from
+# local hard drive.
 
 if [[ $INSIDE_DOCKER -eq 1 ]]; then
     # will assume if running inside docker, you are testing with the docker-compose setup
@@ -22,13 +24,22 @@ if [[ ! -f large_image.dat ]]; then
 fi
 
 if [[ ! -f mender-artifact ]]; then
-    curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/mender-artifact" -o mender-artifact
+    if [ -f /mnt/build/tmp/sysroots/x86_64-linux/usr/bin/mender-artifact ]; then
+        cp /mnt/build/tmp/sysroots/x86_64-linux/usr/bin/mender-artifact .
+    else
+        curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/mender-artifact" -o mender-artifact
+    fi
     chmod +x mender-artifact
 fi
 
-if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] || [[ "$INSIDE_DOCKER" -eq 1 ]] ; then
-    echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was found in the current working directory, will download the latest !!"
-    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp/core-image-full-cmdline-vexpress-qemu.ext4"
+if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] ; then
+    if [ -f /mnt/build/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 ]; then
+        echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was not found in the current working directory, grabbing from mounted volume !!"
+        cp /mnt/build/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .
+    else
+        echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was not found in the current working directory, will download the latest !!"
+        curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp/core-image-full-cmdline-vexpress-qemu.ext4"
+    fi
 fi
 
 if [[ ! -f core-image-full-cmdline-vexpress-qemu-broken-network.ext4 ]]; then

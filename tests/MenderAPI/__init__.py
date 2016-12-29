@@ -16,6 +16,16 @@ import admission
 import deployments
 import artifacts
 
-adm = admission.Admission()
-deploy = deployments.Deployments()
+import requests
+
+r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (gateway, api_version), verify=False)
+assert r.status_code == 200
+
+s = requests.Session()
+s.headers.update({"Authorization": 'Bearer ' + str(r.text)})
+s.verify = False
+
+logging.info("Using Authorization headers: " + str(r.text))
+adm = admission.Admission(s)
+deploy = deployments.Deployments(s)
 image = artifacts.Artifacts()

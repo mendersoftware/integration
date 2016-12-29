@@ -25,14 +25,16 @@ from MenderAPI import gateway, api_version, logger
 class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
+    s = None
 
-    def __init__(self):
+    def __init__(self, s):
         self.deployments_base_path = "https://%s/api/management/%s/deployments/" % (gateway, api_version)
+        self.s = s
 
-    def upload_image(self, name, filename, description=""):
+    def upload_image(self, name, filename, description="abc"):
         image_path_url = self.deployments_base_path + "artifacts"
 
-        r = requests.post(image_path_url, verify=False, files=(("name", (None, name)),
+        r = self.s.post(image_path_url, files=(("name", (None, name)),
                           ("description", (None, description)),
                           ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
@@ -50,7 +52,7 @@ class Deployments(object):
 
         headers = {'Content-Type': 'application/json'}
 
-        r = requests.post(deployments_path_url, headers=headers,
+        r = self.s.post(deployments_path_url, headers=headers,
                           data=json.dumps(trigger_data), verify=False)
 
         logger.debug("triggering deployment with: " + json.dumps(trigger_data))
@@ -63,7 +65,7 @@ class Deployments(object):
 
     def get_logs(self, device, deployment_id, expected_status=200):
         deployments_logs_url = self.deployments_base_path + "deployments/%s/devices/%s/log" % (deployment_id, device)
-        r = requests.get(deployments_logs_url, verify=False)
+        r = self.s.get(deployments_logs_url)
         assert r.status_code == expected_status
 
         logger.info("Logs contain " + str(r.text))
@@ -71,7 +73,7 @@ class Deployments(object):
 
     def get_statistics(self, deployment_id):
         deployments_statistics_url = self.deployments_base_path + "deployments/%s/statistics" % (deployment_id)
-        r = requests.get(deployments_statistics_url, verify=False)
+        r = self.s.get(deployments_statistics_url)
         assert r.status_code == requests.status_codes.codes.ok
 
         try:

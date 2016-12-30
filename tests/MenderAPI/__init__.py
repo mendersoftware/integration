@@ -15,6 +15,7 @@ logging.info("Setting gateway as: " + gateway)
 import admission
 import deployments
 import artifacts
+import inventory
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -46,3 +47,4 @@ auth_header = get_auth_token()
 adm = admission.Admission(auth_header)
 deploy = deployments.Deployments(auth_header)
 image = artifacts.Artifacts()
+inv = inventory.Inventory(auth_header)

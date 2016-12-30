@@ -1,0 +1,9 @@
+version: '2'
+services:
+
+    #
+    # mender-client: For local development using BUILDDIR for images.
+    #
+    mender-client:
+        volumes:
+            - ${BUILDDIR}:/mnt/build:ro

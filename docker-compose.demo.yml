@@ -18,3 +18,9 @@ services:
         volumes:
             - ./ssl/storage-proxy/s3.docker.mender.io.crt:/var/www/storage-proxy/cert/cert.crt
             - ./ssl/storage-proxy/s3.docker.mender.io.key:/var/www/storage-proxy/cert/key.pem
+
+    mender-deployments:
+        volumes:
+            - ./ssl/storage-proxy/s3.docker.mender.io.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+        environment:
+            - STORAGE_BACKEND_CERT=/etc/ssl/certs/s3.docker.mender.io.crt

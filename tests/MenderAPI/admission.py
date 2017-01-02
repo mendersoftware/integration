@@ -61,7 +61,7 @@ class Admission():
 
     def set_device_status(self, device_id, status):
         headers={"Content-Type": "application/json"}
-        headers.append(self.auth_header)
+        headers.update(self.auth_header)
 
         r = requests.put(self.admission_base_path + "devices/%s/status" % device_id,
                          verify=False,

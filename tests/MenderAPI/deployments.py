@@ -27,14 +27,14 @@ class Deployments(object):
     last_statistic = {}
     s = None
 
-    def __init__(self, s):
+    def __init__(self, auth_header):
         self.deployments_base_path = "https://%s/api/management/%s/deployments/" % (gateway, api_version)
-        self.s = s
+        self.auth_header = auth_header
 
     def upload_image(self, name, filename, description="abc"):
         image_path_url = self.deployments_base_path + "artifacts"
 
-        r = self.s.post(image_path_url, files=(("name", (None, name)),
+        r = requests.post(image_path_url, verify=False, headers=self.auth_header, files=(("name", (None, name)),
                           ("description", (None, description)),
                           ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
@@ -51,8 +51,9 @@ class Deployments(object):
                         "devices": devices}
 
         headers = {'Content-Type': 'application/json'}
+        headers.update(self.auth_header)
 
-        r = self.s.post(deployments_path_url, headers=headers,
+        r = requests.post(deployments_path_url, headers=headers,
                           data=json.dumps(trigger_data), verify=False)
 
         logger.debug("triggering deployment with: " + json.dumps(trigger_data))
@@ -65,7 +66,7 @@ class Deployments(object):
 
     def get_logs(self, device, deployment_id, expected_status=200):
         deployments_logs_url = self.deployments_base_path + "deployments/%s/devices/%s/log" % (deployment_id, device)
-        r = self.s.get(deployments_logs_url)
+        r = requests.get(deployments_logs_url, headers=self.auth_header, verify=False)
         assert r.status_code == expected_status
 
         logger.info("Logs contain " + str(r.text))
@@ -73,7 +74,7 @@ class Deployments(object):
 
     def get_statistics(self, deployment_id):
         deployments_statistics_url = self.deployments_base_path + "deployments/%s/statistics" % (deployment_id)
-        r = self.s.get(deployments_statistics_url)
+        r = requests.get(deployments_statistics_url, headers=self.auth_header, verify=False)
         assert r.status_code == requests.status_codes.codes.ok
 
         try:

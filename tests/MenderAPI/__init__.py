@@ -17,15 +17,32 @@ import deployments
 import artifacts
 
 import requests
+from requests.auth import HTTPBasicAuth
 
-r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (gateway, api_version), verify=False)
-assert r.status_code == 200
+def get_auth_token():
+    email = "admin@admin.net"
+    password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
-s = requests.Session()
-s.headers.update({"Authorization": 'Bearer ' + str(r.text)})
-s.verify = False
+    def get_header(t):
+        return {"Authorization": "Bearer " + str(t)}
 
-logging.info("Using Authorization headers: " + str(r.text))
-adm = admission.Admission(s)
-deploy = deployments.Deployments(s)
+    r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (gateway, api_version), verify=False)
+    auth_header = get_header(r.text)
+
+    if r.status_code == 200:
+        auth_header = get_header(r.text)
+        r = requests.post("https://%s/api/management/%s/useradm/users/initial" % (gateway, api_version), headers=auth_header, verify=False, json={"email": email, "password": password})
+        assert r.status_code == 201
+
+    r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (gateway, api_version), verify=False, auth=HTTPBasicAuth(email, password))
+    assert r.status_code == 200
+
+    auth_header = get_header(r.text)
+    logging.info("Using Authorization headers: " + str(r.text))
+    return auth_header
+
+auth_header = get_auth_token()
+
+adm = admission.Admission(auth_header)
+deploy = deployments.Deployments(auth_header)
 image = artifacts.Artifacts()

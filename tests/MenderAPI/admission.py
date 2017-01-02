@@ -24,8 +24,8 @@ from MenderAPI import gateway, api_version, logger
 
 class Admission():
     s = None
-    def __init__(self, s):
-        self.s = s
+    def __init__(self, auth_header):
+        self.auth_header = auth_header
         self.admission_base_path = "https://%s/api/management/%s/admission/" % (gateway, api_version)
 
     def get_devices(self):
@@ -39,7 +39,7 @@ class Admission():
         for c, i in enumerate(range(tries)):
             time.sleep(c*5+5)
             try:
-                devices = self.s.get(device_status_path)
+                devices = requests.get(device_status_path, headers=self.auth_header, verify=False)
                 assert devices.status_code == requests.status_codes.codes.ok
                 assert len(devices.json()) > 0
                 break
@@ -60,8 +60,12 @@ class Admission():
 
 
     def set_device_status(self, device_id, status):
-        r = self.s.put(self.admission_base_path + "devices/%s/status" % device_id,
-                         headers={'Content-Type': 'application/json'},
+        headers={"Content-Type": "application/json"}
+        headers.append(self.auth_header)
+
+        r = requests.put(self.admission_base_path + "devices/%s/status" % device_id,
+                         verify=False,
+                         headers=headers,
                          data=json.dumps({"status": status}))
         assert r.status_code == requests.status_codes.codes.ok
 

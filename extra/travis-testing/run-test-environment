@@ -1,0 +1,73 @@
+#!/bin/bash
+
+set -e
+
+SELFDIR=$(readlink -f $(dirname $0))
+
+usage() {
+    echo "usage: $(basename $0) <test type> <path-to-integration> <path-to-acceptance-compose-file>]"
+    echo
+    echo "  <test type> can be either 'acceptance' or 'integration'"
+    echo
+    echo "  "Acceptance testing sets up tests environment and runs tests defined"
+    echo "   in directory:"
+    echo "      $SELFDIR"
+    echo
+    echo "  "Integration testing sets up integration environment and runs tests"
+    echo
+    echo
+    echo "Environment variables:"
+    echo "   NO_CLEANUP - test environment will not be removed if NO_CLEANUP"
+    echo "                is not empty"
+
+}
+
+[ "$1" = "-h" -o "$1" = "--help" ] && {
+    usage
+    exit 0
+}
+
+TEST_TYPE=$1
+
+[ -z "$TEST_TYPE" -o ! -d "$TEST_TYPE" -a "$TEST_TYPE" != "acceptance" -a "$TEST_TYPE" != "integration" ] && {
+    echo "set the test type to either acceptance or integration"
+    usage
+    exit 1
+}
+shift
+
+INTEGRATION_PATH=$1
+
+[ -z "$INTEGRATION_PATH" -o ! -d "$INTEGRATION_PATH" ] && {
+    echo "integration repository path not provided"
+    usage
+    exit 1
+}
+shift
+
+TESTS_COMPOSE_PATH=$1
+
+[ -z "$TESTS_COMPOSE_PATH" -o ! -f "$TESTS_COMPOSE_PATH" ] && {
+    echo "tests compose path not provided"
+    usage
+    exit 1
+}
+shift
+
+
+[ "$TEST_TYPE" == "acceptance" ] && {
+    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
+    TEST_SERVICE=${TEST_SERVICE:-"acceptance"}
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH run ${TEST_SERVICE} || failed=1
+}
+
+[ "$TEST_TYPE" == "integration" ] && {
+    ( cd "$INTEGRATION_PATH" ; bash up -n )
+    COMPOSE_CMD="docker-compose -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.client.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH up -d || failed=1
+}
+
+# fold everything
+[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
+
+exit $failed

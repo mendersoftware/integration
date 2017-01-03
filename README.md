@@ -144,6 +144,22 @@ changes take effect. Note that the correct API Gateway config is probably
 already set up for an existing service; if not, refer the previous section on
 how to modify it.
 
+### Enabling non-SSL access
+
+For debugging purposes, it may be useful to temporarily enable non-SSL access.
+API Gateway configuration enables plain HTTP on port 80, however the port is not
+published by default, thus it remains inaccessible from the outside. For
+convenience, an overlay compose file is provided that publishes port 80 of API
+Gateway to port 8090 on current host. The overlay file has to be explicitly
+included when setting up the environment like this:
+
+```
+docker-compose ... -f docker-compose.no-ssl.yml ...
+```
+
+**NOTE** make sure that plain HTTP port is not published in production
+deployment.
+
 ## Demo client
 
 The setup comes with a predefined client service (mender-client) that runs a

@@ -4,6 +4,14 @@ set -x -e
 # Tip: use "docker run -v $BUILDDIR:/mnt/build" to get build artifacts from
 # local hard drive.
 
+run_slow_tests () {
+    py.test --maxfail=1 -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
+}
+
+run_fast_tests() {
+    py.test --maxfail=1 -s --tb=short --runfast --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
+}
+
 if [[ $INSIDE_DOCKER -eq 1 ]]; then
     # will assume if running inside docker, you are testing with the docker-compose setup
     DOCKER_GATEWAY=$(/sbin/ip route|awk '/default/ { print $3 }')
@@ -53,7 +61,15 @@ if [[ ! -f broken_update.ext4 ]]; then
     dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 fi
 
+if [[ $1 = "slow" ]]; then
+    run_slow_tests
+    exit
+fi
 
+if [[ $1 = "fast" ]]; then
+    run_fast_tests
+    exit
+fi
 
-py.test --maxfail=1 -s --tb=short --runfast --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_bootstrapping.py,test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
-py.test --maxfail=1 -s --tb=short --runslow --gateway "${GATEWAY_IP_PORT}" --clients "${CLIENT_IP_PORT}" --verbose --junitxml=results.xml tests/{test_basic_integration.py,test_image_update_failures.py,test_fault_tolerance.py}
+run_slow_tests
+run_fast_tests

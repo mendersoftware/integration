@@ -26,6 +26,19 @@ To start using Mender, we recommend that you begin with the Getting started
 section in [the Mender documentation](https://docs.mender.io/).
 
 
+## Services
+
+The integration environment brings together the following services:
+
+- [Mender Device Admission Service](https://github.com/mendersoftware/deviceadm)
+- [Mender Device Authentication Service](https://github.com/mendersoftware/deviceauth)
+- [Mender Deployment Service](https://github.com/mendersoftware/deployments)
+- [Mender Device Inventory Service](https://github.com/mendersoftware/inventory)
+- [Mender User Administration Service](https://github.com/mendersoftware/useradm)
+- [Mender API Gateway](https://github.com/mendersoftware/mender-api-gateway-docker)
+- [Minio](https://www.minio.io/) object storage
+- Storage service proxy based on [OpenResty](https://openresty.org/en/)
+
 ## Integrating a new service
 
 Adding a new service to the setup involves:

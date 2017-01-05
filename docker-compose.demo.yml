@@ -1,6 +1,14 @@
 version: '2'
 services:
 
+    mender-useradm:
+        volumes:
+            - ./keys/useradm-private.pem:/etc/useradm/rsa/private.pem
+
+    mender-device-auth:
+        volumes:
+          - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
+
     mender-api-gateway:
         volumes:
             - ./ssl/mender-api-gateway/cert.pem:/var/www/mendersoftware/cert/cert.pem

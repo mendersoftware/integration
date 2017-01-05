@@ -19,7 +19,7 @@ import time
 from common import *
 from common_setup import *
 from helpers import Helpers
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from MenderAPI import adm, deploy, image
 from mendertesting import MenderTesting
 
@@ -44,7 +44,7 @@ class TestBasicIntegration(MenderTesting):
             return
 
         previous_inactive_part = Helpers.get_passive_partition()
-        deployment_id, expected_image_id = common_update_proceduce(install_image,
+        deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                    name,
                                                                    regnerate_image_id)
 
@@ -78,7 +78,7 @@ class TestBasicIntegration(MenderTesting):
 
 
         previous_active_part = Helpers.get_active_partition()
-        deployment_id, _ = common_update_proceduce(install_image, name, broken_image=True)
+        deployment_id, _ = common_update_procedure(install_image, name, broken_image=True)
 
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_active_part

@@ -19,7 +19,7 @@ from MenderAPI import adm, deploy, image, logger
 import random
 
 
-def common_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
+def common_update_procedure(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))

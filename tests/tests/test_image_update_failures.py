@@ -20,7 +20,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
@@ -38,7 +38,7 @@ class TestFailures(MenderTesting):
 
         previous_inactive_part = Helpers.get_passive_partition()
 
-        deployment_id, expected_image_id = common_update_proceduce(install_image, name, True)
+        deployment_id, expected_image_id = common_update_procedure(install_image, name, True)
         Helpers.verify_reboot_performed()
 
         devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
@@ -55,6 +55,6 @@ class TestFailures(MenderTesting):
             execute(self.test_large_update_image, hosts=get_mender_clients())
             return
 
-        deployment_id, _ = common_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
+        deployment_id, _ = common_update_procedure(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
         deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
         Helpers.verify_reboot_not_performed()

@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -e
+
+SELFDIR=$(readlink -f $(dirname $0))
+
+DIR=$1
+
+[ -n "$DIR" ] || {
+    echo "usage: $(basename $0) <path-to-docker-dir> [<extra-files-to-copy>...]"
+    exit 1
+}
+shift
+
+if [ $# -ne 0 ]; then
+    echo "-- copying extra files"
+    for f in $*; do
+        cp -v $f $SELFDIR
+    done
+fi
+
+(cd $DIR && docker build -t testing .)

@@ -20,3 +20,4 @@ script:
 
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then
         ( cd tests && bash run.sh slow );
+      fi

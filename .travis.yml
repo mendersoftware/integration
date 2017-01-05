@@ -1,0 +1,22 @@
+# Forces travis to use VM insted container, required to be able to build containers.
+sudo: required
+
+services:
+    - docker
+
+env:
+    matrix:
+        - JOB_TYPE=compile_and_integration_tests_fast
+        - JOB_TYPE=compile_and_integration_tests_slow
+
+before_install:
+    - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
+    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests
+
+script:
+    - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then
+        ( cd tests && bash run.sh fast );
+      fi
+
+    - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then
+        ( cd tests && bash run.sh slow );

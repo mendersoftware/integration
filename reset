@@ -2,7 +2,7 @@
 # Removes any state from server to start clean.
 # Mostly for demo purposes, be careful in production!
 
-docker-compose ps | grep -q Up
+sudo docker-compose ps | grep -q Up
 
 if [ $? -eq 0 ]; then
   echo "Please stop the server before resetting."

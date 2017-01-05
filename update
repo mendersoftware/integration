@@ -2,7 +2,7 @@
 # Updates to latest upstream docker compose and images.
 # Mostly for demo purposes, be careful in production!
 
-docker-compose ps | grep -q Up
+sudo docker-compose ps | grep -q Up
 
 if [ $? -eq 0 ]; then
   echo "Please stop the server before updating."
@@ -10,4 +10,4 @@ if [ $? -eq 0 ]; then
 fi
 
 git pull
-docker-compose pull
+sudo docker-compose pull

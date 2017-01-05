@@ -7,7 +7,7 @@ services:
 
     mender-device-auth:
         volumes:
-          - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
+            - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
 
     mender-api-gateway:
         volumes:

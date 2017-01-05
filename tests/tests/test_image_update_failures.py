@@ -17,12 +17,13 @@ from fabric.api import *
 import pytest
 import time
 from common import *
+from common_setup import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_proceduce
 from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("ssh_is_opened", "bootstrapped_successfully")
+@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFailures(MenderTesting):
 
     @MenderTesting.slow
@@ -31,7 +32,7 @@ class TestFailures(MenderTesting):
 
         if not env.host_string:
             execute(self.test_update_image_id_already_installed,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image)
             return
 
@@ -45,15 +46,15 @@ class TestFailures(MenderTesting):
                                                        artifact_name=name,
                                                        devices=devices_accepted_id)
 
-        deploy.check_expected_status(deployment_id, "already-installed", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "already-installed", len(get_mender_clients()))
 
     @MenderTesting.fast
     def test_large_update_image(self):
         """Installing an image larger than the passive/active parition size should result in a failure."""
         if not env.host_string:
-            execute(self.test_large_update_image, hosts=conftest.get_mender_clients())
+            execute(self.test_large_update_image, hosts=get_mender_clients())
             return
 
         deployment_id, _ = common_update_proceduce(install_image="large_image.dat", name=None, regnerate_image_id=False, broken_image=True)
-        deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
         Helpers.verify_reboot_not_performed()

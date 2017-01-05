@@ -20,32 +20,40 @@ import json
 from fabric.api import *
 import time
 import pytest
-from MenderAPI import gateway, api_version, logger
+
+from common import *
+from common_docker import *
+from MenderAPI import api_version, logger
 
 class Admission():
-    s = None
-    def __init__(self, auth_header):
-        self.auth_header = auth_header
-        self.admission_base_path = "https://%s/api/management/%s/admission/" % (gateway, api_version)
+    auth = None
 
-    def get_devices(self):
-        return self.get_devices_status()
+    def __init__(self, auth):
+        self.auth = auth
+
+    def get_admission_base_path(self):
+        return "https://%s/api/management/%s/admission/" % (get_mender_gateway(), api_version)
+
+    def get_devices(self, expected_devices=1):
+        return self.get_devices_status(expected_devices=expected_devices)
 
     # return devices with the specified status
-    def get_devices_status(self, status=None):
-        device_status_path = self.admission_base_path + "devices"
+    def get_devices_status(self, status=None, expected_devices=1):
+        device_status_path = self.get_admission_base_path() + "devices"
 
         tries = 5
         for c, i in enumerate(range(tries)):
             time.sleep(c*5+5)
             try:
-                devices = requests.get(device_status_path, headers=self.auth_header, verify=False)
+                devices = requests.get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
                 assert devices.status_code == requests.status_codes.codes.ok
-                assert len(devices.json()) > 0
+                assert len(devices.json()) == expected_devices
                 break
             except AssertionError:
                 logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
                 continue
+        else:
+            assert False, "Not able to get devices"
 
         devices_json = devices.json()
 
@@ -61,9 +69,9 @@ class Admission():
 
     def set_device_status(self, device_id, status):
         headers={"Content-Type": "application/json"}
-        headers.update(self.auth_header)
+        headers.update(self.auth.get_auth_token())
 
-        r = requests.put(self.admission_base_path + "devices/%s/status" % device_id,
+        r = requests.put(self.get_admission_base_path() + "devices/%s/status" % device_id,
                          verify=False,
                          headers=headers,
                          data=json.dumps({"status": status}))
@@ -92,3 +100,14 @@ class Admission():
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))
+
+
+    def accept_devices(self, expected_devices):
+        if len(self.get_devices_status("accepted", expected_devices=expected_devices)) == len(get_mender_clients()):
+            return
+
+        # iterate over devices and accept them
+        for d in self.get_devices(expected_devices=expected_devices):
+            self.set_device_status(d["id"], "accepted")
+
+        logger.info("Successfully bootstrap all clients")

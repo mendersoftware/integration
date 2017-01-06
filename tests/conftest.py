@@ -32,6 +32,7 @@ def pytest_addoption(parser):
     parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
+    parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
 
 
 def pytest_configure(config):

@@ -27,8 +27,12 @@ COMPOSE_FILES = [
 ]
 
 def docker_compose_cmd(arg_list):
+    extra_files = pytest.config.getoption("--docker-compose-file")
+    if extra_files is None:
+        extra_files = []
+
     files_args = ""
-    for file in COMPOSE_FILES:
+    for file in COMPOSE_FILES + extra_files:
         files_args += " -f %s" % file
 
     subprocess.check_call("docker-compose %s %s" % (files_args, arg_list), shell=True)

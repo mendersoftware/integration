@@ -1,9 +1,6 @@
 #!/bin/bash
 set -x -e
 
-# Tip: use "docker run -v $BUILDDIR:/mnt/build" to get build artifacts from
-# local hard drive.
-
 run_slow_tests () {
     py.test --maxfail=1 -s --tb=short --runslow --verbose --junitxml=results.xml
 }

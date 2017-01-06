@@ -25,11 +25,11 @@ from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
 
-@MenderTesting.fast
 class TestBootstrapping(MenderTesting):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")
 
+    @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_bootstrap(self):
         """Simply make sure we are able to bootstrap a device"""

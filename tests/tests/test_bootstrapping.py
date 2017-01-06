@@ -17,25 +17,28 @@ from fabric.api import *
 import pytest
 import time
 from common import *
+from common_docker import *
+from common_setup import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, logger
+from MenderAPI import auth, adm, deploy, image, logger
 from common_update import common_update_proceduce
 from mendertesting import MenderTesting
 
 
 @MenderTesting.fast
-@pytest.mark.usefixtures("ssh_is_opened")
 class TestBootstrapping(MenderTesting):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")
 
+    @pytest.mark.usefixtures("standard_setup_one_client")
     def test_bootstrap(self):
         """Simply make sure we are able to bootstrap a device"""
-        if not env.host_string:
-            execute(self.test_bootstrap, hosts=conftest.get_mender_clients())
-            return
 
-        adm.check_expected_status("pending", len(conftest.get_mender_clients()))
+        execute(self.accept_devices, hosts=get_mender_clients())
+
+
+    def accept_devices(self):
+        adm.check_expected_status("pending", len(get_mender_clients()))
 
         # iterate over devices and accept them
         for d in adm.get_devices():
@@ -43,18 +46,18 @@ class TestBootstrapping(MenderTesting):
             logging.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
-        adm.check_expected_status("accepted", len(conftest.get_mender_clients()))
+        adm.check_expected_status("accepted", len(get_mender_clients()))
 
         # print all device ids
         for device in adm.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
-    @pytest.mark.usefixtures("bootstrapped_successfully")
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     def test_reject_bootstrap(self):
         """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
         if not env.host_string:
-            execute(self.test_reject_bootstrap, hosts=conftest.get_mender_clients())
+            execute(self.test_reject_bootstrap, hosts=get_mender_clients())
             return
 
         # iterate over devices and reject them
@@ -62,7 +65,7 @@ class TestBootstrapping(MenderTesting):
             adm.set_device_status(device["id"], "rejected")
             logging.info("Rejecting DeviceID: %s" % device["id"])
 
-        adm.check_expected_status("rejected", len(conftest.get_mender_clients()))
+        adm.check_expected_status("rejected", len(get_mender_clients()))
 
         try:
             deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image(), name=None)

@@ -16,9 +16,28 @@ from fabric.contrib.files import *
 from fabric.api import *
 import time
 import pytest
-import conftest
 import logging
-from MenderAPI import adm, deploy, image
+import requests
+from requests.auth import HTTPBasicAuth
+
+import conftest
+
+# This is used to remember which docker-compose setup we're currently running.
+# This is for optimization purposes to avoid respawning the docker-compose
+# environment if we don't have to.
+SETUP_TYPE = None
+
+ST_OneClient = 1
+ST_OneClientBootstrapped = 2
+ST_TwoClientsBootstrapped = 3
+
+def setup_type():
+    return SETUP_TYPE
+
+def set_setup_type(type):
+    global SETUP_TYPE
+    SETUP_TYPE = type
+
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -63,48 +82,5 @@ def ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-
-@pytest.fixture()
-def bootstrapped_successfully():
-    execute(bootstrapped_successfully_impl, hosts=conftest.get_mender_clients())
-
-
-@parallel
-def bootstrapped_successfully_impl():
-    if len(adm.get_devices_status("accepted")) == len(conftest.get_mender_clients()):
-        return
-
-    # iterate over devices and accept them
-    for d in adm.get_devices():
-        adm.set_device_status(d["id"], "accepted")
-
-    logger.info("Successfully bootstrap all clients")
-
-
 def run_after_connect(cmd):
     return ssh_is_opened_impl(cmd)
-
-
-@pytest.fixture(scope="function")
-def ssh_is_opened():
-    execute(ssh_is_opened_impl, hosts=conftest.get_mender_clients())
-
-
-@parallel
-def ssh_is_opened_impl(cmd="true", wait=60):
-    count = 0
-
-    while count < wait:
-        try:
-            # no point in printing this with each test
-            with quiet():
-                return run(cmd)
-        except BaseException:
-            time.sleep(1)
-            count += 1
-            continue
-        else:
-            break
-
-    if count >= 60:
-        logging.fail("Unable to connect to host: ", env.host_string)

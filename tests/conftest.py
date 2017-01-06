@@ -28,10 +28,6 @@ except:
     pass
 
 def pytest_addoption(parser):
-    parser.addoption("--clients", action="store",
-                     help="Comma-seperate mender hosts, example: 10.100.10.11:8822, 10.100.10.12:8822")
-    parser.addoption("--gateway", action="store", default="127.0.0.1:8080",
-                     help="Host of mender gateway")
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
     parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
@@ -39,8 +35,6 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    env.clients = [ip.strip() for ip in config.getoption("clients").split(",")]
-    env.mender_gateway = config.getoption("gateway")
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
 
@@ -72,8 +66,9 @@ def pytest_configure(config):
     env.banner_timeout = 60
 
 
-def get_mender_clients():
-    return env.clients
+def pytest_unconfigure():
+    from common_docker import stop_docker_compose
+    stop_docker_compose()
 
 
 def get_valid_image():

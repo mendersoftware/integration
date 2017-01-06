@@ -20,15 +20,19 @@ import json
 from fabric.api import *
 import time
 import pytest
-from MenderAPI import gateway, api_version, logger, admission
+from common_docker import *
+from MenderAPI import api_version, logger, admission
 
 class Inventory():
-    auth_header = None
-    def __init__(self, auth_header):
-        self.auth_header = auth_header
-        self.inv_base_path = "https://%s/api/management/%s/inventory/" % (gateway, api_version)
+    auth = None
+
+    def __init__(self, auth):
+        self.auth = auth
+
+    def get_inv_base_path(self):
+        return "https://%s/api/management/%s/inventory/" % (get_mender_gateway(), api_version)
 
     def get_devices(self):
-        devices = requests.get(self.inv_base_path + "devices", headers=self.auth_header, verify=False)
+        devices = requests.get(self.get_inv_base_path() + "devices", headers=self.auth.get_auth_token(), verify=False)
         assert devices.status_code == requests.status_codes.codes.ok
         return devices.json()

@@ -18,54 +18,74 @@ import json
 import pytest
 import time
 from common import *
+from common_setup import *
 from helpers import Helpers
-from common_update import common_update_proceduce
 from MenderAPI import adm, deploy, image, inv
 from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("bootstrapped_successfully", "ssh_is_opened")
+@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestInventory(MenderTesting):
 
     @MenderTesting.fast
     def test_inventory(self):
         """Test that device reports inventory after having bootstrapped."""
 
-        inv_json = inv.get_devices()
-        adm_json = adm.get_devices()
+        attempts = 3
 
-        adm_ids = [device['id'] for device in adm_json]
+        while True:
+            attempts = attempts - 1
+            try:
+                inv_json = inv.get_devices()
+                adm_json = adm.get_devices()
 
-        assert(len(inv_json) > 0)
+                adm_ids = [device['id'] for device in adm_json]
 
-        for device in inv_json:
-            # Check that admission and inventory agree.
-            assert(device['id'] in adm_ids)
+                assert(len(inv_json) > 0)
 
-            attrs = device['attributes']
+                for device in inv_json:
+                    try:
+                        # Check that admission and inventory agree.
+                        assert(device['id'] in adm_ids)
 
-            # Check individual attributes.
-            assert(json.loads('{"name": "ifaces", "value": "eth0"}') in attrs)
-            assert(json.loads('{"name": "hostname", "value": "vexpress-qemu"}') in attrs)
-            assert(json.loads('{"name": "device_type", "value": "vexpress-qemu"}') in attrs)
+                        attrs = device['attributes']
 
-            # Check that all known keys are present.
-            keys = [attr['name'] for attr in attrs]
-            expected_keys = [
-                "hostname",
-                "ifaces",
-                "cpu_count",
-                "time_local",
-                "cpu_model",
-                "mem_total",
-                "device_type",
-                "ipv4_eth0",
-                "cpu_online",
-                "time_unix",
-                "uptime",
-                "mac_eth0",
-                "client_version",
-                "mem_free",
-                "artifact_name",
-                "kernel"
-            ]
-            assert(sorted(keys) == sorted(expected_keys))
+                        # Check individual attributes.
+                        assert(json.loads('{"name": "ifaces", "value": "eth0"}') in attrs)
+                        assert(json.loads('{"name": "hostname", "value": "vexpress-qemu"}') in attrs)
+                        assert(json.loads('{"name": "device_type", "value": "vexpress-qemu"}') in attrs)
+
+                        # Check that all known keys are present.
+                        keys = [attr['name'] for attr in attrs]
+                        expected_keys = [
+                            "hostname",
+                            "ifaces",
+                            "cpu_count",
+                            "time_local",
+                            "cpu_model",
+                            "mem_total",
+                            "device_type",
+                            "ipv4_eth0",
+                            "cpu_online",
+                            "time_unix",
+                            "uptime",
+                            "mac_eth0",
+                            "client_version",
+                            "mem_free",
+                            "artifact_name",
+                            "kernel"
+                        ]
+                        assert(sorted(keys) == sorted(expected_keys))
+
+                    except:
+                        print("Exception caught, 'device' json: ", device)
+                        raise
+                break
+
+            except:
+                # This may pass only after the client has had some time to
+                # report.
+                if attempts > 0:
+                    time.sleep(5)
+                    continue
+                else:
+                    raise

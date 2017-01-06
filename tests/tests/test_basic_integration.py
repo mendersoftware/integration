@@ -17,12 +17,13 @@ from fabric.api import *
 import pytest
 import time
 from common import *
+from common_setup import *
 from helpers import Helpers
 from common_update import common_update_proceduce
 from MenderAPI import adm, deploy, image
 from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("bootstrapped_successfully", "ssh_is_opened")
+@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestBasicIntegration(MenderTesting):
 
     @MenderTesting.fast
@@ -36,7 +37,7 @@ class TestBasicIntegration(MenderTesting):
         """
         if not env.host_string:
             execute(self.test_update_image_successful,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image,
                     name=name,
                     regnerate_image_id=regnerate_image_id)
@@ -49,7 +50,7 @@ class TestBasicIntegration(MenderTesting):
 
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_inactive_part
-        deploy.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
 
         for d in adm.get_devices():
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
@@ -67,12 +68,12 @@ class TestBasicIntegration(MenderTesting):
         """
         if not env.host_string:
             execute(self.test_update_image_failed,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image,
                     name=name)
             return
 
-        devices_accepted = conftest.get_mender_clients()
+        devices_accepted = get_mender_clients()
         original_image_id = Helpers.yocto_id_installed_on_machine()
 
 
@@ -97,7 +98,7 @@ class TestBasicIntegration(MenderTesting):
 
         if not env.host_string:
             execute(self.test_double_update,
-                                    hosts=conftest.get_mender_clients())
+                                    hosts=get_mender_clients())
             return
 
         self.test_update_image_successful()
@@ -110,7 +111,7 @@ class TestBasicIntegration(MenderTesting):
 
         if not env.host_string:
             execute(self.test_failed_updated_and_valid_update,
-                    hosts=conftest.get_mender_clients())
+                    hosts=get_mender_clients())
             return
 
         self.test_update_image_failed()

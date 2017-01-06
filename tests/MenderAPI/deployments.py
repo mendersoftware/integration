@@ -19,22 +19,27 @@ import json
 from fabric.api import *
 import time
 import pytest
-from MenderAPI import gateway, api_version, logger
+
+from common import *
+from common_docker import *
+from MenderAPI import api_version, logger
 
 
 class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
-    s = None
+    auth = None
 
-    def __init__(self, auth_header):
-        self.deployments_base_path = "https://%s/api/management/%s/deployments/" % (gateway, api_version)
-        self.auth_header = auth_header
+    def __init__(self, auth):
+        self.auth = auth
+
+    def get_deployments_base_path(self):
+        return "https://%s/api/management/%s/deployments/" % (get_mender_gateway(), api_version)
 
     def upload_image(self, name, filename, description="abc"):
-        image_path_url = self.deployments_base_path + "artifacts"
+        image_path_url = self.get_deployments_base_path() + "artifacts"
 
-        r = requests.post(image_path_url, verify=False, headers=self.auth_header, files=(("name", (None, name)),
+        r = requests.post(image_path_url, verify=False, headers=self.auth.get_auth_token(), files=(("name", (None, name)),
                           ("description", (None, description)),
                           ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
@@ -44,14 +49,14 @@ class Deployments(object):
         return r.headers["location"]
 
     def trigger_deployment(self, name, artifact_name, devices):
-        deployments_path_url = self.deployments_base_path + "deployments"
+        deployments_path_url = self.get_deployments_base_path() + "deployments"
 
         trigger_data = {"name": name,
                         "artifact_name": artifact_name,
                         "devices": devices}
 
         headers = {'Content-Type': 'application/json'}
-        headers.update(self.auth_header)
+        headers.update(self.auth.get_auth_token())
 
         r = requests.post(deployments_path_url, headers=headers,
                           data=json.dumps(trigger_data), verify=False)
@@ -65,16 +70,16 @@ class Deployments(object):
         return deployment_id
 
     def get_logs(self, device, deployment_id, expected_status=200):
-        deployments_logs_url = self.deployments_base_path + "deployments/%s/devices/%s/log" % (deployment_id, device)
-        r = requests.get(deployments_logs_url, headers=self.auth_header, verify=False)
+        deployments_logs_url = self.get_deployments_base_path() + "deployments/%s/devices/%s/log" % (deployment_id, device)
+        r = requests.get(deployments_logs_url, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == expected_status
 
         logger.info("Logs contain " + str(r.text))
         return r.text
 
     def get_statistics(self, deployment_id):
-        deployments_statistics_url = self.deployments_base_path + "deployments/%s/statistics" % (deployment_id)
-        r = requests.get(deployments_statistics_url, headers=self.auth_header, verify=False)
+        deployments_statistics_url = self.get_deployments_base_path() + "deployments/%s/statistics" % (deployment_id)
+        r = requests.get(deployments_statistics_url, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
 
         try:

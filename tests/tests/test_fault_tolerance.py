@@ -17,16 +17,16 @@ from fabric.api import *
 import pytest
 import time
 from common import *
+from common_setup import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_proceduce
 from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("ssh_is_opened", "bootstrapped_successfully")
+@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFaultTolerance(MenderTesting):
 
     @MenderTesting.slow
-    @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-vexpress-qemu-broken-network.ext4"):
         """
             Install an image without systemd-networkd binary existing.
@@ -36,16 +36,15 @@ class TestFaultTolerance(MenderTesting):
         """
         if not env.host_string:
             execute(self.test_update_image_breaks_networking,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image)
             return
 
         deployment_id, _ = common_update_proceduce(install_image, name=None)
         Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
-        deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
         """
             Install an update, and reboot the system when we detect it's being copied over to the inactive parition.
@@ -54,7 +53,7 @@ class TestFaultTolerance(MenderTesting):
         """
         if not env.host_string:
             execute(self.test_update_image_recovery,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image)
             return
 
@@ -78,13 +77,12 @@ class TestFaultTolerance(MenderTesting):
         logging.info("Waiting for system to finish reboot")
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == active_part
-        deploy.check_expected_status(deployment_id, "failure", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
         Helpers.verify_reboot_not_performed()
 
         assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
 
     @MenderTesting.slow
-    @pytest.mark.usefixtures("bootstrapped_successfully")
     def test_deployed_during_network_outage(self, install_image=conftest.get_valid_image()):
         """
             Install a valid upgrade image while there is no network availability on the device
@@ -94,7 +92,7 @@ class TestFaultTolerance(MenderTesting):
         """
         if not env.host_string:
             execute(self.test_deployed_during_network_outage,
-                    hosts=conftest.get_mender_clients(),
+                    hosts=get_mender_clients(),
                     install_image=install_image)
             return
 
@@ -109,6 +107,6 @@ class TestFaultTolerance(MenderTesting):
 
         logging.info("Network stabilized")
         Helpers.verify_reboot_performed()
-        deploy.check_expected_status(deployment_id, "success", len(conftest.get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id

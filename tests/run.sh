@@ -1,14 +1,6 @@
 #!/bin/bash
 set -x -e
 
-run_slow_tests () {
-    py.test --maxfail=1 -s --tb=short --runslow --verbose --junitxml=results.xml
-}
-
-run_fast_tests() {
-    py.test --maxfail=1 -s --tb=short --runfast --verbose --junitxml=results.xml
-}
-
 if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi
@@ -41,15 +33,4 @@ if [[ ! -f broken_update.ext4 ]]; then
     dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 fi
 
-if [[ $1 = "slow" ]]; then
-    run_slow_tests
-    exit
-fi
-
-if [[ $1 = "fast" ]]; then
-    run_fast_tests
-    exit
-fi
-
-run_slow_tests
-run_fast_tests
+py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"

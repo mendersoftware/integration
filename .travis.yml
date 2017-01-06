@@ -15,9 +15,9 @@ before_install:
 
 script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then
-        ( cd tests && bash run.sh fast );
+        ( cd tests && bash run.sh --runfast );
       fi
 
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then
-        ( cd tests && bash run.sh slow );
+        ( cd tests && bash run.sh --runslow );
       fi

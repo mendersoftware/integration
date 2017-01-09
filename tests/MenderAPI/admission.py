@@ -41,7 +41,7 @@ class Admission():
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_admission_base_path() + "devices"
 
-        tries = 5
+        tries = 10
         for c, i in enumerate(range(tries)):
             time.sleep(c*5+5)
             try:

@@ -61,7 +61,7 @@ services:
         # Keys have to grant access to default bucket: mender-artifact-storage
         # Otherwhise provide config file though volume.
         #
-        # The default docker-compose setup uses a fakes3 server, specified by the AWS_URI env. variable.
+        # The default docker-compose setup uses a minio server, specified by the AWS_URI env variable.
         environment:
              AWS_ACCESS_KEY_ID: minio
              AWS_SECRET_ACCESS_KEY: minio123

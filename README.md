@@ -26,17 +26,6 @@ To start using Mender, we recommend that you begin with the Getting started
 section in [the Mender documentation](https://docs.mender.io/).
 
 
-## Services
-
-The integration environment brings together the following services:
-
-- [Mender Device Admission Service](https://github.com/mendersoftware/deviceadm)
-- [Mender Device Authentication Service](https://github.com/mendersoftware/deviceauth)
-- [Mender Deployment Service](https://github.com/mendersoftware/deployments)
-- [Mender Device Inventory Service](https://github.com/mendersoftware/inventory)
-- [Mender API Gateway](https://github.com/mendersoftware/mender-api-gateway-docker)
-- [fake-s3](https://github.com/lphoward/fake-s3)
-
 ## Integrating a new service
 
 Adding a new service to the setup involves:

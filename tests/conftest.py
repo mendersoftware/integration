@@ -16,6 +16,7 @@
 from fabric.api import *
 import logging
 import requests
+from common_docker import stop_docker_compose
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -33,7 +34,7 @@ def pytest_addoption(parser):
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
     parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
-
+    parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
 
 def pytest_configure(config):
     env.api_version = config.getoption("api")
@@ -67,9 +68,9 @@ def pytest_configure(config):
     env.banner_timeout = 60
 
 
-def pytest_unconfigure():
-    from common_docker import stop_docker_compose
-    stop_docker_compose()
+def pytest_unconfigure(config):
+    if not config.getoption("--no-teardown"):
+        stop_docker_compose()
 
 
 def get_valid_image():

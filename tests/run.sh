@@ -33,4 +33,9 @@ if [[ ! -f broken_update.ext4 ]]; then
     dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 fi
 
+if [ $# -eq 0 ]; then
+    py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
+    exit $?
+fi
+
 py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"

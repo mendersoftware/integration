@@ -98,7 +98,7 @@ class Helpers:
         return passive.strip()
 
     @staticmethod
-    # simulate broken internet by drop packets to gateway and fakes3 server
+    # simulate broken internet by drop packets to gateway and fileserver
     def gateway_connectivity(accessible):
         try:
             with settings(hide('everything'), warn_only=True):

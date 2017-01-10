@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+CERT_API_CN="docker.mender.io"
+CERT_STORAGE_CN="s3.docker.mender.io"
+CERT_VALID_DAYS="3650"
+
+command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
+
+KEYDIR=keys-generated-$(date +%Y-%m-%d-%H_%M_%S)
+
+mkdir $KEYDIR
+cd $KEYDIR
+
+
+# generate web certs and keys
+
+mkdir api-gateway storage-gateway
+
+cd api-gateway
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_API_CN
+cd ..
+
+cd storage-gateway
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_STORAGE_CN
+cd ..
+
+
+# generate keys for signing JSON Web Tokens
+
+for DIR in deviceauth useradm
+do
+  mkdir $DIR
+  cd $DIR
+  openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:3072
+  cd ..
+done
+
+echo "All keys and certificates generated in $KEYDIR"
+echo "Please include them in your docker compose and device builds."
+echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys"

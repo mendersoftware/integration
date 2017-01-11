@@ -59,3 +59,24 @@ def standard_setup_two_clients_bootstrapped():
     adm.accept_devices(2)
 
     set_setup_type(ST_TwoClientsBootstrapped)
+
+@pytest.fixture(scope="function")
+def standard_setup_one_client_bootstrapped_with_s3():
+    if setup_type() == ST_OneClientsBootstrapped_AWS_S3:
+        return
+
+    stop_docker_compose()
+
+    docker_compose_cmd("-f ../docker-compose.client.yml \
+                        -f ../docker-compose.storage.s3.yml \
+                        -f ../docker-compose.yml \
+                        -f ../extra/travis-testing/s3.yml up -d",
+                        use_common_files=False)
+
+    docker_compose_cmd("logs -f &")
+    ssh_is_opened()
+
+    auth.reset_auth_token()
+    adm.accept_devices(1)
+
+    set_setup_type(ST_OneClientsBootstrapped_AWS_S3)

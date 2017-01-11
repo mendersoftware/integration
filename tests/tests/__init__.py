@@ -1,0 +1,2 @@
+from test_basic_integration import TestBasicIntegration as TestBasicIntegration_Amazon_S3
+from mendertesting import MenderTesting

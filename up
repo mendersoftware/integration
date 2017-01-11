@@ -51,6 +51,7 @@ rundocker() {
          -f docker-compose.yml \
          -f docker-compose.client.yml \
          -f docker-compose.demo.yml \
+         -f docker-compose.storage.minio.yml \
          up
 }
 

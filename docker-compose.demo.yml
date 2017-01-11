@@ -24,3 +24,7 @@ services:
             - ./ssl/storage-proxy/s3.docker.mender.io.crt:/etc/ssl/certs/s3.docker.mender.io.crt
         environment:
             - STORAGE_BACKEND_CERT=/etc/ssl/certs/s3.docker.mender.io.crt
+
+    mender-gui:
+        environment:
+            - DEMO=1

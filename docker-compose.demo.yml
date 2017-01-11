@@ -7,9 +7,20 @@ services:
 
     mender-device-auth:
         volumes:
-          - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
+            - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
 
     mender-api-gateway:
         volumes:
             - ./ssl/mender-api-gateway/cert.pem:/var/www/mendersoftware/cert/cert.pem
             - ./ssl/mender-api-gateway/key.pem:/var/www/mendersoftware/cert/key.pem
+
+    storage-proxy:
+        volumes:
+            - ./ssl/storage-proxy/s3.docker.mender.io.crt:/var/www/storage-proxy/cert/cert.crt
+            - ./ssl/storage-proxy/s3.docker.mender.io.key:/var/www/storage-proxy/cert/key.pem
+
+    mender-deployments:
+        volumes:
+            - ./ssl/storage-proxy/s3.docker.mender.io.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+        environment:
+            - STORAGE_BACKEND_CERT=/etc/ssl/certs/s3.docker.mender.io.crt

@@ -26,6 +26,79 @@ To start using Mender, we recommend that you begin with the Getting started
 section in [the Mender documentation](https://docs.mender.io/).
 
 
+## Services
+
+The integration environment brings together the following services:
+
+- [Mender Device Admission Service](https://github.com/mendersoftware/deviceadm)
+- [Mender Device Authentication Service](https://github.com/mendersoftware/deviceauth)
+- [Mender Deployment Service](https://github.com/mendersoftware/deployments)
+- [Mender Device Inventory Service](https://github.com/mendersoftware/inventory)
+- [Mender User Administration Service](https://github.com/mendersoftware/useradm)
+- [Mender API Gateway](https://github.com/mendersoftware/mender-api-gateway-docker)
+- [Minio](https://www.minio.io/) object storage
+- Storage service proxy based on [OpenResty](https://openresty.org/en/)
+
+## How to use in production
+
+A provided `docker-compose.yml` file will provision the following set of
+services:
+
+```
+        |
+        |                                            +-------------------------+
+        |                                            |                         |
+        |                                       +--->|  Device Authentication  |
+        |                                       |    |  (mender-device-auth)   |
+        |                                       |    +-------------------------+
+        |        +-----------------------+      |    |                         |
+   port |        |                       |      +--->|  Device Admission       |
+   8080 | <----> |  API Gateway          |      |    |  (mender-device-adm)    |
+        |        |  (mender-api-gateway) |<-----+    +-------------------------+
+        |        +-----------------------+      |    |                         |
+        |                                       +--->|  Inventory              |
+        |                                       |    |  (mender-inventory)     |
+        |                                       |    +-------------------------+
+        |                                       |    |                         |
+        |                                       +--->|  User Administration    |
+        |                                       |    |  (mender-useradm)       |
+        |                                       |    +-------------------------+
+        |                                       +--->|                         |
+        |                                            |  Deployments            |
+        |              +---------------------------->|  (mender-deployments)   |
+        |              |                             +-------------------------+
+        |              |
+        |              |
+        |              v
+        |        +------------------+                 +---------+
+   port |        |                  |                 |         |
+   9000 | <----> |  Storage Proxy   |<--------------->| Minio   |
+        |        |  (storage-proxy) |                 | (minio) |
+        |        +------------------+                 +---------+
+        |
+```
+
+It is customary to provide deployment specific overrides in a separate compose
+file. This can either be `docker-compose.override.yml` file (detected and
+included automatically by `docker-compose` command) or a separate file. If a
+separate file is used, it needs to be explicitly included in command line when
+running `docker-compose` like this:
+
+```
+docker-compose -f docker-compose.yml -f my-other-file.yml up
+```
+
+Mender artifacts file are served from storage backend provided by Minio object
+storage in the reference setup.
+
+A demo setup uses `docker-compose.demo.yml` overlay file to override different
+aspects of configuration and can be used as an example when deploying to
+production.
+
+For details on configuration and administration
+consult [Administration guide](https://docs.mender.io/Administration)
+in [Mender documentation](https://docs.mender.io/).
+
 ## Integrating a new service
 
 Adding a new service to the setup involves:
@@ -130,6 +203,22 @@ Again, recompiling your local binary and restarting `integration` will make your
 changes take effect. Note that the correct API Gateway config is probably
 already set up for an existing service; if not, refer the previous section on
 how to modify it.
+
+### Enabling non-SSL access
+
+For debugging purposes, it may be useful to temporarily enable non-SSL access.
+API Gateway configuration enables plain HTTP on port 80, however the port is not
+published by default, thus it remains inaccessible from the outside. For
+convenience, an overlay compose file is provided that publishes port 80 of API
+Gateway to port 8090 on current host. The overlay file has to be explicitly
+included when setting up the environment like this:
+
+```
+docker-compose ... -f docker-compose.no-ssl.yml ...
+```
+
+**NOTE** make sure that plain HTTP port is not published in production
+deployment.
 
 ## Demo client
 

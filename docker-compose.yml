@@ -65,7 +65,7 @@ services:
         environment:
              AWS_ACCESS_KEY_ID: minio
              AWS_SECRET_ACCESS_KEY: minio123
-             AWS_URI: http://s3.docker.mender.io:9000
+             AWS_URI: https://s3.docker.mender.io:9000
         depends_on:
             - mender-mongo-deployments
 

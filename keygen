@@ -1,13 +1,17 @@
 #!/bin/bash
 set -e
 
-CERT_API_CN="docker.mender.io"
-CERT_STORAGE_CN="s3.docker.mender.io"
+if [ -z "$CERT_API_CN" ] || [ -z "$CERT_STORAGE_CN" ] ; then
+    echo "Environment variables CERT_API_CN and CERT_STORAGE_CN need to be set."
+    echo "Example: CERT_API_CN="docker.mender.io" CERT_STORAGE_CN="s3.docker.mender.io" $0"
+    exit 1
+fi
+
 CERT_VALID_DAYS="3650"
 
 command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
 
-KEYDIR=keys-generated-$(date +%Y-%m-%d-%H_%M_%S)
+KEYDIR=keys-generated
 
 mkdir $KEYDIR
 cd $KEYDIR
@@ -36,6 +40,6 @@ do
   cd ..
 done
 
-echo "All keys and certificates generated in $KEYDIR"
+echo "All keys and certificates have been generated in directory $KEYDIR"
 echo "Please include them in your docker compose and device builds."
 echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys"

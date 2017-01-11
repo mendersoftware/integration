@@ -1,0 +1,13 @@
+version: '2'
+services:
+
+    #
+    # mender-deployments
+    #
+    mender-deployments:
+        # S3 access configuration - override with your own values
+        # Keys have to grant access to default bucket: mender-artifact-storage
+        environment:
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+            AWS_URI: https://s3.amazonaws.com

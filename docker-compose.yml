@@ -11,16 +11,6 @@ services:
             service: mender-base
         networks:
             - mender
-        # Application requires S3 access.
-        # For convinience access can be configured here to overide config file.
-        # Keys have to grant access to default bucket: mender-artifact-storage
-        # Otherwhise provide config file though volume.
-        #
-        # The default docker-compose setup uses a minio server, specified by the AWS_URI env variable.
-        environment:
-             AWS_ACCESS_KEY_ID: minio
-             AWS_SECRET_ACCESS_KEY: minio123
-             AWS_URI: https://s3.docker.mender.io:9000
         depends_on:
             - mender-mongo-deployments
 

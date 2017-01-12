@@ -89,6 +89,9 @@ services:
     #
     mender-api-gateway:
         image: mendersoftware/api-gateway:latest
+        extends:
+            file: common.yml
+            service: mender-base
         ports:
             - "8080:443"
         networks:

@@ -70,7 +70,7 @@ services:
             - mender-mongo-deployments
 
     mender-mongo-deployments:
-        image: mongo:latest
+        image: mongo:3.4
         networks:
             mender:
                 aliases:
@@ -130,7 +130,7 @@ services:
             - mender-mongo-device-auth
 
     mender-mongo-device-auth:
-        image: mongo:latest
+        image: mongo:3.4
         networks:
             mender:
                 aliases:
@@ -150,7 +150,7 @@ services:
             - mender-mongo-device-adm
 
     mender-mongo-device-adm:
-        image: mongo:latest
+        image: mongo:3.4
         networks:
             mender:
                 aliases:
@@ -170,7 +170,7 @@ services:
             - mender-mongo-inventory
 
     mender-mongo-inventory:
-        image: mongo:latest
+        image: mongo:3.4
         networks:
             mender:
                 aliases:
@@ -190,7 +190,7 @@ services:
             - mender-mongo-useradm
 
     mender-mongo-useradm:
-        image: mongo:latest
+        image: mongo:3.4
         networks:
             mender:
                 aliases:

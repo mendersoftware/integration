@@ -21,15 +21,15 @@ import random
 from fabric.api import *
 import tempfile
 
-def common_update_proceduce(install_image,
-                            regnerate_image_id=True,
+def common_update_procedure(install_image,
+                            regenerate_image_id=True,
                             device_type="vexpress-qemu",
                             broken_image=False,
                             verify_status=True):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
-    elif regnerate_image_id:
+    elif regenerate_image_id:
         artifact_id = Helpers.artifact_id_randomize(install_image)
         logger.debug("Randomized image id: " + artifact_id)
     else:
@@ -56,7 +56,7 @@ def common_update_proceduce(install_image,
         logger.error("error creating artifact")
 
 
-def update_image_successful(install_image=conftest.get_valid_image(), regnerate_image_id=True):
+def update_image_successful(install_image=conftest.get_valid_image(), regenerate_image_id=True):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -66,8 +66,8 @@ def update_image_successful(install_image=conftest.get_valid_image(), regnerate_
     """
 
     previous_inactive_part = Helpers.get_passive_partition()
-    deployment_id, expected_image_id = common_update_proceduce(install_image,
-                                                               regnerate_image_id)
+    deployment_id, expected_image_id = common_update_procedure(install_image,
+                                                               regenerate_image_id)
 
     Helpers.verify_reboot_performed()
     assert Helpers.get_active_partition() == previous_inactive_part
@@ -93,7 +93,7 @@ def update_image_failed(install_image="broken_update.ext4"):
     original_image_id = Helpers.yocto_id_installed_on_machine()
 
     previous_active_part = Helpers.get_active_partition()
-    deployment_id, _ = common_update_proceduce(install_image, broken_image=True)
+    deployment_id, _ = common_update_procedure(install_image, broken_image=True)
 
     Helpers.verify_reboot_performed()
     assert Helpers.get_active_partition() == previous_active_part

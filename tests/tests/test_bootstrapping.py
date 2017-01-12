@@ -21,7 +21,7 @@ from common_docker import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import auth, adm, deploy, image, logger
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
 
@@ -69,7 +69,7 @@ class TestBootstrapping(MenderTesting):
         adm.check_expected_status("rejected", len(get_mender_clients()))
 
         try:
-            deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image())
+            deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
         except AssertionError:
             logging.info("Failed to deploy upgrade to rejected device.")
             Helpers.verify_reboot_not_performed()

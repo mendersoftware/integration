@@ -20,7 +20,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
@@ -60,7 +60,7 @@ class TestFaultTolerance(MenderTesting):
                     install_image=install_image)
             return
 
-        deployment_id, _ = common_update_proceduce(install_image)
+        deployment_id, _ = common_update_procedure(install_image)
         Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
         deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
 
@@ -80,7 +80,7 @@ class TestFaultTolerance(MenderTesting):
         installed_yocto_id = Helpers.yocto_id_installed_on_machine()
 
         inactive_part = Helpers.get_passive_partition()
-        deployment_id, _ = common_update_proceduce(install_image)
+        deployment_id, _ = common_update_procedure(install_image)
         active_part = Helpers.get_active_partition()
 
         for i in range(60):
@@ -117,7 +117,7 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
-        deployment_id, expected_yocto_id = common_update_proceduce(install_image, verify_status=False)
+        deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
         time.sleep(60)
 
         for i in range(5):
@@ -154,7 +154,7 @@ class TestFaultTolerance(MenderTesting):
         run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
         inactive_part = Helpers.get_passive_partition()
-        deployment_id, new_yocto_id = common_update_proceduce(install_image)
+        deployment_id, new_yocto_id = common_update_procedure(install_image)
 
         # use iptables to block traffic to storage when installing starts
         for _ in range(60):
@@ -190,7 +190,7 @@ class TestFaultTolerance(MenderTesting):
         inactive_part = Helpers.get_passive_partition()
 
         run("echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts")  # break s3 connectivity before triggering deployment
-        deployment_id, new_yocto_id = common_update_proceduce(install_image)
+        deployment_id, new_yocto_id = common_update_procedure(install_image)
 
         self.wait_for_download_retry_attempts()
         run("sed -i.bak '/1.1.1.1/d' /etc/hosts")

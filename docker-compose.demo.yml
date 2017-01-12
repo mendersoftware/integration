@@ -10,15 +10,37 @@ services:
             - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
 
     mender-api-gateway:
+        ports:
+            - "8080:443"
+        networks:
+            mender:
+                aliases:
+                    - docker.mender.io
+        # nginx doesn't know the actual outside port
+        # could be solved with introspection (mapping daemon socket + 'docker ps')
+        # the easier way is an env var
+        environment:
+            MAPPED_PORT: 8080
         volumes:
             - ./ssl/mender-api-gateway/cert.pem:/var/www/mendersoftware/cert/cert.pem
             - ./ssl/mender-api-gateway/key.pem:/var/www/mendersoftware/cert/key.pem
 
     storage-proxy:
+        ports:
+            - "9000:9000"
         networks:
             mender:
                 aliases:
                     - s3.docker.mender.io
+        environment:
+
+            # use nginx syntax for rate limiting, see
+            # https://nginx.org/en/docs/http/ngx_http_core_module.html#limit_rate
+            # Examples:
+            #   1m - 1MB/s
+            #   512k - 512kB/s
+            DOWNLOAD_SPEED: 1m
+            MAX_CONNECTIONS: 100
         volumes:
             - ./ssl/storage-proxy/s3.docker.mender.io.crt:/var/www/storage-proxy/cert/cert.crt
             - ./ssl/storage-proxy/s3.docker.mender.io.key:/var/www/storage-proxy/cert/key.pem
@@ -27,7 +49,20 @@ services:
         volumes:
             - ./ssl/storage-proxy/s3.docker.mender.io.crt:/etc/ssl/certs/s3.docker.mender.io.crt
         environment:
-            - STORAGE_BACKEND_CERT=/etc/ssl/certs/s3.docker.mender.io.crt
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
+            AWS_ACCESS_KEY_ID: minio
+            AWS_SECRET_ACCESS_KEY: minio123
+            AWS_URI: https://s3.docker.mender.io:9000
+
+    minio:
+        image: minio/minio:RELEASE.2016-12-13T17-19-42Z
+        networks:
+            mender:
+                aliases:
+                    - minio.s3.docker.mender.io
+        environment:
+            MINIO_ACCESS_KEY: minio
+            MINIO_SECRET_KEY: minio123
 
     mender-gui:
         environment:

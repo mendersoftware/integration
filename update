@@ -10,4 +10,4 @@ if [ $? -eq 0 ]; then
 fi
 
 git pull
-sudo docker-compose pull
+sudo docker-compose -f ./docker-compose.yml -f ./docker-compose.client.yml pull

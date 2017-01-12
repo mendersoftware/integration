@@ -19,13 +19,13 @@ cd $KEYDIR
 
 # generate web certs and keys
 
-mkdir api-gateway storage-gateway
+mkdir api-gateway storage-proxy
 
 cd api-gateway
 openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_API_CN
 cd ..
 
-cd storage-gateway
+cd storage-proxy
 openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_STORAGE_CN
 cd ..
 
@@ -40,6 +40,6 @@ do
   cd ..
 done
 
-echo "All keys and certificates have been generated in directory $KEYDIR"
+echo "All keys and certificates have been generated in directory $KEYDIR."
 echo "Please include them in your docker compose and device builds."
-echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys"
+echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys."

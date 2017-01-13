@@ -12,6 +12,7 @@ services:
     mender-api-gateway:
         ports:
             - "8080:443"
+            - "443:443"
         networks:
             mender:
                 aliases:

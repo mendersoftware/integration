@@ -94,7 +94,7 @@ class Deployments(object):
 
         return json.loads(r.text)
 
-    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=120, polling_frequency=0.2):
+    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=180, polling_frequency=1):
         timeout = time.time() + max_wait
         seen = set()
 

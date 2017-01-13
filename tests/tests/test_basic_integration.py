@@ -27,7 +27,7 @@ from mendertesting import MenderTesting
 class TestBasicIntegration(MenderTesting):
 
     @MenderTesting.fast
-    def test_update_image_successful(self, install_image=conftest.get_valid_image(), name=None, regnerate_image_id=True):
+    def test_update_image_successful(self, install_image=conftest.get_valid_image(), regnerate_image_id=True):
         """
             Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -39,13 +39,11 @@ class TestBasicIntegration(MenderTesting):
             execute(self.test_update_image_successful,
                     hosts=get_mender_clients(),
                     install_image=install_image,
-                    name=name,
                     regnerate_image_id=regnerate_image_id)
             return
 
         previous_inactive_part = Helpers.get_passive_partition()
         deployment_id, expected_image_id = common_update_proceduce(install_image,
-                                                                   name,
                                                                    regnerate_image_id)
 
         Helpers.verify_reboot_performed()
@@ -60,7 +58,7 @@ class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
-    def test_update_image_failed(self, install_image="broken_update.ext4", name=None):
+    def test_update_image_failed(self, install_image="broken_update.ext4"):
         """
             Perform a upgrade using a broken image (random data)
             The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
@@ -69,8 +67,7 @@ class TestBasicIntegration(MenderTesting):
         if not env.host_string:
             execute(self.test_update_image_failed,
                     hosts=get_mender_clients(),
-                    install_image=install_image,
-                    name=name)
+                    install_image=install_image)
             return
 
         devices_accepted = get_mender_clients()
@@ -78,7 +75,7 @@ class TestBasicIntegration(MenderTesting):
 
 
         previous_active_part = Helpers.get_active_partition()
-        deployment_id, _ = common_update_proceduce(install_image, name, broken_image=True)
+        deployment_id, _ = common_update_proceduce(install_image, broken_image=True)
 
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_active_part

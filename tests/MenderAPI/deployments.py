@@ -36,11 +36,10 @@ class Deployments(object):
     def get_deployments_base_path(self):
         return "https://%s/api/management/%s/deployments/" % (get_mender_gateway(), api_version)
 
-    def upload_image(self, name, filename, description="abc"):
+    def upload_image(self, filename, description="abc"):
         image_path_url = self.get_deployments_base_path() + "artifacts"
 
-        r = requests.post(image_path_url, verify=False, headers=self.auth.get_auth_token(), files=(("name", (None, name)),
-                          ("description", (None, description)),
+        r = requests.post(image_path_url, verify=False, headers=self.auth.get_auth_token(), files=(("description", (None, description)),
                           ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
 

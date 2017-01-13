@@ -68,7 +68,7 @@ class TestBootstrapping(MenderTesting):
         adm.check_expected_status("rejected", len(get_mender_clients()))
 
         try:
-            deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image(), name=None)
+            deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image())
         except AssertionError:
             logging.info("Failed to deploy upgrade to rejected device.")
             Helpers.verify_reboot_not_performed()

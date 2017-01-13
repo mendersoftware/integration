@@ -50,7 +50,7 @@ class TestInventory(MenderTesting):
                         attrs = device['attributes']
 
                         # Check individual attributes.
-                        assert(json.loads('{"name": "ifaces", "value": "eth0"}') in attrs)
+                        assert(json.loads('{"name": "network_interfaces", "value": "eth0"}') in attrs)
                         assert(json.loads('{"name": "hostname", "value": "vexpress-qemu"}') in attrs)
                         assert(json.loads('{"name": "device_type", "value": "vexpress-qemu"}') in attrs)
 
@@ -58,19 +58,13 @@ class TestInventory(MenderTesting):
                         keys = [attr['name'] for attr in attrs]
                         expected_keys = [
                             "hostname",
-                            "ifaces",
-                            "cpu_count",
-                            "time_local",
+                            "network_interfaces",
                             "cpu_model",
                             "mem_total",
                             "device_type",
                             "ipv4_eth0",
-                            "cpu_online",
-                            "time_unix",
-                            "uptime",
                             "mac_eth0",
-                            "client_version",
-                            "mem_free",
+                            "mender_client_version",
                             "artifact_name",
                             "kernel"
                         ]

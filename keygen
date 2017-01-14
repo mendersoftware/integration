@@ -37,6 +37,10 @@ do
   mkdir $DIR
   cd $DIR
   openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:3072
+
+  # convert to RSA private key format, otherwise services complain:"
+  # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
+  openssl rsa -in private.pem -out private.pem
   cd ..
 done
 

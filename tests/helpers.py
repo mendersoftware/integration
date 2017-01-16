@@ -36,7 +36,7 @@ class Helpers:
     @classmethod
     def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "e2tail %s:%s | sed -n 's/^%s=//p'" % (filename, abself.artifact_info_file)
+            cmd = "e2tail %s:%s | sed -n 's/^%s=//p'" % (filename, self.artifact_info_file)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output

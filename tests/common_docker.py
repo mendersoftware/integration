@@ -23,6 +23,7 @@ from common import *
 COMPOSE_FILES = [
     "../docker-compose.yml",
     "../docker-compose.client.yml",
+    "../docker-compose.storage.minio.yml",
     "../docker-compose.demo.yml"
 ]
 

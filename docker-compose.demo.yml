@@ -15,6 +15,10 @@ services:
             - ./ssl/mender-api-gateway/key.pem:/var/www/mendersoftware/cert/key.pem
 
     storage-proxy:
+        networks:
+            mender:
+                aliases:
+                    - s3.docker.mender.io
         volumes:
             - ./ssl/storage-proxy/s3.docker.mender.io.crt:/var/www/storage-proxy/cert/cert.crt
             - ./ssl/storage-proxy/s3.docker.mender.io.key:/var/www/storage-proxy/cert/key.pem

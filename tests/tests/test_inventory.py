@@ -60,7 +60,7 @@ class TestInventory(MenderTesting):
                             "hostname",
                             "network_interfaces",
                             "cpu_model",
-                            "mem_total",
+                            "mem_total_kB",
                             "device_type",
                             "ipv4_eth0",
                             "mac_eth0",

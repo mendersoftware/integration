@@ -1,0 +1,12 @@
+#!/bin/bash -x
+
+
+CLIENT="-f docker-compose.client.yml"
+[ -n "${NO_CLIENT}" ] && unset CLIENT
+
+exec docker-compose \
+     -f docker-compose.yml \
+     -f docker-compose.storage.minio.yml \
+     -f docker-compose.demo.yml \
+     $CLIENT \
+     $*

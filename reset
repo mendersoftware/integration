@@ -9,4 +9,4 @@ if [ $? -eq 0 ]; then
   exit 1
 fi
 
-sudo docker-compose -f docker-compose.yml -f docker-compose.client.yml -f docker-compose.demo.yml rm -v
+sudo ./demo rm -v

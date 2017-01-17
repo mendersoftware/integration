@@ -37,19 +37,8 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        ports:
-            - "8080:443"
         networks:
-            mender:
-                aliases:
-                    - gateway
-                    - docker.mender.io
-
-        # nginx doesn't know the actual outside port
-        # could be solved with introspection (mapping daemon socket + 'docker ps')
-        # the easier way is an env var
-        environment:
-            MAPPED_PORT: 8080
+            - mender
         # critical - otherwise nginx may not detect
         # these servers and exits with 'upstream server not found'
         depends_on:
@@ -59,10 +48,6 @@ services:
             - mender-gui
             - mender-useradm
             - mender-inventory
-        #mount production SSL cert/key from selected location
-        #volumes:
-        #    - /path/to/ssl/cert:/var/www/mendersoftware/cert/cert.pem
-        #    - /path/to/ssl/key:/var/www/mendersoftware/cert/key.pem
 
     #
     # mender-device-auth

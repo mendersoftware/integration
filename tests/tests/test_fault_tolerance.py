@@ -26,6 +26,27 @@ from mendertesting import MenderTesting
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFaultTolerance(MenderTesting):
 
+    def wait_for_download_retry_attempts(self):
+        """ Block until logs contain messages related to failed downlaod attempts """
+
+        timeout_time = int(time.time()) + (60 * 10)
+        start_time = int(time.time())
+
+        while start_time < timeout_time:
+            with quiet():
+                output = run("journalctl -u mender -l --no-pager | grep 'update fetch request failed' | wc -l")
+                time.sleep(2)
+                if int(output) >= 4:  # check that some retries have occured
+                    logging.info("Looks like the download was retried 2 times, restoring download functionality")
+                    break
+
+        if timeout_time <= int(time.time()):
+            pytest.fail("timed out waiting for download retries")
+
+        # make sure that retries happen after 5 minutes have passed
+        assert timeout_time - start_time >= 5 * 60, "Ooops, looks like the retry happend within less than 5 minutes"
+        logging.info("Waiting for system to finish download")
+
     @MenderTesting.slow
     def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-vexpress-qemu-broken-network.ext4"):
         """
@@ -110,3 +131,70 @@ class TestFaultTolerance(MenderTesting):
         deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
+
+    @MenderTesting.nightly
+    @pytest.mark.skip(reason="MEN-730: download never gets time-out")
+    def test_image_download_retry_1(self, install_image=conftest.get_valid_image()):
+        """
+            Install an update, and block storage connection when we detect it's
+            being copied over to the inactive parition.
+
+            The test should result in a successful download retry.
+        """
+        if not env.host_string:
+            execute(self.test_image_download_retry_1,
+                    hosts=get_mender_clients(),
+                    install_image=install_image)
+            return
+
+        # make tcp timeout quicker, none persistent changes
+        run("echo 1 > /proc/sys/net/ipv4/tcp_retries1")
+        run("echo 1 > /proc/sys/net/ipv4/tcp_retries2")
+        run("echo 20 > /proc/sys/net/ipv4/tcp_keepalive_time")
+
+        inactive_part = Helpers.get_passive_partition()
+        deployment_id, new_yocto_id = common_update_proceduce(install_image)
+
+        # use iptables to block traffic to storage when installing starts
+        for _ in range(60):
+            time.sleep(0.5)
+            with quiet():
+                # make sure we are writing to the inactive partition
+                output = run("fuser -mv %s" % (inactive_part))
+            if output.return_code == 0:
+                Helpers.gateway_connectivity(False, hosts=["s3.docker.mender.io"])  # disable connectivity
+                break
+
+        # re-enable connectivity after 2 retries
+        self.wait_for_download_retry_attempts()
+        Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
+
+        Helpers.verify_reboot_performed()
+        assert Helpers.get_active_partition() == inactive_part
+        assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
+        Helpers.verify_reboot_not_performed()
+
+    @MenderTesting.nightly
+    def test_image_download_retry_2(self, install_image=conftest.get_valid_image()):
+        """
+            Block storage host (minio) by modifying the hosts file.
+        """
+
+        if not env.host_string:
+            execute(self.test_image_download_retry_2,
+                    hosts=get_mender_clients(),
+                    install_image=install_image)
+            return
+
+        inactive_part = Helpers.get_passive_partition()
+
+        run("echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts")  # break s3 connectivity before triggering deployment
+        deployment_id, new_yocto_id = common_update_proceduce(install_image)
+
+        self.wait_for_download_retry_attempts()
+        run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
+
+        Helpers.verify_reboot_performed()
+        assert Helpers.get_active_partition() == inactive_part
+        assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
+        Helpers.verify_reboot_not_performed()

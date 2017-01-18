@@ -19,7 +19,7 @@ from MenderAPI import adm, deploy, image, logger
 import random
 
 
-def common_update_proceduce(install_image, name, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
+def common_update_proceduce(install_image, regnerate_image_id=True, device_type="vexpress-qemu", checksum="abc123", broken_image=False):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
@@ -29,18 +29,15 @@ def common_update_proceduce(install_image, name, regnerate_image_id=True, device
     else:
         artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
-    if name is None:
-        name = "imageid-" + str(random.randint(1, 9999999999))
-
     # create atrifact
     artifact_file = "artifact.mender"
     created = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
 
     if created:
-        deploy.upload_image(name, "artifact.mender")
+        deploy.upload_image("artifact.mender")
         devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
         deployment_id = deploy.trigger_deployment(name="New valid update",
-                                                  artifact_name=name,
+                                                  artifact_name=artifact_id,
                                                   devices=devices_accepted_id)
 
         # remove the artifact file

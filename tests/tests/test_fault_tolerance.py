@@ -40,7 +40,7 @@ class TestFaultTolerance(MenderTesting):
                     install_image=install_image)
             return
 
-        deployment_id, _ = common_update_proceduce(install_image, name=None)
+        deployment_id, _ = common_update_proceduce(install_image)
         Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
         deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
 
@@ -60,7 +60,7 @@ class TestFaultTolerance(MenderTesting):
         installed_yocto_id = Helpers.yocto_id_installed_on_machine()
 
         inactive_part = Helpers.get_passive_partition()
-        deployment_id, _ = common_update_proceduce(install_image, name=None)
+        deployment_id, _ = common_update_proceduce(install_image)
         active_part = Helpers.get_active_partition()
 
         for i in range(60):
@@ -97,7 +97,7 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
-        deployment_id, expected_yocto_id = common_update_proceduce(install_image, name=None)
+        deployment_id, expected_yocto_id = common_update_proceduce(install_image)
         time.sleep(60)
 
         for i in range(5):

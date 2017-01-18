@@ -2,5 +2,4 @@
 # Stops the server, while preserving state.
 set -e -o pipefail
 
-sudo docker-compose -f docker-compose.yml -f docker-compose.client.yml -f docker-compose.demo.yml stop
-
+sudo ./demo stop

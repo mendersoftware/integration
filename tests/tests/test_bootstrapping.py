@@ -78,3 +78,6 @@ class TestBootstrapping(MenderTesting):
 
         else:
             raise("No error while trying to deploy to rejected device")
+
+        # re-accept device after test is done
+        adm.accept_devices(1)

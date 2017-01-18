@@ -78,7 +78,7 @@ class Admission():
         assert r.status_code == requests.status_codes.codes.ok
 
 
-    def check_expected_status(self, status, expected_value, max_wait=60, polling_frequency=0.2):
+    def check_expected_status(self, status, expected_value, max_wait=180, polling_frequency=1):
         timeout = time.time() + max_wait
         seen = set()
 

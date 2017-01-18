@@ -21,15 +21,15 @@ from common_docker import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import auth, adm, deploy, image, logger
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
 
-@MenderTesting.fast
 class TestBootstrapping(MenderTesting):
     slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
                               reason="need --runslow option to run")
 
+    @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_bootstrap(self):
         """Simply make sure we are able to bootstrap a device"""
@@ -68,7 +68,7 @@ class TestBootstrapping(MenderTesting):
         adm.check_expected_status("rejected", len(get_mender_clients()))
 
         try:
-            deployment_id, _ = common_update_proceduce(install_image=conftest.get_valid_image(), name=None)
+            deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image(), name=None)
         except AssertionError:
             logging.info("Failed to deploy upgrade to rejected device.")
             Helpers.verify_reboot_not_performed()

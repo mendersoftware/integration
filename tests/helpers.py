@@ -27,11 +27,13 @@ from fabric.contrib.files import exists
 
 logger = logging.getLogger()
 
+
+class FabricFatalException(Exception):
+    pass
+
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
     artifact_prefix = "artifact_name"
-
-
 
     @classmethod
     def yocto_id_from_ext4(self, filename):
@@ -118,34 +120,41 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*10):
+    def verify_reboot_performed(max_wait=60*5):
+        successful_connections = 0
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
+
         try:
-            with settings(quiet()):
+            with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
                 run(cmd)
-        except BaseException:
-            logging.critical("Failed to touch /tmp/ folder, is the device already rebooting?")
+        except (FabricFatalException, EOFError):
+            logging.critical("failed to touch /tmp/ folder, is the device already rebooting?")
             time.sleep(max_wait)
             return
 
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            time.sleep(15)
-
-            with settings(warn_only=True):
+            with settings(warn_only=True, abort_exception=FabricFatalException):
                 try:
                     if exists(tfile):
                         logging.debug("temp. file still exists, device hasn't rebooted.")
+                        time.sleep(5)
                         continue
                     else:
                         logging.debug("temp. file no longer exists, device has rebooted.")
-                        time.sleep(5)
+                        successful_connections += 1
+
+                        # try connecting 5 times before returning
+                        if successful_connections <= 4:
+                            time.sleep(1)
+                            continue
                     return
 
-                except BaseException:
+                except (FabricFatalException, EOFError):
                     logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
+                    time.sleep(5)
                     continue
 
         if time.time() > timeout:

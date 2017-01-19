@@ -43,7 +43,7 @@ class TestFailures(MenderTesting):
 
         devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
         deployment_id = deploy.trigger_deployment(name="New valid update",
-                                                       artifact_name=install_image,
+                                                       artifact_name=expected_image_id,
                                                        devices=devices_accepted_id)
 
         deploy.check_expected_status(deployment_id, "already-installed", len(get_mender_clients()))

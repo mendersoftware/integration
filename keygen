@@ -8,6 +8,8 @@ if [ -z "$CERT_API_CN" ] || [ -z "$CERT_STORAGE_CN" ] ; then
 fi
 
 CERT_VALID_DAYS="3650"
+FILE_NAME_PRIVATE_KEY="private.pem"
+FILE_NAME_CERT="certificate.pem"
 
 command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
 
@@ -22,11 +24,11 @@ cd $KEYDIR
 mkdir api-gateway storage-proxy
 
 cd api-gateway
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout private.pem -out certificate.pem -subj /CN=$CERT_API_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_API_CN
 cd ..
 
 cd storage-proxy
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout private.pem -out certificate.pem -subj /CN=$CERT_STORAGE_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_STORAGE_CN
 cd ..
 
 
@@ -36,11 +38,11 @@ for DIR in deviceauth useradm
 do
   mkdir $DIR
   cd $DIR
-  openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:3072
+  openssl genpkey -algorithm RSA -out $FILE_NAME_PRIVATE_KEY -pkeyopt rsa_keygen_bits:3072
 
   # convert to RSA private key format, otherwise services complain:"
   # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
-  openssl rsa -in private.pem -out private.pem
+  openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY
   cd ..
 done
 

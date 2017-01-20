@@ -8,8 +8,8 @@ if [ -z "$CERT_API_CN" ] || [ -z "$CERT_STORAGE_CN" ] ; then
 fi
 
 CERT_VALID_DAYS="3650"
-FILE_NAME_PRIVATE_KEY="private.pem"
-FILE_NAME_CERT="certificate.pem"
+FILE_NAME_PRIVATE_KEY="private.key"
+FILE_NAME_CERT="cert.crt"
 
 command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
 

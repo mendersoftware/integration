@@ -22,11 +22,11 @@ cd $KEYDIR
 mkdir api-gateway storage-proxy
 
 cd api-gateway
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_API_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout private.pem -out certificate.pem -subj /CN=$CERT_API_CN
 cd ..
 
 cd storage-proxy
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey rsa:3072 -keyout private.pem -out certificate.pem -subj /CN=$CERT_STORAGE_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout private.pem -out certificate.pem -subj /CN=$CERT_STORAGE_CN
 cd ..
 
 

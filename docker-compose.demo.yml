@@ -44,7 +44,7 @@ services:
             MAX_CONNECTIONS: 100
         volumes:
             - ./keys/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
-            - ./keys/storage-proxy/private.key:/var/www/storage-proxy/cert/key.pem
+            - ./keys/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
 
     mender-deployments:
         volumes:

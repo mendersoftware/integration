@@ -93,7 +93,7 @@ class Deployments(object):
 
         return json.loads(r.text)
 
-    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=300, polling_frequency=1):
+    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=300, polling_frequency=.2):
         timeout = time.time() + max_wait
         seen = set()
 
@@ -110,3 +110,8 @@ class Deployments(object):
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (expected_status, expected_count, str(seen)))
+
+    def abort(self, deployment_id):
+        deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
+        r = requests.put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
+        assert r.status_code == requests.status_codes.codes.no_content

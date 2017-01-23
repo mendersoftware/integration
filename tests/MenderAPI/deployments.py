@@ -19,6 +19,7 @@ import json
 from fabric.api import *
 import time
 import pytest
+import os.path
 
 from common import *
 from common_docker import *
@@ -40,7 +41,7 @@ class Deployments(object):
         image_path_url = self.get_deployments_base_path() + "artifacts"
 
         r = requests.post(image_path_url, verify=False, headers=self.auth.get_auth_token(), files=(("description", (None, description)),
-                          ("artifact", (filename, open(filename),
+                          ("size", (None, str(os.path.getsize(filename)))), ("artifact", (filename, open(filename),
                            "multipart/form-data"))))
 
         logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))

@@ -48,7 +48,7 @@ class TestDeploymentAborting(MenderTesting):
 
         deploy.check_expected_status(deployment_id, abort_step, len(get_mender_clients()))
         deploy.abort(deployment_id)
-        deploy.check_expected_status(deployment_id, "finished", len(get_mender_clients()))
+        deploy.check_expected_status(deployment_id, "aborted", len(get_mender_clients()))
 
         # no deployment logs are sent by the client, is this expected?
         for d in adm.get_devices():

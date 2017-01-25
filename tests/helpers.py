@@ -101,10 +101,9 @@ class Helpers:
 
     @staticmethod
     # simulate broken internet by drop packets to gateway and fileserver
-    def gateway_connectivity(accessible):
+    def gateway_connectivity(accessible, hosts=["mender-artifact-storage.localhost", "mender-api-gateway"]):
         try:
             with settings(hide('everything'), warn_only=True):
-                hosts = ["mender-artifact-storage.localhost", "mender-api-gateway"]
                 for h in hosts:
                     gateway_ip = run("nslookup %s | tail -n 1  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'" % (h)).strip()
 

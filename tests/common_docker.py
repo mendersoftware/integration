@@ -16,6 +16,7 @@ from fabric.api import *
 import pytest
 import subprocess
 
+import tempfile
 import conftest
 from common import *
 
@@ -26,6 +27,8 @@ COMPOSE_FILES = [
     "../docker-compose.storage.minio.yml",
     "../docker-compose.demo.yml"
 ]
+
+log_files = []
 
 def docker_compose_cmd(arg_list):
     extra_files = pytest.config.getoption("--docker-compose-file")
@@ -46,8 +49,16 @@ def stop_docker_compose():
 
 
 def start_docker_compose():
+    inline_logs = pytest.config.getoption("--inline-logs")
     docker_compose_cmd("up -d")
-    docker_compose_cmd("logs -f &")
+
+    if inline_logs:
+        docker_compose_cmd("logs -f &")
+    else:
+        tfile = tempfile.mktemp("mender_testing")
+        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile)
+        logging.info("docker-compose log file stored here: %s" % tfile)
+        log_files.append(tfile)
 
     ssh_is_opened()
 

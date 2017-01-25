@@ -4,6 +4,13 @@
 CLIENT="-f docker-compose.client.yml"
 [ -n "${NO_CLIENT}" ] && unset CLIENT
 
+if [ ! -z "$SCALE" ]; then
+   docker-compose \
+    -f docker-compose.yml \
+    -f docker-compose.client.yml \
+    scale mender-client="$SCALE"
+fi
+
 exec docker-compose \
      -f docker-compose.yml \
      -f docker-compose.storage.minio.yml \

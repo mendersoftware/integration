@@ -26,7 +26,7 @@ from fabric.contrib.files import exists
 
 
 logger = logging.getLogger()
-
+logger.setLevel(logging.INFO)
 
 class FabricFatalException(Exception):
     pass
@@ -125,6 +125,7 @@ class Helpers:
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
 
+        logging.info("waiting for system to reboot")
         try:
             with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
                 run(cmd)

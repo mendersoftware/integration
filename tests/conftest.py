@@ -16,7 +16,7 @@
 from fabric.api import *
 import logging
 import requests
-from common_docker import stop_docker_compose
+from common_docker import stop_docker_compose, log_files
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -35,6 +35,7 @@ def pytest_addoption(parser):
     parser.addoption("--runfast", action="store_true", help="run fast tests")
     parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
+    parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
 def pytest_configure(config):
     env.api_version = config.getoption("api")
@@ -67,6 +68,13 @@ def pytest_configure(config):
     env.eagerly_disconnect = True
     env.banner_timeout = 60
 
+def pytest_exception_interact(node, call, report):
+    if report.failed:
+        for log in log_files:
+           logging.info("printing content of : %s" % log)
+           with open(log) as f:
+                for line in f.readlines():
+                    print line,
 
 def pytest_unconfigure(config):
     if not config.getoption("--no-teardown"):

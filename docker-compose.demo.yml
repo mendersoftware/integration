@@ -67,4 +67,5 @@ services:
 
     mender-gui:
         environment:
-            - DEMO=1
+            # enable demo mode for UI ["true"/"false"]
+            DEMO: "true"

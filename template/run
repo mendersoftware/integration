@@ -1,0 +1,9 @@
+#!/bin/bash -x
+
+
+exec docker-compose \
+     -p '' \
+     -f ../docker-compose.yml \
+     -f ../docker-compose.storage.minio.yml \
+     -f ./prod.yml \
+     "$@"

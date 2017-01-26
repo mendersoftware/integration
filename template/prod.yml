@@ -1,0 +1,101 @@
+# this is a template file for production setup, consult
+# https://docs.docker.com/compose/compose-file/ for details on syntax and usage
+#
+# Notes:
+# - integration/docker-compose.yml file is assumed to be included
+# - integration/docker-compose.storage.minio.yml is assumed to be included
+# - all services are part of `mender` network (service names are unchanged)
+# - keys and certificates are generated using keygen utility from integration
+#   repository, keys and certificates are stored in ./keys-generated directory
+# - certificates and key are mounted into containers using volumes
+# - minio artifacts are stored in a named volume `mender-artifacts`; volume
+#   needs to be created manually using `docker volume create mender-artifacts`
+# - paths need to be adjusted, ie, replace /template/ with production directory
+#   (see list of compose bugs)
+
+# related compose bugs:
+# - https://github.com/docker/compose/issues/3874
+# - https://github.com/docker/compose/issues/3568
+# - https://github.com/docker/compose/issues/3219
+
+version: '2'
+services:
+
+    mender-useradm:
+        volumes:
+            - ./template/keys-generated/useradm/private.key:/etc/useradm/rsa/private.pem:ro
+
+    mender-device-auth:
+        volumes:
+            - ./template/keys-generated/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+
+    mender-api-gateway:
+        ports:
+            # list of ports API gateway is made available on
+            - "443:443"
+        networks:
+            - mender
+        # the outside port must be made known to API gateway
+        environment:
+            MAPPED_PORT: 443
+        volumes:
+            - ./template/keys-generated/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.pem:ro
+            - ./template/keys-generated/api-gateway/private.key:/var/www/mendersoftware/cert/key.pem:ro
+
+    storage-proxy:
+        ports:
+            # outside port mapping for artifact storage (note that storage-proxy listens on port 9000)
+            - "9000:9000"
+        networks:
+            mender:
+                aliases:
+                    # change the alias to DNS name that storage will be
+                    # available on, for instance if devices will access storage
+                    # using https://s3.acme.com:9000, then set this to
+                    # s3.acme.com
+                    - set-my-alias-here.com
+        environment:
+
+            # use nginx syntax for rate limiting, see
+            # https://nginx.org/en/docs/http/ngx_http_core_module.html#limit_rate
+            # Examples:
+            #   1m - 1MB/s
+            #   512k - 512kB/s
+            DOWNLOAD_SPEED: 1m
+            MAX_CONNECTIONS: 100
+        volumes:
+            - ./template/keys-generated/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
+            - ./template/keys-generated/storage-proxy/private.key:/var/www/storage-proxy/cert/key.pem:ro
+
+    mender-deployments:
+        volumes:
+            - ./template/keys-generated/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
+        environment:
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/storage-proxy.crt
+            # access key, the same value as MINIO_ACCESS_KEY
+            DEPLOYMENTS_AWS_AUTH_KEY:
+            # secret, the same valie as MINIO_SECRET_KEY
+            DEPLOYMENTS_AWS_AUTH_SECRET:
+
+            # deployments service uses signed URLs, hence it needs to access
+            # storage-proxy using exactly the same name as devices will; if
+            # devices will access storage using https://s3.acme.com:9000, then
+            # set this to https://s3.acme.com:9000
+            DEPLOYMENTS_AWS_URI: https://set-my-alias-here.com
+
+    minio:
+        environment:
+            # access key
+            MINIO_ACCESS_KEY:
+            # secret
+            MINIO_SECRET_KEY:
+        volumes:
+            # mounts a docker volume named `mender-artifacts` as /export directory
+            - mender-artifacts:/export:rw
+
+volumes:
+    # define `mender-artifacts` volume
+    mender-artifacts:
+      external:
+          # use external volume created manually
+          name: mender-artifacts

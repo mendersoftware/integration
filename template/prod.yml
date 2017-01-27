@@ -93,9 +93,50 @@ services:
             # mounts a docker volume named `mender-artifacts` as /export directory
             - mender-artifacts:/export:rw
 
+    mender-mongo-deployments:
+        volumes:
+            - mender-deployments-db:/data:rw
+    mender-mongo-device-adm:
+        volumes:
+            - mender-deviceadm-db:/data:rw
+    mender-mongo-device-auth:
+        volumes:
+            - mender-deviceauth-db:/data:rw
+    mender-mongo-inventory:
+        volumes:
+            - mender-inventory-db:/data:rw
+    mender-mongo-useradm:
+        volumes:
+            - mender-useradm-db:/data:rw
+
 volumes:
-    # define `mender-artifacts` volume
+    # mender artifacts storage
     mender-artifacts:
       external:
           # use external volume created manually
           name: mender-artifacts
+    # deployments service database
+    mender-deployments-db:
+      external:
+          # use external volume created manually
+          name: mender-deployments-db
+    # user administration service database
+    mender-useradm-db:
+      external:
+          # use external volume created manually
+          name: mender-useradm-db
+    # inventory service database
+    mender-inventory-db:
+      external:
+          # use external volume created manually
+          name: mender-inventory-db
+    # device authentication service database
+    mender-deviceauth-db:
+      external:
+          # use external volume created manually
+          name: mender-deviceauth-db
+    # device admission service database
+    mender-deviceadm-db:
+      external:
+          # use external volume created manually
+          name: mender-deviceadm-db

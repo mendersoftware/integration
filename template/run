@@ -1,8 +1,8 @@
-#!/bin/bash -x
+#!/bin/bash
 
 
 exec docker-compose \
-     -p '' \
+     -p 'menderproduction'\
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \
      -f ./prod.yml \

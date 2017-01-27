@@ -3,11 +3,11 @@ services:
 
     mender-useradm:
         volumes:
-            - ./keys/useradm-private.pem:/etc/useradm/rsa/private.pem
+            - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
 
     mender-device-auth:
         volumes:
-            - ./keys/deviceauth-private.pem:/etc/deviceauth/rsa/private.pem
+            - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
 
     mender-api-gateway:
         ports:
@@ -23,8 +23,8 @@ services:
         environment:
             MAPPED_PORT: 8080
         volumes:
-            - ./ssl/mender-api-gateway/cert.pem:/var/www/mendersoftware/cert/cert.pem
-            - ./ssl/mender-api-gateway/key.pem:/var/www/mendersoftware/cert/key.pem
+            - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
+            - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
 
     storage-proxy:
         ports:
@@ -43,12 +43,12 @@ services:
             DOWNLOAD_SPEED: 1m
             MAX_CONNECTIONS: 100
         volumes:
-            - ./ssl/storage-proxy/s3.docker.mender.io.crt:/var/www/storage-proxy/cert/cert.crt
-            - ./ssl/storage-proxy/s3.docker.mender.io.key:/var/www/storage-proxy/cert/key.pem
+            - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
+            - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
 
     mender-deployments:
         volumes:
-            - ./ssl/storage-proxy/s3.docker.mender.io.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+            - ./certs/storage-proxy/cert.crt:/etc/ssl/certs/s3.docker.mender.io.crt
         environment:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio

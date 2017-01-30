@@ -23,11 +23,11 @@ services:
 
     mender-useradm:
         volumes:
-            - ./template/keys-generated/useradm/private.key:/etc/useradm/rsa/private.pem:ro
+            - ./template/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
 
     mender-device-auth:
         volumes:
-            - ./template/keys-generated/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+            - ./template/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
 
     mender-api-gateway:
         ports:
@@ -39,8 +39,8 @@ services:
         environment:
             MAPPED_PORT: 443
         volumes:
-            - ./template/keys-generated/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.pem:ro
-            - ./template/keys-generated/api-gateway/private.key:/var/www/mendersoftware/cert/key.pem:ro
+            - ./template/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.pem:ro
+            - ./template/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/key.pem:ro
 
     storage-proxy:
         ports:
@@ -64,12 +64,12 @@ services:
             DOWNLOAD_SPEED: 1m
             MAX_CONNECTIONS: 100
         volumes:
-            - ./template/keys-generated/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
-            - ./template/keys-generated/storage-proxy/private.key:/var/www/storage-proxy/cert/key.pem:ro
+            - ./template/keys-generated/certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
+            - ./template/keys-generated/certs/storage-proxy/private.key:/var/www/storage-proxy/cert/key.pem:ro
 
     mender-deployments:
         volumes:
-            - ./template/keys-generated/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
+            - ./template/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
         environment:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/storage-proxy.crt
             # access key, the same value as MINIO_ACCESS_KEY

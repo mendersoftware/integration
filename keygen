@@ -34,6 +34,8 @@ cd storage-proxy
 openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_STORAGE_CN
 cd ..
 
+# concatenate the certificates for inclusion on the Mender client
+cat api-gateway/$FILE_NAME_CERT storage-proxy/$FILE_NAME_CERT > server.crt
 
 
 # generate keys for signing JSON Web Tokens

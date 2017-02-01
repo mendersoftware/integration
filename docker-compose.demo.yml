@@ -68,3 +68,19 @@ services:
         environment:
             # enable demo mode for UI ["true"/"false"]
             DEMO: "true"
+
+    mender-mongo-deployments:
+        volumes:
+            - /var/mender/data:/data:rw
+    mender-mongo-device-adm:
+        volumes:
+            - /var/mender/data:/data:rw
+    mender-mongo-device-auth:
+        volumes:
+            - /var/mender/data:/data:rw
+    mender-mongo-inventory:
+        volumes:
+            - /var/mender/data:/data:rw
+    mender-mongo-useradm:
+        volumes:
+            - /var/mender/data:/data:rw

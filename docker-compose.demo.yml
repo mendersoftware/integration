@@ -17,11 +17,6 @@ services:
             mender:
                 aliases:
                     - docker.mender.io
-        # nginx doesn't know the actual outside port
-        # could be solved with introspection (mapping daemon socket + 'docker ps')
-        # the easier way is an env var
-        environment:
-            MAPPED_PORT: 8080
         volumes:
             - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
             - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key

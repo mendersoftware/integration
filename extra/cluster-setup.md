@@ -414,7 +414,6 @@ docker service create --with-registry-auth \
  --name mender-api-gateway \
  --network cluster-mender \
  -p 8080:443 \
- --env 'MAPPED_PORT=8080' \
  --restart-max-attempts 2 \
  --replicas 1 \
  mendersoftware/api-gateway:latest

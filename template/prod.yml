@@ -35,9 +35,6 @@ services:
             - "443:443"
         networks:
             - mender
-        # the outside port must be made known to API gateway
-        environment:
-            MAPPED_PORT: 443
         volumes:
             - ./template/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
             - ./template/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro

@@ -1,7 +1,7 @@
 import os
 import logging
 
-api_version = os.getenv("MENDER_API_VERSION", "0.1")
+api_version = os.getenv("MENDER_API_VERSION", "v1")
 
 logger = logging.getLogger()
 

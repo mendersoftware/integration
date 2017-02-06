@@ -13,13 +13,16 @@ FILE_NAME_CERT="cert.crt"
 
 command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
 
-KEYDIR=keys-generated
+ROOTDIR=$(pwd)/keys-generated
 
-mkdir $KEYDIR
-cd $KEYDIR
+CERTDIR=$ROOTDIR/certs
+KEYDIR=$ROOTDIR/keys
 
 
-# generate web certs and keys
+# generate web certs and corresponding private keys
+
+mkdir -p $CERTDIR
+cd $CERTDIR
 
 mkdir api-gateway storage-proxy
 
@@ -31,8 +34,14 @@ cd storage-proxy
 openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_STORAGE_CN
 cd ..
 
+# concatenate the certificates for inclusion on the Mender client
+cat api-gateway/$FILE_NAME_CERT storage-proxy/$FILE_NAME_CERT > server.crt
+
 
 # generate keys for signing JSON Web Tokens
+
+mkdir -p $KEYDIR
+cd $KEYDIR
 
 for DIR in deviceauth useradm
 do
@@ -46,6 +55,6 @@ do
   cd ..
 done
 
-echo "All keys and certificates have been generated in directory $KEYDIR."
+echo "All keys and certificates have been generated in directory $ROOTDIR."
 echo "Please include them in your docker compose and device builds."
 echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys."

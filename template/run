@@ -1,0 +1,9 @@
+#!/bin/bash
+
+
+exec docker-compose \
+     -p 'menderproduction'\
+     -f ../docker-compose.yml \
+     -f ../docker-compose.storage.minio.yml \
+     -f ./prod.yml \
+     "$@"

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# removes the current user account, acts as a password reset utility
+# after resetting the account, the user will be prompted to re-create it; no data will be lost
+
+while true; do
+    read -p "This will reset the user account. Do you want to continue (y/n)" -n 1 yn
+    echo
+    case $yn in
+        [y]* )
+            exec docker-compose \
+                exec \
+                mender-mongo-useradm \
+                mongo useradm --eval "db.users.remove({})"
+            break;;
+        [n]* )
+            echo "Aborting."
+            exit;;
+        * )
+            echo "Please answer (y)es or (n)o.";;
+    esac
+done
+

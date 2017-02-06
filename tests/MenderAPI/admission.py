@@ -45,6 +45,7 @@ class Admission():
         for c, i in enumerate(range(tries)):
             time.sleep(c*5+5)
             try:
+                logger.info("getting all devices from :%s" % (device_status_path))
                 devices = requests.get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
                 assert devices.status_code == requests.status_codes.codes.ok
                 assert len(devices.json()) == expected_devices

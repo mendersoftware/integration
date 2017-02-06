@@ -71,7 +71,6 @@ class TestDeploymentAborting(MenderTesting):
     def test_deployment_abortion_installing(self):
         self.abort_deployment("installing")
 
-    @pytest.mark.skip(reason="MEN-961")
     @MenderTesting.fast
     def test_deployment_abortion_rebooting(self):
         self.abort_deployment("rebooting", mender_performs_reboot=True)

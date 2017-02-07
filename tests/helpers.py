@@ -130,7 +130,7 @@ class Helpers:
                 run(cmd)
         except (FabricFatalException, EOFError):
             logging.critical("failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(max_wait)
+            time.sleep(5*60)
             return
 
         timeout = time.time() + max_wait

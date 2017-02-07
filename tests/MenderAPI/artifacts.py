@@ -18,7 +18,7 @@ import pytest
 from MenderAPI import logger
 
 class Artifacts():
-    artifacts_tool_path = "./mender-artifact"
+    artifacts_tool_path = "mender-artifact"
 
     def make_artifact(self, image, device_type, artifact_name, artifact_file_created):
 

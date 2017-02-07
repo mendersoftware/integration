@@ -67,7 +67,6 @@ class TestDeploymentAborting(MenderTesting):
     def test_deployment_abortion_pending(self):
         self.abort_deployment("pending")
 
-    @pytest.mark.skip(reason="MEN-964")
     @MenderTesting.fast
     def test_deployment_abortion_installing(self):
         self.abort_deployment("installing")

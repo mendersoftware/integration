@@ -132,8 +132,7 @@ class TestFaultTolerance(MenderTesting):
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
 
-    @MenderTesting.nightly
-    @pytest.mark.skip(reason="MEN-730: download never gets time-out")
+    @MenderTesting.slow
     def test_image_download_retry_1(self, install_image=conftest.get_valid_image()):
         """
             Install an update, and block storage connection when we detect it's

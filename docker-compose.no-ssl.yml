@@ -4,3 +4,12 @@ services:
     mender-api-gateway:
         ports:
             - "8090:80"
+
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_AWS_URI: http://minio.s3.docker.mender.io:9001
+
+    minio:
+        ports:
+            - "9001:9001"
+        command: server --address ":9001" /export

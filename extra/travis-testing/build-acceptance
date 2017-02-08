@@ -2,8 +2,6 @@
 
 set -e
 
-SELFDIR=$(readlink -f $(dirname $0))
-
 DIR=$1
 
 [ -n "$DIR" ] || {
@@ -15,7 +13,7 @@ shift
 if [ $# -ne 0 ]; then
     echo "-- copying extra files"
     for f in $*; do
-        cp -v $f $SELFDIR
+        cp -v $f $DIR
     done
 fi
 

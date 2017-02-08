@@ -30,9 +30,8 @@ class TestFaultTolerance(MenderTesting):
         """ Block until logs contain messages related to failed downlaod attempts """
 
         timeout_time = int(time.time()) + (60 * 10)
-        start_time = int(time.time())
 
-        while start_time < timeout_time:
+        while int(time.time()) < timeout_time:
             with quiet():
                 output = run("journalctl -u mender -l --no-pager | grep 'update fetch request failed' | wc -l")
                 time.sleep(2)
@@ -43,8 +42,8 @@ class TestFaultTolerance(MenderTesting):
         if timeout_time <= int(time.time()):
             pytest.fail("timed out waiting for download retries")
 
-        # make sure that retries happen after 5 minutes have passed
-        assert timeout_time - start_time >= 5 * 60, "Ooops, looks like the retry happend within less than 5 minutes"
+        # make sure that retries happen after 2 minutes have passed
+        assert timeout_time - int(time.time()) >= 2 * 60, "Ooops, looks like the retry happend within less than 5 minutes"
         logging.info("Waiting for system to finish download")
 
     @MenderTesting.slow
@@ -147,9 +146,12 @@ class TestFaultTolerance(MenderTesting):
             return
 
         # make tcp timeout quicker, none persistent changes
-        run("echo 1 > /proc/sys/net/ipv4/tcp_retries1")
-        run("echo 1 > /proc/sys/net/ipv4/tcp_retries2")
-        run("echo 20 > /proc/sys/net/ipv4/tcp_keepalive_time")
+        run("echo 2 > /proc/sys/net/ipv4/tcp_keepalive_time")
+        run("echo 2 > /proc/sys/net/ipv4/tcp_keepalive_intvl")
+        run("echo 3 > /proc/sys/net/ipv4/tcp_syn_retries")
+
+        # to speed up timeouting client connection
+        run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
         inactive_part = Helpers.get_passive_partition()
         deployment_id, new_yocto_id = common_update_proceduce(install_image)

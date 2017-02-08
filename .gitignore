@@ -1,10 +1,11 @@
 *.pyc
 
 tags
+
 tests/.cache/
 tests/broken_update.ext4
 tests/core-image-full-cmdline-vexpress-qemu-broken-network.ext4
 tests/core-image-full-cmdline-vexpress-qemu.ext4
 tests/large_image.dat
 tests/results.xml
-tests/mender-artifact
+tests/downloaded-tools

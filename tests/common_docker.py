@@ -72,7 +72,7 @@ def restart_docker_compose():
 
 def docker_get_ip_of(image):
     # Returns newline separated list of IPs
-    output = subprocess.check_output("docker ps --filter='ancestor=%s' --format='{{.ID}}' | xargs -r docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" % image, shell=True)
+    output = subprocess.check_output("docker ps | grep '%s'| awk '{print $1}'| xargs -r docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" % image, shell=True)
 
     # Return as list.
     return output.split()

@@ -8,7 +8,6 @@ env:
     matrix:
         - JOB_TYPE=compile_and_integration_tests_fast
         - JOB_TYPE=compile_and_integration_tests_slow
-        - JOB_TYPE=compile_and_integration_tests_nightly
 
 before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
@@ -17,7 +16,9 @@ before_install:
 script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then ( cd tests && bash run.sh --runslow ); fi
-    - if [ "$JOB_TYPE" = compile_and_integration_tests_nightly ]; then ( cd tests && bash run.sh --runnightly ); fi
+
+    # CRON JOB SECTION
+    - if [ "$TRAVIS_EVENT_TYPE" = "cron"]; then ( cd tests && bash run.sh --runnightly ); fi
 
 notifications:
     slack:

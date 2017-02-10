@@ -1,6 +1,9 @@
 #!/bin/bash
 set -x -e
 
+# make sure we are using the right ext4 image when testing
+RELEASE_VERSION="master"
+
 if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi
@@ -30,7 +33,7 @@ else
 
     if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] ; then
         echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was not found, will download the latest !!"
-        curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp/core-image-full-cmdline-vexpress-qemu.ext4"
+        curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp_${RELEASE_VERSION}/core-image-full-cmdline-vexpress-qemu.ext4"
     fi
 fi
 

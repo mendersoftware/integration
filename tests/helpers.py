@@ -38,7 +38,7 @@ class Helpers:
     @classmethod
     def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "e2tail %s:%s | sed -n 's/^%s=//p'" % (filename, self.artifact_info_file)
+            cmd = "debugfs -R 'cat %s' %s| sed -n 's/^%s=//p'" % (self.artifact_info_file, filename, self.artifact_prefix)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
             return output
@@ -69,7 +69,11 @@ class Helpers:
         tfile.close()
 
         try:
-            cmd = "e2cp %s %s:%s" % (tfile.name, install_image, self.artifact_info_file)
+            cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
+            output = subprocess.check_output(cmd, shell=True).strip()
+            logging.info("Running: " + cmd + " returned: " + output)
+
+            cmd = "debugfs -w -R 'write %s %s' %s" % (tfile.name, self.artifact_info_file, install_image)
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
 

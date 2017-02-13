@@ -1,5 +1,7 @@
 #!/bin/bash
+set -e
 
+../verify-docker-versions
 
 exec docker-compose \
      -p 'menderproduction'\

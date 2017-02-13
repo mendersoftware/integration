@@ -1,0 +1,59 @@
+#!/bin/bash
+set -o pipefail
+
+# Assuming docker minor and patch version backward-compatibility,
+# but not major version compatibility (require 1.X.*).
+
+VERSION_MINOR_MIN_DOCKER_ENGINE="11"
+VERSION_MINOR_MIN_DOCKER_COMPOSE="6"
+
+compare_versions() {
+  VERSION_ACTUAL=$1
+  VERSION_MINIMUM=$2
+
+  if [[ -z $VERSION_ACTUAL ]]; then
+    echo "ERROR: Actual version is empty (hint: is it installed, or version format change?)."
+    return 1
+  fi
+
+  if [ "$VERSION_ACTUAL" -lt "$VERSION_MINIMUM" ]; then
+    echo "ERROR: Actual version installed ($VERSION_ACTUAL) is smaller than minimum requirement ($VERSION_MINIMUM)."
+    return 1
+  fi
+
+  return 0
+}
+
+
+# test Docker Engine version
+
+DOCKER_ENGINE_VERSION_REGEX_MINOR_BACKREF="Docker version 1\.([0-9]+)\.[0-9]+, build [0-9a-f]+"
+
+DOCKER_ENGINE_VERSION_STRING=$(docker --version 2>/dev/null | head -n1)
+DOCKER_ENGINE_VERSION_MINOR=$(echo $DOCKER_ENGINE_VERSION_STRING | sed -rn "s/$DOCKER_ENGINE_VERSION_REGEX_MINOR_BACKREF/\1/p")
+
+compare_versions "$DOCKER_ENGINE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_ENGINE"
+
+if [ $? -ne 0 ]; then
+  echo "ERROR: Docker Engine must be on version 1.$VERSION_MINOR_MIN_DOCKER_ENGINE or larger, but found version 1.$DOCKER_ENGINE_VERSION_MINOR installed."
+  echo "DOCKER_ENGINE_VERSION_STRING=$DOCKER_ENGINE_VERSION_STRING"
+  exit 1
+fi
+
+
+# test Docker Compose version
+
+DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF="docker-compose version 1\.([0-9]+)\.[0-9]+, build [0-9a-f]+"
+
+DOCKER_COMPOSE_VERSION_STRING=$(docker-compose version 2>/dev/null | head -n1)
+DOCKER_COMPOSE_VERSION_MINOR=$(echo $DOCKER_COMPOSE_VERSION_STRING | sed -rn "s/$DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF/\1/p")
+
+compare_versions "$DOCKER_COMPOSE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_COMPOSE"
+
+if [ $? -ne 0 ]; then
+  echo "ERROR: Docker Compose must be on version 1.$VERSION_MINOR_MIN_DOCKER_COMPOSE or larger, but found version 1.$DOCKER_COMPOSE_VERSION_MINOR installed."
+  echo "DOCKER_COMPOSE_VERSION_STRING=$DOCKER_COMPOSE_VERSION_STRING"
+  exit 1
+fi
+
+exit 0

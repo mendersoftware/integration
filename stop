@@ -2,4 +2,6 @@
 # Stops the server, while preserving state.
 set -e -o pipefail
 
+./verify-docker-versions
+
 sudo ./demo stop

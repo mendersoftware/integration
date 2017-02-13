@@ -4,6 +4,8 @@
 # using docker-machine, assuming just one vm is started through it
 set -e -o pipefail
 
+./verify-docker-versions
+
 # host entries we need to add
 REQHOSTS="s3.docker.mender.io docker.mender.io"
 

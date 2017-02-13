@@ -18,7 +18,7 @@ script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then ( cd tests && bash run.sh --runslow ); fi
 
     # CRON JOB SECTION
-    - if [ "$TRAVIS_EVENT_TYPE" = "cron"]; then ( cd tests && bash run.sh --runnightly ); fi
+    - if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then ( cd tests && bash run.sh --runnightly ); fi
 
 notifications:
     slack:

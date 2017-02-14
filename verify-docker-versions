@@ -27,9 +27,8 @@ compare_versions() {
 
 # test Docker Engine version
 
-DOCKER_ENGINE_VERSION_REGEX_MINOR_BACKREF="Docker version 1\.([0-9]+)\.[0-9]+, build [0-9a-f]+"
-
-DOCKER_ENGINE_VERSION_STRING=$(docker --version 2>/dev/null | head -n1)
+DOCKER_ENGINE_VERSION_REGEX_MINOR_BACKREF="1\.([0-9]+)\.[0-9]+"
+DOCKER_ENGINE_VERSION_STRING=$(sudo docker info -f '{{.ServerVersion}}')
 DOCKER_ENGINE_VERSION_MINOR=$(echo $DOCKER_ENGINE_VERSION_STRING | sed -rn "s/$DOCKER_ENGINE_VERSION_REGEX_MINOR_BACKREF/\1/p")
 
 compare_versions "$DOCKER_ENGINE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_ENGINE"
@@ -43,9 +42,8 @@ fi
 
 # test Docker Compose version
 
-DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF="docker-compose version 1\.([0-9]+)\.[0-9]+, build [0-9a-f]+"
-
-DOCKER_COMPOSE_VERSION_STRING=$(docker-compose version 2>/dev/null | head -n1)
+DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF="1\.([0-9]+)\.[0-9]+"
+DOCKER_COMPOSE_VERSION_STRING=$(docker-compose version --short)
 DOCKER_COMPOSE_VERSION_MINOR=$(echo $DOCKER_COMPOSE_VERSION_STRING | sed -rn "s/$DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF/\1/p")
 
 compare_versions "$DOCKER_COMPOSE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_COMPOSE"

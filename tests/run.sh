@@ -1,6 +1,12 @@
 #!/bin/bash
 set -x -e
 
+# we need to make sure we use the correct ext4 image for testing
+if [[ -z "$BUILDDIR" ]] && [[ -z "$TEST_BRANCH" ]]; then
+    echo "TEST_BRANCH environment variable needs to be set"
+    exit 1
+fi
+
 if [[ ! -f large_image.dat ]]; then
     dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
 fi
@@ -20,18 +26,13 @@ if [[ -n "$BUILDDIR" ]]; then
     cp -f $BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .
 else
     # Download what we need.
-
     mkdir -p downloaded-tools
-    if [[ ! -f downloaded-tools/mender-artifact ]]; then
-        curl "https://d25phv8h0wbwru.cloudfront.net/master/tip/mender-artifact" -o downloaded-tools/mender-artifact
-    fi
+    curl "https://d25phv8h0wbwru.cloudfront.net/${TEST_BRANCH}/tip/mender-artifact" -o downloaded-tools/mender-artifact
+
     chmod +x downloaded-tools/mender-artifact
     export PATH=$PWD/downloaded-tools:$PATH
 
-    if [[ ! -f core-image-full-cmdline-vexpress-qemu.ext4 ]] ; then
-        echo "!! WARNING: core-image-file-cmdline-vexpress-qemu.ext4 was not found, will download the latest !!"
-        curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp/core-image-full-cmdline-vexpress-qemu.ext4"
-    fi
+    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4"
 fi
 
 cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4

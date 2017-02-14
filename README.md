@@ -53,7 +53,7 @@ services:
         |                                       |    +-------------------------+
         |        +-----------------------+      |    |                         |
    port |        |                       |      +--->|  Device Admission       |
-   8080 | <----> |  API Gateway          |      |    |  (mender-device-adm)    |
+    443 | <----> |  API Gateway          |      |    |  (mender-device-adm)    |
         |        |  (mender-api-gateway) |<-----+    +-------------------------+
         |        +-----------------------+      |    |                         |
         |                                       +--->|  Inventory              |

@@ -129,52 +129,6 @@ services:
             - CONFIG_PROP=config.properties
         ports:
             - "8080:8080"
-
-    mender-mongo-deployments:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-deployments
-        volumes:
-            - mender-deployments-db:/data:rw
-
-    mender-mongo-device-adm:
-        image: mongo:3.4
-        networks:
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-adm
-        volumes:
-            - mender-deviceadm-db:/data:rw
-
-    mender-mongo-device-auth:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-auth
-        volumes:
-            - mender-deviceauth-db:/data:rw
-
-    mender-mongo-inventory:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-inventory
-        volumes:
-            - mender-inventory-db:/data:rw
-
-    mender-mongo-useradm:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-useradm
-        volumes:
-            - mender-useradm-db:/data:rw
     mender-elasticsearch:
         volumes:
             - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
@@ -189,6 +143,24 @@ services:
             - ./conductor/server/config:/app/config
         environment:
             - CONFIG_PROP=config.properties
+    mongo-common:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-deployments
+                    - mongo-device-adm
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
+                    - mender-mongo-deployments
+                    - mender-mongo-device-adm
+                    - mender-mongo-device-auth
+                    - mender-mongo-inventory
+                    - mender-mongo-useradm
+        volumes:
+            - mender-mongo-data:/data:rw
+
 
 volumes:
     # mender artifacts storage
@@ -197,30 +169,10 @@ volumes:
           # use external volume created manually
           name: mender-artifacts
     # deployments service database
-    mender-deployments-db:
+    mender-mongo-data:
       external:
           # use external volume created manually
-          name: mender-deployments-db
-    # user administration service database
-    mender-useradm-db:
-      external:
-          # use external volume created manually
-          name: mender-useradm-db
-    # inventory service database
-    mender-inventory-db:
-      external:
-          # use external volume created manually
-          name: mender-inventory-db
-    # device authentication service database
-    mender-deviceauth-db:
-      external:
-          # use external volume created manually
-          name: mender-deviceauth-db
-    # device admission service database
-    mender-deviceadm-db:
-      external:
-          # use external volume created manually
-          name: mender-deviceadm-db
+          name: mender-mongo-data
     # dynomite database
     mender-dynomite-db:
       external:

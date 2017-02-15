@@ -9,6 +9,9 @@ env:
         - JOB_TYPE=compile_and_integration_tests_fast
         - JOB_TYPE=compile_and_integration_tests_slow
 
+    global:
+        TEST_BRANCH: $TRAVIS_BRANCH
+
 before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
     - pip2.7 install -U --user paramiko fabric PyYAML pytest requests

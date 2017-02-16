@@ -73,7 +73,9 @@ class Helpers:
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
 
-            cmd = "debugfs -w -R 'write %s %s' %s" % (tfile.name, self.artifact_info_file, install_image)
+            cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
+                   % (os.path.dirname(self.artifact_info_file),
+                      tfile.name, os.path.basename(self.artifact_info_file), install_image))
             output = subprocess.check_output(cmd, shell=True).strip()
             logging.info("Running: " + cmd + " returned: " + output)
 

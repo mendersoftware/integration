@@ -3,9 +3,10 @@ set -eu
 
 MENDER_CONF="/etc/mender/mender.conf"
 TEMPFILE=$(mktemp)
-e2cp "$IMAGE_TO_EDIT":"$MENDER_CONF" "$TEMPFILE"
+debugfs -R "dump $MENDER_CONF $TEMPFILE" "$IMAGE_TO_EDIT"
 
 sed -i 's/.*UpdatePollIntervalSeconds.*/\  "UpdatePollIntervalSeconds\": 2,/g' "$TEMPFILE"
 sed -i 's/.*InventoryPollIntervalSeconds.*/\  "InventoryPollIntervalSeconds\": 2,/g' "$TEMPFILE"
 
-e2cp "$TEMPFILE" "$IMAGE_TO_EDIT":"$MENDER_CONF"
+debugfs -w -R "rm $MENDER_CONF" "$IMAGE_TO_EDIT"
+printf 'cd %s\nwrite %s %s\n' `dirname $MENDER_CONF` "$TEMPFILE" `basename $MENDER_CONF` | debugfs -w "$IMAGE_TO_EDIT"

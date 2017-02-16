@@ -33,9 +33,9 @@ class TestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             with quiet():
-                output = run("journalctl -u mender -l --no-pager | grep 'update fetch request failed' | wc -l")
+                output = run("journalctl -u mender -l --no-pager | grep 'msg=\"update fetch failed:' | wc -l")
                 time.sleep(2)
-                if int(output) >= 4:  # check that some retries have occured
+                if int(output) >= 2:  # check that some retries have occured
                     logging.info("Looks like the download was retried 2 times, restoring download functionality")
                     break
 

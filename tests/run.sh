@@ -41,8 +41,8 @@ debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-vexpres
 dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
 if [ $# -eq 0 ]; then
-    py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
+    py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow 
     exit $?
 fi
 
-py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"
+py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@" tests/test_fault_tolerance.py::TestFaultTolerance::test_image_download_retry_1

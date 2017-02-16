@@ -56,7 +56,7 @@ shift
 
 
 [ "$TEST_TYPE" == "acceptance" ] && {
-    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.demo.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml"
+    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
     TEST_SERVICE=${TEST_SERVICE:-"acceptance"}
     $COMPOSE_CMD -f $TESTS_COMPOSE_PATH run ${TEST_SERVICE} || failed=1
 }

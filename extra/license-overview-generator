@@ -1,0 +1,380 @@
+#!/usr/bin/python3
+
+import argparse
+import datetime
+import json
+import operator
+import os
+import re
+import sys
+
+# Go style licenses repos.
+GO_REPOS = [ 'deployments',
+             'deviceadm',
+             'deviceauth',
+             'inventory',
+             'mender',
+             'mender-artifact',
+             'useradm'
+]
+# GUI style licenses repos.
+GUI_REPOS = [ 'gui' ]
+# We don't currently care about this one.
+OTHER_REPOS = [ 'mender-api-gateway-docker' ]
+
+# The directories to look in.
+DIRS = [os.path.join(os.path.dirname(sys.argv[0]), "../..")]
+
+# Candidates for license files.
+LICENSE_CANDIDATES = [ "LICENSE", "LICENCE", "COPYING" ]
+
+# A dictionary of the licenses we have collected, key is module, value is text.
+LICENSES = {}
+
+# A dictionary of license files we have covered.
+LICENSE_FILES_COVERED = {}
+
+
+#-------------------------------------------------------------------------------
+# Used as reference in the below variable.
+MIT_LICENSE = """MIT License
+
+Copyright (c) %d %s
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE."""
+
+# Some licenses we know about. We use these when the authors have not provided
+# the full license themselves.
+KNOWN_LICENSES = {
+    "BSD":
+"""Copyright (c) The Regents of the University of California.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. Neither the name of the University nor the names of its contributors
+   may be used to endorse or promote products derived from this software
+   without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.""",
+
+    "BSD-2-Clause":
+"""The FreeBSD Copyright
+
+Copyright 1992-2010 The FreeBSD Project. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+THIS SOFTWARE IS PROVIDED BY THE FREEBSD PROJECT ``AS IS`` AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as representing official policies, either expressed or implied, of the FreeBSD Project.""",
+
+    "BSD-3-Clause":
+"""Copyright (c) %d, %s
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+Neither the name of the <ORGANIZATION> nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
+
+    "BSD-4-Clause":
+"""Copyright (c) %d, %s
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+3. All advertising materials mentioning features or use of this software
+   must display the following acknowledgement:
+   This product includes software developed by the <organization>.
+4. Neither the name of the <organization> nor the
+   names of its contributors may be used to endorse or promote products
+   derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY <COPYRIGHT HOLDER> ``AS IS`` AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
+
+    "(GPL-2.0 OR MIT)": MIT_LICENSE,
+
+    "ISC":
+"""ISC License:
+
+Copyright &#169; 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
+Copyright &#169; 1995-2003 by Internet Software Consortium
+
+Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.""",
+
+    'MIT': MIT_LICENSE,
+
+    '(MIT OR Apache-2.0)': MIT_LICENSE,
+
+    "MIT/X11":
+"""The MIT/X11 License
+
+Copyright (c) %d %s
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.""",
+
+    "Public Domain":
+"""This software is in the public domain."""
+}
+#-------------------------------------------------------------------------------
+
+
+parser = argparse.ArgumentParser(description='Generate a license overview for Mender repositories.')
+parser.add_argument('--dir', dest='DIRS', action='append',
+                    help='Directories to look for repositories. Later directories take precedence.')
+parsed = parser.parse_args()
+
+if parsed.DIRS is not None:
+    DIRS += parsed.DIRS
+# In order for latest directories to be searched first.
+DIRS.reverse()
+
+def select_license_text(license, author):
+    if KNOWN_LICENSES[license].find('%s') == -1:
+        return KNOWN_LICENSES[license]
+    else:
+        return KNOWN_LICENSES[license] % (datetime.date.today().year, author)
+
+
+def find_repo(repo):
+    loc = None
+    for dir in DIRS:
+        if os.path.exists(os.path.join(dir, repo)):
+            loc = os.path.join(dir, repo)
+
+    if loc is None:
+        raise Exception(("Could not find repository %s in any of the locations: %s. " +
+                         "Use --dir=<dir> to add directories to the search path.")
+                        % (repo, ", ".join(DIRS)))
+
+    return loc
+
+def add_file_to_licenses(component, license_file):
+    LICENSE_FILES_COVERED[license_file] = True
+
+    license_fd = open(license_file)
+    content = license_fd.read()
+    add_to_licenses(component, content)
+
+def add_to_licenses(component, content):
+    existing = LICENSES.get(component)
+    if existing is None:
+        LICENSES[component] = [content]
+    elif content not in existing:
+        LICENSES[component].append(content)
+
+def process_chksum_file(file):
+    fd = open(file)
+
+    line_count = 0
+
+    for line in fd:
+        line = line.strip()
+        line_count += 1
+
+        if line[0:1] == '#':
+            continue
+
+        entries = line.split()
+        if len(entries) == 0:
+            continue
+        if len(entries) != 2:
+            raise Exception("Malformed line in %s:%d: %s" % (file, line_count, line))
+
+        license_file = entries[1]
+        component = os.path.dirname(entries[1])
+
+        # Ignore the license in this directory, which is our own license.
+        if license_file.find('/') == -1:
+            LICENSE_FILES_COVERED[os.path.join(os.path.dirname(file), license_file)] = True
+            continue
+
+        if component[0:7] == "vendor/":
+            component = component[7:]
+
+        if component.find("/vendor/") >= 0:
+            # We assume that sub dependencies are covered by the top license.
+            LICENSE_FILES_COVERED[os.path.join(os.path.dirname(file), license_file)] = True
+            continue
+
+        add_file_to_licenses(component, os.path.join(os.path.dirname(file), license_file))
+
+def process_node_module(modules_path, module):
+    license_file = None
+
+    for candidate in LICENSE_CANDIDATES:
+        full_path = os.path.join(modules_path, module, candidate)
+        if os.path.exists(full_path):
+            license_file = full_path
+            break
+
+    if license_file is not None:
+        add_file_to_licenses("www.npmjs.com/package/%s" % module,
+                             license_file)
+    else:
+        data = json.load(open(os.path.join(modules_path, module, "package.json")))
+        license_url = None
+        # node modules are inconsistent in their specification of license, so
+        # we need to check many locations.
+        if type(data.get('license')) is str:
+            license_type = data['license']
+        elif type(data.get('license')) is dict:
+            license_type = data['license']['type']
+            license_url = data['license'].get('url')
+        elif type(data.get('license')) is list:
+            license_type = data['license'][0]['type']
+            license_url = data['license'][0].get('url')
+
+        elif type(data.get('licenses')) is str:
+            license_type = data['licenses']
+        elif type(data.get('licenses')) is dict:
+            license_type = data['licenses']['type']
+            license_url = data['licenses'].get('url')
+        elif type(data.get('licenses')) is list:
+            license_type = data['licenses'][0]['type']
+            license_url = data['licenses'][0].get('url')
+
+        else:
+            raise Exception("No license key inside package.json for %s" % module)
+
+        try:
+            author = data.get('author')
+            if type(author) is dict:
+                author = author['name']
+
+            if author is None:
+                author = data['_npmUser']['name']
+        except KeyError:
+            raise Exception("No author data in package.json for %s" % module)
+
+        if license_url is None:
+            add_to_licenses("www.npmjs.com/package/%s" % module,
+                            select_license_text(license_type, author))
+
+# Go style licenses.
+def do_go_repos():
+    for repo in GO_REPOS:
+        loc = find_repo(repo)
+
+        lic_chksums = os.path.join(loc, "LIC_FILES_CHKSUM.sha256")
+        if not os.path.exists(lic_chksums):
+            raise Exception("No license checksums found at %s" % lic_chksums)
+
+        process_chksum_file(lic_chksums)
+
+        verify_no_license_leftovers(loc)
+
+# Licenses for GUI repos.
+def do_gui_repos():
+    for repo in GUI_REPOS:
+        loc = find_repo(repo)
+
+        # Our own license is covered.
+        LICENSE_FILES_COVERED[os.path.join(loc, "LICENSE")] = True
+
+        modules_path = os.path.join(loc, "node_modules")
+        modules = os.listdir(modules_path)
+        for module in modules:
+            if module in ['.bin']:
+                continue
+
+            # Exception: This one doesn't come with a valid license, but it is
+            # MIT according to web page.
+            if module == "indexof":
+                add_to_licenses("www.npmjs.com/package/%s" % module,
+                                select_license_text("MIT", "indexof"))
+                continue
+
+            process_node_module(modules_path, module)
+
+        # Node modules that are sub modules we don't care about, they are
+        # covered by their top license.
+        for path, dirs, files in os.walk(loc):
+            for file in files:
+                if file not in LICENSE_CANDIDATES:
+                    continue
+
+                full_path = os.path.join(path, file)
+                if re.search("node_modules/.*/node_modules/", full_path):
+                    LICENSE_FILES_COVERED[full_path] = True
+
+        verify_no_license_leftovers(loc)
+
+def verify_no_license_leftovers(location):
+    for path, dirs, files in os.walk(location):
+        for file in files:
+            if file in LICENSE_CANDIDATES and not LICENSE_FILES_COVERED.get(os.path.join(path, file)):
+                raise Exception("Found unhandled license in %s" % os.path.join(path, file))
+
+do_go_repos()
+do_gui_repos()
+
+# Sort according to component.
+sorted_licenses = sorted(LICENSES.items(), key=operator.itemgetter(0))
+
+separator = "\n\n--------------------------------------------------------------------------------\n\n"
+component_texts = []
+for component in sorted_licenses:
+    text = separator.join(["%s:\n\n%s" % (component[0], license) for license in component[1]])
+    component_texts.append(text)
+
+print("Third party licenses used in Mender.")
+print(separator)
+print(separator.join(component_texts))

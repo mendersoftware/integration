@@ -11,7 +11,20 @@ CERT_VALID_DAYS="3650"
 FILE_NAME_PRIVATE_KEY="private.key"
 FILE_NAME_CERT="cert.crt"
 
-command -v openssl >/dev/null 2>&1 || { echo >&2 "Please install the openssl utility to generate keys."; exit 1; }
+
+# verify openssl is present and sufficiently recent (genpkey seems to require openssl 1.0+)
+command -v openssl >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the openssl utility version 1.0.0 or newer to generate keys."; exit 1; }
+
+OPENSSL_VERSION_REGEX_MAJOR_BACKREF="OpenSSL ([0-9]+).*"
+OPENSSL_VERSION_STRING=$(openssl version)
+OPENSSL_VERSION_MAJOR=$(echo $OPENSSL_VERSION_STRING | sed -En "s/$OPENSSL_VERSION_REGEX_MAJOR_BACKREF/\1/p")
+
+if [ "$OPENSSL_VERSION_MAJOR" != "1" ]; then
+  echo "ERROR: openssl is too old, need version 1.0.0 or newer"
+  echo "ERROR: OPENSSL_VERSION_STRING=$OPENSSL_VERSION_STRING"
+  exit 1
+fi
+
 
 ROOTDIR=$(pwd)/keys-generated
 

@@ -24,10 +24,30 @@ services:
     mender-useradm:
         volumes:
             - ./template/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
 
     mender-device-auth:
         volumes:
             - ./template/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
+
+    mender-inventory:
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
+
+    mender-device-adm:
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
 
     mender-api-gateway:
         ports:
@@ -38,6 +58,10 @@ services:
         volumes:
             - ./template/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
             - ./template/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
 
     storage-proxy:
         ports:
@@ -79,6 +103,10 @@ services:
             # devices will access storage using https://s3.acme.org:9000, then
             # set this to https://s3.acme.org:9000
             DEPLOYMENTS_AWS_URI: https://set-my-alias-here.com
+        logging:
+            options:
+                max-file: "10"
+                max-size: "50m"
 
     minio:
         environment:

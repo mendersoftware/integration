@@ -15,19 +15,18 @@
 
 from fabric.api import *
 import pytest
-import time
 from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import common_update_proceduce
-from MenderAPI import adm, deploy, image
+from MenderAPI import adm, deploy
 from mendertesting import MenderTesting
+
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestBasicIntegration(MenderTesting):
 
-    @MenderTesting.fast
-    def test_update_image_successful(self, install_image=conftest.get_valid_image(), regnerate_image_id=True):
+    def update_image_successful(self, install_image=conftest.get_valid_image(), regnerate_image_id=True):
         """
             Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -35,12 +34,6 @@ class TestBasicIntegration(MenderTesting):
             Deployment status will be set as successful for device.
             Logs will not be retrieved, and result in 404.
         """
-        if not env.host_string:
-            execute(self.test_update_image_successful,
-                    hosts=get_mender_clients(),
-                    install_image=install_image,
-                    regnerate_image_id=regnerate_image_id)
-            return
 
         previous_inactive_part = Helpers.get_passive_partition()
         deployment_id, expected_image_id = common_update_proceduce(install_image,
@@ -56,23 +49,15 @@ class TestBasicIntegration(MenderTesting):
         Helpers.verify_reboot_not_performed()
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
 
-
-    @MenderTesting.fast
-    def test_update_image_failed(self, install_image="broken_update.ext4"):
+    def update_image_failed(self, install_image="broken_update.ext4"):
         """
             Perform a upgrade using a broken image (random data)
             The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
             The resulting upgrade will be considered a failure.
         """
-        if not env.host_string:
-            execute(self.test_update_image_failed,
-                    hosts=get_mender_clients(),
-                    install_image=install_image)
-            return
 
         devices_accepted = get_mender_clients()
         original_image_id = Helpers.yocto_id_installed_on_machine()
-
 
         previous_active_part = Helpers.get_active_partition()
         deployment_id, _ = common_update_proceduce(install_image, broken_image=True)
@@ -89,20 +74,20 @@ class TestBasicIntegration(MenderTesting):
         Helpers.verify_reboot_not_performed()
 
 
-    @MenderTesting.slow
+    @MenderTesting.fast
     def test_double_update(self):
         """Upload a device with two consecutive upgrade images"""
 
         if not env.host_string:
             execute(self.test_double_update,
-                                    hosts=get_mender_clients())
+                    hosts=get_mender_clients())
             return
 
-        self.test_update_image_successful()
-        self.test_update_image_successful()
+        self.update_image_successful()
+        self.update_image_successful()
 
 
-    @MenderTesting.slow
+    @MenderTesting.fast
     def test_failed_updated_and_valid_update(self):
         """Upload a device with a broken image, followed by a valid image"""
 
@@ -111,5 +96,5 @@ class TestBasicIntegration(MenderTesting):
                     hosts=get_mender_clients())
             return
 
-        self.test_update_image_failed()
-        self.test_update_image_successful()
+        self.update_image_failed()
+        self.update_image_successful()

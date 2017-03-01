@@ -14,7 +14,8 @@ env:
 
 before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
-    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests
+    - pip2.7 install -U --user paramiko PyYAML pytest requests
+    - pip2.7 install -e git+git://github.com/GregorioDiStefano/fabric.git@master#egg=fabric
 
 script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi

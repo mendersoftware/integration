@@ -62,7 +62,7 @@ class TestFaultTolerance(MenderTesting):
 
         deployment_id, _ = common_update_proceduce(install_image)
         Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
-        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
 
     @MenderTesting.fast
     def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
@@ -97,7 +97,7 @@ class TestFaultTolerance(MenderTesting):
         logging.info("Waiting for system to finish reboot")
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == active_part
-        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
         Helpers.verify_reboot_not_performed()
 
         assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
@@ -117,7 +117,7 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
-        deployment_id, expected_yocto_id = common_update_proceduce(install_image)
+        deployment_id, expected_yocto_id = common_update_proceduce(install_image, verify_status=False)
         time.sleep(60)
 
         for i in range(5):
@@ -127,7 +127,7 @@ class TestFaultTolerance(MenderTesting):
 
         logging.info("Network stabilized")
         Helpers.verify_reboot_performed()
-        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
 

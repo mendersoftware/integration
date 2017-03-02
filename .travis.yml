@@ -19,11 +19,6 @@ before_install:
 
 script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
-    - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then ( cd tests && bash run.sh --runslow ); fi
-
-    # CRON JOB SECTION
-    - if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then ( cd tests && bash run.sh --runnightly ); fi
-
 
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then
         ( cd tests && bash run.sh --runslow );
@@ -32,6 +27,9 @@ script:
     - if [[ "$JOB_TYPE" = compile_and_integration_tests_amz_s3 ]] && [[ -n $AWS_ACCESS_KEY_ID ]] && [[ -n $AWS_SECRET_ACCESS_KEY ]]; then
         ( cd tests && bash run.sh --runs3 );
       fi
+
+    # CRON JOB SECTION
+    - if [ "$TRAVIS_EVENT_TYPE" = "cron" ]; then ( cd tests && bash run.sh --runnightly ); fi
 
 notifications:
     slack:

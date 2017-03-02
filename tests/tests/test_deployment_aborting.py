@@ -44,11 +44,11 @@ class TestDeploymentAborting(MenderTesting):
         install_image=conftest.get_valid_image()
         expected_partition = Helpers.get_active_partition()
         expected_image_id = Helpers.yocto_id_installed_on_machine()
-        deployment_id, _ = common_update_proceduce(install_image)
+        deployment_id, _ = common_update_proceduce(install_image, verify_status=False)
 
-        deploy.check_expected_status(deployment_id, abort_step, len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
         deploy.abort(deployment_id)
-        deploy.check_expected_status(deployment_id, "aborted", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "aborted", len(get_mender_clients()))
 
         # no deployment logs are sent by the client, is this expected?
         for d in adm.get_devices():
@@ -62,6 +62,7 @@ class TestDeploymentAborting(MenderTesting):
 
         assert Helpers.get_active_partition() == expected_partition
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+        deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
     def test_deployment_abortion_pending(self):
@@ -90,6 +91,7 @@ class TestDeploymentAborting(MenderTesting):
 
         Helpers.verify_reboot_performed()
 
-        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
         deploy.abort(deployment_id)
-        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+        deploy.check_expected_status("finished", deployment_id)

@@ -77,6 +77,17 @@ class Deployments(object):
         logger.info("Logs contain " + str(r.text))
         return r.text
 
+    def get_status(self, status=None):
+        deployments_status_url = self.get_deployments_base_path() + "deployments"
+
+        if status:
+            deployments_status_url += "?status=%s" % (status)
+
+        r = requests.get(deployments_status_url, headers=self.auth.get_auth_token(), verify=False)
+
+        assert r.status_code == requests.status_codes.codes.ok
+        return json.loads(r.text)
+
     def get_statistics(self, deployment_id):
         deployments_statistics_url = self.get_deployments_base_path() + "deployments/%s/statistics" % (deployment_id)
         r = requests.get(deployments_statistics_url, headers=self.auth.get_auth_token(), verify=False)
@@ -94,7 +105,25 @@ class Deployments(object):
 
         return json.loads(r.text)
 
-    def check_expected_status(self, deployment_id, expected_status, expected_count, max_wait=300, polling_frequency=.2):
+    def check_expected_status(self, expected_status, deployment_id, max_wait=600, polling_frequency=2):
+        timeout = time.time() + max_wait
+
+        while time.time() <= timeout:
+            data = self.get_status(status=expected_status)
+
+            for deployment in data:
+                if deployment["id"] == deployment_id:
+                    logger.info("got expected deployment status (%s) for: %s" % (expected_status, deployment_id))
+                    return
+            else:
+                time.sleep(polling_frequency)
+                continue
+
+        if time.time() > timeout:
+            pytest.fail("Never found status: %s for %s" % (expected_status, deployment_id))
+
+
+    def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=300, polling_frequency=.2):
         timeout = time.time() + max_wait
         seen = set()
 
@@ -104,10 +133,9 @@ class Deployments(object):
             data = self.get_statistics(deployment_id)
             seen.add(str(data))
 
-            if data[expected_status] != expected_count:
-                continue
-            else:
+            if data[expected_status] == expected_count:
                 return
+            continue
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (expected_status, expected_count, str(seen)))

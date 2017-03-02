@@ -41,13 +41,15 @@ class TestBasicIntegration(MenderTesting):
 
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_inactive_part
-        deploy.check_expected_status(deployment_id, "success", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
         for d in adm.get_devices():
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
         Helpers.verify_reboot_not_performed()
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+
+        deploy.check_expected_status("finished", deployment_id)
 
     def update_image_failed(self, install_image="broken_update.ext4"):
         """
@@ -65,7 +67,7 @@ class TestBasicIntegration(MenderTesting):
         Helpers.verify_reboot_performed()
         assert Helpers.get_active_partition() == previous_active_part
 
-        deploy.check_expected_status(deployment_id, "failure", len(devices_accepted))
+        deploy.check_expected_statistics(deployment_id, "failure", len(devices_accepted))
 
         for d in adm.get_devices():
             assert "running rollback image" in deploy.get_logs(d["id"], deployment_id)
@@ -73,6 +75,7 @@ class TestBasicIntegration(MenderTesting):
         assert Helpers.yocto_id_installed_on_machine() == original_image_id
         Helpers.verify_reboot_not_performed()
 
+        deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
     def test_double_update(self):

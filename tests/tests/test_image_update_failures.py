@@ -46,7 +46,8 @@ class TestFailures(MenderTesting):
                                                        artifact_name=expected_image_id,
                                                        devices=devices_accepted_id)
 
-        deploy.check_expected_status(deployment_id, "already-installed", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "already-installed", len(get_mender_clients()))
+        deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
     def test_large_update_image(self):
@@ -56,5 +57,6 @@ class TestFailures(MenderTesting):
             return
 
         deployment_id, _ = common_update_proceduce(install_image="large_image.dat", regnerate_image_id=False, broken_image=True)
-        deploy.check_expected_status(deployment_id, "failure", len(get_mender_clients()))
+        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
         Helpers.verify_reboot_not_performed()
+        deploy.check_expected_status("finished", deployment_id)

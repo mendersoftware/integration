@@ -22,7 +22,8 @@ import random
 def common_update_proceduce(install_image,
                             regnerate_image_id=True,
                             device_type="vexpress-qemu",
-                            broken_image=False):
+                            broken_image=False,
+                            verify_status=True):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
@@ -45,6 +46,12 @@ def common_update_proceduce(install_image,
 
         # remove the artifact file
         os.remove(artifact_file)
+
+        # wait until deployment is in correct state
+        if verify_status:
+            deploy.check_expected_status("pending", deployment_id)
+            deploy.check_expected_status("inprogress", deployment_id)
+
         return deployment_id, artifact_id
 
     logger.error("error creating artifact")

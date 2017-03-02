@@ -13,10 +13,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from common_docker import *
 from common import *
 from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 import random
+from fabric.api import *
 
 
 def common_update_proceduce(install_image,
@@ -55,3 +57,56 @@ def common_update_proceduce(install_image,
         return deployment_id, artifact_id
 
     logger.error("error creating artifact")
+
+
+def update_image_successful(install_image=conftest.get_valid_image(), regnerate_image_id=True):
+    """
+        Perform a successful upgrade, and assert that deployment status/logs are correct.
+
+        A reboot is performed, and running partitions have been swapped.
+        Deployment status will be set as successful for device.
+        Logs will not be retrieved, and result in 404.
+    """
+
+    previous_inactive_part = Helpers.get_passive_partition()
+    deployment_id, expected_image_id = common_update_proceduce(install_image,
+                                                               regnerate_image_id)
+
+    Helpers.verify_reboot_performed()
+    assert Helpers.get_active_partition() == previous_inactive_part
+    deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+
+    for d in adm.get_devices():
+        deploy.get_logs(d["id"], deployment_id, expected_status=404)
+
+    Helpers.verify_reboot_not_performed()
+    assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+
+    deploy.check_expected_status("finished", deployment_id)
+
+
+def update_image_failed(install_image="broken_update.ext4"):
+    """
+        Perform a upgrade using a broken image (random data)
+        The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
+        The resulting upgrade will be considered a failure.
+    """
+
+    devices_accepted = get_mender_clients()
+    original_image_id = Helpers.yocto_id_installed_on_machine()
+
+    previous_active_part = Helpers.get_active_partition()
+    deployment_id, _ = common_update_proceduce(install_image, broken_image=True)
+
+    Helpers.verify_reboot_performed()
+    assert Helpers.get_active_partition() == previous_active_part
+
+    deploy.check_expected_statistics(deployment_id, "failure", len(devices_accepted))
+
+    for d in adm.get_devices():
+        assert "running rollback image" in deploy.get_logs(d["id"], deployment_id)
+
+    assert Helpers.yocto_id_installed_on_machine() == original_image_id
+    Helpers.verify_reboot_not_performed()
+
+    deploy.check_expected_status("finished", deployment_id)

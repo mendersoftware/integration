@@ -17,15 +17,17 @@ from fabric.api import *
 import pytest
 from common import *
 from common_setup import *
-from helpers import Helpers
-from tests import TestBasicIntegration_Amazon_S3, MenderTesting
-
+from tests import MenderTesting
+from tests import common_update
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3")
-class TestBasicIntegrationWithS3():
+class TestBasicIntegrationWithS3(MenderTesting):
 
     @MenderTesting.aws_s3
-    def test_update_image_with_aws_s3(self, install_image=conftest.get_valid_image(), name=None, regnerate_image_id=True):
+    def test_update_image_with_aws_s3(self,
+                                      install_image=conftest.get_valid_image(),
+                                      name=None,
+                                      regnerate_image_id=True):
         """
             Perform a successful upgrade using AWS S3
         """
@@ -35,5 +37,4 @@ class TestBasicIntegrationWithS3():
                     hosts=get_mender_clients())
             return
 
-        t = TestBasicIntegration_Amazon_S3()
-        t.update_image_successful()
+        common_update.update_image_successful()

@@ -65,7 +65,7 @@ def pytest_configure(config):
 
     env.user = "root"
 
-    env.connection_attempts = 50
+    env.connection_attempts = 200
     env.eagerly_disconnect = True
     env.banner_timeout = 60
 

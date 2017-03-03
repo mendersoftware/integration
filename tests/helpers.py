@@ -28,7 +28,7 @@ from fabric.contrib.files import exists
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-class FabricFatalException(Exception):
+class FabricFatalException(BaseException):
     pass
 
 class Helpers:
@@ -135,33 +135,31 @@ class Helpers:
             with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
                 run(cmd)
         except (FabricFatalException, EOFError):
-            logging.critical("failed to touch /tmp/ folder, is the device already rebooting?")
+            logging.info("failed to touch /tmp/ folder, is the device already rebooting?")
             time.sleep(5*60)
             return
 
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
-            with settings(warn_only=True, abort_exception=FabricFatalException):
-                try:
+            try:
+                with settings(warn_only=True, abort_exception=FabricFatalException):
+                    time.sleep(1)
                     if exists(tfile):
                         logging.debug("temp. file still exists, device hasn't rebooted.")
-                        time.sleep(5)
                         continue
                     else:
                         logging.debug("temp. file no longer exists, device has rebooted.")
                         successful_connections += 1
 
-                        # try connecting 5 times before returning
-                        if successful_connections <= 4:
-                            time.sleep(1)
-                            continue
+                    # try connecting 5 times before returning
+                    if successful_connections <= 4:
+                        continue
                     return
 
-                except (FabricFatalException, EOFError):
-                    logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
-                    time.sleep(5)
-                    continue
+            except (BaseException):
+                logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
+                continue
 
         if time.time() > timeout:
             pytest.fail("Device never rebooted!")

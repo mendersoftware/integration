@@ -34,6 +34,8 @@ def pytest_addoption(parser):
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
     parser.addoption("--runnightly", action="store_true", help="run nightly (very slow) tests")
+    parser.addoption("--runs3", action="store_true", help="run fast tests")
+
     parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")

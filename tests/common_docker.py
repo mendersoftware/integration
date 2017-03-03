@@ -15,8 +15,8 @@
 from fabric.api import *
 import pytest
 import subprocess
-
 import tempfile
+import time
 import conftest
 from common import *
 
@@ -28,22 +28,26 @@ COMPOSE_FILES = [
     "../docker-compose.demo.yml"
 ]
 
+
 log_files = []
 
-def docker_compose_cmd(arg_list):
+def docker_compose_cmd(arg_list, use_common_files=True):
     extra_files = pytest.config.getoption("--docker-compose-file")
     if extra_files is None:
         extra_files = []
 
     files_args = ""
-    for file in COMPOSE_FILES + extra_files:
-        files_args += " -f %s" % file
+
+    if use_common_files:
+        for file in COMPOSE_FILES + extra_files:
+            files_args += " -f %s" % file
 
     subprocess.check_call("docker-compose %s %s" % (files_args, arg_list), shell=True)
 
 
 def stop_docker_compose():
-    docker_compose_cmd("down -v")
+    # take down all COMPOSE_FILES and the s3 specific files
+    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
 
     set_setup_type(None)
 

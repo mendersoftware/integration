@@ -1,0 +1,1 @@
+from mendertesting import MenderTesting

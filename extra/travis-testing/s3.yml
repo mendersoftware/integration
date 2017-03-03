@@ -1,0 +1,27 @@
+version: '2'
+services:
+
+    mender-useradm:
+        volumes:
+            - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
+
+    mender-device-auth:
+        volumes:
+            - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+
+    mender-api-gateway:
+        ports:
+            - "8080:443"
+            - "443:443"
+        networks:
+            mender:
+                aliases:
+                    - docker.mender.io
+        # nginx doesn't know the actual outside port
+        # could be solved with introspection (mapping daemon socket + 'docker ps')
+        # the easier way is an env var
+        environment:
+            MAPPED_PORT: 8080
+        volumes:
+            - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
+            - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro

@@ -43,13 +43,18 @@ debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-vexpres
 
 dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
-if [[ -z $AWS_ACCESS_KEY_ID ]] || [[ -z $AWS_SECRET_ACCESS_KEY ]]; then
+if [[ -z $AWS_ACCESS_KEY_ID ]] || [[ -z $AWS_SECRET_ACCESS_KEY ]] ; then
     echo "AWS credentials (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY) are not set, not running S3 tests"
 else
     if [[ ! -d ../keys-generated ]]; then
         ( cd .. && CERT_API_CN=docker.mender.io CERT_STORAGE_CN=s3.docker.mender.io ./keygen )
     fi
-    py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runs3 tests/amazon_s3/test_s3.py::TestBasicIntegrationWithS3::test_update_image_with_aws_s3
+
+    if [[ $@ == **--runs3** ]]; then
+        py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runs3 tests/amazon_s3/test_s3.py::TestBasicIntegrationWithS3::test_update_image_with_aws_s3
+    else
+        echo "AWS creds are present, but --runs3 flag not passed."
+    fi
 fi
 
 if [ $# -eq 0 ]; then

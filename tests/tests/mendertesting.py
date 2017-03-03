@@ -28,7 +28,7 @@ else:
 if pytest.config.getoption("--runs3"):
     MenderTesting.aws_cond = True
 
-if not MenderTesting.slow_cond and not MenderTesting.fast_cond and not MenderTesting.nightly_cond:
+if not MenderTesting.slow_cond and not MenderTesting.fast_cond and not MenderTesting.nightly_cond and not MenderTesting.aws_cond:
     # Default to running everything but nightly.
     MenderTesting.slow_cond = True
     MenderTesting.fast_cond = True

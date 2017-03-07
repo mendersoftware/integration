@@ -9,6 +9,7 @@ import os
 import sys
 import random
 from time import sleep
+import inspect
 
 # strings
 import re
@@ -29,12 +30,24 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from web_funcs import *
 
+def function_name():
+   """Returns the function name of the calling function (stack[1])"""
+   return inspect.stack()[1][3]
+
+def ui_test_banner():
+    print("=== UI-TEST: {}() ===".format(inspect.stack()[1][3]))
+
+def ui_test_success():
+    print("=== SUCCESS: {}() ===".format(inspect.stack()[1][3]))
+
+
 def tag_contents_xpath(tag, content):
+    """Constructs an xpath matching element with tag containing content"""
     content = content.lower()
     return '//{}[contains(translate(*,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"{}")]'.format(tag, content)
 
 class TestUI(object):
-    def init_driver(self, url="https://localhost:8080/"):
+    def init_driver(self, url="https://localhost:443/"):
         self.url = url
         driver = chrome_driver()
         #driver = phantom_driver()
@@ -56,12 +69,12 @@ class TestUI(object):
     def download_images(self):
         url1 = "https://d1b0l86ne08fsf.cloudfront.net/master/vexpress-qemu/vexpress_release_1.mender"
         url2 = "https://d1b0l86ne08fsf.cloudfront.net/master/vexpress-qemu/vexpress_release_2.mender"
-        path1 = "mender-artifact"
-        path2 = "mender-artifact2"
+        path1 = "vexpress_release_1.mender"
+        path2 = "vexpress_release_2.mender"
         download_if_needed(url1, path1)
         download_if_needed(url2, path2)
 
-    def wait_for_element(self, driver, timeout, by, arg):
+    def wait_for_element(self, driver, by, arg, timeout=10):
         try:
             element = WebDriverWait(driver, timeout).until(
                 EC.visibility_of_element_located(( by, arg )))
@@ -86,19 +99,27 @@ class TestUI(object):
                     element.click()
                     return True
                 except:
-                    print("Could not click: " + element.text)
                     return False
         except selenium.common.exceptions.StaleElementReferenceException:
             return False
 
-    def click_button(self, driver, label, timeout=3):
+    def attempt_click_timeout(self, element, timeout=10):
+        time_passed = 0.0
+        while time_passed < timeout:
+            if self.attempt_click(element):
+                return True
+            sleep(0.2)
+            time_passed += 0.2
+        return False
+
+    def click_button(self, driver, label, timeout=10):
         xp = tag_contents_xpath("button", label)
-        element = self.wait_for_element(driver, timeout, By.XPATH, xp)
+        element = self.wait_for_element(driver, By.XPATH, xp)
         if not element:
             print("Button not found: " + label)
             return False
         print("Clicking: {} ({})".format(label, element))
-        return self.attempt_click(element)
+        return self.attempt_click_timeout(element, timeout)
 
     def click_random_button(self, driver):
         buttons = driver.find_elements_by_tag_name("button")
@@ -110,41 +131,40 @@ class TestUI(object):
                 return True
         return False
 
-    def upload_artifact(self, driver, path, name, description):
+    def upload_artifact(self, driver, path):
         element = None
         while element is None:
-            try:
-                element = driver.find_element_by_name("artifactFile")
-            except:
-                pass
-            sleep(0.2)
+            #try:
+            element = driver.find_element_by_class_name("dropzone")
+            sleep(0.3)
+#            TODO: Add timeout
+        element = element.find_element_by_tag_name("input")
         element.send_keys(os.path.abspath(path))
-        name_field = driver.find_element_by_id("name")
-        name_field.click()
-        name_field.send_keys(name)
-        description_field = driver.find_element_by_id("description")
-        description_field.click()
-        description_field.send_keys(description)
-        assert self.click_button(driver, "Save artifact")
-        xp = tag_contents_xpath("tr", name)
-        element = self.wait_for_element(driver, 20, By.XPATH, xp)
-        assert element
+        sleep(1)
+
+    def wait_for_xpath(self, driver, xp, timeout=10):
+        return self.wait_for_element(driver, By.XPATH, xp, timeout)
 
     def upload_artifacts(self, driver):
-        self.click_button(driver, "Upload Artifact File")
-        self.upload_artifact(driver, "mender-artifact",
-                                     "Test artifact name 1",
-                                     "Test artifact description 1")
-        self.click_button(driver, "Upload Artifact File")
-        self.upload_artifact(driver, "mender-artifact2",
-                                     "Test artifact name 2",
-                                     "Test artifact description 2")
+        self.upload_artifact(driver, "vexpress_release_1.mender")
+        self.upload_artifact(driver, "vexpress_release_2.mender")
+        sleep(10)
+        artifacts = []
+        xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]",
+                  "//table/tbody[@class='clickable']/tr[2]/td[1]"]
+        # NOTE: These xpaths match the first clickable table
+        # TODO: Can search the page more extensively in case more
+        #       clickable tables are added.
+        elements = [self.wait_for_xpath(driver, x) for x in xpaths]
+        assert len(elements) == 2
+        contents = [x.text for x in elements]
+        assert "release-1" in contents and "release-2" in contents
 
     def login(self, driver):
         if "login" not in driver.current_url:
             return
         mock_email    = "mock_email@cfengine.com"
-        mock_password = "selenium.fox.rainbow.dog"
+        mock_password = "seleniumfoxrainbowdog"
         print("Logging in with credentials:")
         print("Email: "+ mock_email)
         print("Password: "+ mock_password)
@@ -159,17 +179,20 @@ class TestUI(object):
             clicked = self.click_button(driver, "create user")
         assert clicked
         xp = tag_contents_xpath("button", "Dashboard")
-        element = self.wait_for_element(driver, 5, By.XPATH, xp)
+        element = self.wait_for_element(driver, By.XPATH, xp)
         assert element
 
     def test_login_create_user(self):
+        ui_test_banner()
         try:
             driver = self.init_driver()
             self.login(driver)
+            ui_test_success()
         finally:
             self.destroy_driver(driver)
 
     def test_click_header_buttons(self):
+        ui_test_banner()
         try:
             driver = self.init_driver()
             self.login(driver)
@@ -177,52 +200,76 @@ class TestUI(object):
             assert self.click_button(driver, "Devices")
             assert self.click_button(driver, "Artifacts")
             assert self.click_button(driver, "Deployments")
+            ui_test_success()
         finally:
             self.destroy_driver(driver)
 
     def test_artifact_upload(self):
+        ui_test_banner()
         self.download_images()
         try:
             driver = self.init_driver()
             self.login(driver)
             assert self.click_button(driver, "Artifacts")
             self.upload_artifacts(driver)
+            ui_test_success()
         finally:
             self.destroy_driver(driver)
 
     def test_authorize_all(self):
-        try:
-            driver = self.init_driver()
-            self.login(driver)
-            assert self.click_button(driver, "Devices")
-            self.click_button(driver, "Authorize all")
-            xp = tag_contents_xpath("tbody", "vexpress-qemu")
-            element = self.wait_for_element(driver, 20, By.XPATH, xp)
-            assert element
-        finally:
-            self.destroy_driver(driver)
+        ui_test_banner()
+        driver = self.init_driver()
+        self.login(driver)
+        assert self.click_button(driver, "Devices")
+        self.click_button(driver, "Authorize 1 device")
+        xp = "//table/tbody[@class='clickable']/tr/td[3]/div"
+        authorized_device = self.wait_for_element(driver, By.XPATH, xp)
+        assert authorized_device
+        time_passed = 0.0
+        while authorized_device.text != "vexpress-qemu":
+            sleep(0.2)
+            time_passed += 0.2
+            if time_passed > 10.0:
+                break
+        print("Found authorized_device: '" + authorized_device.text + "'")
+        assert authorized_device.text == "vexpress-qemu"
+        ui_test_success()
+        self.destroy_driver(driver)
 
-    # def test_deploy(self):
-    #     try:
-    #         driver = self.init_driver()
-    #         self.login(driver)
-    #         assert self.click_button(driver, "Deployments")
-    #         assert self.click_button(driver, "Create a Deployment")
-    #         xp = tag_contents_xpath("label", "Select target artifact")
-    #         drop_down = self.wait_for_element(driver, 5, By.XPATH, xp)
-    #         assert drop_down
-    #         #drop_down.click()
-    #         # Doesn't work! :(
-    #         xp = tag_contents_xpath("label", "Select target artifact")
-    #         xp = '//label[*="Select target artifact"]'
-    #         option = self.wait_for_element(driver, 5, By.XPATH, xp)
-    #         option.click()
-    #
-    #         # ....
-    #
-    #         assert test.click_button(driver, "Create Deployment")
-    #     finally:
-    #         self.destroy_driver(driver)
+    def test_deploy(self):
+        ui_test_banner()
+        driver = self.init_driver()
+        self.login(driver)
+        assert self.click_button(driver, "Deployments")
+        assert self.click_button(driver, "Create a Deployment")
+
+        # Locate and click the select artifact drop down:
+        xp = "//div[@id='selectArtifact']/div[1]"
+        artifact_drop_down = self.wait_for_element(driver, By.XPATH, xp)
+        assert artifact_drop_down
+        assert self.attempt_click_timeout(artifact_drop_down)
+
+        # Locate and click the artifact we want to deploy "release-2":
+        xp = "/html/body[@class='box-sizing']/div[3]/div/div/div/div[1]/span/div/div/div"
+        target_artifact = self.wait_for_element(driver, By.XPATH, xp)
+        assert target_artifact
+        assert target_artifact.text == "release-2"
+        assert self.attempt_click_timeout(target_artifact)
+
+        # Locate and click the select group drop down:
+        xp = "//div[@id='selectGroup']/div[1]"
+        group_drop_down = self.wait_for_element(driver, By.XPATH, xp)
+        assert group_drop_down
+        assert self.attempt_click_timeout(group_drop_down)
+
+        # Locate and click the "All devices" group in this drop down:
+        xp = "/html/body[@class='box-sizing']/div[3]/div/div/div/div/span/div/div/div"
+        first_option = self.wait_for_element(driver, By.XPATH, xp)
+        assert first_option
+        assert self.attempt_click_timeout(first_option)
+        assert self.click_button(driver, "Create Deployment")
+        ui_test_success()
+        self.destroy_driver(driver)
 
 def get_args():
     argparser = argparse.ArgumentParser(description='Test UI of mender web server')
@@ -238,5 +285,5 @@ if __name__ == '__main__':
     test.test_click_header_buttons()
     test.test_artifact_upload()
     test.test_authorize_all()
-    #test.test_deploy()
+    test.test_deploy()
     #pytest.main(args=[os.path.realpath(__file__)])#, "--url", args.url])

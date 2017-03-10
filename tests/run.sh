@@ -29,12 +29,16 @@ if [[ -n "$BUILDDIR" ]]; then
 else
     # Download what we need.
     mkdir -p downloaded-tools
-    curl "https://d25phv8h0wbwru.cloudfront.net/${TEST_BRANCH}/tip/mender-artifact" -o downloaded-tools/mender-artifact
+    curl "https://d25phv8h0wbwru.cloudfront.net/${TEST_BRANCH}/tip/mender-artifact" \
+         -o downloaded-tools/mender-artifact \
+         -z downloaded-tools/mender-artifact
 
     chmod +x downloaded-tools/mender-artifact
     export PATH=$PWD/downloaded-tools:$PATH
 
-    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4"
+    curl "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
+         -o core-image-full-cmdline-vexpress-qemu.ext4 \
+         -z core-image-full-cmdline-vexpress-qemu.ext4
 fi
 
 

@@ -41,7 +41,7 @@ def common_update_proceduce(install_image,
 
     if created:
         deploy.upload_image("artifact.mender")
-        devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
+        devices_accepted_id = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
         deployment_id = deploy.trigger_deployment(name="New valid update",
                                                   artifact_name=artifact_id,
                                                   devices=devices_accepted_id)
@@ -77,7 +77,7 @@ def update_image_successful(install_image=conftest.get_valid_image(), regnerate_
     deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
     for d in adm.get_devices():
-        deploy.get_logs(d["id"], deployment_id, expected_status=404)
+        deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
     Helpers.verify_reboot_not_performed()
     assert Helpers.yocto_id_installed_on_machine() == expected_image_id
@@ -104,7 +104,7 @@ def update_image_failed(install_image="broken_update.ext4"):
     deploy.check_expected_statistics(deployment_id, "failure", len(devices_accepted))
 
     for d in adm.get_devices():
-        assert "running rollback image" in deploy.get_logs(d["id"], deployment_id)
+        assert "running rollback image" in deploy.get_logs(d["device_id"], deployment_id)
 
     assert Helpers.yocto_id_installed_on_machine() == original_image_id
     Helpers.verify_reboot_not_performed()

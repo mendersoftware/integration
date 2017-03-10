@@ -52,7 +52,7 @@ class TestDeploymentAborting(MenderTesting):
 
         # no deployment logs are sent by the client, is this expected?
         for d in adm.get_devices():
-            deploy.get_logs(d["id"], deployment_id, expected_status=404)
+            deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
         if not mender_performs_reboot:
             Helpers.verify_reboot_not_performed()

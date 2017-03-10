@@ -38,7 +38,7 @@ class TestInventory(MenderTesting):
                 inv_json = inv.get_devices()
                 adm_json = adm.get_devices()
 
-                adm_ids = [device['id'] for device in adm_json]
+                adm_ids = [device['device_id'] for device in adm_json]
 
                 assert(len(inv_json) > 0)
 

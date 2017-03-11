@@ -17,11 +17,14 @@ from fabric.api import *
 import logging
 import requests
 from common_docker import stop_docker_compose, log_files
+import random
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+
+docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 try:
     requests.packages.urllib3.disable_warnings()

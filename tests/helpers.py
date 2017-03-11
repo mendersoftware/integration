@@ -125,7 +125,7 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*15):
+    def verify_reboot_performed(max_wait=60*10):
         successful_connections = 0
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
@@ -134,9 +134,9 @@ class Helpers:
         try:
             with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
                 run(cmd)
-        except (FabricFatalException, EOFError):
+        except (FabricFatalException, EOFError, BaseException):
             logging.info("failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(5*60)
+            time.sleep(60*5)
             return
 
         timeout = time.time() + max_wait

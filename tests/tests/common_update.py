@@ -19,7 +19,7 @@ from helpers import Helpers
 from MenderAPI import adm, deploy, image, logger
 import random
 from fabric.api import *
-
+import tempfile
 
 def common_update_proceduce(install_image,
                             regnerate_image_id=True,
@@ -36,27 +36,24 @@ def common_update_proceduce(install_image,
         artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
     # create atrifact
-    artifact_file = "artifact.mender"
-    created = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
+    with tempfile.NamedTemporaryFile() as artifact_file:
+        created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
 
-    if created:
-        deploy.upload_image("artifact.mender")
-        devices_accepted_id = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
-        deployment_id = deploy.trigger_deployment(name="New valid update",
-                                                  artifact_name=artifact_id,
-                                                  devices=devices_accepted_id)
+        if created_artifact:
+            deploy.upload_image(created_artifact)
+            devices_accepted_id = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
+            deployment_id = deploy.trigger_deployment(name="New valid update",
+                                                      artifact_name=artifact_id,
+                                                      devices=devices_accepted_id)
 
-        # remove the artifact file
-        os.remove(artifact_file)
+            # wait until deployment is in correct state
+            if verify_status:
+                deploy.check_expected_status("pending", deployment_id)
+                deploy.check_expected_status("inprogress", deployment_id)
 
-        # wait until deployment is in correct state
-        if verify_status:
-            deploy.check_expected_status("pending", deployment_id)
-            deploy.check_expected_status("inprogress", deployment_id)
+            return deployment_id, artifact_id
 
-        return deployment_id, artifact_id
-
-    logger.error("error creating artifact")
+        logger.error("error creating artifact")
 
 
 def update_image_successful(install_image=conftest.get_valid_image(), regnerate_image_id=True):

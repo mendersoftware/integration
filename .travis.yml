@@ -27,7 +27,12 @@ before_script:
     # Get last remaining tags, if any.
     - git fetch --tags origin
 
+    - git clone git://github.com/mendersoftware/mendertesting
+
 script:
+    # Check commit compliance.
+    - mendertesting/check_commits.sh
+
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then ( cd tests && bash run.sh --runslow ); fi
 

@@ -16,6 +16,17 @@ before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
     - pip2.7 install -U --user paramiko fabric PyYAML pytest requests
 
+before_script:
+    # Rename the branch we're on, so that it's not in the way for the
+    # subsequent fetch. It's ok if this fails, it just means we're not on any
+    # branch.
+    - git branch -m temp-branch || true
+    # Git trick: Fetch directly into our local branches instead of remote
+    # branches.
+    - git fetch origin 'refs/heads/*:refs/heads/*'
+    # Get last remaining tags, if any.
+    - git fetch --tags origin
+
 script:
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then ( cd tests && bash run.sh --runslow ); fi

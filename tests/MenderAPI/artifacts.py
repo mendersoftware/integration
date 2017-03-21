@@ -29,7 +29,7 @@ class Artifacts():
                                                                  image,
                                                                  device_type,
                                                                  artifact_name,
-                                                                 artifact_file_created)
+                                                                 artifact_file_created.name)
         logger.info("Running: " + cmd)
 
         try:
@@ -43,4 +43,4 @@ class Artifacts():
             pytest.fail("Unexpted error trying to create artifact: %s, error: %s" % (artifact_name, str(e)))
             return False
 
-        return True
+        return artifact_file_created.name

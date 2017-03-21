@@ -36,10 +36,15 @@ else
     chmod +x downloaded-tools/mender-artifact
     export PATH=$PWD/downloaded-tools:$PATH
 
+
     curl "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \
          -z core-image-full-cmdline-vexpress-qemu.ext4
 fi
+
+
+# Remove all published ports for testing
+sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
 
 
 cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4
@@ -62,8 +67,8 @@ else
 fi
 
 if [ $# -eq 0 ]; then
-    py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
+    py.test -n auto --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
     exit $?
 fi
 
-py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"
+py.test -n auto --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"

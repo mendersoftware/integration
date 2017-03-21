@@ -40,10 +40,11 @@ class Admission():
     # return devices with the specified status
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_admission_base_path() + "devices"
+        devices = None
+        tries = 25
 
-        tries = 10
         for c, i in enumerate(range(tries)):
-            time.sleep(c*5+5)
+            time.sleep(c*3+5)
             try:
                 logger.info("getting all devices from :%s" % (device_status_path))
                 devices = requests.get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
@@ -51,7 +52,10 @@ class Admission():
                 assert len(devices.json()) == expected_devices
                 break
             except AssertionError:
-                logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
+                if getattr(devices, "text"):
+                    logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
+                else:
+                    logger.info("failed to get devices, will try #%d times" % (tries-c-1))
                 continue
         else:
             assert False, "Not able to get devices"

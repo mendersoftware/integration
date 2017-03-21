@@ -20,14 +20,12 @@ import time
 import conftest
 from common import *
 
-
 COMPOSE_FILES = [
     "../docker-compose.yml",
     "../docker-compose.client.yml",
     "../docker-compose.storage.minio.yml",
-    "../docker-compose.demo.yml"
+    "../docker-compose.testing.yml"
 ]
-
 
 log_files = []
 
@@ -42,7 +40,7 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         for file in COMPOSE_FILES + extra_files:
             files_args += " -f %s" % file
 
-    subprocess.check_call("docker-compose %s %s" % (files_args, arg_list), shell=True)
+    subprocess.check_call("docker-compose -p %s %s %s" % (conftest.docker_compose_instance, files_args, arg_list), shell=True)
 
 
 def stop_docker_compose():
@@ -76,7 +74,7 @@ def restart_docker_compose():
 
 def docker_get_ip_of(image):
     # Returns newline separated list of IPs
-    output = subprocess.check_output("docker ps | grep '%s'| awk '{print $1}'| xargs -r docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" % image, shell=True)
+    output = subprocess.check_output("docker ps | grep '%s' | grep '%s'| awk '{print $1}'| xargs -r docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" % (conftest.docker_compose_instance, image), shell=True)
 
     # Return as list.
     return output.split()

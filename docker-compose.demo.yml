@@ -62,3 +62,9 @@ services:
         environment:
             # enable demo mode for UI ["true"/"false"]
             DEMO: "true"
+
+    mender-conductor:
+        volumes:
+            - ./conductor/server/config:/app/config
+        environment:
+            - CONFIG_PROP=config.properties

@@ -66,9 +66,15 @@ else
     fi
 fi
 
+XDIST_ARGS="-n auto"
+if ! pip list |grep -e pytest-xdist >/dev/null 2>&1; then
+    XDIST_ARGS=""
+    echo "WARNING: install pytest-xdist for running tests in parallel"
+fi
+
 if [ $# -eq 0 ]; then
-    py.test -n auto --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
+    py.test $XDIST_ARGS --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
     exit $?
 fi
 
-py.test -n auto --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"
+py.test $XDIST_ARGS --maxfail=1 -s --tb=short --verbose --junitxml=results.xml "$@"

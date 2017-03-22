@@ -18,9 +18,9 @@ if [[ -n "$BUILDDIR" ]]; then
     # because the prepare_recipe_sysroot task doesn't exist. Use that failure
     # to fall back to the old generic sysroot path.
     if ( cd $BUILDDIR && bitbake -c prepare_recipe_sysroot mender-test-dependencies ); then
-        eval `cd $BUILDDIR && bitbake -e mender-test-dependencies | grep '^export PATH='`
+        eval `cd $BUILDDIR && bitbake -e mender-test-dependencies | grep '^export PATH='`:$PATH
     else
-        eval `cd $BUILDDIR && bitbake -e core-image-minimal | grep '^export PATH='`
+        eval `cd $BUILDDIR && bitbake -e core-image-minimal | grep '^export PATH='`:$PATH
     fi
 
     cp -f $BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .

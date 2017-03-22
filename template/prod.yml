@@ -118,6 +118,14 @@ services:
             # mounts a docker volume named `mender-artifacts` as /export directory
             - mender-artifacts:/export:rw
 
+    mender-conductor:
+        volumes:
+            - ./conductor/server/config:/app/config
+        environment:
+            - CONFIG_PROP=config.properties
+        ports:
+            - "8080:8080"
+
     mender-mongo-deployments:
         volumes:
             - mender-deployments-db:/data:rw
@@ -133,6 +141,20 @@ services:
     mender-mongo-useradm:
         volumes:
             - mender-useradm-db:/data:rw
+    mender-elasticsearch:
+        volumes:
+            - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
+    mender-dynomite:
+        volumes:
+            - mender-dynomite-db:/var/lib/redis:rw
+            - ./conductor/dynomite/redis.conf:/etc/redis/redis.conf
+            - ./conductor/dynomite/entrypoint.sh:/dynomite/entrypoint.sh
+        entrypoint: /dynomite/entrypoint.sh
+    mender-conductor:
+        volumes:
+            - ./conductor/server/config:/app/config
+        environment:
+            - CONFIG_PROP=config.properties
 
 volumes:
     # mender artifacts storage
@@ -165,3 +187,13 @@ volumes:
       external:
           # use external volume created manually
           name: mender-deviceadm-db
+    # dynomite database
+    mender-dynomite-db:
+      external:
+          # use external volume created manually
+          name: mender-dynomite-db
+    # elasticsearch database
+    mender-elasticsearch-db:
+      external:
+          # use external volume created manually
+          name: mender-elasticsearch-db

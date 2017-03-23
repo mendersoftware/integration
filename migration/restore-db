@@ -1,0 +1,22 @@
+#!/bin/bash -e
+
+SELFDIR=$(dirname $(readlink -f $0))
+SCRIPT=${SCRIPT:=./run}
+
+SERVICES="\
+  mender-inventory \
+  mender-useradm \
+  mender-device-auth \
+  mender-device-adm \
+  mender-deployments \
+"
+
+# stop service that are using DBs
+${SCRIPT} stop ${SERVICES}
+
+# dump DB
+${SCRIPT} -f ${SELFDIR}/migration-helper.yml \
+          run \
+          --rm \
+          mongo-helper \
+          sh -c 'mongorestore -h mongo-common --drop /srv/db-dump; done'

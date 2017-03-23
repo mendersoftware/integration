@@ -1,0 +1,34 @@
+#!/bin/bash -e
+
+SELFDIR=$(dirname $(readlink -f $0))
+SCRIPT=${SCRIPT:=./run}
+
+SERVICES="\
+  mender-inventory \
+  mender-useradm \
+  mender-device-auth \
+  mender-device-adm \
+  mender-deployments \
+"
+
+DB_SERVICES="\
+  mender-mongo-useradm \
+  mender-mongo-inventory \
+  mender-mongo-device-adm \
+  mender-mongo-device-auth \
+  mender-mongo-deployments \
+"
+
+# stop service that are using DBs
+${SCRIPT} stop ${SERVICES}
+
+# make sure that DB services are up
+${SCRIPT} start ${DB_SERVICES}
+
+# dump DB
+DUMP_PATH=$PWD ${SCRIPT} -f ${SELFDIR}/migration-helper.yml \
+         run \
+         --rm \
+         -e DB_SERVICES="${DB_SERVICES}" \
+         mongo-helper \
+         sh -c 'for s in ${DB_SERVICES}; do mongorestore -h "$s" --drop "/srv/db-dump/$s"; done'

@@ -9,4 +9,4 @@ exec docker-compose \
      -f docker-compose.storage.minio.yml \
      -f docker-compose.demo.yml \
      $CLIENT \
-     $*
+     "$@"

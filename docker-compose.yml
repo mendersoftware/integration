@@ -129,5 +129,23 @@ services:
                 aliases:
                     - mongo-useradm
 
+    mender-conductor:
+        image: mendersoftware/conductor:1.7.0
+        depends_on:
+            - mender-elasticsearch
+            - mender-dynomite
+        networks:
+            - mender
+
+    mender-elasticsearch:
+        image: mendersoftware/elasticsearch:2.4
+        networks:
+            - mender
+
+    mender-dynomite:
+        image: mendersoftware/dynomite:stable
+        networks:
+            - mender
+
 networks:
     mender:

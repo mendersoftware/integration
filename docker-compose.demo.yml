@@ -66,5 +66,9 @@ services:
     mender-conductor:
         volumes:
             - ./conductor/server/config:/app/config
+            - ./conductor/server/entrypoint:/srv
+            - ./conductor/server/workflows:/srv/workflows
+            - ./conductor/server/tasks:/srv/tasks
+        entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties

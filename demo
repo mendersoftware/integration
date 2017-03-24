@@ -2,7 +2,10 @@
 
 
 CLIENT="-f docker-compose.client.yml"
-[ -n "${NO_CLIENT}" ] && unset CLIENT
+if [ -n "${NO_CLIENT}" ]; then
+    unset CLIENT
+    echo "-- disabling client containers"
+fi
 
 exec docker-compose \
      -f docker-compose.yml \

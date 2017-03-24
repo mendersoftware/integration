@@ -1,0 +1,54 @@
+{
+    "name": "decommission_device",
+    "description": "Removes device info from all services.",
+    "version": 1,
+    "tasks": [
+        {
+            "name": "delete_device_inventory",
+            "taskReferenceName": "delete_device_inventory",
+            "inputParameters": {
+                "http_request": {
+                    "uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
+                    "method": "DELETE",
+                    "headers": {
+                        "X-MEN-RequestID": "${workflow.input.request_id}"
+                    }
+                }
+            },
+            "type": "HTTP"
+        },
+        {
+            "name": "delete_device_deployments",
+            "taskReferenceName": "delete_device_deployments",
+            "inputParameters": {
+                "http_request": {
+                    "uri": "http://mender-deployments:8080/api/0.0.1/devices/${workflow.input.device_id}",
+                    "method": "DELETE",
+                    "headers": {
+                        "X-MEN-RequestID": "${workflow.input.request_id}"
+                    }
+                }
+            },
+            "type": "HTTP"
+        },
+        {
+            "name": "delete_device_deviceadm",
+            "taskReferenceName": "delete_device_deviceadm",
+            "inputParameters": {
+                "http_request": {
+                    "uri": "http://mender-device-adm:8080/api/0.1.0/devices?device_id=${workflow.input.device_id}",
+                    "method": "DELETE",
+                    "headers": {
+                        "X-MEN-RequestID": "${workflow.input.request_id}"
+                    }
+                }
+            },
+            "type": "HTTP"
+        }
+    ],
+    "inputParameters":[
+        "device_id",
+        "request_id"
+    ],
+    "schemaVersion": 2
+}

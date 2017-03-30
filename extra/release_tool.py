@@ -79,6 +79,7 @@ REPO_ALIASES = {
     "deviceadm": "mender-device-adm",
     "deviceauth": "mender-device-auth",
     "mender": "mender-client",
+    "mender-client-qemu": "mender-client",
     "mender-api-gateway-docker": "mender-api-gateway",
 }
 

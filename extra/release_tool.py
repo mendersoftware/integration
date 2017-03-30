@@ -531,9 +531,11 @@ def trigger_jenkins_build(state, tag_avail):
             print("Request returned: %d: %s" % (reply.status_code, reply.reason))
         else:
             print("Build started.")
-            match = re.search('href="(/%s/[0-9]+/)"' % JENKINS_JOB, reply.content.decode())
+            # Crude way to find build number, pick first number starting with a
+            # hash between two html tags.
+            match = re.search('>#([0-9]+)<', reply.content.decode())
             if match is not None:
-                print("Link: %s%s" % (JENKINS_SERVER, match.group(1)))
+                print("Link: %s/%s/%s/" % (JENKINS_SERVER, JENKINS_JOB, match.group(1)))
             else:
                 print("Unable to determine build number.")
     except Exception:

@@ -101,6 +101,7 @@ GIT_TO_BUILDPARAM_MAP = {
 EXTRA_BUILDPARAMS = {
     "META_MENDER_REV": "morty",
     "POKY_REV": "morty",
+    "MENDER_QA_REV": "master",
     "BUILD_QEMU": "on",
     "TEST_QEMU": "on",
     "BUILD_BBB": "on",

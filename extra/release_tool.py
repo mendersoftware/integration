@@ -109,8 +109,7 @@ EXTRA_BUILDPARAMS = {
     "CLEAN_BUILD_CACHE": "",
     "UPLOAD_OUTPUT": "",
     "RUN_INTEGRATION_TESTS": "on",
-
-    # "RELEASE_VERSION" will be added automatically.
+    "PUSH_CONTAINERS": "",
 }
 
 def integration_dir():
@@ -467,8 +466,6 @@ def trigger_jenkins_build(state, tag_avail):
             print("One of the repositories doesn't have a build tag yet!")
             return
         params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
-
-    params['RELEASE_VERSION'] = state['version']
 
     while True:
         print("--------------------------------------------------------------------------------")

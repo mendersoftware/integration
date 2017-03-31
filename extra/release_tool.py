@@ -742,9 +742,8 @@ def do_release():
         elif reply == "P" or reply == "p":
             git_list = []
             for repo in REPOS.values():
-                if not tag_avail[repo.git]['already_released']:
-                    remote = find_upstream_remote(state, repo.git)
-                    git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
+                remote = find_upstream_remote(state, repo.git)
+                git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
             query_execute_git_list(git_list)
         elif reply == "B" or reply == "b":
             trigger_jenkins_build(state, tag_avail)

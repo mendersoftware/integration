@@ -342,15 +342,21 @@ def report_release_state(state, tag_avail):
     print(fmt_str % ("", "", "TAG FROM", ""))
     for repo in sorted(REPOS.values(), key=repo_sort_key):
         if tag_avail[repo.git]['already_released']:
-            built = state[repo.git]['version']
+            tag = state[repo.git]['version']
+            # Report released tags as following themselves, even though behind
+            # the scenes we do keep track of a branch we follow. This is because
+            # released repositories don't receive build tags.
+            following = state[repo.git]['version']
         else:
-            built = tag_avail[repo.git].get('build_tag')
-            if built is None:
-                built = "<Needs a new build tag>"
+            tag = tag_avail[repo.git].get('build_tag')
+            if tag is None:
+                tag = "<Needs a new build tag>"
             else:
-                built = "%s (%s)" % (built, tag_avail[repo.git]['sha'])
+                tag = "%s (%s)" % (tag, tag_avail[repo.git]['sha'])
+            following = state[repo.git]['following']
+
         print(fmt_str % (repo.git, state[repo.git]['version'],
-                         state[repo.git]['following'], built))
+                         following, tag))
 
 def annotation_version(repo, tag_avail):
     match = re.match("^(.*)-build([0-9]+)$", tag_avail[repo.git]['build_tag'])
@@ -466,8 +472,6 @@ def generate_new_tags(state, tag_avail, final):
 
     for repo in REPOS.values():
         if not next_tag_avail[repo.git]['already_released'] and final:
-            if repo.git != "integration":
-                update_state(state, [repo.git, 'following'], next_tag_avail[repo.git]['build_tag'])
             next_tag_avail[repo.git]['already_released'] = True
 
     return next_tag_avail
@@ -609,6 +613,37 @@ def assign_default_following_branch(state, repo):
     branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
     update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
 
+def merge_release_tag(state, tag_avail, repo):
+    if not tag_avail[repo.git]['already_released']:
+        print("Repository must have a final release tag before the tag can be merged!")
+        return
+
+    tmpdir = setup_temp_git_checkout(state, repo.git, state[repo.git]['following'])
+    try:
+        branch = execute_git(state, tmpdir, ["symbolic-ref", "--short", "HEAD"],
+                             capture=True)
+
+        # Merge tag into version branch, but only for Git history's sake, the
+        # 'ours' merge strategy keeps the branch as it is, the changes in the
+        # tag are not pulled in. Without this merge, Git won't auto-grab tags
+        # without using "git fetch --tags", which is inconvenient for users.
+        git_list = [((state, tmpdir, ["merge", "-s", "ours", "-m",
+                                      "Merge tag %s into %s using 'ours' merge strategy."
+                                      % (tag_avail[repo.git]['build_tag'], branch),
+                                      tag_avail[repo.git]['build_tag']]))]
+        if not query_execute_git_list(git_list):
+            return
+
+        execute_git(state, repo.git, ["fetch", tmpdir, branch])
+
+        upstream = find_upstream_remote(state, repo.git)
+        git_list = [((state, repo.git, ["push", upstream, "FETCH_HEAD:refs/heads/%s"
+                                        % branch]))]
+        if not query_execute_git_list(git_list):
+            return
+    finally:
+        cleanup_temp_git_checkout(tmpdir)
+
 def do_release():
     if os.path.exists(RELEASE_STATE):
         while True:
@@ -656,11 +691,8 @@ def do_release():
     tag_avail = check_tag_availability(state)
 
     for repo in REPOS.values():
-        if tag_avail[repo.git]['already_released']:
-            update_state(state, [repo.git, 'following'], state[repo.git]['version'])
-        else:
-            # Follow "1.0.x" style branches by default.
-            assign_default_following_branch(state, repo)
+        # Follow "1.0.x" style branches by default.
+        assign_default_following_branch(state, repo)
 
     for param in EXTRA_BUILDPARAMS.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
@@ -682,12 +714,13 @@ def do_release():
         print("-- Main operations")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
-        print("  F) Tag and push final tag, based on previous build tag")
+        print("  F) Tag and push final tag, based on current build tag")
         print("  Q) Quit (your state is saved in %s)" % RELEASE_STATE)
         print()
         print("-- Less common operations")
         print("  P) Push current build tags (not necessary unless -s was used before)")
         print("  U) Purge build tags from all repositories")
+        print('  M) Merge "integration" release tag into release branch')
         print("  S) Switch fetching branch between remote and local branch (affects next")
         print("       tagging)")
 
@@ -703,6 +736,9 @@ def do_release():
             reply = ask("Purge all build tags from all repositories (recommended)? ")
             if reply == "Y" or reply == "y":
                 purge_build_tags(state, tag_avail)
+            reply = ask('Merge "integration" release tag into version branch (recommended)? ')
+            if reply == "Y" or reply == "y":
+                merge_release_tag(state, tag_avail, determine_repo("integration"))
         elif reply == "P" or reply == "p":
             git_list = []
             for repo in REPOS.values():
@@ -716,6 +752,8 @@ def do_release():
             purge_build_tags(state, tag_avail)
         elif reply == "S" or reply == "s":
             switch_following_branch(state, tag_avail)
+        elif reply == "M" or reply == "m":
+            merge_release_tag(state, tag_avail, determine_repo("integration"))
         else:
             print("Invalid choice!")
 

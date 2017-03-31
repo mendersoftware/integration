@@ -6,6 +6,7 @@ import json
 import operator
 import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
@@ -206,17 +207,24 @@ def execute_git(state, repo_git, args, capture=False, capture_stderr=False):
     is_change = (is_push
                  or (args[0] == "tag" and len(args) > 1)
                  or (args[0] == "config" and args[1] != "-l")
+                 or (args[0] == "checkout")
+                 or (args[0] == "commit")
                  or (args[0] == "fetch")
-                 or (args[0] == "reset")
-                 or (args[0] == "commit"))
+                 or (args[0] == "init")
+                 or (args[0] == "reset"))
+
+    if os.path.isabs(repo_git):
+        git_dir = repo_git
+    else:
+        git_dir = os.path.join(state['repo_dir'], repo_git)
 
     if (not PUSH and is_push) or (DRY_RUN and is_change):
         print("Would have executed: cd %s && git %s"
-              % (os.path.join(state['repo_dir'], repo_git), " ".join(args)))
+              % (git_dir, " ".join(args)))
         return None
 
     fd = os.open(".", flags=os.O_RDONLY)
-    os.chdir(os.path.join(state['repo_dir'], repo_git))
+    os.chdir(git_dir)
     if capture_stderr:
         stderr = subprocess.STDOUT
     else:
@@ -251,6 +259,23 @@ def query_execute_git_list(execute_git_list):
         execute_git(cmd[0], cmd[1], cmd[2])
 
     return True
+
+def setup_temp_git_checkout(state, repo_git, branch):
+    """Checks out a temporary Git directory, and returns an absolute path to
+    it. Checks out the branch specified in repo_git."""
+
+    tmpdir = os.path.join(state['repo_dir'], repo_git, "tmp_checkout")
+    cleanup_temp_git_checkout(tmpdir)
+
+    execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True)
+    execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
+                                "refs/remotes/%s:%s" % (branch, branch)], capture=True)
+    execute_git(state, tmpdir, ["checkout", "-t", branch], capture=True)
+
+    return tmpdir
+
+def cleanup_temp_git_checkout(tmpdir):
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
 def find_upstream_remote(state, repo_git):
     config = execute_git(state, repo_git, ["config", "-l"], capture=True)
@@ -338,12 +363,6 @@ def generate_new_tags(state, tag_avail, final):
     """Creates new build tags, and returns the new tags in a modified
     tag_avail."""
 
-    try:
-        execute_git(state, "integration", ["diff-files", "--quiet"], capture=True)
-    except subprocess.CalledProcessError:
-        print("You cannot have uncommitted changes in integration when doing this operation")
-        return tag_avail
-
     output = execute_git(state, "integration", ["show", "-s"], capture=True)
     if output.find(VERSION_BUMP_STRING) >= 0:
         # Previous version bump detected. Roll back one commit.
@@ -402,35 +421,36 @@ def generate_new_tags(state, tag_avail, final):
     if not reply.startswith("Y") and not reply.startswith("y"):
         return tag_avail
 
-    reply = ask("Permission to edit and commit docker-compose.yml files to insert tags? ")
-    if not reply.startswith("Y") and not reply.startswith("y"):
-        return tag_avail
+    # Create temporary directory to make changes in.
+    tmpdir = setup_temp_git_checkout(state, "integration", state['integration']['following'])
+    try:
+        # Modify docker tags in docker-compose file.
+        for repo in REPOS.values():
+            set_docker_compose_version_to(tmpdir, repo.docker,
+                                          next_tag_avail[repo.git]['build_tag'])
 
-    for repo in REPOS.values():
-        set_docker_compose_version_to(os.path.join(state['repo_dir'], "integration"),
-                                      repo.docker,
-                                      next_tag_avail[repo.git]['build_tag'])
+        print("-----------------------------------------------")
+        print("Changes to commit:")
+        print()
+        execute_git(state, tmpdir, ["diff"])
+        git_list = []
+        git_list.append((state, tmpdir,
+                         ["commit", "-a", "-s", "-m",
+                          "%s %s.\n\nChangelog: None"
+                          % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'])]))
+        if not query_execute_git_list(git_list):
+            return tag_avail
 
-    print("-----------------------------------------------")
-    print("Changes to commit:")
-    print()
-    execute_git(state, "integration", ["diff"])
-    git_list = []
-    git_list.append((state, "integration",
-                     ["commit", "-a", "-s", "-m", "%s %s.\n\nChangelog: None"
-                      % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'])]))
-
-    if not query_execute_git_list(git_list):
-        execute_git(state, "integration", ["reset", "--hard"])
-        return tag_avail
-
-    # Because of the commit above, integration repository now has a new sha.
-    next_tag_avail["integration"]['sha'] = execute_git(state, "integration",
-                                                       ["rev-parse", "--short",
-                                                        state["integration"]['following'] + "~0"],
-                                                       capture=True)
-    # Now that we have the SHA, we can revert the integration branch.
-    execute_git(state, "integration", ["reset", "--hard", "HEAD~1"])
+        # Because of the commit above, integration repository now has a new SHA.
+        sha = execute_git(state, tmpdir,
+                          ["rev-parse", "--short", "HEAD~0"],
+                          capture=True)
+        next_tag_avail["integration"]['sha'] = sha
+        # Fetch the SHA from the tmpdir to make the object available in the
+        # original repository.
+        execute_git(state, "integration", ["fetch", tmpdir, "HEAD"], capture=True)
+    finally:
+        cleanup_temp_git_checkout(tmpdir)
 
     git_list = []
     for repo in REPOS.values():
@@ -575,10 +595,6 @@ def purge_build_tags(state, tag_avail):
 def switch_following_branch(state, tag_avail):
     current = None
     for repo in REPOS.values():
-        if repo.git == "integration":
-            # integration is special. Because we need to commit changes to its
-            # docker-compose files, we have to follow HEAD.
-            continue
         if not tag_avail[repo.git]['already_released']:
             if current is None:
                 # Pick first match as current state.
@@ -590,13 +606,8 @@ def switch_following_branch(state, tag_avail):
 
 def assign_default_following_branch(state, repo):
     remote = find_upstream_remote(state, repo.git)
-    if repo.git == "integration":
-        # integration is special. Because we need to commit changes to its
-        # docker-compose files, we have to follow HEAD.
-        update_state(state, [repo.git, 'following'], "HEAD")
-    else:
-        branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
-        update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
+    branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
+    update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
 
 def do_release():
     if os.path.exists(RELEASE_STATE):

@@ -49,28 +49,31 @@ class RepoName:
     docker = None
     # Name of repository in Git. (what we index by)
     git = None
+    # Whether or not this repository has a Docker container.
+    has_container = None
 
-    def __init__(self, container, docker, git):
+    def __init__(self, container, docker, git, has_container):
         self.container = container
         self.docker = docker
         self.git = git
+        self.has_container = has_container
 
 # All our repos, and also a map from docker-compose container name to all
 # names. Everywhere we index using the Git name, unless specified otherwise.
 REPOS = {
-    "mender-api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker"),
-    "mender-client": RepoName("mender-client", "mender-client-qemu", "mender"),
-    "mender-deployments": RepoName("mender-deployments", "deployments", "deployments"),
-    "mender-device-adm": RepoName("mender-device-adm", "deviceadm", "deviceadm"),
-    "mender-device-auth": RepoName("mender-device-auth", "deviceauth", "deviceauth"),
-    "mender-gui": RepoName("mender-gui", "gui", "gui"),
-    "mender-inventory": RepoName("mender-inventory", "inventory", "inventory"),
-    "mender-useradm": RepoName("mender-useradm", "useradm", "useradm"),
+    "mender-api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
+    "mender-client": RepoName("mender-client", "mender-client-qemu", "mender", True),
+    "mender-deployments": RepoName("mender-deployments", "deployments", "deployments", True),
+    "mender-device-adm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
+    "mender-device-auth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
+    "mender-gui": RepoName("mender-gui", "gui", "gui", True),
+    "mender-inventory": RepoName("mender-inventory", "inventory", "inventory", True),
+    "mender-useradm": RepoName("mender-useradm", "useradm", "useradm", True),
 
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.
-    "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact"),
-    "mender-integration": RepoName("mender-integration", "integration", "integration"),
+    "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
+    "mender-integration": RepoName("mender-integration", "integration", "integration", False),
 }
 
 # Some convenient aliases, mainly because Git phrasing differs slightly from
@@ -257,6 +260,30 @@ def query_execute_git_list(execute_git_list):
 
     for cmd in execute_git_list:
         execute_git(cmd[0], cmd[1], cmd[2])
+
+    return True
+
+def query_execute_list(execute_list):
+    """Executes the list of commands after asking first. The argument is a list of
+    lists, where the inner list is the argument to subprocess.check_call."""
+
+    print("--------------------------------------------------------------------------------")
+    for cmd in execute_list:
+        # Provide quotes around arguments with spaces in them.
+        print(" ".join(['"%s"' % str if str.find(" ") >= 0 else str for str in cmd]))
+    reply = ask("\nOk to execute the above commands? ")
+    if not reply.startswith("Y") and not reply.startswith("y"):
+        return False
+
+    for cmd in execute_list:
+        is_push = cmd[0] == "docker" and cmd[1] == "push"
+        is_change = is_push or (
+            cmd[0] == "docker" and cmd[1] == "tag")
+        if (PUSH and is_push) or (DRY_RUN and is_change):
+            print("Would have executed: %s" % " ".join(cmd))
+            continue
+
+        subprocess.check_call(cmd)
 
     return True
 
@@ -644,6 +671,31 @@ def merge_release_tag(state, tag_avail, repo):
     finally:
         cleanup_temp_git_checkout(tmpdir)
 
+def update_latest_docker_tags(state, tag_avail):
+    for repo in REPOS.values():
+        if not tag_avail[repo.git]['already_released']:
+            print('You cannot push the ":latest" Docker tags without making final release tags first!')
+            return
+
+    print("This requires the versioned containers to be built and pushed already.")
+    reply = ask("Has the final build finished successfully? ")
+    if not reply.startswith("Y") and not reply.startswith("y"):
+        return
+
+    exec_list = []
+    for repo in REPOS.values():
+        if not repo.has_container:
+            continue
+
+        exec_list.append(["docker", "pull",
+                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag'])])
+        exec_list.append(["docker", "tag",
+                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag']),
+                          "mendersoftware/%s:latest" % repo.docker])
+        exec_list.append(["docker", "push", "mendersoftware/%s:latest" % repo.docker])
+
+    query_execute_list(exec_list)
+
 def do_release():
     if os.path.exists(RELEASE_STATE):
         while True:
@@ -715,6 +767,7 @@ def do_release():
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
         print("  F) Tag and push final tag, based on current build tag")
+        print('  D) Update ":latest" Docker tags to current release')
         print("  Q) Quit (your state is saved in %s)" % RELEASE_STATE)
         print()
         print("-- Less common operations")
@@ -739,6 +792,8 @@ def do_release():
             reply = ask('Merge "integration" release tag into version branch (recommended)? ')
             if reply == "Y" or reply == "y":
                 merge_release_tag(state, tag_avail, determine_repo("integration"))
+        elif reply == "D" or reply == "d":
+            update_latest_docker_tags(state, tag_avail)
         elif reply == "P" or reply == "p":
             git_list = []
             for repo in REPOS.values():

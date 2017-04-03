@@ -743,8 +743,9 @@ def do_release():
     tag_avail = check_tag_availability(state)
 
     for repo in REPOS.values():
-        # Follow "1.0.x" style branches by default.
-        assign_default_following_branch(state, repo)
+        if state_value(state, [repo.git, "following"]) is None:
+            # Follow "1.0.x" style branches by default.
+            assign_default_following_branch(state, repo)
 
     for param in EXTRA_BUILDPARAMS.keys():
         if state_value(state, ["extra_buildparams", param]) is None:

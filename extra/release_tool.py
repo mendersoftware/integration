@@ -294,10 +294,17 @@ def setup_temp_git_checkout(state, repo_git, branch):
     tmpdir = os.path.join(state['repo_dir'], repo_git, "tmp_checkout")
     cleanup_temp_git_checkout(tmpdir)
 
+    if branch.find('/') < 0:
+        # Local branch.
+        checkout_cmd = ["checkout"]
+    else:
+        # Remote branch.
+        checkout_cmd = ["checkout", "-t"]
+
     execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True)
     execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
                                 "--tags", "%s:%s" % (branch, branch)], capture=True)
-    execute_git(state, tmpdir, ["checkout", "-t", branch], capture=True)
+    execute_git(state, tmpdir, checkout_cmd + [branch], capture=True)
 
     return tmpdir
 
@@ -630,10 +637,13 @@ def switch_following_branch(state, tag_avail):
             if current is None:
                 # Pick first match as current state.
                 current = state[repo.git]['following']
-            if current == 'HEAD':
+            if current.find('/') < 0:
+                # Not a remote branch, switch to one.
                 assign_default_following_branch(state, repo)
             else:
-                update_state(state, [repo.git, 'following'], "HEAD")
+                # Remote branch, switch to the local one.
+                local = current[(current.index('/') + 1):]
+                update_state(state, [repo.git, 'following'], local)
 
 def assign_default_following_branch(state, repo):
     remote = find_upstream_remote(state, repo.git)

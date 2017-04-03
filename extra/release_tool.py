@@ -6,6 +6,7 @@ import json
 import operator
 import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
@@ -48,28 +49,31 @@ class RepoName:
     docker = None
     # Name of repository in Git. (what we index by)
     git = None
+    # Whether or not this repository has a Docker container.
+    has_container = None
 
-    def __init__(self, container, docker, git):
+    def __init__(self, container, docker, git, has_container):
         self.container = container
         self.docker = docker
         self.git = git
+        self.has_container = has_container
 
 # All our repos, and also a map from docker-compose container name to all
 # names. Everywhere we index using the Git name, unless specified otherwise.
 REPOS = {
-    "mender-api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker"),
-    "mender-client": RepoName("mender-client", "mender-client-qemu", "mender"),
-    "mender-deployments": RepoName("mender-deployments", "deployments", "deployments"),
-    "mender-device-adm": RepoName("mender-device-adm", "deviceadm", "deviceadm"),
-    "mender-device-auth": RepoName("mender-device-auth", "deviceauth", "deviceauth"),
-    "mender-gui": RepoName("mender-gui", "gui", "gui"),
-    "mender-inventory": RepoName("mender-inventory", "inventory", "inventory"),
-    "mender-useradm": RepoName("mender-useradm", "useradm", "useradm"),
+    "mender-api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
+    "mender-client": RepoName("mender-client", "mender-client-qemu", "mender", True),
+    "mender-deployments": RepoName("mender-deployments", "deployments", "deployments", True),
+    "mender-device-adm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
+    "mender-device-auth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
+    "mender-gui": RepoName("mender-gui", "gui", "gui", True),
+    "mender-inventory": RepoName("mender-inventory", "inventory", "inventory", True),
+    "mender-useradm": RepoName("mender-useradm", "useradm", "useradm", True),
 
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.
-    "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact"),
-    "mender-integration": RepoName("mender-integration", "integration", "integration"),
+    "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
+    "mender-integration": RepoName("mender-integration", "integration", "integration", False),
 }
 
 # Some convenient aliases, mainly because Git phrasing differs slightly from
@@ -206,17 +210,24 @@ def execute_git(state, repo_git, args, capture=False, capture_stderr=False):
     is_change = (is_push
                  or (args[0] == "tag" and len(args) > 1)
                  or (args[0] == "config" and args[1] != "-l")
+                 or (args[0] == "checkout")
+                 or (args[0] == "commit")
                  or (args[0] == "fetch")
-                 or (args[0] == "reset")
-                 or (args[0] == "commit"))
+                 or (args[0] == "init")
+                 or (args[0] == "reset"))
+
+    if os.path.isabs(repo_git):
+        git_dir = repo_git
+    else:
+        git_dir = os.path.join(state['repo_dir'], repo_git)
 
     if (not PUSH and is_push) or (DRY_RUN and is_change):
         print("Would have executed: cd %s && git %s"
-              % (os.path.join(state['repo_dir'], repo_git), " ".join(args)))
+              % (git_dir, " ".join(args)))
         return None
 
     fd = os.open(".", flags=os.O_RDONLY)
-    os.chdir(os.path.join(state['repo_dir'], repo_git))
+    os.chdir(git_dir)
     if capture_stderr:
         stderr = subprocess.STDOUT
     else:
@@ -251,6 +262,54 @@ def query_execute_git_list(execute_git_list):
         execute_git(cmd[0], cmd[1], cmd[2])
 
     return True
+
+def query_execute_list(execute_list):
+    """Executes the list of commands after asking first. The argument is a list of
+    lists, where the inner list is the argument to subprocess.check_call."""
+
+    print("--------------------------------------------------------------------------------")
+    for cmd in execute_list:
+        # Provide quotes around arguments with spaces in them.
+        print(" ".join(['"%s"' % str if str.find(" ") >= 0 else str for str in cmd]))
+    reply = ask("\nOk to execute the above commands? ")
+    if not reply.startswith("Y") and not reply.startswith("y"):
+        return False
+
+    for cmd in execute_list:
+        is_push = cmd[0] == "docker" and cmd[1] == "push"
+        is_change = is_push or (
+            cmd[0] == "docker" and cmd[1] == "tag")
+        if (PUSH and is_push) or (DRY_RUN and is_change):
+            print("Would have executed: %s" % " ".join(cmd))
+            continue
+
+        subprocess.check_call(cmd)
+
+    return True
+
+def setup_temp_git_checkout(state, repo_git, branch):
+    """Checks out a temporary Git directory, and returns an absolute path to
+    it. Checks out the branch specified in repo_git."""
+
+    tmpdir = os.path.join(state['repo_dir'], repo_git, "tmp_checkout")
+    cleanup_temp_git_checkout(tmpdir)
+
+    if branch.find('/') < 0:
+        # Local branch.
+        checkout_cmd = ["checkout"]
+    else:
+        # Remote branch.
+        checkout_cmd = ["checkout", "-t"]
+
+    execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True)
+    execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
+                                "--tags", "%s:%s" % (branch, branch)], capture=True)
+    execute_git(state, tmpdir, checkout_cmd + [branch], capture=True)
+
+    return tmpdir
+
+def cleanup_temp_git_checkout(tmpdir):
+    shutil.rmtree(tmpdir, ignore_errors=True)
 
 def find_upstream_remote(state, repo_git):
     config = execute_git(state, repo_git, ["config", "-l"], capture=True)
@@ -317,15 +376,21 @@ def report_release_state(state, tag_avail):
     print(fmt_str % ("", "", "TAG FROM", ""))
     for repo in sorted(REPOS.values(), key=repo_sort_key):
         if tag_avail[repo.git]['already_released']:
-            built = state[repo.git]['version']
+            tag = state[repo.git]['version']
+            # Report released tags as following themselves, even though behind
+            # the scenes we do keep track of a branch we follow. This is because
+            # released repositories don't receive build tags.
+            following = state[repo.git]['version']
         else:
-            built = tag_avail[repo.git].get('build_tag')
-            if built is None:
-                built = "<Needs a new build tag>"
+            tag = tag_avail[repo.git].get('build_tag')
+            if tag is None:
+                tag = "<Needs a new build tag>"
             else:
-                built = "%s (%s)" % (built, tag_avail[repo.git]['sha'])
+                tag = "%s (%s)" % (tag, tag_avail[repo.git]['sha'])
+            following = state[repo.git]['following']
+
         print(fmt_str % (repo.git, state[repo.git]['version'],
-                         state[repo.git]['following'], built))
+                         following, tag))
 
 def annotation_version(repo, tag_avail):
     match = re.match("^(.*)-build([0-9]+)$", tag_avail[repo.git]['build_tag'])
@@ -337,12 +402,6 @@ def annotation_version(repo, tag_avail):
 def generate_new_tags(state, tag_avail, final):
     """Creates new build tags, and returns the new tags in a modified
     tag_avail."""
-
-    try:
-        execute_git(state, "integration", ["diff-files", "--quiet"], capture=True)
-    except subprocess.CalledProcessError:
-        print("You cannot have uncommitted changes in integration when doing this operation")
-        return tag_avail
 
     output = execute_git(state, "integration", ["show", "-s"], capture=True)
     if output.find(VERSION_BUMP_STRING) >= 0:
@@ -402,35 +461,36 @@ def generate_new_tags(state, tag_avail, final):
     if not reply.startswith("Y") and not reply.startswith("y"):
         return tag_avail
 
-    reply = ask("Permission to edit and commit docker-compose.yml files to insert tags? ")
-    if not reply.startswith("Y") and not reply.startswith("y"):
-        return tag_avail
+    # Create temporary directory to make changes in.
+    tmpdir = setup_temp_git_checkout(state, "integration", state['integration']['following'])
+    try:
+        # Modify docker tags in docker-compose file.
+        for repo in REPOS.values():
+            set_docker_compose_version_to(tmpdir, repo.docker,
+                                          next_tag_avail[repo.git]['build_tag'])
 
-    for repo in REPOS.values():
-        set_docker_compose_version_to(os.path.join(state['repo_dir'], "integration"),
-                                      repo.docker,
-                                      next_tag_avail[repo.git]['build_tag'])
+        print("-----------------------------------------------")
+        print("Changes to commit:")
+        print()
+        execute_git(state, tmpdir, ["diff"])
+        git_list = []
+        git_list.append((state, tmpdir,
+                         ["commit", "-a", "-s", "-m",
+                          "%s %s.\n\nChangelog: None"
+                          % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'])]))
+        if not query_execute_git_list(git_list):
+            return tag_avail
 
-    print("-----------------------------------------------")
-    print("Changes to commit:")
-    print()
-    execute_git(state, "integration", ["diff"])
-    git_list = []
-    git_list.append((state, "integration",
-                     ["commit", "-a", "-s", "-m", "%s %s.\n\nChangelog: None"
-                      % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'])]))
-
-    if not query_execute_git_list(git_list):
-        execute_git(state, "integration", ["reset", "--hard"])
-        return tag_avail
-
-    # Because of the commit above, integration repository now has a new sha.
-    next_tag_avail["integration"]['sha'] = execute_git(state, "integration",
-                                                       ["rev-parse", "--short",
-                                                        state["integration"]['following'] + "~0"],
-                                                       capture=True)
-    # Now that we have the SHA, we can revert the integration branch.
-    execute_git(state, "integration", ["reset", "--hard", "HEAD~1"])
+        # Because of the commit above, integration repository now has a new SHA.
+        sha = execute_git(state, tmpdir,
+                          ["rev-parse", "--short", "HEAD~0"],
+                          capture=True)
+        next_tag_avail["integration"]['sha'] = sha
+        # Fetch the SHA from the tmpdir to make the object available in the
+        # original repository.
+        execute_git(state, "integration", ["fetch", tmpdir, "HEAD"], capture=True)
+    finally:
+        cleanup_temp_git_checkout(tmpdir)
 
     git_list = []
     for repo in REPOS.values():
@@ -446,8 +506,6 @@ def generate_new_tags(state, tag_avail, final):
 
     for repo in REPOS.values():
         if not next_tag_avail[repo.git]['already_released'] and final:
-            if repo.git != "integration":
-                update_state(state, [repo.git, 'following'], next_tag_avail[repo.git]['build_tag'])
             next_tag_avail[repo.git]['already_released'] = True
 
     return next_tag_avail
@@ -575,28 +633,78 @@ def purge_build_tags(state, tag_avail):
 def switch_following_branch(state, tag_avail):
     current = None
     for repo in REPOS.values():
-        if repo.git == "integration":
-            # integration is special. Because we need to commit changes to its
-            # docker-compose files, we have to follow HEAD.
-            continue
         if not tag_avail[repo.git]['already_released']:
             if current is None:
                 # Pick first match as current state.
                 current = state[repo.git]['following']
-            if current == 'HEAD':
+            if current.find('/') < 0:
+                # Not a remote branch, switch to one.
                 assign_default_following_branch(state, repo)
             else:
-                update_state(state, [repo.git, 'following'], "HEAD")
+                # Remote branch, switch to the local one.
+                local = current[(current.index('/') + 1):]
+                update_state(state, [repo.git, 'following'], local)
 
 def assign_default_following_branch(state, repo):
     remote = find_upstream_remote(state, repo.git)
-    if repo.git == "integration":
-        # integration is special. Because we need to commit changes to its
-        # docker-compose files, we have to follow HEAD.
-        update_state(state, [repo.git, 'following'], "HEAD")
-    else:
-        branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
-        update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
+    branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
+    update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
+
+def merge_release_tag(state, tag_avail, repo):
+    if not tag_avail[repo.git]['already_released']:
+        print("Repository must have a final release tag before the tag can be merged!")
+        return
+
+    tmpdir = setup_temp_git_checkout(state, repo.git, state[repo.git]['following'])
+    try:
+        branch = execute_git(state, tmpdir, ["symbolic-ref", "--short", "HEAD"],
+                             capture=True)
+
+        # Merge tag into version branch, but only for Git history's sake, the
+        # 'ours' merge strategy keeps the branch as it is, the changes in the
+        # tag are not pulled in. Without this merge, Git won't auto-grab tags
+        # without using "git fetch --tags", which is inconvenient for users.
+        git_list = [((state, tmpdir, ["merge", "-s", "ours", "-m",
+                                      "Merge tag %s into %s using 'ours' merge strategy."
+                                      % (tag_avail[repo.git]['build_tag'], branch),
+                                      tag_avail[repo.git]['build_tag']]))]
+        if not query_execute_git_list(git_list):
+            return
+
+        execute_git(state, repo.git, ["fetch", tmpdir, branch])
+
+        upstream = find_upstream_remote(state, repo.git)
+        git_list = [((state, repo.git, ["push", upstream, "FETCH_HEAD:refs/heads/%s"
+                                        % branch]))]
+        if not query_execute_git_list(git_list):
+            return
+    finally:
+        cleanup_temp_git_checkout(tmpdir)
+
+def update_latest_docker_tags(state, tag_avail):
+    for repo in REPOS.values():
+        if not tag_avail[repo.git]['already_released']:
+            print('You cannot push the ":latest" Docker tags without making final release tags first!')
+            return
+
+    print("This requires the versioned containers to be built and pushed already.")
+    reply = ask("Has the final build finished successfully? ")
+    if not reply.startswith("Y") and not reply.startswith("y"):
+        return
+
+    exec_list = []
+    for repo in REPOS.values():
+        if not repo.has_container:
+            continue
+
+        exec_list.append(["docker", "pull",
+                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag'])])
+        exec_list.append(["docker", "tag",
+                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag']),
+                          "mendersoftware/%s:latest" % repo.docker])
+        exec_list.append(["docker", "push", "mendersoftware/%s:latest" % repo.docker])
+
+    query_execute_list(exec_list)
 
 def do_release():
     if os.path.exists(RELEASE_STATE):
@@ -645,9 +753,7 @@ def do_release():
     tag_avail = check_tag_availability(state)
 
     for repo in REPOS.values():
-        if tag_avail[repo.git]['already_released']:
-            update_state(state, [repo.git, 'following'], state[repo.git]['version'])
-        else:
+        if state_value(state, [repo.git, "following"]) is None:
             # Follow "1.0.x" style branches by default.
             assign_default_following_branch(state, repo)
 
@@ -671,12 +777,14 @@ def do_release():
         print("-- Main operations")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
-        print("  F) Tag and push final tag, based on previous build tag")
+        print("  F) Tag and push final tag, based on current build tag")
+        print('  D) Update ":latest" Docker tags to current release')
         print("  Q) Quit (your state is saved in %s)" % RELEASE_STATE)
         print()
         print("-- Less common operations")
         print("  P) Push current build tags (not necessary unless -s was used before)")
         print("  U) Purge build tags from all repositories")
+        print('  M) Merge "integration" release tag into release branch')
         print("  S) Switch fetching branch between remote and local branch (affects next")
         print("       tagging)")
 
@@ -692,12 +800,16 @@ def do_release():
             reply = ask("Purge all build tags from all repositories (recommended)? ")
             if reply == "Y" or reply == "y":
                 purge_build_tags(state, tag_avail)
+            reply = ask('Merge "integration" release tag into version branch (recommended)? ')
+            if reply == "Y" or reply == "y":
+                merge_release_tag(state, tag_avail, determine_repo("integration"))
+        elif reply == "D" or reply == "d":
+            update_latest_docker_tags(state, tag_avail)
         elif reply == "P" or reply == "p":
             git_list = []
             for repo in REPOS.values():
-                if not tag_avail[repo.git]['already_released']:
-                    remote = find_upstream_remote(state, repo.git)
-                    git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
+                remote = find_upstream_remote(state, repo.git)
+                git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
             query_execute_git_list(git_list)
         elif reply == "B" or reply == "b":
             trigger_jenkins_build(state, tag_avail)
@@ -705,6 +817,8 @@ def do_release():
             purge_build_tags(state, tag_avail)
         elif reply == "S" or reply == "s":
             switch_following_branch(state, tag_avail)
+        elif reply == "M" or reply == "m":
+            merge_release_tag(state, tag_avail, determine_repo("integration"))
         else:
             print("Invalid choice!")
 

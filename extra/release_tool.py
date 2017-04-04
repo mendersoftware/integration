@@ -793,6 +793,7 @@ def do_release():
 
         print("What do you want to do?")
         print("-- Main operations")
+        print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
         print("  F) Tag and push final tag, based on current build tag")
@@ -810,6 +811,10 @@ def do_release():
 
         if reply == "Q" or reply == "q":
             break
+        if reply == "R" or reply == "r":
+            refresh_repos(state)
+            # Refill data about available tags, since it may have changed.
+            tag_avail = check_tag_availability(state)
         elif reply == "T" or reply == "t":
             tag_avail = generate_new_tags(state, tag_avail, final=False)
         elif reply == "F" or reply == "f":

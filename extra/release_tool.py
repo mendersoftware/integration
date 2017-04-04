@@ -301,10 +301,10 @@ def setup_temp_git_checkout(state, repo_git, branch):
         # Remote branch.
         checkout_cmd = ["checkout", "-t"]
 
-    execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True)
+    execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True, capture_stderr=True)
     execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
-                                "--tags", "%s:%s" % (branch, branch)], capture=True)
-    execute_git(state, tmpdir, checkout_cmd + [branch], capture=True)
+                                "--tags", "%s:%s" % (branch, branch)], capture=True, capture_stderr=True)
+    execute_git(state, tmpdir, checkout_cmd + [branch])
 
     return tmpdir
 

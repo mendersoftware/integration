@@ -681,7 +681,7 @@ def merge_release_tag(state, tag_avail, repo):
     finally:
         cleanup_temp_git_checkout(tmpdir)
 
-def update_latest_docker_tags(state, tag_avail):
+def push_latest_docker_tags(state, tag_avail):
     for repo in REPOS.values():
         if not tag_avail[repo.git]['already_released']:
             print('You cannot push the ":latest" Docker tags without making final release tags first!')
@@ -692,19 +692,35 @@ def update_latest_docker_tags(state, tag_avail):
     if not reply.startswith("Y") and not reply.startswith("y"):
         return
 
-    exec_list = []
-    for repo in REPOS.values():
-        if not repo.has_container:
+    # Only for the message. We need to generate a new one for each repository.
+    overall_minor_version = state['version'][0:state['version'].rindex('.')]
+
+    for tip in [overall_minor_version, "latest"]:
+        reply = ask('Do you want to update ":%s" tags? ' % tip)
+        if not reply.startswith("Y") and not reply.startswith("y"):
             continue
 
-        exec_list.append(["docker", "pull",
-                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag'])])
-        exec_list.append(["docker", "tag",
-                          "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag']),
-                          "mendersoftware/%s:latest" % repo.docker])
-        exec_list.append(["docker", "push", "mendersoftware/%s:latest" % repo.docker])
+        exec_list = []
+        for repo in REPOS.values():
+            if not repo.has_container:
+                continue
 
-    query_execute_list(exec_list)
+            # Even though the version is already in 'tip', this is for the
+            # overall Mender version. We need the specific one for the
+            # repository.
+            if tip == "latest":
+                minor_version = "latest"
+            else:
+                minor_version = state[repo.git]['version'][0:state[repo.git]['version'].rindex('.')]
+
+            exec_list.append(["docker", "pull",
+                              "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag'])])
+            exec_list.append(["docker", "tag",
+                              "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag']),
+                              "mendersoftware/%s:%s" % (repo.docker, minor_version)])
+            exec_list.append(["docker", "push", "mendersoftware/%s:%s" % (repo.docker, minor_version)])
+
+        query_execute_list(exec_list)
 
 def do_release():
     if os.path.exists(RELEASE_STATE):
@@ -773,12 +789,14 @@ def do_release():
         print("Current state of release:")
         report_release_state(state, tag_avail)
 
+        minor_version = state['version'][0:state['version'].rindex('.')]
+
         print("What do you want to do?")
         print("-- Main operations")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
         print("  F) Tag and push final tag, based on current build tag")
-        print('  D) Update ":latest" Docker tags to current release')
+        print('  D) Update ":%s" and/or ":latest" Docker tags to current release' % minor_version)
         print("  Q) Quit (your state is saved in %s)" % RELEASE_STATE)
         print()
         print("-- Less common operations")
@@ -804,7 +822,7 @@ def do_release():
             if reply == "Y" or reply == "y":
                 merge_release_tag(state, tag_avail, determine_repo("integration"))
         elif reply == "D" or reply == "d":
-            update_latest_docker_tags(state, tag_avail)
+            push_latest_docker_tags(state, tag_avail)
         elif reply == "P" or reply == "p":
             git_list = []
             for repo in REPOS.values():

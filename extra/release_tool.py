@@ -279,7 +279,7 @@ def query_execute_list(execute_list):
         is_push = cmd[0] == "docker" and cmd[1] == "push"
         is_change = is_push or (
             cmd[0] == "docker" and cmd[1] == "tag")
-        if (PUSH and is_push) or (DRY_RUN and is_change):
+        if (not PUSH and is_push) or (DRY_RUN and is_change):
             print("Would have executed: %s" % " ".join(cmd))
             continue
 

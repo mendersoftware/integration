@@ -19,6 +19,9 @@ import tempfile
 import time
 import conftest
 from common import *
+import random
+import inspect
+import filelock
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -28,6 +31,8 @@ COMPOSE_FILES = [
 ]
 
 log_files = []
+lock = filelock.FileLock("mender_lock_file")
+
 
 def docker_compose_cmd(arg_list, use_common_files=True):
     extra_files = pytest.config.getoption("--docker-compose-file")
@@ -40,13 +45,17 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         for file in COMPOSE_FILES + extra_files:
             files_args += " -f %s" % file
 
-    subprocess.check_call("docker-compose -p %s %s %s" % (conftest.docker_compose_instance, files_args, arg_list), shell=True)
+    with lock:
+        cmd = "docker-compose -p %s %s %s" % (conftest.docker_compose_instance,
+                                              files_args,
+                                              arg_list)
+        subprocess.Popen(cmd, shell=True).wait()
 
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
+    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml kill")
     docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
-
     set_setup_type(None)
 
 

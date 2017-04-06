@@ -52,7 +52,10 @@ class Admission():
                 assert len(devices.json()) == expected_devices
                 break
             except AssertionError:
-                logger.info("failed to get devices, will try #%d times" % (tries-c-1))
+                if devices is not None and getattr(devices, "text"):
+                    logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
+                else:
+                    logger.info("failed to get devices, will try #%d times" % (tries-c-1))
                 continue
         else:
             assert False, "Not able to get devices"

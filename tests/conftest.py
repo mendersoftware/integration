@@ -23,13 +23,13 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 try:
     requests.packages.urllib3.disable_warnings()
 except:
     pass
+
 
 def pytest_addoption(parser):
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
@@ -42,6 +42,7 @@ def pytest_addoption(parser):
     parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
+
 
 def pytest_configure(config):
     env.api_version = config.getoption("api")
@@ -74,6 +75,7 @@ def pytest_configure(config):
     env.eagerly_disconnect = True
     env.banner_timeout = 60
 
+
 def pytest_exception_interact(node, call, report):
     if report.failed:
         for log in log_files:
@@ -82,8 +84,14 @@ def pytest_exception_interact(node, call, report):
                 for line in f.readlines():
                     print line,
 
+
 def pytest_unconfigure(config):
     if not config.getoption("--no-teardown"):
+        stop_docker_compose()
+
+
+def pytest_runtest_teardown(item, nextitem):
+    if nextitem is None:
         stop_docker_compose()
 
 

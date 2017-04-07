@@ -22,7 +22,7 @@
             "taskReferenceName": "delete_device_deployments",
             "inputParameters": {
                 "http_request": {
-                    "uri": "http://mender-deployments:8080/api/0.0.1/devices/${workflow.input.device_id}",
+                    "uri": "http://mender-deployments:8080/api/0.0.1/deployments/devices/${workflow.input.device_id}",
                     "method": "DELETE",
                     "headers": {
                         "X-MEN-RequestID": "${workflow.input.request_id}"

@@ -1,21 +1,46 @@
 #!/bin/bash -e
 
+CONDUCTOR=${CONDUCTOR="http://localhost:8080"}
+
+echo "-- conductor API is at ${CONDUCTOR}"
+
 # start conductor
 /app/startup.sh &
 
 # wait for conductor
-sleep 60
+tries=0
+while [ "$tries" -lt 20 ]; do
+    if ! curl -f "${CONDUCTOR}/api/metadata/taskdefs" > /dev/null 2>&1 ; then
+        tries=$((tries + 1))
+        echo "-- $(date) waiting for conductor, attempt ${tries}"
+        sleep 5
+    else
+        up=1
+        break
+    fi
+done
+
+if [ "$up"  != "1" ] ; then
+    echo "-- $(date) conductor still down, exiting"
+    exit 1
+fi
 
 shopt -s nullglob
 
 # load task definitions
 for task in /srv/tasks/*.json; do
-    curl -v -X POST -H "Content-Type: application/json" http://localhost:8080/api/metadata/taskdefs -d @$task
+    echo "-- loading task $task"
+    curl -fS -v -X POST -H "Content-Type: application/json" \
+         "${CONDUCTOR}/api/metadata/taskdefs" \
+         -d @$task
 done
 
 # load workflow definitions
 for workflow in /srv/workflows/*.json; do
-    curl -v -X POST -H "Content-Type: application/json" http://localhost:8080/api/metadata/workflow -d @$workflow
+    echo "-- loading workflow $workflow"
+    curl -fS -v -X POST -H "Content-Type: application/json" \
+         "${CONDUCTOR}/api/metadata/workflow" \
+         -d @$workflow
 done
 
 wait

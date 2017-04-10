@@ -30,7 +30,7 @@ shopt -s nullglob
 # load task definitions
 for task in /srv/tasks/*.json; do
     echo "-- loading task $task"
-    curl -f -v -X POST -H "Content-Type: application/json" \
+    curl -fS -v -X POST -H "Content-Type: application/json" \
          "${CONDUCTOR}/api/metadata/taskdefs" \
          -d @$task
 done
@@ -38,7 +38,7 @@ done
 # load workflow definitions
 for workflow in /srv/workflows/*.json; do
     echo "-- loading workflow $workflow"
-    curl -f -v -X POST -H "Content-Type: application/json" \
+    curl -fS -v -X POST -H "Content-Type: application/json" \
          "${CONDUCTOR}/api/metadata/workflow" \
          -d @$workflow
 done

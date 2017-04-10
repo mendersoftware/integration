@@ -4,7 +4,22 @@
 /app/startup.sh &
 
 # wait for conductor
-sleep 60
+tries=0
+while [ "$tries" -lt 20 ]; do
+    if ! curl -f http://localhost:8080/api/metadata/taskdefs > /dev/null 2>&1 ; then
+        tries=$((tries + 1))
+        echo "-- $(date) waiting for conductor, attempt ${tries}"
+        sleep 5
+    else
+        up=1
+        break
+    fi
+done
+
+if [ "$up"  != "1" ] ; then
+    echo "-- $(date) conductor still down, exiting"
+    exit 1
+fi
 
 shopt -s nullglob
 

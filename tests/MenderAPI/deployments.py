@@ -40,9 +40,14 @@ class Deployments(object):
     def upload_image(self, filename, description="abc"):
         image_path_url = self.get_deployments_base_path() + "artifacts"
 
-        r = requests.post(image_path_url, verify=False, headers=self.auth.get_auth_token(), files=(("description", (None, description)),
-                          ("size", (None, str(os.path.getsize(filename)))), ("artifact", (filename, open(filename),
-                           "multipart/form-data"))))
+        r = requests.post(image_path_url,
+                          verify=False,
+                          headers=self.auth.get_auth_token(),
+                          files=(
+                              ("description", (None, description)),
+                              ("size", (None, str(os.path.getsize(filename)))),
+                              ("artifact", (filename, open(filename), "application/octet-stream"))
+                          ))
 
         logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))
         assert r.status_code == requests.status_codes.codes.created

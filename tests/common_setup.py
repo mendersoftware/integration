@@ -53,9 +53,8 @@ def standard_setup_two_clients_bootstrapped():
     if setup_type() == ST_TwoClientsBootstrapped:
         return
 
-    restart_docker_compose()
+    restart_docker_compose(2)
     auth.reset_auth_token()
-    setup_set_client_number(2)
     adm.accept_devices(2)
 
     set_setup_type(ST_TwoClientsBootstrapped)

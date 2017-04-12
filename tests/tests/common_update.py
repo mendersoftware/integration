@@ -25,7 +25,8 @@ def common_update_procedure(install_image,
                             regenerate_image_id=True,
                             device_type="vexpress-qemu",
                             broken_image=False,
-                            verify_status=True):
+                            verify_status=True,
+                            devices=None):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
@@ -41,10 +42,11 @@ def common_update_procedure(install_image,
 
         if created_artifact:
             deploy.upload_image(created_artifact)
-            devices_accepted_id = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
+            if devices is None:
+                devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
             deployment_id = deploy.trigger_deployment(name="New valid update",
                                                       artifact_name=artifact_id,
-                                                      devices=devices_accepted_id)
+                                                      devices=devices)
 
             # wait until deployment is in correct state
             if verify_status:

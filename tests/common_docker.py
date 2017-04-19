@@ -50,9 +50,12 @@ def stop_docker_compose():
     set_setup_type(None)
 
 
-def start_docker_compose():
+def start_docker_compose(clients=1):
     inline_logs = pytest.config.getoption("--inline-logs")
+
     docker_compose_cmd("up -d")
+    if clients > 1:
+        docker_compose_cmd("scale mender-client=%d" % clients)
 
     if inline_logs:
         docker_compose_cmd("logs -f &")
@@ -67,9 +70,9 @@ def start_docker_compose():
     set_setup_type(ST_OneClient)
 
 
-def restart_docker_compose():
+def restart_docker_compose(clients=1):
     stop_docker_compose()
-    start_docker_compose()
+    start_docker_compose(clients)
 
 
 def docker_get_ip_of(image):

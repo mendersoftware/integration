@@ -27,7 +27,7 @@ class TestBasicIntegrationWithS3(MenderTesting):
     def test_update_image_with_aws_s3(self,
                                       install_image=conftest.get_valid_image(),
                                       name=None,
-                                      regnerate_image_id=True):
+                                      regenerate_image_id=True):
         """
             Perform a successful upgrade using AWS S3
         """

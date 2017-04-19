@@ -18,7 +18,7 @@ import pytest
 from common import *
 from common_setup import *
 from helpers import Helpers
-from common_update import common_update_proceduce
+from common_update import common_update_procedure
 from MenderAPI import adm, deploy, image
 from mendertesting import MenderTesting
 
@@ -44,7 +44,7 @@ class TestDeploymentAborting(MenderTesting):
         install_image=conftest.get_valid_image()
         expected_partition = Helpers.get_active_partition()
         expected_image_id = Helpers.yocto_id_installed_on_machine()
-        deployment_id, _ = common_update_proceduce(install_image, verify_status=False)
+        deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
         deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
         deploy.abort(deployment_id)
@@ -86,7 +86,7 @@ class TestDeploymentAborting(MenderTesting):
             return
 
         install_image = conftest.get_valid_image()
-        deployment_id, _ = common_update_proceduce(install_image)
+        deployment_id, _ = common_update_procedure(install_image)
 
         Helpers.verify_reboot_performed()
 

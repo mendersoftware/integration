@@ -32,15 +32,6 @@ class Artifacts():
                                                                  artifact_file_created.name)
         logger.info("Running: " + cmd)
 
-        try:
-            subprocess.check_output(cmd, shell=True).strip()
-
-        except subprocess.CalledProcessError:
-            pytest.fail("Trying to create artifact failed.")
-            return False
-
-        except Exception, e:
-            pytest.fail("Unexpted error trying to create artifact: %s, error: %s" % (artifact_name, str(e)))
-            return False
+        subprocess.check_call(cmd, shell=True)
 
         return artifact_file_created.name

@@ -22,6 +22,7 @@ import random
 import tempfile
 import pytest
 import os
+import json
 from fabric.contrib.files import exists
 
 
@@ -175,3 +176,14 @@ class Helpers:
             except:
                 pytest.fail("A reboot was performed when it was not expected")
         assert t2 > t1
+
+
+    @staticmethod
+    def identity_script_to_identity_string(output):
+        data_dict = {}
+        for line in output.split('\n'):
+            split = line.split('=', 2)
+            assert(len(split) == 2)
+            data_dict[split[0]] = split[1]
+
+        return json.dumps(data_dict, separators=(",", ":"))

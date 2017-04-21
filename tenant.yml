@@ -1,0 +1,10 @@
+version: '2'
+services:
+
+    mender-tenantadm:
+        image: mendersoftware/tenantadm:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender

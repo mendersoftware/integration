@@ -25,6 +25,9 @@ Requirements:
 To start using Mender, we recommend that you begin with the Getting started
 section in [the Mender documentation](https://docs.mender.io/).
 
+To quickly get started, and demo mender, run `./up`
+
+If you want to test with multiple devices (default=1) set the SCALE variable as such: `SCALE=3 ./up`
 
 ## Services
 

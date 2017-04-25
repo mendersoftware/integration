@@ -19,8 +19,6 @@ import tempfile
 import time
 import conftest
 from common import *
-import random
-import inspect
 import filelock
 
 COMPOSE_FILES = [
@@ -54,7 +52,6 @@ def docker_compose_cmd(arg_list, use_common_files=True):
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
-    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml kill")
     docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
     set_setup_type(None)
 

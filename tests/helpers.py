@@ -23,6 +23,7 @@ import tempfile
 import pytest
 import os
 import json
+import filelock
 from fabric.contrib.files import exists
 
 
@@ -35,6 +36,7 @@ class FabricFatalException(BaseException):
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
     artifact_prefix = "artifact_name"
+    lock = filelock.FileLock("artifact_modify_lock")
 
     @classmethod
     def yocto_id_from_ext4(self, filename):
@@ -62,7 +64,7 @@ class Helpers:
         if specific_image_id:
             imageid = specific_image_id
         else:
-            imageid = "mender-%s" % str(random.randint(0,99999999))
+            imageid = "mender-%s" % str(random.randint(0, 99999999))
 
         config_file = r"""%s=%s""" % (self.artifact_prefix, imageid)
         tfile = tempfile.NamedTemporaryFile(delete=False)
@@ -70,9 +72,10 @@ class Helpers:
         tfile.close()
 
         try:
-            cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
-            output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            with self.lock:
+                cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
+                output = subprocess.check_output(cmd, shell=True).strip()
+                logging.info("Running: " + cmd + " returned: " + output)
 
             cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
                    % (os.path.dirname(self.artifact_info_file),
@@ -126,7 +129,7 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*10):
+    def verify_reboot_performed(max_wait=60*15):
         successful_connections = 0
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
@@ -137,8 +140,6 @@ class Helpers:
                 run(cmd)
         except (FabricFatalException, EOFError, BaseException):
             logging.info("failed to touch /tmp/ folder, is the device already rebooting?")
-            time.sleep(60*5)
-            return
 
         timeout = time.time() + max_wait
 
@@ -176,7 +177,6 @@ class Helpers:
             except:
                 pytest.fail("A reboot was performed when it was not expected")
         assert t2 > t1
-
 
     @staticmethod
     def identity_script_to_identity_string(output):

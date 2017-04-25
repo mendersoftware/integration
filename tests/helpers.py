@@ -23,9 +23,8 @@ import tempfile
 import pytest
 import os
 import json
-import filelock
 from fabric.contrib.files import exists
-
+import conftest
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -36,7 +35,6 @@ class FabricFatalException(BaseException):
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
     artifact_prefix = "artifact_name"
-    lock = filelock.FileLock("artifact_modify_lock")
 
     @classmethod
     def yocto_id_from_ext4(self, filename):
@@ -72,7 +70,7 @@ class Helpers:
         tfile.close()
 
         try:
-            with self.lock:
+            with conftest.artifact_lock:
                 cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
                 output = subprocess.check_output(cmd, shell=True).strip()
                 logging.info("Running: " + cmd + " returned: " + output)

@@ -19,7 +19,6 @@ import tempfile
 import time
 import conftest
 from common import *
-import filelock
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -29,7 +28,6 @@ COMPOSE_FILES = [
 ]
 
 log_files = []
-lock = filelock.FileLock("mender_lock_file")
 
 
 def docker_compose_cmd(arg_list, use_common_files=True):
@@ -43,7 +41,7 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         for file in COMPOSE_FILES + extra_files:
             files_args += " -f %s" % file
 
-    with lock:
+    with conftest.docker_lock:
         cmd = "docker-compose -p %s %s %s" % (conftest.docker_compose_instance,
                                               files_args,
                                               arg_list)

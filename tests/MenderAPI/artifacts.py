@@ -14,8 +14,10 @@
 #    limitations under the License.
 
 import subprocess
-import pytest
 from MenderAPI import logger
+import sys
+sys.path.append('..')
+import conftest
 
 class Artifacts():
     artifacts_tool_path = "mender-artifact"
@@ -32,6 +34,8 @@ class Artifacts():
                                                                  artifact_file_created.name)
         logger.info("Running: " + cmd)
 
-        subprocess.check_call(cmd, shell=True)
+
+        with conftest.artifact_lock:
+            subprocess.check_call(cmd, shell=True)
 
         return artifact_file_created.name

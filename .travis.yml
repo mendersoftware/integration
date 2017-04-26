@@ -16,7 +16,6 @@ env:
 before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
     - pip2.7 install -U --user paramiko fabric PyYAML pytest requests pytest-xdist filelock
-    - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-engine
 
 before_script:
     # Rename the branch we're on, so that it's not in the way for the

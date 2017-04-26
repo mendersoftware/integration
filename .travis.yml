@@ -15,7 +15,6 @@ env:
 
 before_install:
     - sudo apt-get -qq update && sudo apt-get -qq install -y e2tools
-    - pip2.7 install -U --user paramiko fabric PyYAML pytest requests pytest-xdist filelock
 
 before_script:
     # Rename the branch we're on, so that it's not in the way for the
@@ -33,6 +32,7 @@ before_script:
 script:
     # Check commit compliance.
     - mendertesting/check_commits.sh
+    - pip2.7 install -U --user -r tests/requirements.txt
 
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
 

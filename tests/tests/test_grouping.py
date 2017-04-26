@@ -15,7 +15,6 @@
 
 from fabric.api import *
 import pytest
-import time
 from common import *
 from common_setup import *
 from helpers import Helpers
@@ -23,7 +22,7 @@ from common_update import common_update_procedure
 from MenderAPI import deploy, inv
 from mendertesting import MenderTesting
 
-@MenderTesting.fast
+@MenderTesting.slow
 @pytest.mark.usefixtures("standard_setup_two_clients_bootstrapped")
 class TestGrouping(MenderTesting):
     def validate_group_responses(self, device_map):

@@ -34,6 +34,10 @@ script:
     - mendertesting/check_commits.sh
     - pip2.7 install -U --user -r tests/requirements.txt
 
+    # make sure we can open lots of fds
+    - sudo sysctl -w fs.file-max=5000000
+    - sudo sysctl --system
+
     - if [ "$JOB_TYPE" = compile_and_integration_tests_fast ]; then ( cd tests && bash run.sh --runfast ); fi
 
     - if [ "$JOB_TYPE" = compile_and_integration_tests_slow ]; then

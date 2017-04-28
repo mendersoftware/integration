@@ -68,6 +68,7 @@ fi
 
 XDIST_ARGS="-n auto"
 MAX_FAIL_ARG="--maxfail=1"
+HTML_REPORT="--html=report.html --self-contained-html"
 
 if ! pip list |grep -e pytest-xdist >/dev/null 2>&1; then
     XDIST_ARGS=""
@@ -77,9 +78,14 @@ else
     MAX_FAIL_ARG=""
 fi
 
+if ! pip list|grep -e pytest-html >/dev/null 2>&1; then
+    HTML_REPORT=""
+    echo "WARNING: install pytest-html for html results report"
+fi
+
 if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --tb=short --verbose --junitxml=results.xml --runfast --runslow
+    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --tb=short --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow
     exit $?
 fi
 
-py.test $XDIST_ARGS $MAX_FAIL_ARG -s --tb=short --verbose --junitxml=results.xml "$@"
+py.test $XDIST_ARGS $MAX_FAIL_ARG -s --tb=short --verbose --junitxml=results.xml $HTML_REPORT "$@"

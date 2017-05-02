@@ -175,7 +175,7 @@ class TestFaultTolerance(MenderTesting):
         assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
         Helpers.verify_reboot_not_performed()
 
-    @MenderTesting.nightly
+    @MenderTesting.slow
     def test_image_download_retry_2(self, install_image=conftest.get_valid_image()):
         """
             Block storage host (minio) by modifying the hosts file.

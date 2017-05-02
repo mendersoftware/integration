@@ -19,11 +19,13 @@ from common import *
 from common_setup import *
 from tests import MenderTesting
 from tests import common_update
+import os
 
+@pytest.mark.skipif(os.getenv("AWS_ACCESS_KEY_ID") == "" or os.getenv("AWS_SECRET_ACCESS_KEY" == ""), reason="AWS_ACCESS_KEY_ID and/or AWS_SECRET_ACCESS_KEY missing")
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3")
 class TestBasicIntegrationWithS3(MenderTesting):
 
-    @MenderTesting.aws_s3
+    @MenderTesting.slow
     def test_update_image_with_aws_s3(self,
                                       install_image=conftest.get_valid_image(),
                                       name=None,

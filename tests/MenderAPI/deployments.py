@@ -128,7 +128,7 @@ class Deployments(object):
             pytest.fail("Never found status: %s for %s" % (expected_status, deployment_id))
 
 
-    def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=300, polling_frequency=.2):
+    def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=600, polling_frequency=.2):
         timeout = time.time() + max_wait
         seen = set()
 

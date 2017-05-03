@@ -25,7 +25,7 @@ from mendertesting import MenderTesting
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestDeploymentAborting(MenderTesting):
 
-    def abort_deployment(self, abort_step, mender_performs_reboot=False):
+    def abort_deployment(self, abort_step=None, mender_performs_reboot=False):
         """
             Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
@@ -46,7 +46,8 @@ class TestDeploymentAborting(MenderTesting):
         expected_image_id = Helpers.yocto_id_installed_on_machine()
         deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
-        deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
+        if abort_step is not None:
+            deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
         deploy.abort(deployment_id)
         deploy.check_expected_statistics(deployment_id, "aborted", len(get_mender_clients()))
 
@@ -65,8 +66,8 @@ class TestDeploymentAborting(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
-    def test_deployment_abortion_pending(self):
-        self.abort_deployment("pending")
+    def test_deployment_abortion_instantly(self):
+        self.abort_deployment()
 
     @MenderTesting.fast
     def test_deployment_abortion_installing(self):

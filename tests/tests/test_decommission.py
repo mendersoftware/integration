@@ -22,16 +22,17 @@ from common_update import common_update_procedure
 from MenderAPI import inv, adm, deploy, deviceauth
 from mendertesting import MenderTesting
 
-@pytest.mark.usefixtures("standard_setup_one_client")
+# ugly way of passing a the "true" parameter to "standard_setup_one_client"
+@pytest.mark.parametrize("standard_setup_one_client", ["force_new"], indirect=True)
 class TestDeviceDecommissioning(MenderTesting):
 
 
     @MenderTesting.fast
-    def test_device_decommissioning(self):
+    def test_device_decommissioning(self, standard_setup_one_client):
         """ Decommission a device successfully """
 
         if not env.host_string:
-            execute(self.test_device_decommissioning, hosts=get_mender_clients())
+            execute(self.test_device_decommissioning, standard_setup_one_client, hosts=get_mender_clients())
             return
 
         adm.check_expected_status("pending", len(get_mender_clients()))

@@ -15,9 +15,11 @@ import admission
 import deployments
 import artifacts
 import inventory
+import device_authentication
 
 auth = authentication.Authentication()
 adm = admission.Admission(auth)
 deploy = deployments.Deployments(auth)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)
+deviceauth = device_authentication.DeviceAuthentication(auth)

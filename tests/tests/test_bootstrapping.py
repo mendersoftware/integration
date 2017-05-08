@@ -49,6 +49,9 @@ class TestBootstrapping(MenderTesting):
         # make sure all devices are accepted
         adm.check_expected_status("accepted", len(get_mender_clients()))
 
+        # make sure mender-store contains authtoken
+        run("strings /data/mender/mender-store | grep -q 'authtoken'")
+
         # print all device ids
         for device in adm.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
@@ -74,11 +77,11 @@ class TestBootstrapping(MenderTesting):
             logging.info("Failed to deploy upgrade to rejected device.")
             Helpers.verify_reboot_not_performed()
 
-            # authtoken has been removed
-            assert not exists("/data/mender/authtoken")
+            # authtoken has been removed from mender-store
+            run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
 
         else:
-            raise("No error while trying to deploy to rejected device")
+            pytest.fail("No error while trying to deploy to rejected device")
 
         # re-accept device after test is done
         adm.accept_devices(1)

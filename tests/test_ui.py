@@ -2,40 +2,34 @@
 # -*- coding: utf-8 -*-
 """Test mender via web server and selenium"""
 
-__authors__    = ["Ole Herman Schumacher Elgesem"]
-
 # System
 import os
-import sys
 import random
 from time import sleep
 import inspect
 
 # strings
-import re
 import argparse
-import getpass
-
-# file io
-import json
-import pickle
 
 # network
-import requests
 import selenium
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from web_funcs import *
 
+__authors__ = ["Ole Herman Schumacher Elgesem", "Gregorio Di Stefano"]
+
+
 def function_name():
-   """Returns the function name of the calling function (stack[1])"""
-   return inspect.stack()[1][3]
+    """Returns the function name of the calling function (stack[1])"""
+    return inspect.stack()[1][3]
+
 
 def ui_test_banner():
     print("=== UI-TEST: {}() ===".format(inspect.stack()[1][3]))
+
 
 def ui_test_success():
     print("=== SUCCESS: {}() ===".format(inspect.stack()[1][3]))
@@ -46,12 +40,13 @@ def tag_contents_xpath(tag, content):
     content = content.lower()
     return '//{}[contains(translate(*,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"{}")]'.format(tag, content)
 
+
 class TestUI(object):
-    def init_driver(self, url="https://localhost:443/"):
+    def init_driver(self, url="https://dev-gui.mender.io"):
         self.url = url
-        driver = chrome_driver()
-        #driver = phantom_driver()
+        driver = webdriver.Chrome()
         driver.set_window_size(1024, 600)
+        driver.implicitly_wait(10)
         print("Getting: "+url)
         driver.get(url)
         return driver
@@ -66,27 +61,15 @@ class TestUI(object):
         finally:
             driver.quit()
 
-    def download_images(self):
-        url1 = "https://d1b0l86ne08fsf.cloudfront.net/master/vexpress-qemu/vexpress_release_1.mender"
-        url2 = "https://d1b0l86ne08fsf.cloudfront.net/master/vexpress-qemu/vexpress_release_2.mender"
-        path1 = "vexpress_release_1.mender"
-        path2 = "vexpress_release_2.mender"
-        download_if_needed(url1, path1)
-        download_if_needed(url2, path2)
-
-    def wait_for_element(self, driver, by, arg, timeout=10):
+    def wait_for_element(self, driver, by, arg, visibiliy=True, timeout=10):
         try:
-            element = WebDriverWait(driver, timeout).until(
-                EC.visibility_of_element_located(( by, arg )))
-            if not element:
-                print("WebDriverWait returned "+str(element))
-                return None
-            timer = 0.0
-            while timer < timeout and not element.is_enabled():
-                sleep(0.2)
-                timer += 0.2
-            if not element.is_enabled():
-                print("Element not enabled: "+str(element))
+            if visibiliy:
+                element = WebDriverWait(driver, timeout).until(
+                    EC.visibility_of_element_located((by, arg)))
+            else:
+                element = WebDriverWait(driver, timeout).until(
+                    EC.invisibility_of_element_located((by, arg)))
+
         except selenium.common.exceptions.TimeoutException:
             print("wait_for_element timeout: " + arg)
             return None
@@ -112,14 +95,14 @@ class TestUI(object):
             time_passed += 0.2
         return False
 
-    def click_button(self, driver, label, timeout=10):
+    def click_button(self, driver, label, timeout=30):
         xp = tag_contents_xpath("button", label)
-        element = self.wait_for_element(driver, By.XPATH, xp)
+        element = self.wait_for_element(driver, By.XPATH, xp, timeout=timeout)
         if not element:
             print("Button not found: " + label)
             return False
         print("Clicking: {} ({})".format(label, element))
-        return self.attempt_click_timeout(element, timeout)
+        return self.attempt_click_timeout(element, timeout=timeout)
 
     def click_random_button(self, driver):
         buttons = driver.find_elements_by_tag_name("button")
@@ -132,22 +115,24 @@ class TestUI(object):
         return False
 
     def upload_artifact(self, driver, path):
-        element = None
-        while element is None:
-            #try:
-            element = driver.find_element_by_class_name("dropzone")
-            sleep(0.3)
-#            TODO: Add timeout
-        element = element.find_element_by_tag_name("input")
+        attempts = 0
+        while attempts < 10:
+            element = driver.find_element_by_css_selector("input[type='file']")
+            if element is not None:
+                break
+            attempts += 1
+            sleep(3)
+
+        assert os.path.exists(os.path.abspath(path))
+        driver.save_screenshot('screen.png')
         element.send_keys(os.path.abspath(path))
-        sleep(1)
 
     def wait_for_xpath(self, driver, xp, timeout=10):
         return self.wait_for_element(driver, By.XPATH, xp, timeout)
 
     def upload_artifacts(self, driver):
-        self.upload_artifact(driver, "vexpress_release_1.mender")
-        self.upload_artifact(driver, "vexpress_release_2.mender")
+        self.upload_artifact(driver, "/tmp/vexpress_release_1.mender")
+        self.upload_artifact(driver, "/tmp/vexpress_release_2.mender")
         sleep(10)
         artifacts = []
         xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]",
@@ -166,8 +151,8 @@ class TestUI(object):
         mock_email    = "mock_email@cfengine.com"
         mock_password = "seleniumfoxrainbowdog"
         print("Logging in with credentials:")
-        print("Email: "+ mock_email)
-        print("Password: "+ mock_password)
+        print("Email: " + mock_email)
+        print("Password: " + mock_password)
         email_field = driver.find_element_by_id("email")
         email_field.click()
         email_field.send_keys(mock_email)
@@ -221,20 +206,43 @@ class TestUI(object):
         driver = self.init_driver()
         self.login(driver)
         assert self.click_button(driver, "Devices")
-        self.click_button(driver, "Authorize 1 device")
+        self.click_button(driver, "Authorize 1 device", timeout=600)
         xp = "//table/tbody[@class='clickable']/tr/td[3]/div"
-        authorized_device = self.wait_for_element(driver, By.XPATH, xp)
+        authorized_device = self.wait_for_element(driver, By.XPATH, xp, timeout=600)
         assert authorized_device
-        time_passed = 0.0
-        while authorized_device.text != "vexpress-qemu":
+        authorized_device.click()
+        timeout = time.time() + (60*5)
+
+        while time.time() < timeout:
             sleep(0.2)
-            time_passed += 0.2
-            if time_passed > 10.0:
+            if self.wait_for_element(driver, By.XPATH, xp).text == "vexpress-qemu":
                 break
+        else:
+            raise Exception("Device never appeared for authorization")
+
         print("Found authorized_device: '" + authorized_device.text + "'")
         assert authorized_device.text == "vexpress-qemu"
         ui_test_success()
         self.destroy_driver(driver)
+
+    def test_basic_inventory(self):
+        ui_test_banner()
+        driver = self.init_driver()
+        self.login(driver)
+        assert self.click_button(driver, "Devices")
+        authorized_device = self.wait_for_element(driver, By.CSS_SELECTOR, "div.rightFluid.padding-right tbody.clickable > tr")
+        assert authorized_device
+        authorized_device.click()
+        assert "vexpress-qemu" in authorized_device.text
+        assert "mender-image-master" in authorized_device.text
+
+        # make sure basic inventory items are there
+        assert self.wait_for_element(driver, By.XPATH, "//*[contains(text(),'Linux version')]")
+        assert self.wait_for_element(driver, By.XPATH, "//*[contains(text(),'eth0')]")
+        assert self.wait_for_element(driver, By.XPATH, "//*[contains(text(),'ARM')]")
+        ui_test_success()
+        self.destroy_driver(driver)
+
 
     def test_deploy(self):
         ui_test_banner()
@@ -271,6 +279,42 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
+    def test_deployment_in_progress(self):
+        ui_test_banner()
+        driver = self.init_driver()
+        self.login(driver)
+        assert self.click_button(driver, "Deployments")
+
+        timeout = time.time() + 60*5
+        while time.time() < timeout:
+                e = self.wait_for_element(driver, By.CSS_SELECTOR, "span.status.inprogress")
+                if e.text == '1':
+                    break
+                time.sleep(1)
+        else:
+            raise Exception("Deployment never in progress")
+
+        ui_test_success()
+        self.destroy_driver(driver)
+
+    def test_deployment_successful(self):
+        ui_test_banner()
+        driver = self.init_driver()
+        self.login(driver)
+        assert self.click_button(driver, "Deployments")
+
+        timeout = time.time() + 60*5
+        while time.time() < timeout:
+                e = self.wait_for_element(driver, By.CSS_SELECTOR, "span.status.success")
+                if e.text == '1':
+                    break
+                time.sleep(1)
+        else:
+            raise Exception("Deployment never completed")
+
+        ui_test_success()
+        self.destroy_driver(driver)
+
 def get_args():
     argparser = argparse.ArgumentParser(description='Test UI of mender web server')
     argparser.add_argument('--url', '-u', help='URL (default="https://localhost:8080/")', type=str, default='https://localhost:8080/')
@@ -285,5 +329,8 @@ if __name__ == '__main__':
     test.test_click_header_buttons()
     test.test_artifact_upload()
     test.test_authorize_all()
+    test.test_basic_inventory()
     test.test_deploy()
+    test.test_deployment_in_progress()
+    test.test_deployment_successful()
     #pytest.main(args=[os.path.realpath(__file__)])#, "--url", args.url])

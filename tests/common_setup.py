@@ -19,8 +19,8 @@ from common import *
 from common_docker import *
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client():
-    if setup_type() == ST_OneClient:
+def standard_setup_one_client(request):
+    if getattr(request, 'param', False) and request.param != "force_new" and setup_type() == ST_OneClient:
         return
 
     restart_docker_compose()

@@ -127,7 +127,7 @@ class Helpers:
             logging.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*15):
+    def verify_reboot_performed(max_wait=60*30):
         successful_connections = 0
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)

@@ -125,7 +125,7 @@ class Deployments(object):
                 continue
 
         if time.time() > timeout:
-            pytest.fail("Never found status: %s for %s" % (expected_status, deployment_id))
+            pytest.fail("Never found status: %s for %s after %d seconds" % (expected_status, deployment_id, max_wait))
 
 
     def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=600, polling_frequency=.2):
@@ -143,7 +143,7 @@ class Deployments(object):
             continue
 
         if time.time() > timeout:
-            pytest.fail("Never found: %s:%s, only seen: %s" % (expected_status, expected_count, str(seen)))
+            pytest.fail("Never found: %s:%s, only seen: %s after %d seconds" % (expected_status, expected_count, str(seen), max_wait))
 
     def abort(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)

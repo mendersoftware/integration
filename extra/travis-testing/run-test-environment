@@ -68,6 +68,6 @@ shift
 }
 
 # fold everything
-[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
+[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH down && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH rm || true
 
 exit $failed

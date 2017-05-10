@@ -19,7 +19,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import common_update_procedure
-from MenderAPI import inv, adm, deploy, deviceauth
+from MenderAPI import inv, adm, deviceauth
 from mendertesting import MenderTesting
 
 # ugly way of passing a the "true" parameter to "standard_setup_one_client"
@@ -67,8 +67,10 @@ class TestDeviceDecommissioning(MenderTesting):
 
         # make sure a deployment to the decommissioned device fails
         try:
+            time.sleep(10)  # sometimes deployment microservice hasn't removed the device yet
             deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image(),
-                                                       devices=[device_id])
+                                                       devices=[device_id],
+                                                       verify_status=False)
         except AssertionError:
             logging.info("Failed to deploy upgrade to rejected device")
             # authtoken has been removed

@@ -25,14 +25,14 @@ from common import *
 from common_docker import *
 from MenderAPI import api_version, logger
 
-
 class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
     auth = None
 
-    def __init__(self, auth):
+    def __init__(self, auth, adm):
         self.auth = auth
+        self.adm = adm
 
     def get_deployments_base_path(self):
         return "https://%s/api/management/%s/deployments/" % (get_mender_gateway(), api_version)
@@ -137,6 +137,16 @@ class Deployments(object):
 
             data = self.get_statistics(deployment_id)
             seen.add(str(data))
+
+            if int(data["failure"]) > 0 and expected_status != "failure":
+                all_failed_logs = ""
+                for device in self.adm.get_devices():
+                    try:
+                        all_failed_logs += self.get_logs(device["device_id"], deployment_id) + "\n" * 5
+                    except Exception, e:
+                        logger.warn("failed to get logs.")
+
+                pytest.fail("deployment unexpectedly failed, here are the deployment logs: \n\n %s" % (all_failed_logs))
 
             if data[expected_status] == expected_count:
                 return

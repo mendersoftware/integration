@@ -10,6 +10,7 @@ logger.setLevel(logging.DEBUG)
 
 logging.info("Setting api_version as: " + api_version)
 
+
 import authentication
 import admission
 import deployments
@@ -19,7 +20,7 @@ import device_authentication
 
 auth = authentication.Authentication()
 adm = admission.Admission(auth)
-deploy = deployments.Deployments(auth)
+deploy = deployments.Deployments(auth, adm)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)
 deviceauth = device_authentication.DeviceAuthentication(auth)

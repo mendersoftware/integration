@@ -67,7 +67,7 @@ class TestDeviceDecommissioning(MenderTesting):
 
         # make sure a deployment to the decommissioned device fails
         try:
-            time.sleep(10)  # sometimes deployment microservice hasn't removed the device yet
+            time.sleep(60)  # sometimes deployment microservice hasn't removed the device yet
             deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image(),
                                                        devices=[device_id],
                                                        verify_status=False)

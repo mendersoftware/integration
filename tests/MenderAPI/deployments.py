@@ -70,7 +70,7 @@ class Deployments(object):
         assert r.status_code == requests.status_codes.codes.created
 
         deployment_id = str(r.headers['Location'].split("/")[-1])
-        logger.info("Deployment id is: " + deployment_id)
+        logger.info("deployment [%s] triggered for device [%s]" % (devices, deployment_id))
 
         return deployment_id
 

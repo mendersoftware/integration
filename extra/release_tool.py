@@ -28,7 +28,7 @@ os.environ['GIT_PAGER'] = "cat"
 RELEASE_STATE = "release-state.yml"
 
 JENKINS_SERVER = "https://ci.cfengine.com"
-JENKINS_JOB = "job/yoctobuild-kristian"
+JENKINS_JOB = "job/yoctobuild-pr"
 JENKINS_CRUMB_ISSUER = 'crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)'
 
 # What we use in commits messages when bumping versions.

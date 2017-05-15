@@ -7,9 +7,12 @@ import os
 import random
 import time
 import inspect
+import subprocess
+import sys
 
 # strings
 import argparse
+
 
 # network
 import selenium
@@ -18,9 +21,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from web_funcs import *
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from helpers import Helpers
+from MenderAPI import authentication
+
 
 __authors__ = ["Ole Herman Schumacher Elgesem", "Gregorio Di Stefano"]
-
+auth = authentication.Authentication()
 
 def function_name():
     """Returns the function name of the calling function (stack[1])"""
@@ -131,25 +138,22 @@ class TestUI(object):
         return self.wait_for_element(driver, By.XPATH, xp, timeout)
 
     def upload_artifacts(self, driver):
-        self.upload_artifact(driver, "/tmp/vexpress_release_1.mender")
-        self.upload_artifact(driver, "/tmp/vexpress_release_2.mender")
-        time.sleep(10)
-        artifacts = []
-        xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]",
-                  "//table/tbody[@class='clickable']/tr[2]/td[1]"]
+        self.upload_artifact(driver, "vexpress_release_1.mender")
+        time.sleep(60)
+        xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]"]
         # NOTE: These xpaths match the first clickable table
         # TODO: Can search the page more extensively in case more
         #       clickable tables are added.
         elements = [self.wait_for_xpath(driver, x) for x in xpaths]
-        assert len(elements) == 2
+        assert len(elements) == 1
         contents = [x.text for x in elements]
-        assert "release-1" in contents and "release-2" in contents
+        assert "release1" in contents
 
     def login(self, driver):
         if "login" not in driver.current_url:
             return
-        mock_email    = "mock_email@cfengine.com"
-        mock_password = "seleniumfoxrainbowdog"
+        mock_email    = auth.email
+        mock_password = auth.password
         print("Logging in with credentials:")
         print("Email: " + mock_email)
         print("Password: " + mock_password)
@@ -190,6 +194,7 @@ class TestUI(object):
             self.destroy_driver(driver)
 
     def test_artifact_upload(self):
+        self.create_artifacts()
         ui_test_banner()
 
         try:
@@ -257,11 +262,11 @@ class TestUI(object):
         assert artifact_drop_down
         assert self.attempt_click_timeout(artifact_drop_down)
 
-        # Locate and click the artifact we want to deploy "release-2":
+        # Locate and click the artifact we want to deploy "release-1":
         xp = "/html/body[@class='box-sizing']/div[3]/div/div/div/div[1]/span/div/div/div"
         target_artifact = self.wait_for_element(driver, By.XPATH, xp)
         assert target_artifact
-        assert target_artifact.text == "release-2"
+        assert target_artifact.text == "release1"
         assert self.attempt_click_timeout(target_artifact)
 
         # Locate and click the select group drop down:
@@ -315,16 +320,23 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
+    def create_artifacts(self):
+        Helpers.artifact_id_randomize("core-image-full-cmdline-vexpress-qemu.ext4", specific_image_id="release1")
+        subprocess.call("mender-artifact write rootfs-image -u core-image-full-cmdline-vexpress-qemu.ext4 -t vexpress-qemu -n release1 -o vexpress_release_1.mender", shell=True)
+
+
 def get_args():
     argparser = argparse.ArgumentParser(description='Test UI of mender web server')
     argparser.add_argument('--url', '-u', help='URL (default="https://localhost:8080/")', type=str, default='https://localhost:8080/')
     args = argparser.parse_args()
     return args
 
+
 # For running without pytest:
 if __name__ == '__main__':
     args = get_args()
     test = TestUI()
+    test.create_artifacts()
     test.test_login_create_user()
     test.test_click_header_buttons()
     test.test_artifact_upload()

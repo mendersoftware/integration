@@ -19,6 +19,7 @@ import logging
 from common_docker import *
 from MenderAPI import api_version
 
+
 class Authentication:
     auth_header = None
 
@@ -29,24 +30,32 @@ class Authentication:
         email = "admin@admin.net"
         password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
-        def get_header(t):
-            return {"Authorization": "Bearer " + str(t)}
+        # try login - the user might be in a shared db already (if not running xdist)
+        r = self._do_login(email, password)
 
-        r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False)
-        self.auth_header = get_header(r.text)
+        # ...if not, create user
+        if r.status_code is not 200:
+            self._create_user(email, password)
 
-        if r.status_code == 200:
-            self.auth_header = get_header(r.text)
-            r = requests.post("https://%s/api/management/%s/useradm/users/initial" % (get_mender_gateway(), api_version), headers=self.auth_header, verify=False, json={"email": email, "password": password})
-            assert r.status_code == 201
+            r = self._do_login(email, password)
+            assert r.status_code == 200
 
-        r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False, auth=HTTPBasicAuth(email, password))
-        assert r.status_code == 200
-
-        self.auth_header = get_header(r.text)
         logging.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
 
-
     def reset_auth_token(self):
         self.auth_header = None
+
+    def _do_login(self, username, password):
+        r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False, auth=HTTPBasicAuth(username, password))
+        assert r.status_code == 200 or r.status_code == 401
+
+        if r.status_code == 200:
+            self.auth_header = {"Authorization": "Bearer " + str(r.text)}
+
+        return r
+
+    def _create_user(self, username, password):
+        cmd = 'exec mender-useradm /usr/bin/useradm create-user --username %s --password %s' % (username, password)
+
+        docker_compose_cmd(cmd)

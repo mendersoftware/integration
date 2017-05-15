@@ -5,7 +5,7 @@
 # System
 import os
 import random
-from time import sleep
+import time
 import inspect
 
 # strings
@@ -91,7 +91,7 @@ class TestUI(object):
         while time_passed < timeout:
             if self.attempt_click(element):
                 return True
-            sleep(0.2)
+            time.sleep(0.2)
             time_passed += 0.2
         return False
 
@@ -121,7 +121,7 @@ class TestUI(object):
             if element is not None:
                 break
             attempts += 1
-            sleep(3)
+            time.sleep(3)
 
         assert os.path.exists(os.path.abspath(path))
         driver.save_screenshot('screen.png')
@@ -133,7 +133,7 @@ class TestUI(object):
     def upload_artifacts(self, driver):
         self.upload_artifact(driver, "/tmp/vexpress_release_1.mender")
         self.upload_artifact(driver, "/tmp/vexpress_release_2.mender")
-        sleep(10)
+        time.sleep(10)
         artifacts = []
         xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]",
                   "//table/tbody[@class='clickable']/tr[2]/td[1]"]
@@ -191,7 +191,7 @@ class TestUI(object):
 
     def test_artifact_upload(self):
         ui_test_banner()
-        self.download_images()
+
         try:
             driver = self.init_driver()
             self.login(driver)
@@ -214,7 +214,7 @@ class TestUI(object):
         timeout = time.time() + (60*5)
 
         while time.time() < timeout:
-            sleep(0.2)
+            time.sleep(0.2)
             if self.wait_for_element(driver, By.XPATH, xp).text == "vexpress-qemu":
                 break
         else:

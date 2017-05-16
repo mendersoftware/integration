@@ -45,7 +45,8 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         cmd = "docker-compose -p %s %s %s" % (conftest.docker_compose_instance,
                                               files_args,
                                               arg_list)
-        print("running ", cmd)
+
+        logging.info("running with: %s" % cmd)
         subprocess.Popen(cmd, shell=True).wait()
 
 

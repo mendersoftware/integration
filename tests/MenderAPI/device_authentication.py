@@ -35,5 +35,5 @@ class DeviceAuthentication(object):
         r = requests.delete(decommission_path_url,
                             verify=False,
                             headers=self.auth.get_auth_token())
-        print(decommission_path_url, r.status_code)
         assert r.status_code == expected_http_code
+        logger.info("device [%s] is decommissioned" % (deviceID))

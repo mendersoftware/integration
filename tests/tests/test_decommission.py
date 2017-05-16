@@ -60,14 +60,18 @@ class TestDeviceDecommissioning(MenderTesting):
                 newAdmissions = adm.get_devices()[0]
                 if device_id != newAdmissions["device_id"] \
                    and adm_id != newAdmissions["id"]:
-                       break
+                    logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
+                    break
+                else:
+                    logger.info("device [%s] found in inventory..." % (device_id))
                 time.sleep(.5)
         else:
             pytest.fail("decommissioned device still available in admissions")
 
         # make sure a deployment to the decommissioned device fails
         try:
-            time.sleep(60)  # sometimes deployment microservice hasn't removed the device yet
+            time.sleep(120)  # sometimes deployment microservice hasn't removed the device yet
+            logger.info("attempting to deploy to decommissioned device: %s" % (device_id))
             deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image(),
                                                        devices=[device_id],
                                                        verify_status=False)

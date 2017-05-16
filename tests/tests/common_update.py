@@ -21,6 +21,8 @@ import random
 from fabric.api import *
 import tempfile
 from tests import artifact_lock
+import pytest
+
 
 def common_update_procedure(install_image,
                             regenerate_image_id=True,
@@ -49,9 +51,8 @@ def common_update_procedure(install_image,
                 deployment_id = deploy.trigger_deployment(name="New valid update",
                                                           artifact_name=artifact_id,
                                                           devices=devices)
-
             else:
-                logger.error("error creating artifact")
+                pytest.fail("error creating artifact")
 
         # wait until deployment is in correct state
         if verify_status:
@@ -74,7 +75,17 @@ def update_image_successful(install_image=conftest.get_valid_image(), regenerate
                                                                regenerate_image_id)
 
     Helpers.verify_reboot_performed()
-    assert Helpers.get_active_partition() == previous_inactive_part
+
+    try:
+        assert Helpers.get_active_partition() == previous_inactive_part
+    except AssertionError:
+        logs = []
+        for d in adm.get_devices():
+            logs.append(deploy.get_logs(d["device_id"], deployment_id))
+
+        pytest.fail("device did not flip partitions during update, here are the device logs:\n\n %s" % (logs))
+
+
     deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
     for d in adm.get_devices():

@@ -20,6 +20,7 @@ from MenderAPI import adm, deploy, image, logger
 import random
 from fabric.api import *
 import tempfile
+from tests import artifact_lock
 
 def common_update_procedure(install_image,
                             regenerate_image_id=True,
@@ -28,33 +29,35 @@ def common_update_procedure(install_image,
                             verify_status=True,
                             devices=None):
 
-    if broken_image:
-        artifact_id = "broken_image_" + str(random.randint(0, 999999))
-    elif regenerate_image_id:
-        artifact_id = Helpers.artifact_id_randomize(install_image)
-        logger.debug("Randomized image id: " + artifact_id)
-    else:
-        artifact_id = Helpers.yocto_id_from_ext4(install_image)
+    with artifact_lock:
+        if broken_image:
+            artifact_id = "broken_image_" + str(random.randint(0, 999999))
+        elif regenerate_image_id:
+            artifact_id = Helpers.artifact_id_randomize(install_image)
+            logger.debug("Randomized image id: " + artifact_id)
+        else:
+            artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
-    # create atrifact
-    with tempfile.NamedTemporaryFile() as artifact_file:
-        created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
+        # create atrifact
+        with tempfile.NamedTemporaryFile() as artifact_file:
+            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
 
-        if created_artifact:
-            deploy.upload_image(created_artifact)
-            if devices is None:
-                devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
-            deployment_id = deploy.trigger_deployment(name="New valid update",
-                                                      artifact_name=artifact_id,
-                                                      devices=devices)
+            if created_artifact:
+                deploy.upload_image(created_artifact)
+                if devices is None:
+                    devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
+                deployment_id = deploy.trigger_deployment(name="New valid update",
+                                                          artifact_name=artifact_id,
+                                                          devices=devices)
 
-            # wait until deployment is in correct state
-            if verify_status:
-                deploy.check_expected_status("inprogress", deployment_id)
+            else:
+                logger.error("error creating artifact")
 
-            return deployment_id, artifact_id
+        # wait until deployment is in correct state
+        if verify_status:
+            deploy.check_expected_status("inprogress", deployment_id)
 
-        logger.error("error creating artifact")
+        return deployment_id, artifact_id
 
 
 def update_image_successful(install_image=conftest.get_valid_image(), regenerate_image_id=True):

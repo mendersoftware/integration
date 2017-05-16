@@ -33,9 +33,6 @@ class Artifacts():
                                                                  artifact_name,
                                                                  artifact_file_created.name)
         logger.info("Running: " + cmd)
-
-
-        with conftest.artifact_lock:
-            subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=True)
 
         return artifact_file_created.name

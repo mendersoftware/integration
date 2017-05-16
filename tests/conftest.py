@@ -27,7 +27,6 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 docker_lock = filelock.FileLock("docker_lock")
-artifact_lock = filelock.FileLock("artifact_lock")
 
 try:
     requests.packages.urllib3.disable_warnings()

@@ -250,6 +250,7 @@ def execute_git(state, repo_git, args, capture=False, capture_stderr=False):
     is_push = (args[0] == "push")
     is_change = (is_push
                  or (args[0] == "tag" and len(args) > 1)
+                 or (args[0] == "branch" and len(args) > 1)
                  or (args[0] == "config" and args[1] != "-l")
                  or (args[0] == "checkout")
                  or (args[0] == "commit")
@@ -830,6 +831,39 @@ def push_latest_docker_tags(state, tag_avail):
 
         query_execute_list(exec_list)
 
+def create_release_branches(state, tag_avail):
+    print("Checking if any repository needs a new branch...")
+
+    any_repo_needs_branch = False
+
+    for repo in REPOS.values():
+        if tag_avail[repo.git]['already_released']:
+            continue
+
+        remote = find_upstream_remote(state, repo.git)
+
+        try:
+            execute_git(state, repo.git, ["rev-parse", state[repo.git]['following']],
+                        capture=True, capture_stderr=True)
+        except subprocess.CalledProcessError:
+            any_repo_needs_branch = True
+            reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
+                         + "and base it on latest '%s/master' (if you don't want to base "
+                         + "it on '%s/master' you have to do it manually)? ")
+                        % (repo.git, state[repo.git]['following'], remote, remote))
+            if not reply.startswith("Y") and not reply.startswith("y"):
+                continue
+
+            cmd_list = []
+            cmd_list.append((state, repo.git, ["push", remote, "%s/master:refs/heads/%s"
+                                           # Slight abuse of basename() to get branch basename.
+                                           % (remote, os.path.basename(state[repo.git]['following']))]))
+            query_execute_git_list(cmd_list)
+
+    if not any_repo_needs_branch:
+        # Matches the beginning text above.
+        print("No.")
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
@@ -889,6 +923,8 @@ def do_release():
         if state_value(state, ["extra_buildparams", param]) is None:
             update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
+    create_release_branches(state, tag_avail)
+
     first_time = True
     while True:
         if first_time:
@@ -918,6 +954,7 @@ def do_release():
         print('  M) Merge "integration" release tag into release branch')
         print("  S) Switch fetching branch between remote and local branch (affects next")
         print("       tagging)")
+        print("  C) Create new series branch (A.B.x style) for each repository that lacks one")
 
         reply = ask("Choice? ")
 
@@ -954,6 +991,8 @@ def do_release():
             switch_following_branch(state, tag_avail)
         elif reply == "M" or reply == "m":
             merge_release_tag(state, tag_avail, determine_repo("integration"))
+        elif reply == "C" or reply == "c":
+            create_release_branches(state, tag_avail)
         else:
             print("Invalid choice!")
 

@@ -3,7 +3,6 @@
 import argparse
 import copy
 import json
-import operator
 import os
 import re
 import shutil
@@ -127,7 +126,10 @@ EXTRA_BUILDPARAMS = {
 def integration_dir():
     """Return the location of the integration repository."""
 
-    return os.path.join(os.path.dirname(sys.argv[0]), "..")
+    if os.path.isabs(sys.argv[0]):
+        return os.path.normpath(os.path.dirname(os.path.dirname(sys.argv[0])))
+    else:
+        return os.path.normpath(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), ".."))
 
 def ask(text):
     """Ask a question and return the reply."""
@@ -173,14 +175,21 @@ def docker_compose_files_list(dir):
             list.append(os.path.join(dir, entry))
     return list
 
+def get_docker_compose_data_from_json_list(json_list):
+    """Return the Yaml as data from all strings in the json list."""
+    data = {}
+    for json_str in json_list:
+        deepupdate(data, yaml.load(json_str))
+    return data
+
 def get_docker_compose_data(dir):
     """Return the Yaml as data from all the docker-compose YAML files."""
-    data = {}
+    json_list = []
     for file in docker_compose_files_list(dir):
-        fd = open(file)
-        deepupdate(data, yaml.load(fd))
-        fd.close()
-    return data
+        with open(file) as fd:
+            json_list.append(fd.read())
+
+    return get_docker_compose_data_from_json_list(json_list)
 
 def do_version_of(args):
     """Process --version-of argument."""
@@ -232,6 +241,8 @@ def execute_git(state, repo_git, args, capture=False, capture_stderr=False):
     """Executes a Git command in the given repository, with args being a list
     of arguments (not including git itself). capture and capture_stderr
     arguments causes it to return stdout or stdout+stderr as a string.
+
+    state can be None, but if so, then repo_git needs to be an absolute path.
 
     The function automatically takes into account Git commands with side effects
     and applies push simulation and dry run if those are enabled."""
@@ -352,7 +363,8 @@ def find_upstream_remote(state, repo_git):
     config = execute_git(state, repo_git, ["config", "-l"], capture=True)
     remote = None
     for line in config.split('\n'):
-        match = re.match(r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$" % repo_git, line)
+        match = re.match(r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$"
+                         % os.path.basename(repo_git), line)
         if match is not None:
             remote = match.group(1)
             break
@@ -955,14 +967,67 @@ def do_set_version_to(args):
     repo = determine_repo(args.set_version_of)
     set_docker_compose_version_to(integration_dir(), repo.docker, args.version)
 
+def do_integration_versions_including(args):
+    if not args.version:
+        print("--integration-versions-including requires --version argument")
+        sys.exit(2)
+
+    git_dir = integration_dir()
+    remote = find_upstream_remote(None, git_dir)
+    output = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
+                                         "--sort=-version:refname",
+                                         "refs/tags/*",
+                                         "refs/remotes/%s/master" % remote,
+                                         "refs/remotes/%s/[1-9]*" % remote],
+                         capture=True)
+    candidates = []
+    for line in output.strip().split('\n'):
+        # Filter out build tags.
+        if re.search("-build", line):
+            continue
+
+        candidates.append(line)
+
+    # Now look at each docker compose file in each branch, and figure out which
+    # ones contain the version of the service we are querying.
+    matches = []
+    for candidate in candidates:
+        yamls = []
+        files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
+                            capture=True).strip().split('\n')
+        for file in files:
+            if not file.endswith(".yml"):
+                continue
+
+            output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, file)],
+                                 capture=True)
+            yamls.append(output)
+
+        data = get_docker_compose_data_from_json_list(yamls)
+        try:
+            repo = determine_repo(args.integration_versions_including)
+        except KeyError:
+            print("Unrecognized repository: %s" % args.integration_versions_including)
+            sys.exit(1)
+        image = data['services'][repo.container]['image']
+        version = image[(image.index(":") + 1):]
+        if version == args.version:
+            matches.append(candidate)
+
+    for match in matches:
+        print(match)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version-of", dest="version_of", metavar="SERVICE",
                         help="Determine version of given service")
     parser.add_argument("--set-version-of", dest="set_version_of", metavar="SERVICE",
                         help="Write version of given service into docker-compose.yml")
+    parser.add_argument("--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",
+                        help="Find version(s) of integration repository that contain the given version of SERVICE, "
+                        + " where version is given with --version. Returned as a newline separated list")
     parser.add_argument("--version", dest="version",
-                        help="Version to write using previous option")
+                        help="Version which is used in above two arguments")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -991,6 +1056,8 @@ def main():
         do_version_of(args)
     elif args.set_version_of is not None:
         do_set_version_to(args)
+    elif args.integration_versions_including is not None:
+        do_integration_versions_including(args)
     elif args.release:
         do_release()
     else:

@@ -185,8 +185,8 @@ def get_docker_compose_data_from_json_list(json_list):
 def get_docker_compose_data(dir):
     """Return the Yaml as data from all the docker-compose YAML files."""
     json_list = []
-    for file in docker_compose_files_list(dir):
-        with open(file) as fd:
+    for filename in docker_compose_files_list(dir):
+        with open(filename) as fd:
             json_list.append(fd.read())
 
     return get_docker_compose_data_from_json_list(json_list)
@@ -691,9 +691,9 @@ def set_docker_compose_version_to(dir, repo_docker, tag):
     image points to the given tag."""
 
     compose_files = docker_compose_files_list(dir)
-    for file in compose_files:
-        old = open(file)
-        new = open(file + ".tmp", "w")
+    for filename in compose_files:
+        old = open(filename)
+        new = open(filename + ".tmp", "w")
         for line in old:
             # Replace build tag with a new one.
             line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(repo_docker),
@@ -701,7 +701,7 @@ def set_docker_compose_version_to(dir, repo_docker, tag):
             new.write(line)
         new.close()
         old.close()
-        os.rename(file + ".tmp", file)
+        os.rename(filename + ".tmp", filename)
 
 def purge_build_tags(state, tag_avail):
     """Gets rid of all tags in all repositories that match the current version
@@ -995,11 +995,11 @@ def do_integration_versions_including(args):
         yamls = []
         files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
                             capture=True).strip().split('\n')
-        for file in files:
-            if not file.endswith(".yml"):
+        for filename in files:
+            if not filename.endswith(".yml"):
                 continue
 
-            output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, file)],
+            output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, filename)],
                                  capture=True)
             yamls.append(output)
 

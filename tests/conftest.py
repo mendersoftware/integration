@@ -113,14 +113,19 @@ def get_valid_image():
 
 def pytest_assertrepr_compare(op, left, right):
     logs_to_include = []
-    for logs in log_files:
-        # we already have s3cmd configured on our build machine, so use it directly
-        s3_object_name = str(uuid.uuid4()) + ".log"
-        ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (logs, s3_object_name), shell=True)
-        if int(ret) == 0:
-            logs_to_include.append("https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name)
-        else:
-            logging.warn("uploading backend logs failed.")
+
+
+    if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
+        for logs in log_files:
+            # we already have s3cmd configured on our build machine, so use it directly
+            s3_object_name = str(uuid.uuid4()) + ".log"
+            ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (logs, s3_object_name), shell=True)
+            if int(ret) == 0:
+                logs_to_include.append("https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name)
+            else:
+                logging.warn("uploading backend logs failed.")
+    else:
+        logging.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
 
     if len(logs_to_include):
         return ["failed: assert %s %s %s" % (left, op, right), "backend logs: %s" % ('\n'.join(logs_to_include))]

@@ -19,6 +19,9 @@ import requests
 from common_docker import stop_docker_compose, log_files
 import random
 import filelock
+import uuid
+import subprocess
+import os
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -82,8 +85,8 @@ def pytest_configure(config):
 def pytest_exception_interact(node, call, report):
     if report.failed:
         for log in log_files:
-           logging.info("printing content of : %s" % log)
-           with open(log) as f:
+            logging.info("printing content of : %s" % log)
+            with open(log) as f:
                 for line in f.readlines():
                     print line,
 
@@ -91,6 +94,12 @@ def pytest_exception_interact(node, call, report):
 def pytest_unconfigure(config):
     if not config.getoption("--no-teardown"):
         stop_docker_compose()
+
+    for log in log_files:
+        try:
+            os.remove(log)
+        except:
+            pass
 
 
 def pytest_runtest_teardown(item, nextitem):
@@ -100,3 +109,25 @@ def pytest_runtest_teardown(item, nextitem):
 
 def get_valid_image():
     return env.valid_image
+
+
+def pytest_assertrepr_compare(op, left, right):
+    logs_to_include = []
+
+
+    if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
+        for logs in log_files:
+            # we already have s3cmd configured on our build machine, so use it directly
+            s3_object_name = str(uuid.uuid4()) + ".log"
+            ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (logs, s3_object_name), shell=True)
+            if int(ret) == 0:
+                logs_to_include.append("https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name)
+            else:
+                logging.warn("uploading backend logs failed.")
+    else:
+        logging.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
+
+    if len(logs_to_include):
+        return ["failed: assert %s %s %s" % (left, op, right), "backend logs: %s" % ('\n'.join(logs_to_include))]
+    else:
+        return ["failed: assert %s %s %s" % (left, op, right)]

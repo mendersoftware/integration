@@ -743,7 +743,7 @@ def switch_following_branch(state, tag_avail):
 
 def assign_default_following_branch(state, repo):
     remote = find_upstream_remote(state, repo.git)
-    branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
+    branch = re.sub(r"\.[^.]+$", ".x", state[repo.git]['version'])
     update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
 
 def merge_release_tag(state, tag_avail, repo):

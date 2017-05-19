@@ -902,7 +902,7 @@ def do_release():
 
     update_state(state, ["integration", 'version'], state['version'])
 
-    for repo in REPOS.values():
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
         if state_value(state, [repo.git, 'version']) is None:
             update_state(state, [repo.git, 'version'],
                          ask("What version of %s should be included? " % repo.git))

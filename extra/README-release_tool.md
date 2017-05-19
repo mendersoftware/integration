@@ -294,3 +294,11 @@ using old branch heads.
 Tip: You can also switch only one repository to a local branch, or to a
 differently named branch, but then you need to edit the `release-state.yml` file
 manually and change the `following` branch of the repository you want.
+
+#### Create new series branch
+
+For each repository that follows a remote branch you will get the option of
+pushing a new branch if it lacks a branch of this name. The intended usage of
+this command is to create a new 1.1.x branch off of master when 1.1.0 is to be
+released. This command is automatically invoked when the script starts, but one
+can say no if it's not desired.

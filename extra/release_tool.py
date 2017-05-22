@@ -864,6 +864,16 @@ def create_release_branches(state, tag_avail):
         # Matches the beginning text above.
         print("No.")
 
+def do_beta_to_final_transition(state):
+    for repo in REPOS.values():
+        version = state[repo.git]['version']
+        version = re.sub("b[0-9]+$", "", version)
+        update_state(state, [repo.git, 'version'], version)
+
+    version = state['version']
+    version = re.sub("b[0-9]+$", "", version)
+    update_state(state, ['version'], version)
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
@@ -941,6 +951,8 @@ def do_release():
 
         print("What do you want to do?")
         print("-- Main operations")
+        if re.search("b[0-9]+$", state['version']):
+            print("  O) Move from beta build tags to final build tags")
         print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
@@ -993,6 +1005,9 @@ def do_release():
             merge_release_tag(state, tag_avail, determine_repo("integration"))
         elif reply == "C" or reply == "c":
             create_release_branches(state, tag_avail)
+        elif reply == "O" or reply == "o":
+            do_beta_to_final_transition(state)
+            tag_avail = check_tag_availability(state)
         else:
             print("Invalid choice!")
 

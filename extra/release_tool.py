@@ -1050,7 +1050,7 @@ def do_integration_versions_including(args):
         files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
                             capture=True).strip().split('\n')
         for filename in files:
-            if not filename.endswith(".yml"):
+            if not entry.startswith("docker-compose") or not filename.endswith(".yml"):
                 continue
 
             output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, filename)],

@@ -143,6 +143,13 @@ the existing release when the tool starts.
 ### Reference: Main operations
 
 
+#### Move from beta build tags to final build tags
+
+This moves all version tags from version with beta, so versions without beta, in
+order to start building the final. This operation is not displayed if the
+current build tag is not a beta version.
+
+
 #### Refresh all repositories
 
 This simply does a `git fetch --tags` in all repositories to update all remote

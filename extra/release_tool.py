@@ -110,8 +110,8 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
-    "META_MENDER_REV": "morty",
-    "POKY_REV": "morty",
+    "META_MENDER_REV": "pyro",
+    "POKY_REV": "pyro",
     "MENDER_QA_REV": "master",
     "BUILD_QEMU": "on",
     "TEST_QEMU": "on",
@@ -120,7 +120,7 @@ EXTRA_BUILDPARAMS = {
     "CLEAN_BUILD_CACHE": "",
     "UPLOAD_OUTPUT": "",
     "RUN_INTEGRATION_TESTS": "on",
-    "PUSH_CONTAINERS": "",
+    "PUSH_CONTAINERS": "on",
 }
 
 def integration_dir():

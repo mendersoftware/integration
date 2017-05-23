@@ -3,7 +3,6 @@
 import argparse
 import datetime
 import json
-import operator
 import os
 import re
 import sys
@@ -366,8 +365,11 @@ def verify_no_license_leftovers(location):
 do_go_repos()
 do_gui_repos()
 
-# Sort according to component.
-sorted_licenses = sorted(LICENSES.items(), key=operator.itemgetter(0))
+def case_insensitive_item(item):
+    return item[0].lower()
+
+# Sort according to component (case insensitive).
+sorted_licenses = sorted(LICENSES.items(), key=case_insensitive_item)
 
 separator = "\n\n--------------------------------------------------------------------------------\n\n"
 component_texts = []

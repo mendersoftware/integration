@@ -22,22 +22,22 @@ from MenderAPI import api_version
 
 class Authentication:
     auth_header = None
+    email = "admin@admin.net"
+    password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
     def get_auth_token(self):
         if self.auth_header is not None:
             return self.auth_header
 
-        email = "admin@admin.net"
-        password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
         # try login - the user might be in a shared db already (if not running xdist)
-        r = self._do_login(email, password)
+        r = self._do_login(self.email, self.password)
 
         # ...if not, create user
         if r.status_code is not 200:
-            self._create_user(email, password)
+            self._create_user(self.email, self.password)
 
-            r = self._do_login(email, password)
+            r = self._do_login(self.email, self.password)
             assert r.status_code == 200
 
         logging.info("Using Authorization headers: " + str(r.text))

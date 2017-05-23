@@ -2,11 +2,32 @@
 set -x -e
 RUN_S3=""
 
+function get_requirements() {
+    # Download what we need.
+    mkdir -p downloaded-tools
+    curl "https://d25phv8h0wbwru.cloudfront.net/${TEST_BRANCH}/tip/mender-artifact" \
+         -o downloaded-tools/mender-artifact \
+         -z downloaded-tools/mender-artifact
+
+    chmod +x downloaded-tools/mender-artifact
+    export PATH=$PWD/downloaded-tools:$PATH
+
+
+    curl "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
+         -o core-image-full-cmdline-vexpress-qemu.ext4 \
+         -z core-image-full-cmdline-vexpress-qemu.ext4
+}
+
 
 # we need to make sure we use the correct ext4 image for testing
 if [[ -z "$BUILDDIR" ]] && [[ -z "$TEST_BRANCH" ]]; then
     echo "TEST_BRANCH environment variable needs to be set"
     exit 1
+fi
+
+if [[ $1 == "--get-requirements" ]]; then
+    get_requirements
+    exit 0
 fi
 
 if [[ ! -f large_image.dat ]]; then
@@ -27,19 +48,7 @@ if [[ -n "$BUILDDIR" ]]; then
 
     cp -f $BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .
 else
-    # Download what we need.
-    mkdir -p downloaded-tools
-    curl "https://d25phv8h0wbwru.cloudfront.net/${TEST_BRANCH}/tip/mender-artifact" \
-         -o downloaded-tools/mender-artifact \
-         -z downloaded-tools/mender-artifact
-
-    chmod +x downloaded-tools/mender-artifact
-    export PATH=$PWD/downloaded-tools:$PATH
-
-
-    curl "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
-         -o core-image-full-cmdline-vexpress-qemu.ext4 \
-         -z core-image-full-cmdline-vexpress-qemu.ext4
+    get_requirements
 fi
 
 
@@ -89,8 +98,8 @@ if ! pip list|grep -e pytest-html >/dev/null 2>&1; then
 fi
 
 if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow
+    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow tests/
     exit $?
 fi
 
-py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT "$@"
+py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT "$@" tests/

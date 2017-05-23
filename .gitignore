@@ -1,4 +1,6 @@
+*.log
 *.pyc
+
 
 tags
 
@@ -11,3 +13,10 @@ tests/core-image-full-cmdline-vexpress-qemu.ext4
 tests/large_image.dat
 tests/results.xml
 tests/downloaded-tools
+
+__pycache__
+.cache
+artifacts
+core-image-full-*
+large_image.dat
+update.mender

@@ -76,12 +76,12 @@ class TestDeviceDecommissioning(MenderTesting):
                                                        devices=[device_id],
                                                        verify_status=False)
         except AssertionError:
-            logging.info("Failed to deploy upgrade to rejected device")
-            # authtoken has been removed
-            run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
+            logging.info("Failed to deploy upgrade to rejected device, as expected.")
         else:
-            pytest.fail("No error while trying to deploy to rejected device")
+            assert False, "No error while trying to deploy to rejected device"
 
+        # authtoken has been removed
+        run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
 
         """
             at this point, the device will re-appear, since it's actually still

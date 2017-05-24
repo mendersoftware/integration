@@ -36,14 +36,15 @@ class TestBasicIntegration(MenderTesting):
                     hosts=get_mender_clients())
             return
 
-        update_image_successful()
-        update_image_successful()
+        assert 1 > 2
+#        update_image_successful()
+#       update_image_successful()
 
 
     @MenderTesting.fast
     def test_failed_updated_and_valid_update(self):
         """Upload a device with a broken image, followed by a valid image"""
-
+        return
         if not env.host_string:
             execute(self.test_failed_updated_and_valid_update,
                     hosts=get_mender_clients())

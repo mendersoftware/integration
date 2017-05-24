@@ -123,9 +123,12 @@ def get_valid_image():
 def pytest_assertrepr_compare(op, left, right):
     logs_to_include = []
 
-
+    print "before loop"
     if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
+        print "HERE!!"
+        print(log_files)
         for logs in log_files:
+            print "looping"
             # we already have s3cmd configured on our build machine, so use it directly
             s3_object_name = str(uuid.uuid4()) + ".log"
             ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (logs, s3_object_name), shell=True)

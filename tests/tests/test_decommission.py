@@ -49,7 +49,7 @@ class TestDeviceDecommissioning(MenderTesting):
                 break
             time.sleep(.5)
         else:
-            pytest.fail("never got inventory")
+            assert False, "never got inventory"
 
         # decommission actual device
         deviceauth.decommission(device_id)
@@ -66,7 +66,7 @@ class TestDeviceDecommissioning(MenderTesting):
                     logger.info("device [%s] found in inventory..." % (device_id))
                 time.sleep(.5)
         else:
-            pytest.fail("decommissioned device still available in admissions")
+            assert False, "decommissioned device still available in admissions"
 
         # make sure a deployment to the decommissioned device fails
         try:

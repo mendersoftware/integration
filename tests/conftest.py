@@ -121,8 +121,8 @@ def get_valid_image():
 
 
 def pytest_assertrepr_compare(op, left, right):
+    """ catch all failed asserts in order to grab backend logs """
     logs_to_include = []
-
 
     if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
         for logs in log_files:

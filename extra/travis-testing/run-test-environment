@@ -58,7 +58,20 @@ shift
 [ "$TEST_TYPE" == "acceptance" ] && {
     COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
     TEST_SERVICE=${TEST_SERVICE:-"acceptance"}
-    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH run ${TEST_SERVICE} || failed=1
+    # technically we could use 'docker-compose run' here, but it doesn't preserve the acceptance service name,
+    # which is needed e.g. for predictably running the tenantadm mock
+    # use 'up instead
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH up ${TEST_SERVICE} || failed=1
+    # try to find the container now
+    contid=$(docker ps --filter status=exited --filter label=com.docker.compose.service=${TEST_SERVICE} -q)
+    if [ -n "$contid" ] ; then
+        # determine its status
+        status=$(docker inspect --format '{{.State.ExitCode}}' ${contid})
+        [ "$status" == "0" ] || failed=1
+    else
+        echo "cannot find acceptance container's ID"
+        failed=1
+    fi
 }
 
 [ "$TEST_TYPE" == "integration" ] && {

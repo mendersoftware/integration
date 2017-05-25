@@ -19,6 +19,10 @@ import requests
 from common_docker import stop_docker_compose, log_files
 import random
 import filelock
+import uuid
+import subprocess
+import os
+import pytest
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -87,6 +91,29 @@ def pytest_exception_interact(node, call, report):
                 for line in f.readlines():
                     print line,
 
+
+@pytest.mark.hookwrapper
+def pytest_runtest_makereport(item, call):
+    pytest_html = item.config.pluginmanager.getplugin('html')
+    outcome = yield
+    report = outcome.get_result()
+    extra = getattr(report, 'extra', [])
+    if report.failed:
+        url = ""
+        if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
+            # we already have s3cmd configured on our build machine, so use it directly
+            s3_object_name = str(uuid.uuid4()) + ".log"
+            ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
+            if int(ret) == 0:
+                url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
+            else:
+                logging.warn("uploading backend logs failed.")
+        else:
+            logging.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
+
+        # always add url to report
+        extra.append(pytest_html.extras.url(url))
+        report.extra = extra
 
 def pytest_unconfigure(config):
     if not config.getoption("--no-teardown"):

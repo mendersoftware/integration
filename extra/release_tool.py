@@ -94,7 +94,7 @@ REPO_ALIASES = {
 
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
-    "mender-api-gateway-docker": "API_GATEWAY_REV",
+    "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deviceadm": "DEVICEADM_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -103,7 +103,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "useradm": "USERADM_REV",
 
     "mender": "MENDER_REV",
-    "mender-artifact": "ARTIFACTS_REV",
+    "mender-artifact": "MENDER_ARTIFACT_REV",
 
     "integration": "INTEGRATION_REV",
 }

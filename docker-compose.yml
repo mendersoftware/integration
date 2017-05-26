@@ -11,15 +11,6 @@ services:
             service: mender-base
         networks:
             - mender
-        depends_on:
-            - mender-mongo-deployments
-
-    mender-mongo-deployments:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-deployments
 
     #
     # mender-gui
@@ -59,15 +50,6 @@ services:
             service: mender-base
         networks:
             - mender
-        depends_on:
-            - mender-mongo-device-auth
-
-    mender-mongo-device-auth:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-auth
 
     #
     # mender-device-adm
@@ -79,15 +61,6 @@ services:
             service: mender-base
         networks:
             - mender
-        depends_on:
-            - mender-mongo-device-adm
-
-    mender-mongo-device-adm:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-adm
 
     #
     # mender-inventory
@@ -99,15 +72,6 @@ services:
             service: mender-base
         networks:
             - mender
-        depends_on:
-            - mender-mongo-inventory
-
-    mender-mongo-inventory:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-inventory
 
     #
     # mender-useradm
@@ -119,15 +83,6 @@ services:
             service: mender-base
         networks:
             - mender
-        depends_on:
-            - mender-mongo-useradm
-
-    mender-mongo-useradm:
-        image: mongo:3.4
-        networks:
-            mender:
-                aliases:
-                    - mongo-useradm
 
     mender-conductor:
         image: mendersoftware/conductor:1.7.0

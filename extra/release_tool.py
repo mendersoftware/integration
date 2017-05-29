@@ -171,7 +171,8 @@ def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""
     list = []
     for entry in os.listdir(dir):
-        if entry.startswith("docker-compose") and entry.endswith(".yml"):
+        if (entry == "other-components.yml"
+            or (entry.startswith("docker-compose") and entry.endswith(".yml"))):
             list.append(os.path.join(dir, entry))
     return list
 
@@ -1050,7 +1051,8 @@ def do_integration_versions_including(args):
         files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
                             capture=True).strip().split('\n')
         for filename in files:
-            if not entry.startswith("docker-compose") or not filename.endswith(".yml"):
+            if (entry != "other-components.yml"
+                and not (entry.startswith("docker-compose") and filename.endswith(".yml"))):
                 continue
 
             output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, filename)],
@@ -1071,6 +1073,101 @@ def do_integration_versions_including(args):
     for match in matches:
         print(match)
 
+def figure_out_checked_out_revision(state, repo_git):
+    """Finds out what is currently checked out, and returns a pair. The first
+    element is the name of what is checked out, the second is either "branch"
+    or "tag", referring to what is currently checked out. If neither a tag nor
+    branch is checked out, returns None."""
+
+    try:
+        ref = execute_git(None, repo_git, ["symbolic-ref", "--short", "HEAD"], capture=True, capture_stderr=True)
+        # If the above didn't produce an exception, then we are on a branch.
+        return (ref, "branch")
+    except subprocess.CalledProcessError:
+        # We are not on a branch. Maybe we are on a branch, but Jenkins
+        # checked out the SHA anyway.
+        ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
+
+        if ref is not None:
+            # Make sure it matches the checked out SHA.
+            problem_with_ref = False
+            checked_out_sha = execute_git(None, repo_git, ["rev-parse", "HEAD"], capture=True)
+            remote = find_upstream_remote(None, repo_git)
+            try:
+                ref_sha = execute_git(None, repo_git, ["rev-parse", "%s/%s" % (remote, ref)], capture=True)
+                if ref_sha != checked_out_sha:
+                    problem_with_ref = True
+            except subprocess.CalledProcessError:
+                problem_with_ref = True
+                ref_sha = ""
+
+            if problem_with_ref:
+                # Why isn't the branch mentioned in the build parameters checked
+                # out? This should not happen.
+                raise Exception("%s: SHA %s from %s does not match checked out SHA %s. This should not happen!"
+                                % (repo_git, ref_sha, ref, checked_out_sha))
+
+            return (ref, "branch")
+        else:
+            # Not a branch checked out as a SHA either. Try tag then.
+            try:
+                ref = execute_git(None, repo_git, ["describe", "--exact", "HEAD"], capture=True, capture_stderr=True)
+            except subprocess.CalledProcessError:
+                # We are not on a tag either.
+                return None
+
+            return (ref, "tag")
+
+def do_verify_integration_references(args):
+    int_dir = integration_dir()
+    data = get_docker_compose_data(int_dir)
+    problem = False
+
+    for repo in REPOS.values():
+        # integration is not checked, since the current checkout records the
+        # version of that one.
+        if repo.git == "integration":
+            continue
+
+        # Try some common locations.
+        tried = []
+        for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
+            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git))
+            tried.append(path)
+            if os.path.isdir(path):
+                break
+        else:
+            print("%s not found. Tried: %s"
+                  % (repo.git, ", ".join(tried)))
+            sys.exit(2)
+
+        rev = figure_out_checked_out_revision(None, path)
+        if rev is None:
+            # Unrecognized checkout. Skip the check then.
+            continue
+
+        ref, reftype = rev
+
+        if reftype == "branch" and not re.match(r"^([1-9][0-9]*\.[0-9]+\.([0-9]+|x)|master)$", ref):
+            # Skip the check if the branch doesn't have a well known name,
+            # either a version (with or without beta and build appendix) or
+            # "master". If it does not have a well known name, then most likely
+            # this is a pull request, and we don't require those to be recorded
+            # in the YAML files.
+            continue
+
+        image = data['services'][repo.container]['image']
+        version = image[image.rfind(':')+1:]
+
+        if ref != version:
+            print("%s: Checked out Git ref '%s' does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
+                  % (repo.git, ref, version, image))
+            problem = True
+
+    if problem:
+        print("\nMake sure all *.yml files contain the correct versions.")
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version-of", dest="version_of", metavar="SERVICE",
@@ -1088,6 +1185,14 @@ def main():
                         help="Simulate (don't do) pushes")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")
+    parser.add_argument("--verify-integration-references", action="store_true",
+                        help="Checks that references in the yaml files match the tags that "
+                        + "are checked out in Git. This is intended to catch cases where "
+                        + "references to images or tools are out of date. It requires checked-out "
+                        + "repositories to exist next to the integration repository, and is "
+                        + "usually used only in builds. For branch names (not tags), only "
+                        + 'well known names are checked: version numbers and "master" (to avoid '
+                        + "pull requests triggering a failure)")
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -1114,6 +1219,8 @@ def main():
         do_integration_versions_including(args)
     elif args.release:
         do_release()
+    elif args.verify_integration_references:
+        do_verify_integration_references(args)
     else:
         parser.print_help()
         sys.exit(1)

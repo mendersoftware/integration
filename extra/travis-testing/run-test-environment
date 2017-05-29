@@ -80,6 +80,8 @@ shift
     $COMPOSE_CMD -f $TESTS_COMPOSE_PATH up -d || failed=1
 }
 
+echo "-- compose command: $COMPOSE_CMD -f $TESTS_COMPOSE_PATH"
+
 # fold everything
 [ -z "$NO_CLEANUP" ] && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH down && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH rm || true
 

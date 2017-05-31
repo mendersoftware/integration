@@ -3,7 +3,6 @@
 import argparse
 import copy
 import json
-import operator
 import os
 import re
 import shutil
@@ -28,7 +27,7 @@ os.environ['GIT_PAGER'] = "cat"
 RELEASE_STATE = "release-state.yml"
 
 JENKINS_SERVER = "https://ci.cfengine.com"
-JENKINS_JOB = "job/yoctobuild-kristian"
+JENKINS_JOB = "job/yoctobuild-pr"
 JENKINS_CRUMB_ISSUER = 'crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)'
 
 # What we use in commits messages when bumping versions.
@@ -95,7 +94,7 @@ REPO_ALIASES = {
 
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
-    "mender-api-gateway-docker": "API_GATEWAY_REV",
+    "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deviceadm": "DEVICEADM_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -104,15 +103,15 @@ GIT_TO_BUILDPARAM_MAP = {
     "useradm": "USERADM_REV",
 
     "mender": "MENDER_REV",
-    "mender-artifact": "ARTIFACTS_REV",
+    "mender-artifact": "MENDER_ARTIFACT_REV",
 
     "integration": "INTEGRATION_REV",
 }
 
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
-    "META_MENDER_REV": "morty",
-    "POKY_REV": "morty",
+    "META_MENDER_REV": "pyro",
+    "POKY_REV": "pyro",
     "MENDER_QA_REV": "master",
     "BUILD_QEMU": "on",
     "TEST_QEMU": "on",
@@ -121,13 +120,16 @@ EXTRA_BUILDPARAMS = {
     "CLEAN_BUILD_CACHE": "",
     "UPLOAD_OUTPUT": "",
     "RUN_INTEGRATION_TESTS": "on",
-    "PUSH_CONTAINERS": "",
+    "PUSH_CONTAINERS": "on",
 }
 
 def integration_dir():
     """Return the location of the integration repository."""
 
-    return os.path.join(os.path.dirname(sys.argv[0]), "..")
+    if os.path.isabs(sys.argv[0]):
+        return os.path.normpath(os.path.dirname(os.path.dirname(sys.argv[0])))
+    else:
+        return os.path.normpath(os.path.join(os.getcwd(), os.path.dirname(sys.argv[0]), ".."))
 
 def ask(text):
     """Ask a question and return the reply."""
@@ -169,18 +171,26 @@ def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""
     list = []
     for entry in os.listdir(dir):
-        if entry.startswith("docker-compose") and entry.endswith(".yml"):
+        if (entry == "other-components.yml"
+            or (entry.startswith("docker-compose") and entry.endswith(".yml"))):
             list.append(os.path.join(dir, entry))
     return list
 
+def get_docker_compose_data_from_json_list(json_list):
+    """Return the Yaml as data from all strings in the json list."""
+    data = {}
+    for json_str in json_list:
+        deepupdate(data, yaml.load(json_str))
+    return data
+
 def get_docker_compose_data(dir):
     """Return the Yaml as data from all the docker-compose YAML files."""
-    data = {}
-    for file in docker_compose_files_list(dir):
-        fd = open(file)
-        deepupdate(data, yaml.load(fd))
-        fd.close()
-    return data
+    json_list = []
+    for filename in docker_compose_files_list(dir):
+        with open(filename) as fd:
+            json_list.append(fd.read())
+
+    return get_docker_compose_data_from_json_list(json_list)
 
 def do_version_of(args):
     """Process --version-of argument."""
@@ -233,12 +243,15 @@ def execute_git(state, repo_git, args, capture=False, capture_stderr=False):
     of arguments (not including git itself). capture and capture_stderr
     arguments causes it to return stdout or stdout+stderr as a string.
 
+    state can be None, but if so, then repo_git needs to be an absolute path.
+
     The function automatically takes into account Git commands with side effects
     and applies push simulation and dry run if those are enabled."""
 
     is_push = (args[0] == "push")
     is_change = (is_push
                  or (args[0] == "tag" and len(args) > 1)
+                 or (args[0] == "branch" and len(args) > 1)
                  or (args[0] == "config" and args[1] != "-l")
                  or (args[0] == "checkout")
                  or (args[0] == "commit")
@@ -352,7 +365,8 @@ def find_upstream_remote(state, repo_git):
     config = execute_git(state, repo_git, ["config", "-l"], capture=True)
     remote = None
     for line in config.split('\n'):
-        match = re.match(r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$" % repo_git, line)
+        match = re.match(r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$"
+                         % os.path.basename(repo_git), line)
         if match is not None:
             remote = match.group(1)
             break
@@ -679,9 +693,9 @@ def set_docker_compose_version_to(dir, repo_docker, tag):
     image points to the given tag."""
 
     compose_files = docker_compose_files_list(dir)
-    for file in compose_files:
-        old = open(file)
-        new = open(file + ".tmp", "w")
+    for filename in compose_files:
+        old = open(filename)
+        new = open(filename + ".tmp", "w")
         for line in old:
             # Replace build tag with a new one.
             line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(repo_docker),
@@ -689,7 +703,7 @@ def set_docker_compose_version_to(dir, repo_docker, tag):
             new.write(line)
         new.close()
         old.close()
-        os.rename(file + ".tmp", file)
+        os.rename(filename + ".tmp", filename)
 
 def purge_build_tags(state, tag_avail):
     """Gets rid of all tags in all repositories that match the current version
@@ -730,7 +744,7 @@ def switch_following_branch(state, tag_avail):
 
 def assign_default_following_branch(state, repo):
     remote = find_upstream_remote(state, repo.git)
-    branch = re.sub("[0-9]+$", "x", state[repo.git]['version'])
+    branch = re.sub(r"\.[^.]+$", ".x", state[repo.git]['version'])
     update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
 
 def merge_release_tag(state, tag_avail, repo):
@@ -818,6 +832,49 @@ def push_latest_docker_tags(state, tag_avail):
 
         query_execute_list(exec_list)
 
+def create_release_branches(state, tag_avail):
+    print("Checking if any repository needs a new branch...")
+
+    any_repo_needs_branch = False
+
+    for repo in REPOS.values():
+        if tag_avail[repo.git]['already_released']:
+            continue
+
+        remote = find_upstream_remote(state, repo.git)
+
+        try:
+            execute_git(state, repo.git, ["rev-parse", state[repo.git]['following']],
+                        capture=True, capture_stderr=True)
+        except subprocess.CalledProcessError:
+            any_repo_needs_branch = True
+            reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
+                         + "and base it on latest '%s/master' (if you don't want to base "
+                         + "it on '%s/master' you have to do it manually)? ")
+                        % (repo.git, state[repo.git]['following'], remote, remote))
+            if not reply.startswith("Y") and not reply.startswith("y"):
+                continue
+
+            cmd_list = []
+            cmd_list.append((state, repo.git, ["push", remote, "%s/master:refs/heads/%s"
+                                           # Slight abuse of basename() to get branch basename.
+                                           % (remote, os.path.basename(state[repo.git]['following']))]))
+            query_execute_git_list(cmd_list)
+
+    if not any_repo_needs_branch:
+        # Matches the beginning text above.
+        print("No.")
+
+def do_beta_to_final_transition(state):
+    for repo in REPOS.values():
+        version = state[repo.git]['version']
+        version = re.sub("b[0-9]+$", "", version)
+        update_state(state, [repo.git, 'version'], version)
+
+    version = state['version']
+    version = re.sub("b[0-9]+$", "", version)
+    update_state(state, ['version'], version)
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
@@ -856,7 +913,7 @@ def do_release():
 
     update_state(state, ["integration", 'version'], state['version'])
 
-    for repo in REPOS.values():
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
         if state_value(state, [repo.git, 'version']) is None:
             update_state(state, [repo.git, 'version'],
                          ask("What version of %s should be included? " % repo.git))
@@ -877,6 +934,8 @@ def do_release():
         if state_value(state, ["extra_buildparams", param]) is None:
             update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
+    create_release_branches(state, tag_avail)
+
     first_time = True
     while True:
         if first_time:
@@ -893,6 +952,8 @@ def do_release():
 
         print("What do you want to do?")
         print("-- Main operations")
+        if re.search("b[0-9]+$", state['version']):
+            print("  O) Move from beta build tags to final build tags")
         print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
@@ -906,6 +967,7 @@ def do_release():
         print('  M) Merge "integration" release tag into release branch')
         print("  S) Switch fetching branch between remote and local branch (affects next")
         print("       tagging)")
+        print("  C) Create new series branch (A.B.x style) for each repository that lacks one")
 
         reply = ask("Choice? ")
 
@@ -942,6 +1004,11 @@ def do_release():
             switch_following_branch(state, tag_avail)
         elif reply == "M" or reply == "m":
             merge_release_tag(state, tag_avail, determine_repo("integration"))
+        elif reply == "C" or reply == "c":
+            create_release_branches(state, tag_avail)
+        elif reply == "O" or reply == "o":
+            do_beta_to_final_transition(state)
+            tag_avail = check_tag_availability(state)
         else:
             print("Invalid choice!")
 
@@ -955,20 +1022,177 @@ def do_set_version_to(args):
     repo = determine_repo(args.set_version_of)
     set_docker_compose_version_to(integration_dir(), repo.docker, args.version)
 
+def do_integration_versions_including(args):
+    if not args.version:
+        print("--integration-versions-including requires --version argument")
+        sys.exit(2)
+
+    git_dir = integration_dir()
+    remote = find_upstream_remote(None, git_dir)
+    output = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
+                                         "--sort=-version:refname",
+                                         "refs/tags/*",
+                                         "refs/remotes/%s/master" % remote,
+                                         "refs/remotes/%s/[1-9]*" % remote],
+                         capture=True)
+    candidates = []
+    for line in output.strip().split('\n'):
+        # Filter out build tags.
+        if re.search("-build", line):
+            continue
+
+        candidates.append(line)
+
+    # Now look at each docker compose file in each branch, and figure out which
+    # ones contain the version of the service we are querying.
+    matches = []
+    for candidate in candidates:
+        yamls = []
+        files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
+                            capture=True).strip().split('\n')
+        for filename in files:
+            if (entry != "other-components.yml"
+                and not (entry.startswith("docker-compose") and filename.endswith(".yml"))):
+                continue
+
+            output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, filename)],
+                                 capture=True)
+            yamls.append(output)
+
+        data = get_docker_compose_data_from_json_list(yamls)
+        try:
+            repo = determine_repo(args.integration_versions_including)
+        except KeyError:
+            print("Unrecognized repository: %s" % args.integration_versions_including)
+            sys.exit(1)
+        image = data['services'][repo.container]['image']
+        version = image[(image.index(":") + 1):]
+        if version == args.version:
+            matches.append(candidate)
+
+    for match in matches:
+        print(match)
+
+def figure_out_checked_out_revision(state, repo_git):
+    """Finds out what is currently checked out, and returns a pair. The first
+    element is the name of what is checked out, the second is either "branch"
+    or "tag", referring to what is currently checked out. If neither a tag nor
+    branch is checked out, returns None."""
+
+    try:
+        ref = execute_git(None, repo_git, ["symbolic-ref", "--short", "HEAD"], capture=True, capture_stderr=True)
+        # If the above didn't produce an exception, then we are on a branch.
+        return (ref, "branch")
+    except subprocess.CalledProcessError:
+        # We are not on a branch. Maybe we are on a branch, but Jenkins
+        # checked out the SHA anyway.
+        ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
+
+        if ref is not None:
+            # Make sure it matches the checked out SHA.
+            problem_with_ref = False
+            checked_out_sha = execute_git(None, repo_git, ["rev-parse", "HEAD"], capture=True)
+            remote = find_upstream_remote(None, repo_git)
+            try:
+                ref_sha = execute_git(None, repo_git, ["rev-parse", "%s/%s" % (remote, ref)], capture=True)
+                if ref_sha != checked_out_sha:
+                    problem_with_ref = True
+            except subprocess.CalledProcessError:
+                problem_with_ref = True
+                ref_sha = ""
+
+            if problem_with_ref:
+                # Why isn't the branch mentioned in the build parameters checked
+                # out? This should not happen.
+                raise Exception("%s: SHA %s from %s does not match checked out SHA %s. This should not happen!"
+                                % (repo_git, ref_sha, ref, checked_out_sha))
+
+            return (ref, "branch")
+        else:
+            # Not a branch checked out as a SHA either. Try tag then.
+            try:
+                ref = execute_git(None, repo_git, ["describe", "--exact", "HEAD"], capture=True, capture_stderr=True)
+            except subprocess.CalledProcessError:
+                # We are not on a tag either.
+                return None
+
+            return (ref, "tag")
+
+def do_verify_integration_references(args):
+    int_dir = integration_dir()
+    data = get_docker_compose_data(int_dir)
+    problem = False
+
+    for repo in REPOS.values():
+        # integration is not checked, since the current checkout records the
+        # version of that one.
+        if repo.git == "integration":
+            continue
+
+        # Try some common locations.
+        tried = []
+        for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
+            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git))
+            tried.append(path)
+            if os.path.isdir(path):
+                break
+        else:
+            print("%s not found. Tried: %s"
+                  % (repo.git, ", ".join(tried)))
+            sys.exit(2)
+
+        rev = figure_out_checked_out_revision(None, path)
+        if rev is None:
+            # Unrecognized checkout. Skip the check then.
+            continue
+
+        ref, reftype = rev
+
+        if reftype == "branch" and not re.match(r"^([1-9][0-9]*\.[0-9]+\.([0-9]+|x)|master)$", ref):
+            # Skip the check if the branch doesn't have a well known name,
+            # either a version (with or without beta and build appendix) or
+            # "master". If it does not have a well known name, then most likely
+            # this is a pull request, and we don't require those to be recorded
+            # in the YAML files.
+            continue
+
+        image = data['services'][repo.container]['image']
+        version = image[image.rfind(':')+1:]
+
+        if ref != version:
+            print("%s: Checked out Git ref '%s' does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
+                  % (repo.git, ref, version, image))
+            problem = True
+
+    if problem:
+        print("\nMake sure all *.yml files contain the correct versions.")
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version-of", dest="version_of", metavar="SERVICE",
                         help="Determine version of given service")
     parser.add_argument("--set-version-of", dest="set_version_of", metavar="SERVICE",
                         help="Write version of given service into docker-compose.yml")
+    parser.add_argument("--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",
+                        help="Find version(s) of integration repository that contain the given version of SERVICE, "
+                        + " where version is given with --version. Returned as a newline separated list")
     parser.add_argument("--version", dest="version",
-                        help="Version to write using previous option")
+                        help="Version which is used in above two arguments")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")
+    parser.add_argument("--verify-integration-references", action="store_true",
+                        help="Checks that references in the yaml files match the tags that "
+                        + "are checked out in Git. This is intended to catch cases where "
+                        + "references to images or tools are out of date. It requires checked-out "
+                        + "repositories to exist next to the integration repository, and is "
+                        + "usually used only in builds. For branch names (not tags), only "
+                        + 'well known names are checked: version numbers and "master" (to avoid '
+                        + "pull requests triggering a failure)")
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -991,8 +1215,12 @@ def main():
         do_version_of(args)
     elif args.set_version_of is not None:
         do_set_version_to(args)
+    elif args.integration_versions_including is not None:
+        do_integration_versions_including(args)
     elif args.release:
         do_release()
+    elif args.verify_integration_references:
+        do_verify_integration_references(args)
     else:
         parser.print_help()
         sys.exit(1)

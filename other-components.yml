@@ -1,0 +1,8 @@
+# This file lists software components, and their versions, that are part of a
+# Mender release, but which don't have Docker containers, and hence are not
+# tracked there. It is written in the format of docker-compose purely for
+# convenience; our tools will understand either one. So just ignore the
+# 'services' tag.
+services:
+    mender-artifact:
+        image: mendersoftware/mender-artifact:1.0.x

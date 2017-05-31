@@ -143,6 +143,13 @@ the existing release when the tool starts.
 ### Reference: Main operations
 
 
+#### Move from beta build tags to final build tags
+
+This moves all version tags from version with beta, so versions without beta, in
+order to start building the final. This operation is not displayed if the
+current build tag is not a beta version.
+
+
 #### Refresh all repositories
 
 This simply does a `git fetch --tags` in all repositories to update all remote
@@ -294,3 +301,35 @@ using old branch heads.
 Tip: You can also switch only one repository to a local branch, or to a
 differently named branch, but then you need to edit the `release-state.yml` file
 manually and change the `following` branch of the repository you want.
+
+#### Create new series branch
+
+For each repository that follows a remote branch you will get the option of
+pushing a new branch if it lacks a branch of this name. The intended usage of
+this command is to create a new 1.1.x branch off of master when 1.1.0 is to be
+released. This command is automatically invoked when the script starts, but one
+can say no if it's not desired.
+
+
+## Verifying integration references
+
+This section describes the `--verify-integration-references` option. What it
+does is to check that for each version recorded in one of the YAML files in the
+list below, the currently checked out version is the same. The motivation for
+providing this check is to make sure releases are always listing the version we
+build, so that:
+
+* there is no confusion among users as to which versions belong together.
+
+* we can safely query the versions recorded in the YAML files to provide branch
+  names for upload, for example.
+
+Tags are always checked, but branches are only checked if they match well known
+patterns, such as a version number or the string "master". This is to avoid
+temporary branch names, such as pull requests, triggering a failure, since we
+don't expect such branch names to be recorded in the YAML files.
+
+List of YAML files that are checked:
+
+* `docker-compose*.yml`
+* `other-components.yml` (non-Docker components)

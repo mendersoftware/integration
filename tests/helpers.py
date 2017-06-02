@@ -184,3 +184,17 @@ class Helpers:
             data_dict[split[0]] = split[1]
 
         return json.dumps(data_dict, separators=(",", ":"))
+
+    @staticmethod
+    def get_executed_scripts():
+        cmd = "cat /data/mender/scripts_exec"
+        with quiet():
+            executed = run(cmd)
+        return executed
+
+    @staticmethod
+    def remove_executed_scripts():
+        cmd = "rm /data/mender/scripts_exec"
+        with quiet():
+            rm = run(cmd)
+        return rm

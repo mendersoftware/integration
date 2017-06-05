@@ -1,0 +1,103 @@
+#!/usr/bin/env python2
+
+import httplib
+import json
+import argparse
+import logging
+from contextlib import closing
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='conductor metadata loader',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-c', '--conductor-address', help='Conductor address',
+                        default='localhost:8080')
+    parser.add_argument('-t', '--data-type', help='Metadata type (task or workflow)',
+                        required=True)
+    parser.add_argument('infile')
+    return parser.parse_args()
+
+
+def request(addr, method, url, body=None, headers=None):
+    """Make a HTTP request. Returns tuple (status, body)"""
+
+    if not headers:
+        headers = {}
+
+    with closing(httplib.HTTPConnection(addr)) as conn:
+        conn.request(method, url, body=body, headers=headers)
+        resp = conn.getresponse()
+        return (resp.status, resp.read())
+
+
+def load_workflow(opts):
+    with open(opts.infile) as inf:
+        workflow_data = inf.read()
+        workflow = json.loads(workflow_data)
+
+    logging.info('found workflow %s version %d',
+                 workflow['name'], workflow['version'])
+
+    name = workflow['name']
+    version = workflow['version']
+
+    status, _ = request(opts.conductor_address, 'GET',
+                           '/api/metadata/workflow/{}?version={}'.format(name, version))
+
+    if status == 200:
+        logging.info('workflow %s version %d already present', name, version)
+    elif status == 204:
+        logging.info('loading workflow %s version %d', name, version)
+
+        status, _ = request(opts.conductor_address, 'POST',
+                            '/api/metadata/workflow/', body=workflow_data,
+                            headers={'Content-Type': 'application/json'})
+        if status != 204:
+            logging.error('failed to load workflow %s version %s, status: %d',
+                          name, version, status)
+            raise SystemExit(1)
+        else:
+            logging.info('workflow %s version %d successfully loaded',
+                         name, version)
+
+
+def load_task(opts):
+    with open(opts.infile) as inf:
+        tasks_data = inf.read()
+        tasks = json.loads(tasks_data)
+
+    logging.info('found %d tasks', len(tasks))
+
+    for task in tasks:
+        name = task['name']
+
+        logging.info('loading task %s', name)
+
+        # POST pushes a list of tasks, load them one by one
+        status, _ = request(opts.conductor_address, 'POST',
+                            '/api/metadata/taskdefs/', body=json.dumps([task]),
+                            headers={'Content-Type': 'application/json'})
+        if status == 204:
+            logging.info('task %s successfully loaded', name)
+        else:
+            logging.error('failed to load task %s, status: %d',
+                          name, status)
+            raise SystemExit(1)
+
+
+def main(opts):
+    if opts.data_type == 'task':
+        load_task(opts)
+    elif opts.data_type == 'workflow':
+        load_workflow(opts)
+    else:
+        logging.error('unsupported data type %s', opts.data_type)
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    pargs = parse_arguments()
+
+    if pargs.conductor_address.startswith('http://'):
+        pargs.conductor_address = pargs.conductor_address.replace('http://', '')
+    main(pargs)

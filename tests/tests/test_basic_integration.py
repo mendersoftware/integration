@@ -36,8 +36,8 @@ class TestBasicIntegration(MenderTesting):
                     hosts=get_mender_clients())
             return
 
-        update_image_successful()
-        update_image_successful()
+        update_image_successful(install_image=conftest.get_valid_image())
+        update_image_successful(install_image=conftest.get_valid_image())
 
 
     @MenderTesting.fast
@@ -50,4 +50,4 @@ class TestBasicIntegration(MenderTesting):
             return
 
         update_image_failed()
-        update_image_successful()
+        update_image_successful(install_image=conftest.get_valid_image())

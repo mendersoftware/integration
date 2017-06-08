@@ -37,4 +37,4 @@ class TestBasicIntegrationWithS3(MenderTesting):
                     hosts=get_mender_clients())
             return
 
-        common_update.update_image_successful()
+        common_update.update_image_successful(install_image=conftest.get_valid_image())

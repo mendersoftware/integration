@@ -92,6 +92,6 @@ class TestDeploymentAborting(MenderTesting):
         Helpers.verify_reboot_performed()
 
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
-        deploy.abort(deployment_id)
+        deploy.abort_finished_deployment(deployment_id)
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
         deploy.check_expected_status("finished", deployment_id)

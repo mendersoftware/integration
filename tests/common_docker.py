@@ -94,8 +94,12 @@ def get_mender_clients():
 
 
 def get_mender_gateway():
-    return docker_get_ip_of("mendersoftware/api-gateway")[0]
+    gateway = docker_get_ip_of("mendersoftware/api-gateway")
 
+    if len(gateway) != 1:
+        raise SystemExit("more then one api-gateway running, which is unexpected")
+
+    return gateway[0]
 
 def ssh_is_opened():
     execute(ssh_is_opened_impl, hosts=get_mender_clients())

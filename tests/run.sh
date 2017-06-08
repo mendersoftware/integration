@@ -25,11 +25,18 @@ function get_requirements() {
          -z downloaded-tools/mender-artifact
 
     chmod +x downloaded-tools/mender-artifact
-    export PATH=$PWD/downloaded-tools:$PATH
 
     curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \
          -z core-image-full-cmdline-vexpress-qemu.ext4
+
+   curl "https://s3-eu-west-1.amazonaws.com/stress-client/release/mender-stress-test-client" \
+        -o mender-stress-test-client \
+        -z mender-stress-test-client
+
+    chmod +x downloaded-tools/mender-stress-test-client
+
+    export PATH=$PWD/downloaded-tools:$PATH
 }
 
 if [[ $1 == "--get-requirements" ]]; then

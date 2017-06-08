@@ -104,6 +104,9 @@ def pytest_exception_interact(node, call, report):
 @pytest.mark.hookwrapper
 def pytest_runtest_makereport(item, call):
     pytest_html = item.config.pluginmanager.getplugin('html')
+    if pytest_html is None:
+        yield
+        return
     outcome = yield
     report = outcome.get_result()
     extra = getattr(report, 'extra', [])

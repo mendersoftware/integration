@@ -20,19 +20,21 @@ echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
+
     curl "https://d25phv8h0wbwru.cloudfront.net/${MENDER_ARTIFACT_BRANCH}/tip/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 
     chmod +x downloaded-tools/mender-artifact
 
+
     curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \
          -z core-image-full-cmdline-vexpress-qemu.ext4
 
    curl "https://s3-eu-west-1.amazonaws.com/stress-client/release/mender-stress-test-client" \
-        -o mender-stress-test-client \
-        -z mender-stress-test-client
+        -o downloaded-tools/mender-stress-test-client \
+        -z downloaded-tools/mender-stress-test-client
 
     chmod +x downloaded-tools/mender-stress-test-client
 
@@ -61,6 +63,10 @@ if [[ -n "$BUILDDIR" ]]; then
     fi
 
     cp -f $BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .
+
+    # mender-stress-test-client is here
+    export PATH=$PATH:~/go/bin/
+
 else
     get_requirements
 fi

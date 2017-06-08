@@ -1084,39 +1084,39 @@ def figure_out_checked_out_revision(state, repo_git):
         # If the above didn't produce an exception, then we are on a branch.
         return (ref, "branch")
     except subprocess.CalledProcessError:
-        # We are not on a branch. Maybe we are on a branch, but Jenkins
-        # checked out the SHA anyway.
-        ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
+        # Not a branch, fall through to below.
+        pass
 
-        if ref is not None:
+    # We are not on a branch. Or maybe we are on a branch, but Jenkins
+    # checked out the SHA anyway.
+    ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
+
+    if ref is not None:
+        try:
             # Make sure it matches the checked out SHA.
-            problem_with_ref = False
             checked_out_sha = execute_git(None, repo_git, ["rev-parse", "HEAD"], capture=True)
             remote = find_upstream_remote(None, repo_git)
-            try:
-                ref_sha = execute_git(None, repo_git, ["rev-parse", "%s/%s" % (remote, ref)], capture=True)
-                if ref_sha != checked_out_sha:
-                    problem_with_ref = True
-            except subprocess.CalledProcessError:
-                problem_with_ref = True
-                ref_sha = ""
-
-            if problem_with_ref:
+            ref_sha = execute_git(None, repo_git, ["rev-parse", "%s/%s" % (remote, ref)],
+                                  capture=True, capture_stderr=True)
+            if ref_sha != checked_out_sha:
                 # Why isn't the branch mentioned in the build parameters checked
                 # out? This should not happen.
                 raise Exception("%s: SHA %s from %s does not match checked out SHA %s. This should not happen!"
                                 % (repo_git, ref_sha, ref, checked_out_sha))
 
             return (ref, "branch")
-        else:
-            # Not a branch checked out as a SHA either. Try tag then.
-            try:
-                ref = execute_git(None, repo_git, ["describe", "--exact", "HEAD"], capture=True, capture_stderr=True)
-            except subprocess.CalledProcessError:
-                # We are not on a tag either.
-                return None
+        except subprocess.CalledProcessError:
+            # Not a branch. Then fall through to part below.
+            pass
 
-            return (ref, "tag")
+    # Not a branch checked out as a SHA either. Try tag then.
+    try:
+        ref = execute_git(None, repo_git, ["describe", "--exact", "HEAD"], capture=True, capture_stderr=True)
+    except subprocess.CalledProcessError:
+        # We are not on a tag either.
+        return None
+
+    return (ref, "tag")
 
 def do_verify_integration_references(args):
     int_dir = integration_dir()

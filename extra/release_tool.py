@@ -1065,7 +1065,12 @@ def do_integration_versions_including(args):
         except KeyError:
             print("Unrecognized repository: %s" % args.integration_versions_including)
             sys.exit(1)
-        image = data['services'][repo.container]['image']
+        try:
+            image = data['services'][repo.container]['image']
+        except KeyError:
+            # If key doesn't exist it's because the version is from before
+            # that component existed. So definitely not a match.
+            continue
         version = image[(image.index(":") + 1):]
         if version == args.version:
             matches.append(candidate)

@@ -27,6 +27,7 @@ import conftest
 # environment if we don't have to.
 SETUP_TYPE = None
 
+ST_NoClient = 0
 ST_OneClient = 1
 ST_OneClientBootstrapped = 2
 ST_TwoClientsBootstrapped = 3

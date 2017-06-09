@@ -79,3 +79,18 @@ def standard_setup_one_client_bootstrapped_with_s3():
     adm.accept_devices(1)
 
     set_setup_type(ST_OneClientsBootstrapped_AWS_S3)
+
+
+@pytest.fixture(scope="function")
+def standard_setup_without_client():
+    if setup_type() == ST_NoClient:
+        return
+
+    stop_docker_compose()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.demo.yml up -d",
+                        use_common_files=False)
+
+    set_setup_type(ST_NoClient)

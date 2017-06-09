@@ -49,7 +49,7 @@ class TestDeviceDecommissioning(MenderTesting):
                 break
             time.sleep(.5)
         else:
-            pytest.fail("never got inventory")
+            assert False, "never got inventory"
 
         # decommission actual device
         deviceauth.decommission(device_id)
@@ -63,7 +63,7 @@ class TestDeviceDecommissioning(MenderTesting):
                        break
                 time.sleep(.5)
         else:
-            pytest.fail("decommissioned device still available in admissions")
+            assert False, "decommissioned device still available in admissions"
 
         # make sure a deployment to the decommissioned device fails
         try:
@@ -72,12 +72,12 @@ class TestDeviceDecommissioning(MenderTesting):
                                                        devices=[device_id],
                                                        verify_status=False)
         except AssertionError:
-            logging.info("Failed to deploy upgrade to rejected device")
-            # authtoken has been removed
-            run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
+            logging.info("Failed to deploy upgrade to rejected device, as expected.")
         else:
-            pytest.fail("No error while trying to deploy to rejected device")
+            assert False, "No error while trying to deploy to rejected device"
 
+        # authtoken has been removed
+        run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
 
         """
             at this point, the device will re-appear, since it's actually still

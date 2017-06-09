@@ -127,8 +127,6 @@ services:
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
-        ports:
-            - "8080:8080"
 
     mender-mongo-deployments:
         volumes:
@@ -154,11 +152,6 @@ services:
             - ./conductor/dynomite/redis.conf:/etc/redis/redis.conf
             - ./conductor/dynomite/entrypoint.sh:/dynomite/entrypoint.sh
         entrypoint: /dynomite/entrypoint.sh
-    mender-conductor:
-        volumes:
-            - ./conductor/server/config:/app/config
-        environment:
-            - CONFIG_PROP=config.properties
 
 volumes:
     # mender artifacts storage

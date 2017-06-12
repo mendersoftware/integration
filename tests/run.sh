@@ -1,25 +1,31 @@
 #!/bin/bash
 set -x -e
 RUN_S3=""
-MENDER_BRANCH=$(cd .. && python extra/release_tool.py --version-of mender)
+MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
 if [[ $? -ne 0 ]]; then
     echo "Failed to determine mender version using release_tool.py"
     exit 1
 fi
+MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of artifact)
+
+if [[ $? -ne 0 ]]; then
+    echo "Failed to determine mender-artifact version using release_tool.py"
+    exit 1
+fi
 
 echo "Detected Mender branch: $MENDER_BRANCH"
+echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
 
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
-    curl "https://d25phv8h0wbwru.cloudfront.net/${MENDER_BRANCH}/tip/mender-artifact" \
+    curl "https://d25phv8h0wbwru.cloudfront.net/${MENDER_ARTIFACT_BRANCH}/tip/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 
     chmod +x downloaded-tools/mender-artifact
     export PATH=$PWD/downloaded-tools:$PATH
-
 
     curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \

@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+import argparse
 import os
 import sys
 import subprocess
@@ -11,7 +12,23 @@ from common_update import common_update_proceduce
 # make sure artifact tool is available
 os.environ["PATH"] += os.pathsep + os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools"
 
-if sys.argv[1] == "start":
+parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
+parser.add_argument('--start', dest='start', action='store_true',
+                    help='start production environment')
+
+parser.add_argument('--deploy', dest='deploy', action='store_true',
+                    help='start testing upgrade test procedure (used for upgrade testing)')
+
+conftest.docker_compose_instance = "testprod"
+
+if len(sys.argv) == 1:
+    parser.print_help()
+    sys.exit(1)
+
+args = parser.parse_args()
+
+
+if args.start:
     # add keys for production environment
     if not os.path.exists("../keys-generated"):
         ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
@@ -36,7 +53,7 @@ if sys.argv[1] == "start":
 
     assert ret == 0, "failed to start docker-compose"
 
-if sys.argv[1] == "deploy":
+if args.deploy:
     # create account for management api
     auth.get_auth_token()
 

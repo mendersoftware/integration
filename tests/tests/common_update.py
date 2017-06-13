@@ -22,7 +22,8 @@ import random
 def common_update_proceduce(install_image,
                             regnerate_image_id=True,
                             device_type="vexpress-qemu",
-                            broken_image=False):
+                            broken_image=False,
+                            devices=None):
 
     if broken_image:
         artifact_id = "broken_image_" + str(random.randint(0, 999999))
@@ -38,10 +39,11 @@ def common_update_proceduce(install_image,
 
     if created:
         deploy.upload_image("artifact.mender")
-        devices_accepted_id = [device["id"] for device in adm.get_devices_status("accepted")]
+        if devices is None:
+            devices = [device["id"] for device in adm.get_devices_status("accepted")]
         deployment_id = deploy.trigger_deployment(name="New valid update",
                                                   artifact_name=artifact_id,
-                                                  devices=devices_accepted_id)
+                                                  devices=devices)
 
         # remove the artifact file
         os.remove(artifact_file)

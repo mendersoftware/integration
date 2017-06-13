@@ -1,24 +1,38 @@
 #!/bin/bash
 set -x -e
+RUN_S3=""
+MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
+
+if [[ $? -ne 0 ]]; then
+    echo "Failed to determine mender version using release_tool.py"
+    exit 1
+fi
+
+MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of artifact)
+
+if [[ $? -ne 0 ]]; then
+    echo "Failed to determine mender-artifact version using release_tool.py"
+    exit 1
+fi
+
+echo "Detected Mender branch: $MENDER_BRANCH"
+echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
+
 
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
-
-    artifact_version=$(../extra/release_tool.py --version-of mender-artifact)
-    curl "https://d25phv8h0wbwru.cloudfront.net/${artifact_version}/tip/mender-artifact" -o downloaded-tools/mender-artifact
+    curl "https://d25phv8h0wbwru.cloudfront.net/${MENDER_ARTIFACT_BRANCH}/tip/mender-artifact" \
+         -o downloaded-tools/mender-artifact \
+         -z downloaded-tools/mender-artifact
 
     chmod +x downloaded-tools/mender-artifact
     export PATH=$PWD/downloaded-tools:$PATH
 
-    curl -o core-image-full-cmdline-vexpress-qemu.ext4 "https://s3.amazonaws.com/mender/temp_${TEST_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4"
+    curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
+         -o core-image-full-cmdline-vexpress-qemu.ext4 \
+         -z core-image-full-cmdline-vexpress-qemu.ext4
 }
-
-# we need to make sure we use the correct ext4 image for testing
-if [[ -z "$BUILDDIR" ]] && [[ -z "$TEST_BRANCH" ]]; then
-    echo "TEST_BRANCH environment variable needs to be set"
-    exit 1
-fi
 
 if [[ $1 == "--get-requirements" ]]; then
     get_requirements

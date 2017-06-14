@@ -9,14 +9,12 @@ from MenderAPI import auth, adm
 sys.path.insert(0, "./tests")
 from common_update import common_update_proceduce
 
-# make sure artifact tool is available
-os.environ["PATH"] += os.pathsep + os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools"
 
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
 parser.add_argument('--start', dest='start', action='store_true',
                     help='start production environment')
 
-parser.add_argument('--deploy', dest='deploy', action='store_true',
+parser.add_argument('--test-deployment', dest='deploy', action='store_true',
                     help='start testing upgrade test procedure (used for upgrade testing)')
 
 conftest.docker_compose_instance = "testprod"
@@ -44,7 +42,7 @@ if args.start:
 
     # start docker-compose
     ret = subprocess.call(["docker-compose",
-                           "-p", "test-prod",
+                           "-p", "testprod",
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
                            "-f", "production-testing-env.yml",
@@ -65,6 +63,14 @@ if args.deploy:
     for d in devices:
         adm.set_device_status(d["id"], "accepted")
 
+
+    # make sure artifact tool in current work dir is used
+    os.environ["PATH"] = os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools" + os.pathsep + os.environ["PATH"]
+
     # perform upgrade
     devices_to_update = list(set([device["id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
-    common_update_proceduce("core-image-full-cmdline-vexpress-qemu.ext4", device_type="test", devices=devices_to_update)
+    deployment_id, artifact_id = common_update_proceduce("core-image-full-cmdline-vexpress-qemu.ext4", device_type="test", devices=devices_to_update)
+
+    print("deployment_id=%s" % deployment_id)
+    print("artifact_id=%s" % artifact_id)
+    print("devices=%d" % len(devices))

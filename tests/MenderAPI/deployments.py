@@ -159,3 +159,8 @@ class Deployments(object):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
         r = requests.put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
         assert r.status_code == requests.status_codes.codes.no_content
+
+    def abort_finished_deployment(self, deployment_id):
+        deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
+        r = requests.put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
+        assert r.status_code == requests.status_codes.codes.unprocessable_entity

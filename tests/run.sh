@@ -74,12 +74,6 @@ else
     if [[ ! -d ../keys-generated ]]; then
         ( cd .. && CERT_API_CN=docker.mender.io CERT_STORAGE_CN=s3.docker.mender.io ./keygen )
     fi
-
-    if [[ $@ == **--runs3** ]]; then
-        py.test --maxfail=1 -s --tb=short --verbose --junitxml=results.xml --runs3 tests/amazon_s3/test_s3.py::TestBasicIntegrationWithS3::test_update_image_with_aws_s3
-    else
-        echo "AWS creds are present, but --runs3 flag not passed."
-    fi
 fi
 
 XDIST_ARGS="-n auto"

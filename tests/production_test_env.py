@@ -10,9 +10,6 @@ from MenderAPI import auth, adm
 sys.path.insert(0, "./tests")
 from common_update import common_update_procedure
 
-# make sure that mender-artifacts, and other tools are in our path
-os.environ["PATH"] += os.pathsep + os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools"
-
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
 parser.add_argument('--start', dest='start', action='store_true',
                     help='start production environment')
@@ -32,23 +29,27 @@ args = parser.parse_args()
 if args.start:
     # add keys for production environment
     if not os.path.exists("../keys-generated"):
-        subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
-                                           "CERT_STORAGE_CN": "localhost"},
-                                      cwd="../")
+        ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
+                                                 "CERT_STORAGE_CN": "localhost"},
+                              cwd="../")
+        assert ret == 0, "failed to generate keys"
 
     # copy production environment yml file
     if not os.path.exists("../production-testing-env.yml"):
-        subprocess.call(["cp", "extra/production-testing-env.yml", "."],
-                        cwd="../")
+        ret = subprocess.call(["cp", "extra/production-testing-env.yml", "."],
+                              cwd="../")
+        assert ret == 0, "failed to copy extra/production-testing-env.yml"
 
     # start docker-compose
-    subprocess.call(["docker-compose",
-                     "-p", "testprod",
-                     "-f", "docker-compose.yml",
-                     "-f", "docker-compose.storage.minio.yml",
-                     "-f", "production-testing-env.yml",
-                     "up", "-d"],
-                    cwd="../")
+    ret = subprocess.call(["docker-compose",
+                           "-p", "testprod",
+                           "-f", "docker-compose.yml",
+                           "-f", "docker-compose.storage.minio.yml",
+                           "-f", "production-testing-env.yml",
+                           "up", "-d"],
+                          cwd="../")
+
+    assert ret == 0, "failed to start docker-compose"
 
 if args.deploy:
     # create account for management api
@@ -61,6 +62,9 @@ if args.deploy:
     # accept all devices
     for d in devices:
         adm.set_device_status(d["id"], "accepted")
+
+    # make sure artifact tool in current workdir is being used
+    os.environ["PATH"] = os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools" + os.pathsep + os.environ["PATH"]
 
     # perform upgrade
     devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))

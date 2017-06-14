@@ -24,7 +24,8 @@ from MenderAPI import auth, adm, deploy, inv, deviceauth
 import subprocess
 import time
 import conftest
-
+import shutil
+import filelock
 
 def setup_docker_volumes():
     docker_volumes = ["mender-artifacts",
@@ -42,9 +43,11 @@ def setup_docker_volumes():
 
 
 def setup_upgrade_source(upgrade_from):
-    if not os.path.exists("upgrade-from"):
-        ret = subprocess.call(["git", "clone", "https://github.com/mendersoftware/integration", "-b", upgrade_from, "upgrade-from"])
-        assert ret == 0, "failed to git clone old source version"
+    if os.path.exists("upgrade-from"):
+        shutil.rmtree("upgrade-from")
+
+    ret = subprocess.call(["git", "clone", "https://github.com/mendersoftware/integration", "-b", upgrade_from, "upgrade-from"])
+    assert ret == 0, "failed to git clone old source version"
 
     # start upgrade source and bring up it's production environment
     ret = subprocess.call(["bash", "run.sh", "--get-requirements"],
@@ -94,46 +97,43 @@ def provision_upgrade_server():
     return devices, deployment_id, artifact_id
 
 
-@MenderTesting.upgrade_from
-class TestBackendUpdating(MenderTesting):
+class BackendUpdating():
     fake_client_process = None
     provisioned_devices = None
     provisioned_deployment_id = None
     provisioned_artifact_id = None
 
-    @classmethod
-    def setup_class(cls):
+    def __init__(self, upgrade_from):
         conftest.docker_compose_instance = "testprod"
-        upgrade_from = pytest.config.getoption("--upgrade-from")
         setup_docker_volumes()
         setup_upgrade_source(upgrade_from)
-        cls.fake_client_process = setup_fake_clients(10, 3)
-        cls.provisioned_devices, cls.provisioned_deployment_id, cls.provisioned_artifact_id = provision_upgrade_server()
+        self.fake_client_process = setup_fake_clients(10, 3)
+        self.provisioned_devices, self.provisioned_deployment_id, self.provisioned_artifact_id = provision_upgrade_server()
         perform_upgrade()
 
-    @classmethod
-    def teardown_class(cls):
-        cls.fake_client_process.kill()
+    def teardown(self):
+        self.fake_client_process.kill()
         subprocess.call(["docker-compose", "-p", "testprod", "down", "-v"])
 
     def test_original_deployments_persisted(self):
+        auth.reset_auth_token()
         auth.get_auth_token()
 
         # wait for 10 devices to be available
         devices = adm.get_devices_status("accepted", 10)
-        provisioned_devices = eval(TestBackendUpdating.provisioned_devices)
+        provisioned_devices = eval(self.provisioned_devices)
 
         # check that devices and provisioned_devices are the same
-        assert len(devices) == len(provisioned_devices)
+        assert len(devices) == provisioned_devices
         # not sure what else I can do here, the device admission changed from 1.0 to master
 
-        assert deploy.get_statistics(TestBackendUpdating.provisioned_deployment_id)["success"] == 7
-        assert deploy.get_statistics(TestBackendUpdating.provisioned_deployment_id)["failure"] == 3
+        assert deploy.get_statistics(self.provisioned_deployment_id)["success"] == 7
+        assert deploy.get_statistics(self.provisioned_deployment_id)["failure"] == 3
 
         # check failures still contain logs
-        for device_deployment in deploy.get_deployment_overview(TestBackendUpdating.provisioned_deployment_id):
+        for device_deployment in deploy.get_deployment_overview(self.provisioned_deployment_id):
             if device_deployment["status"] == "failure":
-                assert "damn" in deploy.get_logs(device_deployment["id"], TestBackendUpdating.provisioned_deployment_id)
+                assert "damn" in deploy.get_logs(device_deployment["id"], self.provisioned_deployment_id)
 
         deployments_in_progress = deploy.get_status("inprogress")
         deployments_pending = deploy.get_status("pending")
@@ -143,7 +143,7 @@ class TestBackendUpdating(MenderTesting):
         assert len(deployments_pending) == 0
         assert len(deployments_finished) == 1
 
-        assert TestBackendUpdating.provisioned_artifact_id in str(deployments_finished)
+        assert self.provisioned_artifact_id in str(deployments_finished)
 
     def test_inventory_post_upgrade(self):
         inventory = inv.get_devices()
@@ -178,7 +178,7 @@ class TestBackendUpdating(MenderTesting):
     def test_artifacts_persisted(self):
         devices_to_update = list(set([device["id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
         deployment_id = deploy.trigger_deployment(name="artifact survived backed upgrade",
-                                                  artifact_name=TestBackendUpdating.provisioned_artifact_id,
+                                                  artifact_name=self.provisioned_artifact_id,
                                                   devices=devices_to_update)
         deploy.check_expected_status("finished", deployment_id)
 
@@ -186,3 +186,21 @@ class TestBackendUpdating(MenderTesting):
         # assertion error occurs here on decommissioning fail
         for device in adm.get_devices(10):
             deviceauth.decommission(device["device_id"])
+
+
+@MenderTesting.upgrade_from
+@pytest.mark.parametrize("upgrade_from", [s.strip() for s in pytest.config.getoption("--upgrade-from").split(",")])
+def test_run_upgrade_test(upgrade_from):
+
+    # run these tests sequentially since they expose the storage proxy and the api gateports to the host
+    lock = filelock.FileLock("production_env")
+    with lock:
+        # exception is handled by pytest
+        try:
+            t = BackendUpdating(upgrade_from)
+            t.test_original_deployments_persisted()
+            t.test_inventory_post_upgrade()
+            t.test_deployments_post_upgrade()
+            t.test_artifacts_persisted()
+        finally:
+            t.teardown()

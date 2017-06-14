@@ -60,7 +60,7 @@ def common_update_procedure(install_image,
         return deployment_id, artifact_id
 
 
-def update_image_successful(install_image=conftest.get_valid_image(), regenerate_image_id=True):
+def update_image_successful(install_image, regenerate_image_id=True):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 

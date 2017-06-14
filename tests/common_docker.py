@@ -46,8 +46,8 @@ def docker_compose_cmd(arg_list, use_common_files=True):
                                               files_args,
                                               arg_list)
         logging.info("running with: %s" % cmd)
-        subprocess.Popen(cmd, shell=True).wait()
-
+        ret = subprocess.Popen(cmd, shell=True).wait()
+        assert ret == 0, "docker-compose failed, command returned exit code: " + str(ret)
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
@@ -93,8 +93,12 @@ def get_mender_clients():
 
 
 def get_mender_gateway():
-    return docker_get_ip_of("mendersoftware/api-gateway")[0]
+    gateway = docker_get_ip_of("mendersoftware/api-gateway")
 
+    if len(gateway) != 1:
+        raise SystemExit("more then one api-gateway running, which is unexpected")
+
+    return gateway[0]
 
 def ssh_is_opened():
     execute(ssh_is_opened_impl, hosts=get_mender_clients())

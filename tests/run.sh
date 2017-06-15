@@ -21,7 +21,7 @@ function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
 
-    curl "https://d25phv8h0wbwru.cloudfront.net/${MENDER_ARTIFACT_BRANCH}/tip/mender-artifact" \
+    curl "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 

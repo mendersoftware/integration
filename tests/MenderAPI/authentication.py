@@ -56,6 +56,6 @@ class Authentication:
         return r
 
     def _create_user(self, username, password):
-        cmd = 'exec mender-useradm /usr/bin/useradm create-user --username %s --password %s' % (username, password)
+        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s' % (username, password)
 
         docker_compose_cmd(cmd)

@@ -36,7 +36,7 @@ if args.start:
 
     # copy production environment yml file
     if not os.path.exists("../production-testing-env.yml"):
-        ret = subprocess.call(["cp", "extra/production-testing-env.yml", "."],
+        ret = subprocess.call(["cp", "extra/production-environment/production-testing-env.yml", "."],
                               cwd="../")
         assert ret == 0, "failed to copy extra/production-testing-env.yml"
 

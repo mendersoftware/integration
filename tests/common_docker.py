@@ -31,14 +31,10 @@ log_files = []
 
 
 def docker_compose_cmd(arg_list, use_common_files=True):
-    extra_files = pytest.config.getoption("--docker-compose-file")
-    if extra_files is None:
-        extra_files = []
-
     files_args = ""
 
     if use_common_files:
-        for file in COMPOSE_FILES + extra_files:
+        for file in COMPOSE_FILES:
             files_args += " -f %s" % file
 
     with conftest.docker_lock:

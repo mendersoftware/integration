@@ -155,6 +155,14 @@ class Deployments(object):
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s after %d seconds" % (expected_status, expected_count, str(seen), max_wait))
 
+    def get_deployment_overview(self, deployment_id):
+        deployments_overview_url = self.get_deployments_base_path() + "deployments/%s/devices" % (deployment_id)
+
+        r = requests.get(deployments_overview_url, headers=self.auth.get_auth_token(), verify=False)
+        assert r.status_code == requests.status_codes.codes.ok
+
+        return r.json()
+
     def abort(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
         r = requests.put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})

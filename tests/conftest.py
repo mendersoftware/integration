@@ -23,6 +23,7 @@ import uuid
 import subprocess
 import os
 import pytest
+import distutils.spawn
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
@@ -39,6 +40,11 @@ except:
 
 
 def pytest_addoption(parser):
+    parser.addoption("--clients", action="store", default="localhost:8080",
+                     help="Comma-seperate mender hosts, example: 10.100.10.11:8822, 10.100.10.12:8822")
+    parser.addoption("--gateway", action="store", default="127.0.0.1:8080",
+                     help="Host of mender gateway")
+
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
     parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
@@ -46,12 +52,15 @@ def pytest_addoption(parser):
     parser.addoption("--runnightly", action="store_true", help="run nightly (very slow) tests")
     parser.addoption("--runs3", action="store_true", help="run fast tests")
 
+    parser.addoption("--upgrade-from", action="store", help="perform upgrade test", default="")
     parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
 
 def pytest_configure(config):
+    verify_sane_test_environment()
+
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
 
@@ -127,3 +136,18 @@ def pytest_runtest_teardown(item, nextitem):
 
 def get_valid_image():
     return env.valid_image
+
+def verify_sane_test_environment():
+    # check if required tools are in PATH, add any other checks here
+    if distutils.spawn.find_executable("mender-stress-test-client") is None:
+        raise SystemExit("mender-stress-test-client not found in PATH")
+
+    if distutils.spawn.find_executable("mender-artifact") is None:
+        raise SystemExit("mender-artifact not found in PATH")
+
+    if distutils.spawn.find_executable("docker") is None:
+        raise SystemExit("docker not found in PATH")
+
+    ret = subprocess.call("docker ps > /dev/null", shell=True)
+    if ret != 0:
+        raise SystemExit("not able to use docker, is your user part of the docker group?")

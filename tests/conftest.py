@@ -32,6 +32,8 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 docker_lock = filelock.FileLock("docker_lock")
+extra_files = []
+inline_logs = False
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -63,6 +65,9 @@ def pytest_configure(config):
 
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
+
+    extra_files = config.getoption("--docker-compose-file")
+    inline_logs = config.getoption("--inline-logs")
 
     env.password = ""
 

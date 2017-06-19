@@ -31,10 +31,7 @@ log_files = []
 
 
 def docker_compose_cmd(arg_list, use_common_files=True):
-    extra_files = pytest.config.getoption("--docker-compose-file")
-    if extra_files is None:
-        extra_files = []
-
+    extra_files = conftest.extra_files
     files_args = ""
 
     if use_common_files:
@@ -56,7 +53,7 @@ def stop_docker_compose():
 
 
 def start_docker_compose(clients=1):
-    inline_logs = pytest.config.getoption("--inline-logs")
+    inline_logs = conftest.inline_logs
 
     docker_compose_cmd("up -d")
     if clients > 1:

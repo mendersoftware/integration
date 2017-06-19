@@ -17,6 +17,12 @@ fi
 echo "Detected Mender branch: $MENDER_BRANCH"
 echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
 
+
+function remove_published_ports() {
+    # get rid of published ports, so we can run tests in parallel
+    sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
+}
+
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
@@ -39,6 +45,7 @@ function get_requirements() {
     chmod +x downloaded-tools/mender-stress-test-client
 
     export PATH=$PWD/downloaded-tools:$PATH
+    remove_published_ports
 }
 
 if [[ $1 == "--get-requirements" ]]; then
@@ -66,14 +73,11 @@ if [[ -n "$BUILDDIR" ]]; then
 
     # mender-stress-test-client is here
     export PATH=$PATH:~/go/bin/
-
+    remove_published_ports
 else
     get_requirements
 fi
 
-
-# Remove all published ports for testing
-sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
 
 
 cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4

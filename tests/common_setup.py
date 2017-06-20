@@ -13,7 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-
+from tests import exposed_ports_lock
 from MenderAPI import auth, adm
 from common import *
 from common_docker import *
@@ -88,10 +88,11 @@ def standard_setup_without_client():
 
     stop_docker_compose()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.demo.yml up -d",
-                        use_common_files=False)
+    with exposed_ports_lock:
+        docker_compose_cmd("-f ../docker-compose.yml \
+                            -f ../docker-compose.storage.minio.yml \
+                            -f ../docker-compose.demo.yml up -d",
+                            use_common_files=False)
 
     set_setup_type(ST_NoClient)
 

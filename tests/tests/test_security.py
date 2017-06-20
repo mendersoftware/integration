@@ -30,6 +30,7 @@ import conftest
 import contextlib
 import ssl
 import socket
+from tests import exposed_ports_lock
 
 class TestSecurity(MenderTesting):
 
@@ -37,8 +38,9 @@ class TestSecurity(MenderTesting):
     def test_ssl_only(self):
         """ make sure we are not exposing any non-ssl connections"""
 
-        # get all exposed ports from docker
-        exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*'" % (conftest.docker_compose_instance), shell=True)
+        with exposed_ports_lock:
+            # get all exposed ports from docker
+            exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*'" % (conftest.docker_compose_instance), shell=True)
 
         for host in exposed_hosts.split():
             with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:

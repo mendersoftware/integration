@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from tests import exposed_ports_lock
 from fabric.api import *
 import pytest
 from common import *
@@ -192,7 +193,6 @@ class BackendUpdating():
 def test_run_upgrade_test(upgrade_from):
     # run these tests sequentially since they expose the storage proxy and the api gateports to the host
     with filelock.FileLock(".update_test_lock"):
-        t = None
         try:
             t = BackendUpdating(upgrade_from)
             t.test_original_deployments_persisted()

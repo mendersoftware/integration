@@ -18,20 +18,28 @@ from MenderAPI import logger
 import sys
 sys.path.append('..')
 import conftest
+import os
 
 class Artifacts():
     artifacts_tool_path = "mender-artifact"
 
-    def make_artifact(self, image, device_type, artifact_name, artifact_file_created):
+    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False):
+        signed_arg = ""
 
         if artifact_name.startswith("artifact_name="):
             artifact_name = artifact_name.split('=')[1]
 
-        cmd = "%s write rootfs-image -u %s -t %s -n %s -o %s" % (self.artifacts_tool_path,
-                                                                 image,
-                                                                 device_type,
-                                                                 artifact_name,
-                                                                 artifact_file_created.name)
+        if signed:
+            private_key = "../extra/signed-artifact-client-testing/private.key"
+            assert os.path.exists(private_key), "private key for testing doesn't exist"
+            signed_arg = "-k %s" % (private_key)
+
+        cmd = "%s write rootfs-image -u %s -t %s -n %s -o %s %s" % (self.artifacts_tool_path,
+                                                                    image,
+                                                                    device_type,
+                                                                    artifact_name,
+                                                                    artifact_file_created.name,
+                                                                    signed_arg)
         logger.info("Running: " + cmd)
         subprocess.check_call(cmd, shell=True)
 

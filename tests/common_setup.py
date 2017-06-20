@@ -94,3 +94,22 @@ def standard_setup_without_client():
                         use_common_files=False)
 
     set_setup_type(ST_NoClient)
+
+
+@pytest.fixture(scope="function")
+def standard_setup_with_signed_artifact_client(request):
+    if getattr(request, 'param', False) and request.param != "force_new" and setup_type() == ST_SignedClient:
+        return
+
+    stop_docker_compose()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f  ../extra/signed-artifact-client-testing/docker-compose.signed-client.yml  \
+                        -f ../docker-compose.testing.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+    auth.reset_auth_token()
+    adm.accept_devices(1)
+    set_setup_type(ST_SignedClient)

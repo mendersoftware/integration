@@ -13,10 +13,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-from tests import exposed_ports_lock
 from MenderAPI import auth, adm
 from common import *
 from common_docker import *
+import conftest
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
@@ -87,12 +87,12 @@ def standard_setup_without_client():
         return
 
     stop_docker_compose()
+    conftest.production_setup_lock.acquire()
 
-    with exposed_ports_lock:
-        docker_compose_cmd("-f ../docker-compose.yml \
-                            -f ../docker-compose.storage.minio.yml \
-                            -f ../docker-compose.demo.yml up -d",
-                            use_common_files=False)
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.demo.yml up -d",
+                        use_common_files=False)
 
     set_setup_type(ST_NoClient)
 
@@ -134,3 +134,9 @@ def standard_setup_with_short_lived_token():
     auth.reset_auth_token()
     adm.accept_devices(1)
     set_setup_type(ST_ShortLivedAuthToken)
+
+@pytest.fixture(scope="function")
+def running_custom_production_setup():
+    conftest.production_setup_lock.acquire()
+    set_setup_type(ST_CustomSetup)
+

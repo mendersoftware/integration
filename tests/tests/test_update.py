@@ -13,7 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from tests import exposed_ports_lock
 from fabric.api import *
 import pytest
 from common import *
@@ -189,6 +188,7 @@ class BackendUpdating():
 
 
 @MenderTesting.upgrade_from
+@pytest.mark.usefixtures("running_custom_production_setup")
 @pytest.mark.parametrize("upgrade_from", [s.strip() for s in pytest.config.getoption("--upgrade-from").split(",")])
 def test_run_upgrade_test(upgrade_from):
     # run these tests sequentially since they expose the storage proxy and the api gateports to the host

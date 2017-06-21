@@ -53,9 +53,14 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         except subprocess.CalledProcessError as e:
             print "failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output)
 
+
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
     docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
+
+    if setup_type() == ST_CustomSetup or setup_type() == ST_NoClient and conftest.production_setup_lock.is_locked:
+        conftest.production_setup_lock.release()
+
     set_setup_type(None)
 
 

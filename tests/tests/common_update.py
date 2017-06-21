@@ -29,6 +29,7 @@ def common_update_procedure(install_image,
                             device_type="vexpress-qemu",
                             broken_image=False,
                             verify_status=True,
+                            signed=False,
                             devices=None):
 
     with artifact_lock:
@@ -42,7 +43,7 @@ def common_update_procedure(install_image,
 
         # create atrifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file)
+            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed)
 
             if created_artifact:
                 deploy.upload_image(created_artifact)
@@ -61,7 +62,7 @@ def common_update_procedure(install_image,
         return deployment_id, artifact_id
 
 
-def update_image_successful(install_image, regenerate_image_id=True):
+def update_image_successful(install_image, regenerate_image_id=True, signed=False):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -72,7 +73,8 @@ def update_image_successful(install_image, regenerate_image_id=True):
 
     previous_inactive_part = Helpers.get_passive_partition()
     deployment_id, expected_image_id = common_update_procedure(install_image,
-                                                               regenerate_image_id)
+                                                               regenerate_image_id,
+                                                               signed=signed)
 
     Helpers.verify_reboot_performed()
 
@@ -95,6 +97,13 @@ def update_image_successful(install_image, regenerate_image_id=True):
     assert Helpers.yocto_id_installed_on_machine() == expected_image_id
 
     deploy.check_expected_status("finished", deployment_id)
+
+    # make sure backend recognizes signed and unsigned images
+    artifact_id = deploy.get_deployment(deployment_id)["artifacts"][0]
+    artifact_info = deploy.get_artifact_details(artifact_id)
+    assert artifact_info["signed"] is signed, "image was not correct recognized as signed/unsigned"
+
+    return deployment_id
 
 
 def update_image_failed(install_image="broken_update.ext4"):

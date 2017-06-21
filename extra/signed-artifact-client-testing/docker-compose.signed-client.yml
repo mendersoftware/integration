@@ -1,0 +1,12 @@
+version: '2'
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:master
+        networks:
+            - mender
+        volumes:
+            - ./extra/signed-artifact-client-testing/config/artifact-verify-key.pem:/mnt/config/artifact-verify-key.pem:ro

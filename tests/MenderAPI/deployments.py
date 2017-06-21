@@ -67,10 +67,11 @@ class Deployments(object):
                           data=json.dumps(trigger_data), verify=False)
 
         logger.debug("triggering deployment with: " + json.dumps(trigger_data))
+        logging.info("deployment returned: " + r.text)
         assert r.status_code == requests.status_codes.codes.created
 
         deployment_id = str(r.headers['Location'].split("/")[-1])
-        logger.info("deployment [%s] triggered for device [%s]" % (devices, deployment_id))
+        logger.info("deployment [%s] triggered for device [%s]" % (deployment_id, devices))
 
         return deployment_id
 
@@ -157,10 +158,20 @@ class Deployments(object):
 
     def get_deployment_overview(self, deployment_id):
         deployments_overview_url = self.get_deployments_base_path() + "deployments/%s/devices" % (deployment_id)
-
         r = requests.get(deployments_overview_url, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
+        return r.json()
 
+    def get_deployment(self, deployment_id):
+        deployments_url = self.get_deployments_base_path() + "deployments/%s" % (deployment_id)
+        r = requests.get(deployments_url, headers=self.auth.get_auth_token(), verify=False)
+        assert r.status_code == requests.status_codes.codes.ok
+        return r.json()
+
+    def get_artifact_details(self, artifact_id):
+        artifact_url = self.get_deployments_base_path() + "artifacts/%s" % (artifact_id)
+        r = requests.get(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
     def abort(self, deployment_id):

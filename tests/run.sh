@@ -74,6 +74,14 @@ fi
 
 # Remove all published ports for testing
 sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
+# disable download speed limits
+sed -e 's/DOWNLOAD_SPEED/#DOWNLOAD_SPEED/' -i ../docker-compose.testing.yml
+# disable dynomite logs, NOTE indentation is important in this one
+cat <<EOF  >> ../docker-compose.testing.yml
+    mender-dynomite:
+        logging:
+            driver: "none"
+EOF
 
 
 cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4

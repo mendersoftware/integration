@@ -7,5 +7,3 @@ services:
     mender-client:
         volumes:
             - ${BUILDDIR}:/mnt/build:ro
-        stdin_open: true
-        tty: true

@@ -5,6 +5,6 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:master
+        image: bboozzoo/mender-client-qemu:from-source
         networks:
             - mender

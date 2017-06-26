@@ -130,4 +130,4 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             break
 
     if count >= 60:
-        logging.fail("Unable to connect to host: ", env.host_string)
+        logging.fatal("Unable to connect to host: %s", env.host_string)

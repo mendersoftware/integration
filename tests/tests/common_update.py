@@ -30,7 +30,8 @@ def common_update_procedure(install_image,
                             broken_image=False,
                             verify_status=True,
                             signed=False,
-                            devices=None):
+                            devices=None,
+                            scripts=[]):
 
     with artifact_lock:
         if broken_image:
@@ -43,7 +44,7 @@ def common_update_procedure(install_image,
 
         # create atrifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed)
+            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed, scripts=scripts)
 
             if created_artifact:
                 deploy.upload_image(created_artifact)
@@ -55,12 +56,11 @@ def common_update_procedure(install_image,
             else:
                 pytest.fail("error creating artifact")
 
-        # wait until deployment is in correct state
-        if verify_status:
-            deploy.check_expected_status("inprogress", deployment_id)
+    # wait until deployment is in correct state
+    if verify_status:
+        deploy.check_expected_status("inprogress", deployment_id)
 
-        return deployment_id, artifact_id
-
+    return deployment_id, artifact_id
 
 def update_image_successful(install_image, regenerate_image_id=True, signed=False):
     """

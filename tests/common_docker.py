@@ -90,7 +90,7 @@ def docker_get_ip_of(image):
 
 
 def get_mender_clients():
-    return [ip + ":8822" for ip in docker_get_ip_of("mendersoftware/mender-client-qemu")]
+    return [ip + ":8822" for ip in docker_get_ip_of("bboozzoo/mender-client-qemu")]
 
 
 def get_mender_gateway():

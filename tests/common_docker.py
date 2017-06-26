@@ -84,20 +84,31 @@ def restart_docker_compose(clients=1):
     start_docker_compose(clients)
 
 
-def docker_get_ip_of(image):
-    # Returns newline separated list of IPs
-    output = subprocess.check_output("docker ps | grep '%s' | grep '%s'| awk '{print $1}'| xargs -r docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'" % (conftest.docker_compose_instance, image), shell=True)
+def docker_get_ip_of(service):
+    """Return a list of IP addresseses of `service`. `service` is the same name as
+    present in docker-compose files.
+    """
+    temp = "docker ps -q " \
+           "--filter label=com.docker.compose.project={project} " \
+           "--filter label=com.docker.compose.service={service} "
+    cmd = temp.format(project=conftest.docker_compose_instance,
+                      service=service)
+
+    output = subprocess.check_output(cmd + \
+                                     "| xargs -r " \
+                                     "docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'",
+                                     shell=True)
 
     # Return as list.
     return output.split()
 
 
 def get_mender_clients():
-    return [ip + ":8822" for ip in docker_get_ip_of("mendersoftware/mender-client-qemu")]
+    return [ip + ":8822" for ip in docker_get_ip_of("mender-client")]
 
 
 def get_mender_gateway():
-    gateway = docker_get_ip_of("mendersoftware/api-gateway")
+    gateway = docker_get_ip_of("mender-api-gateway")
 
     if len(gateway) != 1:
         raise SystemExit("more then one api-gateway running, which is unexpected")

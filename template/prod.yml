@@ -62,6 +62,8 @@ services:
             options:
                 max-file: "10"
                 max-size: "50m"
+        environment:
+            ALLOWED_HOSTS: my-gateway-dns-name
 
     storage-proxy:
         ports:

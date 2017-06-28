@@ -23,6 +23,7 @@ from MenderAPI import adm, deploy, image, logger
 from common_update import update_image_successful, update_image_failed, common_update_procedure
 from mendertesting import MenderTesting
 
+@pytest.mark.skip
 @MenderTesting.fast
 class TestSignedUpdates(MenderTesting):
     """

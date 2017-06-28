@@ -1,0 +1,5 @@
+version: '2'
+services:
+    mender-device-auth:
+        environment:
+            - DEVICEAUTH_JWT_EXP_TIMEOUT=10

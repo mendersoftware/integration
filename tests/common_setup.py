@@ -113,3 +113,23 @@ def standard_setup_with_signed_artifact_client(request):
     auth.reset_auth_token()
     adm.accept_devices(1)
     set_setup_type(ST_SignedClient)
+
+
+@pytest.fixture(scope="function")
+def standard_setup_with_short_lived_token():
+    if setup_type() == ST_ShortLivedAuthToken:
+        return
+
+    stop_docker_compose()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
+                        -f ../docker-compose.storage.minio.yml  \
+                        -f ../docker-compose.testing.yml \
+                        -f ../extra/expired-token-testing/docker-compose.short-token.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+    auth.reset_auth_token()
+    adm.accept_devices(1)
+    set_setup_type(ST_ShortLivedAuthToken)

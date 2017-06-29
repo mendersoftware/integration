@@ -45,3 +45,32 @@ class TestSecurity(MenderTesting):
                 logging.info("%s: connect to host with TLS" % host)
                 host, port = host.split(":")
                 sock.connect((host, int(port)))
+
+    @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
+    def test_token_token_expiration(self):
+        """ verify that an expired token is handled correctly (client gets a new, valid one)
+            and that deployments are still recieved by the client
+        """
+
+        if not env.host_string:
+            execute(self.test_token_token_expiration,
+                    hosts=get_mender_clients())
+            return
+
+        timeout_time = int(time.time()) + 60
+        while int(time.time()) < timeout_time:
+            with quiet():
+                output = run("journalctl -u mender -l --no-pager | grep \"received new authorization data\"")
+                time.sleep(1)
+
+            if output.return_code == 0:
+                logging.info("mender logs indicate new authorization data available")
+                break
+
+        if timeout_time <= int(time.time()):
+            pytest.fail("timed out waiting for download retries")
+
+
+        # this call verifies that the deployment process goes into an "inprogress" state
+        # which is only possible when the client has a valid token.
+        common_update_procedure(install_image=conftest.get_valid_image())

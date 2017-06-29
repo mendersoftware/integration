@@ -33,6 +33,7 @@ ST_OneClientBootstrapped = 2
 ST_TwoClientsBootstrapped = 3
 ST_OneClientsBootstrapped_AWS_S3 = 4
 ST_SignedClient = 5
+ST_ShortLivedAuthToken = 6
 
 def setup_type():
     return SETUP_TYPE

@@ -105,7 +105,7 @@ def get_mender_gateway():
     gateway = docker_get_ip_of("mendersoftware/api-gateway")
 
     if len(gateway) != 1:
-        raise SystemExit("more then one api-gateway running, which is unexpected")
+        raise SystemExit("expected one instance of api-gateway running, but found: %d instance(s)" % len(gateway))
 
     return gateway[0]
 

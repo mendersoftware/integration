@@ -11,8 +11,12 @@ sys.path.insert(0, "./tests")
 from common_update import common_update_procedure
 
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
+
 parser.add_argument('--start', dest='start', action='store_true',
                     help='start production environment')
+
+parser.add_argument('--kill', dest='kill', action='store_true',
+                    help='destroy production environment')
 
 parser.add_argument('--test-deployment', dest='deploy', action='store_true',
                     help='start testing upgrade test procedure (used for upgrade testing)')
@@ -25,8 +29,24 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
+def setup_docker_volumes():
+    docker_volumes = ["mender-artifacts",
+                      "mender-deployments-db",
+                      "mender-deviceadm-db",
+                      "mender-deviceauth-db",
+                      "mender-dynomite-db",
+                      "mender-elasticsearch-db",
+                      "mender-inventory-db",
+                      "mender-useradm-db"]
+
+    for volume in docker_volumes:
+        ret = subprocess.call(["docker", "volume", "create", "--name=%s" % volume])
+        assert ret == 0, "failed to create docker volumes"
 
 if args.start:
+    # create volumes required for production environment
+    setup_docker_volumes()
+
     # add keys for production environment
     if not os.path.exists("../keys-generated"):
         ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
@@ -73,3 +93,6 @@ if args.deploy:
     print("deployment_id=%s" % deployment_id)
     print("artifact_id=%s" % artifact_id)
     print("devices=%d" % len(devices))
+
+if args.kill:
+    subprocess.call(["docker-compose", "-p", "testprod", "down", "-v"])

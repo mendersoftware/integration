@@ -32,18 +32,24 @@ import socket
 
 class TestSecurity(MenderTesting):
 
-    @pytest.mark.usefixtures("standard_setup_without_client")
+    @pytest.mark.usefixtures("running_custom_production_setup")
     def test_ssl_only(self):
-        """ make sure we are not exposing any non-ssl connections"""
+        """ make sure we are not exposing any non-ssl connections in production environment """
+
+        # start production environment
+        subprocess.call(["./production_test_env.py", "--start"])
 
         # get all exposed ports from docker
-        exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*'" % (conftest.docker_compose_instance), shell=True)
+        exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*'" % ("testprod"), shell=True)
 
         for host in exposed_hosts.split():
             with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:
                 logging.info("%s: connect to host with TLS" % host)
                 host, port = host.split(":")
                 sock.connect((host, int(port)))
+
+        # destroy production environment
+        subprocess.call(["./production_test_env.py", "--kill"])
 
     @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
     def test_token_token_expiration(self):

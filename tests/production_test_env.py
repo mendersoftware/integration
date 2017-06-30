@@ -5,6 +5,7 @@ import sys
 import subprocess
 import argparse
 import conftest
+import shutil
 import common
 from MenderAPI import auth, adm
 sys.path.insert(0, "./tests")
@@ -28,6 +29,20 @@ if len(sys.argv) == 1:
     sys.exit(1)
 
 args = parser.parse_args()
+
+def fill_production_template():
+
+    # copy production environment yml file
+    subprocess.check_output(["cp", "template/prod.yml", "production-testing-env.yml"], cwd="../")
+    subprocess.check_output("sed -i 's/template\///g' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/ALLOWED_HOSTS: my-gateway-dns-name/ALLOWED_HOSTS: ~./' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i '0,/set-my-alias-here.com/s/set-my-alias-here.com/localhost/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost:9000|' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/MINIO_ACCESS_KEY:.*/MINIO_ACCESS_KEY: Q3AM3UQ867SPQQA43P2F/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/MINIO_SECRET_KEY:.*/MINIO_SECRET_KEY: abcssadasdssado798dsfjhkksd/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/DEPLOYMENTS_AWS_AUTH_KEY:.*/DEPLOYMENTS_AWS_AUTH_KEY: Q3AM3UQ867SPQQA43P2F/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/DEPLOYMENTS_AWS_AUTH_SECRET:.*/DEPLOYMENTS_AWS_AUTH_SECRET: abcssadasdssado798dsfjhkksd/' ../production-testing-env.yml", shell=True)
+
 
 def setup_docker_volumes():
     docker_volumes = ["mender-artifacts",
@@ -53,19 +68,14 @@ if args.start:
                                                  "CERT_STORAGE_CN": "localhost"},
                               cwd="../")
         assert ret == 0, "failed to generate keys"
-
-    # copy production environment yml file
-    if not os.path.exists("../production-testing-env.yml"):
-        ret = subprocess.call(["cp", "extra/production-testing-env.yml", "."],
-                              cwd="../")
-        assert ret == 0, "failed to copy extra/production-testing-env.yml"
+    fill_production_template()
 
     # start docker-compose
     ret = subprocess.call(["docker-compose",
                            "-p", "testprod",
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
-                           "-f", "production-testing-env.yml",
+                           "-f", "./production-testing-env.yml",
                            "up", "-d"],
                           cwd="../")
 

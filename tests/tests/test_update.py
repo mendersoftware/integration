@@ -64,11 +64,7 @@ def perform_upgrade():
     ret = subprocess.call(["cp", "-r", "tests/upgrade-from/keys-generated", "."], cwd="..")
     assert ret == 0, "faled to copy keys from original environment"
 
-    ret = subprocess.call(["cp", "extra/production-environment/production-testing-env.yml", "."], cwd="..")
-    assert ret == 0, "copying extra/production-envrionment folder failed."
-
-    ret = subprocess.call(["docker-compose", "-p", "testprod", "-f", "docker-compose.yml", "-f", "docker-compose.storage.minio.yml", "-f", "production-testing-env.yml", "up", "-d"], cwd="..")
-    assert ret == 0
+    subprocess.check_call(["./production_test_env.py", "--start"])
 
     # give time for all microservices to come online
     time.sleep(30)
@@ -193,6 +189,7 @@ class BackendUpdating():
 def test_run_upgrade_test(upgrade_from):
     # run these tests sequentially since they expose the storage proxy and the api gateports to the host
     with filelock.FileLock(".update_test_lock"):
+        t = None
         try:
             t = BackendUpdating(upgrade_from)
             t.test_original_deployments_persisted()
@@ -204,5 +201,5 @@ def test_run_upgrade_test(upgrade_from):
             # exception is handled by pytest
             raise e
         finally:
-            if isinstance(t, BackendUpdating):
-                t.teardown()
+           if isinstance(t, BackendUpdating):
+               t.teardown()

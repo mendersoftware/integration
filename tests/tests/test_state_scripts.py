@@ -17,6 +17,7 @@ import json
 import multiprocessing
 import shutil
 import time
+import traceback
 
 from fabric.api import *
 import pytest
@@ -40,15 +41,14 @@ def run_one_state_script_test(test_set):
                                                                       test_set=test_set)
     except:
         # Since we are in a sub process, the backtrace tends to get lost, so
-        # print it here.
-        print("FAILED: Exception caught while in test_set:")
-        print(json.dumps(test_set, indent=4))
-        print("Backtrace:")
-        import traceback
-        print(traceback.format_exc())
-        raise
+        # format it here, and store it in the result.
+        msg = "FAILED: Exception caught while in test_set:"
+        msg += json.dumps(test_set, indent=4)
+        msg += "Backtrace:"
+        msg += traceback.format_exc()
+        return msg
 
-    return True
+    return None
 
 class TestStateScripts(MenderTesting):
     scripts = [
@@ -743,10 +743,20 @@ class TestStateScripts(MenderTesting):
 
         # Run test cases in parallel.
         try:
-            pool.map(run_one_state_script_test, test_sets)
+            results = pool.map(run_one_state_script_test, test_sets)
         finally:
             pool.close()
             pool.join()
+
+        expected = [None] * len(test_sets)
+        try:
+            assert results == expected
+        except:
+            for result in results:
+                if result is None:
+                    continue
+                print(result)
+            raise
 
     def run_one_state_script_test_on_client(self, client, test_set):
         """Tests one case of upgrading with state scripts against one client.

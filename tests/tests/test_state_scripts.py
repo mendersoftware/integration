@@ -122,7 +122,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -157,7 +156,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09", # Error in this script should not have any effect.
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -192,7 +190,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09", # Error in this script should not have any effect.
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -227,7 +224,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -244,7 +240,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -264,7 +259,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -284,7 +278,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -306,7 +299,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -336,7 +328,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -372,7 +363,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -410,7 +400,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -454,7 +443,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -502,7 +490,6 @@ class TestStateScripts(MenderTesting):
         #     "ScriptOrder": [
         #         "Idle_Enter_08_testing",
         #         "Idle_Enter_09",
-        #         "Idle_Enter_100", # Should not be here: MEN-1289
         #         "Idle_Leave_09",
         #         "Idle_Leave_10",
         #         "Sync_Enter_02",
@@ -549,7 +536,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -564,22 +550,34 @@ class TestStateScripts(MenderTesting):
                 "ArtifactInstall_Enter_02",
                 "ArtifactInstall_Leave_01",
                 "ArtifactInstall_Leave_03",
+                # TODO: These should not be executed: MEN-1301
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Enter_11",
                 "ArtifactReboot_Leave_01",
                 "ArtifactReboot_Leave_89",
                 "ArtifactReboot_Leave_99",
-                "ArtifactCommit_Enter_01",
-                "ArtifactCommit_Enter_05",
-                "ArtifactCommit_Error_91",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Enter_11",
+                "ArtifactReboot_Error_97",
+                "ArtifactReboot_Error_98",
+                # TODO: These should be executed: MEN-1301
+                # "ArtifactReboot_Enter_01",
+                # "ArtifactReboot_Enter_11",
+                # "ArtifactReboot_Leave_01",
+                # "ArtifactReboot_Leave_89",
+                # "ArtifactReboot_Leave_99",
+                # "ArtifactCommit_Enter_01",
+                # "ArtifactCommit_Enter_05",
+                # "ArtifactCommit_Error_91",
                 "ArtifactRollback_Enter_00",
                 "ArtifactRollback_Enter_01",
                 "ArtifactRollback_Leave_00",
                 "ArtifactRollback_Leave_01",
-                "ArtifactRollbackReboot_Enter_00",
-                "ArtifactRollbackReboot_Enter_99",
-                "ArtifactRollbackReboot_Leave_01",
-                "ArtifactRollbackReboot_Leave_99",
+                # TODO: These should be executed: MEN-1301
+                # "ArtifactRollbackReboot_Enter_00",
+                # "ArtifactRollbackReboot_Enter_99",
+                # "ArtifactRollbackReboot_Leave_01",
+                # "ArtifactRollbackReboot_Leave_99",
                 "ArtifactFailure_Enter_22",
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
@@ -596,7 +594,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -635,7 +632,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -666,7 +662,6 @@ class TestStateScripts(MenderTesting):
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Enter_100", # Should not be here: MEN-1289
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -725,7 +720,9 @@ class TestStateScripts(MenderTesting):
         if debug_mode:
             client_num = 1
         else:
-            client_num = min(multiprocessing.cpu_count(), len(test_sets))
+            # Limit the number so we don't go completely crazy with resources.
+            max_clients = 8
+            client_num = min(multiprocessing.cpu_count(), len(test_sets), max_clients)
 
         setup_set_client_number_bootstrapped(client_num)
         clients = get_mender_clients()
@@ -752,6 +749,7 @@ class TestStateScripts(MenderTesting):
         try:
             assert results == expected
         except:
+            # Print message from each non-null result.
             for result in results:
                 if result is None:
                     continue
@@ -848,7 +846,7 @@ class TestStateScripts(MenderTesting):
                         # rollback with U-Boot.
                         fd.write("fw_setenv bootcount 1\n")
                     if test_set.get("CorruptDataScriptVersionIn") == script:
-                        fd.write("printf '3' > /data/mender/scripts/version\n")
+                        fd.write("printf '1000' > /data/mender/scripts/version\n")
 
             # Now create the artifact, and make the deployment.
             device_id = self.ip_to_device_id[client]
@@ -888,23 +886,6 @@ class TestStateScripts(MenderTesting):
 
             output = run_after_connect("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split('\n'))
-
-            # At the end of a deployment, there should never ever be any
-            # Artifact scripts left in the execution folder.
-            output = run("ls /data/mender/scripts || true")
-
-            # TODO MEN-XXX
-            # The entire if block below should be replaced with this single
-            # line once the bug has been fixed.
-            # assert len(output.strip()) == 0, "/data/mender/scripts not empty after deployment has finished:\n%s" % output
-
-            # Get rid of this block once above bug is fixed.
-            if len(test_set['FailureScript']) > 0 and not (test_set['FailureScript'][0].startswith("Idle_")
-                or test_set['FailureScript'][0].startswith("Sync_")
-                or test_set['FailureScript'][0].startswith("Download_Enter_")):
-                # We are testing for incorrect behavior here, just to catch when
-                # this bug has been fixed.
-                assert len(output.strip()) != 0, "We unexpectedly got correct behavior, has this bug been fixed? This section should be reviewed"
 
             new_active = Helpers.get_active_partition()
             should_switch_partition = (test_set['ExpectedStatus'] == "success")

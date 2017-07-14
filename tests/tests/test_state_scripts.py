@@ -720,9 +720,7 @@ class TestStateScripts(MenderTesting):
         if debug_mode:
             client_num = 1
         else:
-            # Limit the number so we don't go completely crazy with resources.
-            max_clients = 8
-            client_num = min(multiprocessing.cpu_count(), len(test_sets), max_clients)
+            client_num = min(multiprocessing.cpu_count(), len(test_sets))
 
         setup_set_client_number_bootstrapped(client_num)
         clients = get_mender_clients()

@@ -151,8 +151,8 @@ class Helpers:
                         logging.debug("temp. file no longer exists, device has rebooted.")
                         successful_connections += 1
 
-                    # try connecting 5 times before returning
-                    if successful_connections <= 4:
+                    # try connecting 10 times before returning
+                    if successful_connections <= 9:
                         continue
                     return
 

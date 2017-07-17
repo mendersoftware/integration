@@ -57,7 +57,7 @@ class TestDeploymentAborting(MenderTesting):
 
         if not mender_performs_reboot:
             Helpers.verify_reboot_not_performed()
-            run("( sleep 3 ; reboot ) 2>/dev/null >/dev/null &")
+            run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
 
         Helpers.verify_reboot_performed()
 

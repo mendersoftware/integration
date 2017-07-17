@@ -47,8 +47,11 @@ def docker_compose_cmd(arg_list, use_common_files=True):
                                               arg_list)
 
         logging.info("running with: %s" % cmd)
-        ret = subprocess.Popen(cmd, shell=True).wait()
-        assert ret == 0, "docker-compose failed, command returned exit code: " + str(ret)
+
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as e:
+            print "failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output)
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files

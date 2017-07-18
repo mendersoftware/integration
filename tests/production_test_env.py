@@ -5,14 +5,19 @@ import sys
 import subprocess
 import argparse
 import conftest
+import shutil
 import common
 from MenderAPI import auth, adm
 sys.path.insert(0, "./tests")
 from common_update import common_update_procedure
 
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
+
 parser.add_argument('--start', dest='start', action='store_true',
                     help='start production environment')
+
+parser.add_argument('--kill', dest='kill', action='store_true',
+                    help='destroy production environment')
 
 parser.add_argument('--test-deployment', dest='deploy', action='store_true',
                     help='start testing upgrade test procedure (used for upgrade testing)')
@@ -25,27 +30,52 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
+def fill_production_template():
+
+    # copy production environment yml file
+    subprocess.check_output(["cp", "template/prod.yml", "production-testing-env.yml"], cwd="../")
+    subprocess.check_output("sed -i 's/template\///g' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/ALLOWED_HOSTS: my-gateway-dns-name/ALLOWED_HOSTS: ~./' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i '0,/set-my-alias-here.com/s/set-my-alias-here.com/localhost/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost:9000|' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/MINIO_ACCESS_KEY:.*/MINIO_ACCESS_KEY: Q3AM3UQ867SPQQA43P2F/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/MINIO_SECRET_KEY:.*/MINIO_SECRET_KEY: abcssadasdssado798dsfjhkksd/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/DEPLOYMENTS_AWS_AUTH_KEY:.*/DEPLOYMENTS_AWS_AUTH_KEY: Q3AM3UQ867SPQQA43P2F/' ../production-testing-env.yml", shell=True)
+    subprocess.check_output("sed -i 's/DEPLOYMENTS_AWS_AUTH_SECRET:.*/DEPLOYMENTS_AWS_AUTH_SECRET: abcssadasdssado798dsfjhkksd/' ../production-testing-env.yml", shell=True)
+
+
+def setup_docker_volumes():
+    docker_volumes = ["mender-artifacts",
+                      "mender-deployments-db",
+                      "mender-deviceadm-db",
+                      "mender-deviceauth-db",
+                      "mender-dynomite-db",
+                      "mender-elasticsearch-db",
+                      "mender-inventory-db",
+                      "mender-useradm-db"]
+
+    for volume in docker_volumes:
+        ret = subprocess.call(["docker", "volume", "create", "--name=%s" % volume])
+        assert ret == 0, "failed to create docker volumes"
 
 if args.start:
+    # create volumes required for production environment
+    setup_docker_volumes()
+
     # add keys for production environment
     if not os.path.exists("../keys-generated"):
         ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
                                                  "CERT_STORAGE_CN": "localhost"},
                               cwd="../")
         assert ret == 0, "failed to generate keys"
-
-    # copy production environment yml file
-    if not os.path.exists("../production-testing-env.yml"):
-        ret = subprocess.call(["cp", "extra/production-testing-env.yml", "."],
-                              cwd="../")
-        assert ret == 0, "failed to copy extra/production-testing-env.yml"
+    fill_production_template()
 
     # start docker-compose
     ret = subprocess.call(["docker-compose",
                            "-p", "testprod",
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
-                           "-f", "production-testing-env.yml",
+                           "-f", "./production-testing-env.yml",
                            "up", "-d"],
                           cwd="../")
 
@@ -73,3 +103,6 @@ if args.deploy:
     print("deployment_id=%s" % deployment_id)
     print("artifact_id=%s" % artifact_id)
     print("devices=%d" % len(devices))
+
+if args.kill:
+    subprocess.call(["docker-compose", "-p", "testprod", "down", "-v"])

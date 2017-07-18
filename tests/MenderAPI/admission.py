@@ -14,15 +14,7 @@
 #    limitations under the License.
 
 
-import requests
-import json
-from fabric.api import *
-import time
-import pytest
-
-from common import *
-from common_docker import *
-from MenderAPI import api_version, logger
+from MenderAPI import *
 
 class Admission():
     auth = None

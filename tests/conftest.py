@@ -32,6 +32,8 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 docker_lock = filelock.FileLock("docker_lock")
+production_setup_lock = filelock.FileLock(".exposed_ports_lock")
+
 extra_files = []
 inline_logs = False
 

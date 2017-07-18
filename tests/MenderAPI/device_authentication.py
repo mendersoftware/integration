@@ -13,13 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
-import requests
-from fabric.api import *
-from common import *
-from common_docker import *
-from MenderAPI import api_version
-
+from MenderAPI import *
 
 class DeviceAuthentication(object):
     auth = None

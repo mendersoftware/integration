@@ -13,17 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
-import requests
-import json
-from fabric.api import *
-import time
-import pytest
-import os.path
-
-from common import *
-from common_docker import *
-from MenderAPI import api_version, logger
+from MenderAPI import *
 
 class Deployments(object):
     # track the last statistic for a deployment id

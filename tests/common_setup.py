@@ -13,10 +13,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-
 from MenderAPI import auth, adm
 from common import *
 from common_docker import *
+import conftest
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
@@ -87,6 +87,7 @@ def standard_setup_without_client():
         return
 
     stop_docker_compose()
+    conftest.production_setup_lock.acquire()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
@@ -133,3 +134,15 @@ def standard_setup_with_short_lived_token():
     auth.reset_auth_token()
     adm.accept_devices(1)
     set_setup_type(ST_ShortLivedAuthToken)
+
+@pytest.fixture(scope="function")
+def running_custom_production_setup():
+    conftest.production_setup_lock.acquire()
+
+    # since we are starting a manual instance of the backend,
+    # let the script know the instance is called "testprod"
+    # so that is cleaned up correctly on test failure/error
+
+    conftest.docker_compose_instance = "testprod"
+    set_setup_type(ST_CustomSetup)
+

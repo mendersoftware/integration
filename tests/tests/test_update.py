@@ -26,6 +26,7 @@ import time
 import conftest
 import shutil
 import filelock
+import re
 
 def setup_docker_volumes():
     docker_volumes = ["mender-artifacts",
@@ -52,8 +53,8 @@ def setup_upgrade_source(upgrade_from):
     # start upgrade source and bring up it's production environment
     ret = subprocess.call(["bash", "run.sh", "--get-requirements"],
                           cwd="upgrade-from/tests")
-
     assert ret == 0, "failed running 'run.sh --get-requirements' on upgrade source"
+
     ret = subprocess.call(["python", "production_test_env.py", "--start"],
                           cwd="upgrade-from/tests")
     assert ret == 0, "failed running 'production_test_env.py start' on upgrade source"
@@ -63,11 +64,7 @@ def perform_upgrade():
     ret = subprocess.call(["cp", "-r", "tests/upgrade-from/keys-generated", "."], cwd="..")
     assert ret == 0, "faled to copy keys from original environment"
 
-    ret = subprocess.call(["cp", "extra/production-environment/production-testing-env.yml", "."], cwd="..")
-    assert ret == 0, "copying extra/production-envrionment folder failed."
-
-    ret = subprocess.call(["docker-compose", "-p", "testprod", "-f", "docker-compose.yml", "-f", "docker-compose.storage.minio.yml", "-f", "production-testing-env.yml", "up", "-d"], cwd="..")
-    assert ret == 0
+    subprocess.check_call(["./production_test_env.py", "--start"])
 
     # give time for all microservices to come online
     time.sleep(30)
@@ -76,9 +73,9 @@ def perform_upgrade():
 def setup_fake_clients(device_count, fail_count):
     p = subprocess.Popen(["mender-stress-test-client",
                          "-count=%s" % str(device_count),
-                         "-invfreq=1",
-                         "-pollfreq=1",
-                         "-wait=1",
+                         "-invfreq=5",
+                         "-pollfreq=5",
+                         "-wait=10",
                          "-failcount=%s" % str(fail_count)])
     return p
 
@@ -113,7 +110,6 @@ class BackendUpdating():
 
     def teardown(self):
         self.fake_client_process.kill()
-        subprocess.call(["docker-compose", "-p", "testprod", "down", "-v"])
 
     def test_original_deployments_persisted(self):
         auth.reset_auth_token()
@@ -152,7 +148,7 @@ class BackendUpdating():
 
                 # make sure time was updated recently
                 if inventory_pair["name"] == "time":
-                    assert int(time.time()) - int(inventory_pair["value"]) <= 3
+                    assert int(time.time()) - int(inventory_pair["value"]) <= 10
 
                 # and other invetory items are still present
                 elif inventory_pair["name"] == "device_type":
@@ -164,7 +160,7 @@ class BackendUpdating():
         devices = adm.get_devices_status("accepted", 10)
 
         # perform upgrade
-        devices_to_update = list(set([device["id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
+        devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
         deployment_id, artifact_id = common_update_procedure("core-image-full-cmdline-vexpress-qemu.ext4",
                                                              device_type="test",
                                                              devices=devices_to_update)
@@ -173,10 +169,9 @@ class BackendUpdating():
         assert deploy.get_statistics(deployment_id)["success"] == 7
         assert deploy.get_statistics(deployment_id)["failure"] == 3
 
-        deployments_finished = deploy.get_status("finished")
 
     def test_artifacts_persisted(self):
-        devices_to_update = list(set([device["id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
+        devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
         deployment_id = deploy.trigger_deployment(name="artifact survived backed upgrade",
                                                   artifact_name=self.provisioned_artifact_id,
                                                   devices=devices_to_update)
@@ -189,18 +184,22 @@ class BackendUpdating():
 
 
 @MenderTesting.upgrade_from
+@pytest.mark.usefixtures("running_custom_production_setup")
 @pytest.mark.parametrize("upgrade_from", [s.strip() for s in pytest.config.getoption("--upgrade-from").split(",")])
 def test_run_upgrade_test(upgrade_from):
-
     # run these tests sequentially since they expose the storage proxy and the api gateports to the host
-    lock = filelock.FileLock("production_env")
-    with lock:
-        # exception is handled by pytest
+    with filelock.FileLock(".update_test_lock"):
+        t = None
         try:
             t = BackendUpdating(upgrade_from)
             t.test_original_deployments_persisted()
             t.test_inventory_post_upgrade()
             t.test_deployments_post_upgrade()
             t.test_artifacts_persisted()
+            t.test_decommissioning_post_upgrade()
+        except Exception, e:
+            # exception is handled by pytest
+            raise e
         finally:
-            t.teardown()
+           if isinstance(t, BackendUpdating):
+               t.teardown()

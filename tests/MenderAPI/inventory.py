@@ -13,15 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
-import conftest
-import requests
-import json
-from fabric.api import *
-import time
-import pytest
-from common_docker import *
-from MenderAPI import api_version, logger, admission
+from MenderAPI import *
 
 class Inventory():
     auth = None

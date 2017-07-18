@@ -67,7 +67,7 @@ def perform_upgrade():
     subprocess.check_call(["./production_test_env.py", "--start"])
 
     # give time for all microservices to come online
-    time.sleep(30)
+    time.sleep(60 * 5)
 
 
 def setup_fake_clients(device_count, fail_count):
@@ -157,7 +157,7 @@ class BackendUpdating():
                     assert inventory_pair["value"] == "test"
 
     def test_deployments_post_upgrade(self):
-        devices = adm.get_devices_status("accepted", 10)
+        adm.get_devices_status("accepted", 10)
 
         # perform upgrade
         devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
@@ -169,6 +169,7 @@ class BackendUpdating():
         assert deploy.get_statistics(deployment_id)["success"] == 7
         assert deploy.get_statistics(deployment_id)["failure"] == 3
 
+        deploy.get_status("finished")
 
     def test_artifacts_persisted(self):
         devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))

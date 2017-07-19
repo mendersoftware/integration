@@ -13,11 +13,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 from fabric.api import *
-import pytest
 import subprocess
 import tempfile
 import time
 import conftest
+import psutil
 from common import *
 
 COMPOSE_FILES = [
@@ -60,6 +60,13 @@ def stop_docker_compose():
 
     if setup_type() == ST_CustomSetup or setup_type() == ST_NoClient and conftest.production_setup_lock.is_locked:
         conftest.production_setup_lock.release()
+
+    # docker-compose issue: https://github.com/docker/compose/issues/4046
+    # under some unknown circumstances, docker-compose log fails to quit, and hangs pytest
+    for p in psutil.process_iter():
+        if "docker-compose -p %s" % (conftest.docker_compose_instance) in p.cmdline() and "logs" in p.cmdline():
+            logging.info("killing lingering 'docker-compose log' process (pid: %s)" % p.cmdline())
+            p.kill()
 
     set_setup_type(None)
 

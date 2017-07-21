@@ -8,3 +8,12 @@ services:
             service: mender-base
         networks:
             - mender
+        depends_on:
+            - mender-mongo-tenantadm
+
+    mender-mongo-tenantadm:
+        image: mongo:3.4
+        networks:
+            mender:
+                aliases:
+                    - mongo-tenantadm

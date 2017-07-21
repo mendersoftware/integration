@@ -133,7 +133,7 @@ if [[ -n $UPGRADE_FROM ]]; then
 fi
 
 if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG tests/
+    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG tests/test_signed_image_update.py
     exit $?
 fi
 

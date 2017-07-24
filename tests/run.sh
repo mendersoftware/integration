@@ -109,7 +109,7 @@ XDIST_ARGS="-n auto"
 MAX_FAIL_ARG="--maxfail=1"
 HTML_REPORT="--html=report.html --self-contained-html"
 UPGRADE_TEST_ARG=""
-SPECIFIC_INTEGRATION_TEST=""
+SPECIFIC_INTEGRATION_TEST_ARG=""
 
 if ! pip list |grep -e pytest-xdist >/dev/null 2>&1; then
     XDIST_ARGS=""
@@ -134,11 +134,11 @@ if [[ -n $UPGRADE_FROM ]]; then
 fi
 
 if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
-    SPECIFIC_INTEGRATION_TEST="-k $SPECIFIC_INTEGRATION_TEST"
+    SPECIFIC_INTEGRATION_TEST_ARG="-k $SPECIFIC_INTEGRATION_TEST"
 fi
 
 if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST tests/
+    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST_ARG tests/
     exit $?
 fi
 

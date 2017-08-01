@@ -6,6 +6,7 @@ services:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
 
     mender-device-auth:
+        command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
 

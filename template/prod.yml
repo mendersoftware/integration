@@ -30,6 +30,7 @@ services:
                 max-size: "50m"
 
     mender-device-auth:
+        command: server --automigrate
         volumes:
             - ./template/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
         logging:

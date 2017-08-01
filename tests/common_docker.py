@@ -25,13 +25,14 @@ COMPOSE_FILES = [
     "../docker-compose.yml",
     "../docker-compose.client.yml",
     "../docker-compose.storage.minio.yml",
-    "../docker-compose.testing.yml"
+    "../docker-compose.testing.yml",
+    "../docker-compose.tenant.yml"
 ]
 
 log_files = []
 logger = logging.getLogger("root")
 
-def docker_compose_cmd(arg_list, use_common_files=True):
+def docker_compose_cmd(arg_list, use_common_files=True, env=None):
     files_args = ""
 
     if use_common_files:
@@ -46,14 +47,15 @@ def docker_compose_cmd(arg_list, use_common_files=True):
         logger.info("running with: %s" % cmd)
 
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=env)
         except subprocess.CalledProcessError as e:
-            print "failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output)
+            raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
+        return output
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
-    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
+    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml -f ../docker-compose.tenant.yml down -v")
 
     # docker-compose issue: https://github.com/docker/compose/issues/4046
     # under some unknown circumstances, docker-compose log fails to quit, and hangs pytest
@@ -109,9 +111,9 @@ def docker_get_ip_of(service):
     return output.split()
 
 
-def get_mender_clients():
-    return [ip + ":8822" for ip in docker_get_ip_of("mender-client")]
-
+def get_mender_clients(service="mender-client"):
+    clients = [ip + ":8822" for ip in docker_get_ip_of(service)]
+    return clients
 
 def get_mender_gateway():
     gateway = docker_get_ip_of("mender-api-gateway")
@@ -143,3 +145,9 @@ def ssh_is_opened_impl(cmd="true", wait=60):
 
     if count >= 60:
         logger.fatal("Unable to connect to host: %s", env.host_string)
+
+
+def new_tenant_client(name, tenant):
+    logging.info("creating client connected to tenant: " + tenant)
+    docker_compose_cmd("-f %s -f ../docker-compose.mt.client.yml \
+                        run -d --name=%s mender-client" % (conftest.mt_docker_compose_file, name), env={"TENANT_TOKEN": "%s" % tenant})

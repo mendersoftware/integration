@@ -1,0 +1,11 @@
+version: '2'
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        networks:
+            - mender
+        environment:
+            - TENANT_TOKEN=$TENANT_TOKEN

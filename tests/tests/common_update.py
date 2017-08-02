@@ -56,12 +56,11 @@ def common_update_procedure(install_image,
             else:
                 pytest.fail("error creating artifact")
 
-        # wait until deployment is in correct state
-        if verify_status:
-            deploy.check_expected_status("inprogress", deployment_id)
+    # wait until deployment is in correct state
+    if verify_status:
+        deploy.check_expected_status("inprogress", deployment_id)
 
-        return deployment_id, artifact_id
-
+    return deployment_id, artifact_id
 
 def update_image_successful(install_image, regenerate_image_id=True, signed=False):
     """

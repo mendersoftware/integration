@@ -87,5 +87,23 @@ def ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-def run_after_connect(cmd):
-    return ssh_is_opened_impl(cmd)
+def run_after_connect(cmd, wait = 120):
+    output = ""
+    start_time = time.time()
+    # Use shorter timeout to get a faster cycle.
+    with settings(timeout = 5, abort_exception = Exception):
+        while True:
+            attempt_time = time.time()
+            try:
+                output = run(cmd)
+                break
+            except Exception as e:
+                print("Could not connect to host %s: %s" % (env.host_string, e))
+                if attempt_time >= start_time + wait:
+                    raise Exception("Could not reconnect to QEMU")
+                now = time.time()
+                if now - attempt_time < 5:
+                    time.sleep(5 - (now - attempt_time))
+                continue
+    return output
+

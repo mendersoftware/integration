@@ -34,7 +34,6 @@ docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
-extra_files = []
 inline_logs = False
 
 try:
@@ -57,7 +56,6 @@ def pytest_addoption(parser):
     parser.addoption("--runs3", action="store_true", help="run fast tests")
 
     parser.addoption("--upgrade-from", action="store", help="perform upgrade test", default="")
-    parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
@@ -68,7 +66,6 @@ def pytest_configure(config):
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
 
-    extra_files = config.getoption("--docker-compose-file")
     inline_logs = config.getoption("--inline-logs")
 
     env.password = ""

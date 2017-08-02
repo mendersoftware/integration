@@ -73,14 +73,16 @@ class Helpers:
 
         try:
             cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
+            logging.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            logging.info("Returned: " + output)
 
             cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
                    % (os.path.dirname(self.artifact_info_file),
                       tfile.name, os.path.basename(self.artifact_info_file), install_image))
+            logging.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            logging.info("Returned: " + output)
 
         except subprocess.CalledProcessError:
             pytest.fail("Trying to modify ext4 image failed, probably because it's not a valid image.")

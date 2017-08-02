@@ -29,9 +29,12 @@ def standard_setup_one_client(request):
     set_setup_type(ST_OneClient)
 
 
-def setup_set_client_number(clients):
+def setup_set_client_number_bootstrapped(clients):
     docker_compose_cmd("scale mender-client=%d" % clients)
     ssh_is_opened()
+
+    auth.reset_auth_token()
+    adm.accept_devices(clients)
 
     set_setup_type(None)
 

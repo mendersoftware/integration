@@ -19,7 +19,7 @@ from MenderAPI import *
 class Artifacts():
     artifacts_tool_path = "mender-artifact"
 
-    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False):
+    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[]):
         signed_arg = ""
 
         if artifact_name.startswith("artifact_name="):
@@ -36,6 +36,9 @@ class Artifacts():
                                                                     artifact_name,
                                                                     artifact_file_created.name,
                                                                     signed_arg)
+        for script in scripts:
+            cmd += " -s %s" % script
+
         logger.info("Running: " + cmd)
         subprocess.check_call(cmd, shell=True)
 

@@ -26,6 +26,8 @@ import json
 from fabric.contrib.files import exists
 import conftest
 
+from MenderAPI import adm
+
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -71,14 +73,16 @@ class Helpers:
 
         try:
             cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
+            logging.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            logging.info("Returned: " + output)
 
             cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
                    % (os.path.dirname(self.artifact_info_file),
                       tfile.name, os.path.basename(self.artifact_info_file), install_image))
+            logging.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            logging.info("Returned: " + output)
 
         except subprocess.CalledProcessError:
             pytest.fail("Trying to modify ext4 image failed, probably because it's not a valid image.")
@@ -184,3 +188,23 @@ class Helpers:
             data_dict[split[0]] = split[1]
 
         return json.dumps(data_dict, separators=(",", ":"))
+
+    @staticmethod
+    def ip_to_device_id_map(clients):
+        # Get admission data, which includes device identity.
+        adm_devices = adm.get_devices(expected_devices=len(clients))
+
+        # Collect identity of each client.
+        ret = execute(run, "/usr/share/mender/identity/mender-device-identity", hosts=clients)
+
+        # Calculate device identities.
+        identity_to_ip = {}
+        for client in clients:
+            identity_to_ip[Helpers.identity_script_to_identity_string(ret[client])] = client
+
+        # Match them.
+        ip_to_device_id = {}
+        for device in adm_devices:
+            ip_to_device_id[identity_to_ip[device['device_identity']]] = device['device_id']
+
+        return ip_to_device_id

@@ -110,16 +110,9 @@ class TestGrouping(MenderTesting):
         alpha = clients[0]
         bravo = clients[1]
 
-        # Get admission data, which includes device identity.
-        adm_devices = adm.get_devices(expected_devices=2)
-        # Collect identity of each client.
-        ret = execute(run, "/usr/share/mender/identity/mender-device-identity", hosts=clients)
-        # Match them.
-        for device in adm_devices:
-            if device['device_identity'] == Helpers.identity_script_to_identity_string(ret[alpha]):
-                id_alpha = device['device_id']
-            elif device['device_identity'] == Helpers.identity_script_to_identity_string(ret[bravo]):
-                id_bravo = device['device_id']
+        ip_to_device_id = Helpers.ip_to_device_id_map(clients)
+        id_alpha = ip_to_device_id[alpha]
+        id_bravo = ip_to_device_id[bravo]
         print("ID of alpha host: %s\nID of bravo host: %s" % (id_alpha, id_bravo))
 
         ret = execute(Helpers.get_passive_partition, hosts=clients)

@@ -29,9 +29,12 @@ def standard_setup_one_client(request):
     set_setup_type(ST_OneClient)
 
 
-def setup_set_client_number(clients):
+def setup_set_client_number_bootstrapped(clients):
     docker_compose_cmd("scale mender-client=%d" % clients)
     ssh_is_opened()
+
+    auth.reset_auth_token()
+    adm.accept_devices(clients)
 
     set_setup_type(None)
 
@@ -88,6 +91,21 @@ def standard_setup_without_client():
 
     stop_docker_compose()
     conftest.production_setup_lock.acquire()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.testing.yml up -d",
+                        use_common_files=False)
+
+    set_setup_type(ST_NoClient)
+
+
+@pytest.fixture(scope="function")
+def production_setup_without_client():
+    if setup_type() == ST_NoClient:
+        return
+
+    stop_docker_compose()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \

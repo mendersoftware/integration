@@ -31,7 +31,7 @@ import ssl
 import socket
 
 class TestSecurity(MenderTesting):
-
+    #@pytest.mark.usefixtures("production_setup_without_client")
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_ssl_only(self):
         """ make sure we are not exposing any non-ssl connections in production environment """

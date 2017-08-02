@@ -70,8 +70,8 @@ class TestDeploymentAborting(MenderTesting):
         self.abort_deployment()
 
     @MenderTesting.fast
-    def test_deployment_abortion_installing(self):
-        self.abort_deployment("installing")
+    def test_deployment_abortion_downloading(self):
+        self.abort_deployment("downloading")
 
     @MenderTesting.fast
     def test_deployment_abortion_rebooting(self):

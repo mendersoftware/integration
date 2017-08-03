@@ -24,11 +24,13 @@ import subprocess
 import os
 import pytest
 import distutils.spawn
+import log
 
-logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+logging.getLogger("filelock").setLevel(logging.CRITICAL)
+
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 docker_lock = filelock.FileLock("docker_lock")
@@ -95,6 +97,10 @@ def pytest_configure(config):
     env.eagerly_disconnect = True
     env.banner_timeout = 60
 
+
+def pytest_runtest_setup(item):
+    logger = log.setup_custom_logger("root", item.name)
+    logger.info("%s is starting.... " % item.name)
 
 def pytest_exception_interact(node, call, report):
     if report.failed:

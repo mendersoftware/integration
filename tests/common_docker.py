@@ -18,7 +18,8 @@ import tempfile
 import time
 import conftest
 import psutil
-from common import *
+import logging
+import common
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -28,7 +29,7 @@ COMPOSE_FILES = [
 ]
 
 log_files = []
-
+logger = logging.getLogger("root")
 
 def docker_compose_cmd(arg_list, use_common_files=True):
     files_args = ""
@@ -42,7 +43,7 @@ def docker_compose_cmd(arg_list, use_common_files=True):
                                               files_args,
                                               arg_list)
 
-        logging.info("running with: %s" % cmd)
+        logger.info("running with: %s" % cmd)
 
         try:
             subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
@@ -54,17 +55,17 @@ def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
     docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
 
-    if setup_type() == ST_CustomSetup or setup_type() == ST_NoClient and conftest.production_setup_lock.is_locked:
+    if common.setup_type() == common.ST_CustomSetup or common.setup_type() == common.ST_NoClient and conftest.production_setup_lock.is_locked:
         conftest.production_setup_lock.release()
 
     # docker-compose issue: https://github.com/docker/compose/issues/4046
     # under some unknown circumstances, docker-compose log fails to quit, and hangs pytest
     for p in psutil.process_iter():
         if "docker-compose -p %s" % (conftest.docker_compose_instance) in p.cmdline() and "logs" in p.cmdline():
-            logging.info("killing lingering 'docker-compose log' process (pid: %s)" % p.cmdline())
+            logger.info("killing lingering 'docker-compose log' process (pid: %s)" % p.cmdline())
             p.kill()
 
-    set_setup_type(None)
+    common.set_setup_type(None)
 
 
 def start_docker_compose(clients=1):
@@ -79,12 +80,12 @@ def start_docker_compose(clients=1):
     else:
         tfile = tempfile.mktemp("mender_testing")
         docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile)
-        logging.info("docker-compose log file stored here: %s" % tfile)
+        logger.info("docker-compose log file stored here: %s" % tfile)
         log_files.append(tfile)
 
     ssh_is_opened()
 
-    set_setup_type(ST_OneClient)
+    common.set_setup_type(common.ST_OneClient)
 
 
 def restart_docker_compose(clients=1):
@@ -144,4 +145,4 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             break
 
     if count >= 60:
-        logging.fatal("Unable to connect to host: %s", env.host_string)
+        logger.fatal("Unable to connect to host: %s", env.host_string)

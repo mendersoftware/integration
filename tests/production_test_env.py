@@ -105,4 +105,4 @@ if args.deploy:
     print("devices=%d" % len(devices))
 
 if args.kill:
-    subprocess.call(["docker-compose", "-p", "testprod", "down", "-v"])
+    subprocess.call(["docker-compose", "-p", "testprod", "down", "-v", "--remove-orphans"])

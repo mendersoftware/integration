@@ -618,7 +618,7 @@ def trigger_jenkins_build(state, tag_avail):
     # Allow changing of build parameters.
     while True:
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-25s %-20s"
+        fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))

@@ -875,6 +875,13 @@ def do_beta_to_final_transition(state):
 def do_release():
     """Handles the interactive menu for doing a release."""
 
+    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
+        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+
+    global JENKINS_USER, JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+
     if os.path.exists(RELEASE_STATE):
         while True:
             reply = ask("Release already in progress. Continue or start a new one [C/S]? ")
@@ -1196,13 +1203,6 @@ def main():
                         + 'well known names are checked: version numbers and "master" (to avoid '
                         + "pull requests triggering a failure)")
     args = parser.parse_args()
-
-    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
-        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
-
-    global JENKINS_USER, JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
 
     # Check conflicting options.
     operations = 0

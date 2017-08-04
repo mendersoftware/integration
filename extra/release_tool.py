@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import traceback
+import logging
 
 try:
     import yaml
@@ -26,9 +27,10 @@ os.environ['GIT_PAGER'] = "cat"
 # The repositories are indexed by their Git repository names.
 RELEASE_STATE = "release-state.yml"
 
-JENKINS_SERVER = "https://ci.cfengine.com"
-JENKINS_JOB = "job/yoctobuild-pr"
-JENKINS_CRUMB_ISSUER = 'crumbIssuer/api/xml?xpath=concat(//crumbRequestField,":",//crumb)'
+JENKINS_SERVER = "https://mender-jenkins.mender.io"
+JENKINS_JOB = "job/mender-builder"
+JENKINS_USER = ""
+JENKINS_PASSWORD = ""
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
@@ -110,17 +112,19 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
+    "BUILD_BBB": "on",
+    "BUILD_QEMU": "on",
+    "CLEAN_BUILD_CACHE": "",
+    "MENDER_QA_REV": "master",
+    "MENDER_STRESS_TEST_CLIENT_REV": "master",
     "META_MENDER_REV": "pyro",
     "POKY_REV": "pyro",
-    "MENDER_QA_REV": "master",
-    "BUILD_QEMU": "on",
-    "TEST_QEMU": "on",
-    "BUILD_BBB": "on",
-    "TEST_BBB": "",
-    "CLEAN_BUILD_CACHE": "",
-    "UPLOAD_OUTPUT": "",
-    "RUN_INTEGRATION_TESTS": "on",
     "PUSH_CONTAINERS": "on",
+    "RUN_INTEGRATION_TESTS": "on",
+    "TENANTADM_REV": "master",
+    "TEST_BBB": "",
+    "TEST_QEMU": "on",
+    "UPLOAD_OUTPUT": "",
 }
 
 def integration_dir():
@@ -598,6 +602,9 @@ def trigger_jenkins_build(state, tag_avail):
         print("PyYAML missing, try running 'sudo pip3 install requests'.")
         sys.exit(2)
 
+    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
+        raise SystemExit("unable to trigger build with JENKINS_USER or JENKINS_PASSWORD not set")
+
     # We'll be adding parameters here that shouldn't be in 'state', so make a
     # copy.
     params = copy.deepcopy(state['extra_buildparams'])
@@ -613,7 +620,7 @@ def trigger_jenkins_build(state, tag_avail):
     # Allow changing of build parameters.
     while True:
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-25s %-20s"
+        fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
@@ -657,22 +664,14 @@ def trigger_jenkins_build(state, tag_avail):
             jdata['parameter'].append({"name": param[0], "value": param[1]})
 
     try:
-        reply = requests.get("%s/%s" % (JENKINS_SERVER, JENKINS_CRUMB_ISSUER),
-                             data=postdata)
-        if reply.status_code < 200 or reply.status_code >= 300:
-            print("Crumb request FAILED and returned: %d: %s" % (reply.status_code, reply.reason))
-            return
-        crumb = reply.content.decode().split(':', 2)
         postdata.append(("statusCode", "303"))
         jdata["statusCode"] = "303"
         postdata.append(("redirectTo", "."))
         jdata["redirectTo"] = "."
-        postdata.append((crumb[0], crumb[1]))
-        jdata[crumb[0]] = crumb[1]
         postdata.append(("json", json.dumps(jdata)))
 
         reply = requests.post("%s/%s/build?delay=0sec" % (JENKINS_SERVER, JENKINS_JOB),
-                              data=postdata)
+                              data=postdata, auth=(JENKINS_USER, JENKINS_PASSWORD), verify=False)
         if reply.status_code < 200 or reply.status_code >= 300:
             print("Request returned: %d: %s" % (reply.status_code, reply.reason))
         else:
@@ -877,6 +876,13 @@ def do_beta_to_final_transition(state):
 
 def do_release():
     """Handles the interactive menu for doing a release."""
+
+    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
+        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+
+    global JENKINS_USER, JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
 
     if os.path.exists(RELEASE_STATE):
         while True:

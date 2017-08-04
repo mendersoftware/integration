@@ -73,8 +73,8 @@ class TestDeploymentAborting(MenderTesting):
     # fragile, it breaks at the slightest timing issue: MEN-1364
     @pytest.mark.skip
     @MenderTesting.fast
-    def test_deployment_abortion_installing(self):
-        self.abort_deployment("installing")
+    def test_deployment_abortion_downloading(self):
+        self.abort_deployment("downloading")
 
     @MenderTesting.fast
     def test_deployment_abortion_rebooting(self):

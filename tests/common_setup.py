@@ -29,9 +29,12 @@ def standard_setup_one_client(request):
     set_setup_type(ST_OneClient)
 
 
-def setup_set_client_number(clients):
+def setup_set_client_number_bootstrapped(clients):
     docker_compose_cmd("scale mender-client=%d" % clients)
     ssh_is_opened()
+
+    auth.reset_auth_token()
+    adm.accept_devices(clients)
 
     set_setup_type(None)
 
@@ -91,7 +94,7 @@ def standard_setup_without_client():
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.demo.yml up -d",
+                        -f ../docker-compose.testing.yml up -d",
                         use_common_files=False)
 
     set_setup_type(ST_NoClient)
@@ -136,13 +139,18 @@ def standard_setup_with_short_lived_token():
     set_setup_type(ST_ShortLivedAuthToken)
 
 @pytest.fixture(scope="function")
-def running_custom_production_setup():
+def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
     # since we are starting a manual instance of the backend,
     # let the script know the instance is called "testprod"
     # so that is cleaned up correctly on test failure/error
 
-    conftest.docker_compose_instance = "testprod"
-    set_setup_type(ST_CustomSetup)
+    def fin():
+        conftest.production_setup_lock.release()
+        stop_docker_compose()
 
+    conftest.docker_compose_instance = "testprod"
+    request.addfinalizer(fin)
+
+    set_setup_type(ST_CustomSetup)

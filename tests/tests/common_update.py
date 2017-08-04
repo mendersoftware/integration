@@ -30,20 +30,21 @@ def common_update_procedure(install_image,
                             broken_image=False,
                             verify_status=True,
                             signed=False,
-                            devices=None):
+                            devices=None,
+                            scripts=[]):
 
     with artifact_lock:
         if broken_image:
             artifact_id = "broken_image_" + str(random.randint(0, 999999))
         elif regenerate_image_id:
             artifact_id = Helpers.artifact_id_randomize(install_image)
-            logger.debug("Randomized image id: " + artifact_id)
+            logger.debug("randomized image id: " + artifact_id)
         else:
             artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
         # create atrifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed)
+            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed, scripts=scripts)
 
             if created_artifact:
                 deploy.upload_image(created_artifact)
@@ -53,14 +54,14 @@ def common_update_procedure(install_image,
                                                           artifact_name=artifact_id,
                                                           devices=devices)
             else:
+                logger.warn("failed to create artifact")
                 pytest.fail("error creating artifact")
 
-        # wait until deployment is in correct state
-        if verify_status:
-            deploy.check_expected_status("inprogress", deployment_id)
+    # wait until deployment is in correct state
+    if verify_status:
+        deploy.check_expected_status("inprogress", deployment_id)
 
-        return deployment_id, artifact_id
-
+    return deployment_id, artifact_id
 
 def update_image_successful(install_image, regenerate_image_id=True, signed=False):
     """

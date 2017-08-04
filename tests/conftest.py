@@ -29,7 +29,7 @@ import log
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
-logging.getLogger("filelock").setLevel(logging.CRITICAL)
+logging.getLogger("filelock").setLevel(logging.INFO)
 
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 

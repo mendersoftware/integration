@@ -112,17 +112,19 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
+    "BUILD_BBB": "on",
+    "BUILD_QEMU": "on",
+    "CLEAN_BUILD_CACHE": "",
+    "MENDER_QA_REV": "master",
+    "MENDER_STRESS_TEST_CLIENT_REV": "master",
     "META_MENDER_REV": "pyro",
     "POKY_REV": "pyro",
-    "MENDER_QA_REV": "master",
-    "BUILD_QEMU": "on",
-    "TEST_QEMU": "on",
-    "BUILD_BBB": "on",
-    "TEST_BBB": "",
-    "CLEAN_BUILD_CACHE": "",
-    "UPLOAD_OUTPUT": "",
-    "RUN_INTEGRATION_TESTS": "on",
     "PUSH_CONTAINERS": "on",
+    "RUN_INTEGRATION_TESTS": "on",
+    "TENANTADM_REV": "master",
+    "TEST_BBB": "",
+    "TEST_QEMU": "on",
+    "UPLOAD_OUTPUT": "",
 }
 
 def integration_dir():
@@ -618,7 +620,7 @@ def trigger_jenkins_build(state, tag_avail):
     # Allow changing of build parameters.
     while True:
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-25s %-20s"
+        fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
@@ -874,6 +876,13 @@ def do_beta_to_final_transition(state):
 
 def do_release():
     """Handles the interactive menu for doing a release."""
+
+    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
+        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+
+    global JENKINS_USER, JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
 
     if os.path.exists(RELEASE_STATE):
         while True:
@@ -1196,13 +1205,6 @@ def main():
                         + 'well known names are checked: version numbers and "master" (to avoid '
                         + "pull requests triggering a failure)")
     args = parser.parse_args()
-
-    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
-        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
-
-    global JENKINS_USER, JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
 
     # Check conflicting options.
     operations = 0

@@ -55,9 +55,6 @@ def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files
     docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
 
-    if common.setup_type() == common.ST_CustomSetup or common.setup_type() == common.ST_NoClient and conftest.production_setup_lock.is_locked:
-        conftest.production_setup_lock.release()
-
     # docker-compose issue: https://github.com/docker/compose/issues/4046
     # under some unknown circumstances, docker-compose log fails to quit, and hangs pytest
     for p in psutil.process_iter():

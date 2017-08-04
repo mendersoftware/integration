@@ -16,7 +16,6 @@ from fabric.contrib.files import *
 from fabric.api import *
 import time
 import pytest
-import logging
 import requests
 from requests.auth import HTTPBasicAuth
 
@@ -36,16 +35,13 @@ ST_SignedClient = 5
 ST_ShortLivedAuthToken = 6
 ST_CustomSetup = 7
 
+
 def setup_type():
     return SETUP_TYPE
 
 def set_setup_type(type):
     global SETUP_TYPE
     SETUP_TYPE = type
-
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 def put(file, local_path=".", remote_path="."):
     (scp, host, port) = scp_prep_args()

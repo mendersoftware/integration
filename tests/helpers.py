@@ -28,8 +28,7 @@ import conftest
 
 from MenderAPI import adm
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger = logging.getLogger("root")
 
 class FabricFatalException(BaseException):
     pass
@@ -43,7 +42,7 @@ class Helpers:
         try:
             cmd = "debugfs -R 'cat %s' %s| sed -n 's/^%s=//p'" % (self.artifact_info_file, filename, self.artifact_prefix)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Running: " + cmd + " returned: " + output)
+            logger.info("Running: " + cmd + " returned: " + output)
             return output
 
         except subprocess.CalledProcessError:
@@ -73,16 +72,16 @@ class Helpers:
 
         try:
             cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
-            logging.info("Running: " + cmd)
+            logger.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Returned: " + output)
+            logger.info("Returned: " + output)
 
             cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
                    % (os.path.dirname(self.artifact_info_file),
                       tfile.name, os.path.basename(self.artifact_info_file), install_image))
-            logging.info("Running: " + cmd)
+            logger.info("Running: " + cmd)
             output = subprocess.check_output(cmd, shell=True).strip()
-            logging.info("Returned: " + output)
+            logger.info("Returned: " + output)
 
         except subprocess.CalledProcessError:
             pytest.fail("Trying to modify ext4 image failed, probably because it's not a valid image.")
@@ -127,7 +126,7 @@ class Helpers:
                         run("iptables -I INPUT 1 -s %s -j DROP" % gateway_ip)
                         run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip)
         except Exception, e:
-            logging.info("Exception while messing with network connectivity: " + e)
+            logger.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
     def verify_reboot_performed(max_wait=60*30):
@@ -135,12 +134,12 @@ class Helpers:
         tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
         cmd = "touch %s" % (tfile)
 
-        logging.info("waiting for system to reboot")
+        logger.info("waiting for system to reboot")
         try:
             with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
                 run(cmd)
         except (FabricFatalException, EOFError, BaseException):
-            logging.info("failed to touch /tmp/ folder, is the device already rebooting?")
+            logger.info("failed to touch /tmp/ folder, is the device already rebooting?")
 
         timeout = time.time() + max_wait
 
@@ -149,10 +148,10 @@ class Helpers:
                 with settings(warn_only=True, abort_exception=FabricFatalException):
                     time.sleep(1)
                     if exists(tfile):
-                        logging.debug("temp. file still exists, device hasn't rebooted.")
+                        logger.debug("temp. file still exists, device hasn't rebooted.")
                         continue
                     else:
-                        logging.debug("temp. file no longer exists, device has rebooted.")
+                        logger.debug("temp. file no longer exists, device has rebooted.")
                         successful_connections += 1
 
                     # try connecting 10 times before returning
@@ -161,7 +160,7 @@ class Helpers:
                     return
 
             except (BaseException):
-                logging.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
+                logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
                 continue
 
         if time.time() > timeout:

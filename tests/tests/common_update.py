@@ -38,7 +38,7 @@ def common_update_procedure(install_image,
             artifact_id = "broken_image_" + str(random.randint(0, 999999))
         elif regenerate_image_id:
             artifact_id = Helpers.artifact_id_randomize(install_image)
-            logger.debug("Randomized image id: " + artifact_id)
+            logger.debug("randomized image id: " + artifact_id)
         else:
             artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
@@ -54,6 +54,7 @@ def common_update_procedure(install_image,
                                                           artifact_name=artifact_id,
                                                           devices=devices)
             else:
+                logger.warn("failed to create artifact")
                 pytest.fail("error creating artifact")
 
     # wait until deployment is in correct state

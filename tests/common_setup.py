@@ -90,7 +90,6 @@ def standard_setup_without_client():
         return
 
     stop_docker_compose()
-    conftest.production_setup_lock.acquire()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \

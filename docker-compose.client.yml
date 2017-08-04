@@ -5,6 +5,6 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:1.2.x
+        image: mendersoftware/mender-client-qemu:1.2.0b1
         networks:
             - mender

@@ -69,6 +69,9 @@ class TestDeploymentAborting(MenderTesting):
     def test_deployment_abortion_instantly(self):
         self.abort_deployment()
 
+    # Because the install step is over almost instantly, this test is very
+    # fragile, it breaks at the slightest timing issue: MEN-1364
+    @pytest.mark.skip
     @MenderTesting.fast
     def test_deployment_abortion_downloading(self):
         self.abort_deployment("downloading")

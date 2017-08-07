@@ -49,6 +49,8 @@ setuphosts() {
 
 rundocker() {
     # sudo -E docker-compose scale mender-client=3
+    echo "The web interface will be accessible locally via https://docker.mender.io"
+    sleep 2
     sudo -E ./demo up
 }
 

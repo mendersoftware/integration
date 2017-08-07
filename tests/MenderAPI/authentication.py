@@ -28,6 +28,7 @@ class Authentication:
     def __init__(self, username="admin", email="admin@admin.net", password="averyverystrongpasswordthatyouwillneverguess!haha!"):
         self.username = username
         self.email = email
+        self.password = password
 
     def set_tenant(self, username, password):
         return self.new_tenant(username, password)

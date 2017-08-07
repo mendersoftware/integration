@@ -153,3 +153,19 @@ def running_custom_production_setup(request):
     request.addfinalizer(fin)
 
     set_setup_type(ST_CustomSetup)
+
+
+@pytest.fixture(scope="function")
+def multitenancy_setup_without_client():
+    if setup_type() == ST_MultiTenancyNoClient:
+        return
+
+    stop_docker_compose()
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.tenant.yml \
+                        -f %s up -d" % (conftest.mt_docker_compose_file),
+                        use_common_files=False)
+
+    set_setup_type(ST_MultiTenancyNoClient)

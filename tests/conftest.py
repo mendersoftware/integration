@@ -37,6 +37,7 @@ docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 inline_logs = False
+mt_docker_compose_file = ""
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -61,14 +62,22 @@ def pytest_addoption(parser):
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
+    parser.addoption("--mt-docker-compose-file", action="store", type=str, help="Docker-compose file that enables multi-tenancy (required for some tests)")
+
 
 def pytest_configure(config):
+    global extra_files, inline_logs, mt_docker_compose_file
     verify_sane_test_environment()
 
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
 
     inline_logs = config.getoption("--inline-logs")
+    mt_docker_compose_file = config.getoption("--mt-docker-compose-file")
+
+    if mt_docker_compose_file is None and os.path.exists("../docker-compose.mt.yml"):
+        logging.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
+        mt_docker_compose_file = "../docker-compose.mt.yml"
 
     env.password = ""
 
@@ -152,9 +161,9 @@ def pytest_runtest_teardown(item, nextitem):
     if nextitem is None:
         stop_docker_compose()
 
-
 def get_valid_image():
     return env.valid_image
+
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here

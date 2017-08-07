@@ -62,7 +62,6 @@ class Admission():
                 matching.append(d)
         return matching
 
-
     def set_device_status(self, device_id, status):
         headers={"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())

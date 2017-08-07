@@ -14,12 +14,8 @@
 #    limitations under the License.
 from fabric.contrib.files import *
 from fabric.api import *
-import time
-import pytest
-import requests
 from requests.auth import HTTPBasicAuth
-
-import conftest
+import time
 
 # This is used to remember which docker-compose setup we're currently running.
 # This is for optimization purposes to avoid respawning the docker-compose
@@ -34,10 +30,13 @@ ST_OneClientsBootstrapped_AWS_S3 = 4
 ST_SignedClient = 5
 ST_ShortLivedAuthToken = 6
 ST_CustomSetup = 7
+ST_MultiTenancyNoClient = 8
+
 
 
 def setup_type():
     return SETUP_TYPE
+
 
 def set_setup_type(type):
     global SETUP_TYPE

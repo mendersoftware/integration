@@ -21,7 +21,7 @@ services:
             - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
             - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
         environment:
-            ALLOWED_HOSTS: docker.mender.io
+            ALLOWED_HOSTS: localhost docker.mender.io
 
     storage-proxy:
         ports:

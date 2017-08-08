@@ -77,7 +77,7 @@ sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml 
 # disable download speed limits
 sed -e 's/DOWNLOAD_SPEED/#DOWNLOAD_SPEED/' -i ../docker-compose.testing.yml
 # whitelist *all* IPs/DNS names in the gateway (will be accessed via dynamically assigned IP in tests)
-sed -e 's/ALLOWED_HOSTS: docker.mender.io/ALLOWED_HOSTS: ~./' -i ../docker-compose.testing.yml
+sed -e 's/ALLOWED_HOSTS: .*/ALLOWED_HOSTS: ~./' -i ../docker-compose.testing.yml
 # disable dynomite logs, NOTE indentation is important in this one
 cat <<EOF  >> ../docker-compose.testing.yml
     mender-dynomite:

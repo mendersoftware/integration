@@ -130,7 +130,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/conductor:1.7.0
+        image: mendersoftware/conductor:1.7.7
         depends_on:
             - mender-elasticsearch
             - mender-dynomite

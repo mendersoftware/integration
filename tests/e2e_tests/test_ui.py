@@ -24,6 +24,10 @@ from web_funcs import *
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers import Helpers
 from MenderAPI import authentication
+import logging
+
+selenium_logger = logging.getLogger('selenium.webdriver.remote.remote_connection')
+selenium_logger.setLevel(logging.INFO)
 
 
 __authors__ = ["Ole Herman Schumacher Elgesem", "Gregorio Di Stefano"]
@@ -323,7 +327,7 @@ class TestUI(object):
     def create_artifacts(self):
         Helpers.artifact_id_randomize("core-image-full-cmdline-vexpress-qemu.ext4", specific_image_id="release1")
         subprocess.call("mender-artifact write rootfs-image -u core-image-full-cmdline-vexpress-qemu.ext4 -t vexpress-qemu -n release1 -o vexpress_release_1.mender", shell=True)
-
+        logging.debug("done creating arifacts")
 
 def get_args():
     argparser = argparse.ArgumentParser(description='Test UI of mender web server')

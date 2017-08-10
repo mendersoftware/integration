@@ -32,8 +32,6 @@ import socket
 
 class TestSecurity(MenderTesting):
 
-    # Currently hangs: MEN-1363
-    @pytest.mark.skip
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_ssl_only(self):
         """ make sure we are not exposing any non-ssl connections in production environment """

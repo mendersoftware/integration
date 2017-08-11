@@ -146,9 +146,10 @@ def running_custom_production_setup(request):
     # so that is cleaned up correctly on test failure/error
 
     def fin():
-        conftest.production_setup_lock.release()
         stop_docker_compose()
+        conftest.production_setup_lock.release()
 
+    # this additional lock is required.
     conftest.docker_compose_instance = "testprod"
     request.addfinalizer(fin)
 

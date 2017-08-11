@@ -48,8 +48,6 @@ class TestSecurity(MenderTesting):
                 host, port = host.split(":")
                 sock.connect((host, int(port)))
 
-        # destroy production environment
-        subprocess.call(["./production_test_env.py", "--kill"])
 
     @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
     def test_token_token_expiration(self):

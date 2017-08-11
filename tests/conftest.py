@@ -176,7 +176,7 @@ def pull_all_containers():
         docker_line += " -f " + f
 
     cmd = "docker-compose %s pull --parallel" % docker_line
-    subprocess.check_call("docker-compose %s pull --parallel" % docker_line, shell=True)
+    subprocess.check_call(cmd, shell=True)
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here

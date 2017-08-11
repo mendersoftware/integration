@@ -25,6 +25,7 @@ import os
 import pytest
 import distutils.spawn
 import log
+import glob
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -74,6 +75,7 @@ def pytest_configure(config):
 
     inline_logs = config.getoption("--inline-logs")
     mt_docker_compose_file = config.getoption("--mt-docker-compose-file")
+    pull_all_containers()
 
     if mt_docker_compose_file is None and os.path.exists("../docker-compose.mt.yml"):
         logging.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
@@ -134,7 +136,11 @@ def pytest_runtest_makereport(item, call):
         if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
             # we already have s3cmd configured on our build machine, so use it directly
             s3_object_name = str(uuid.uuid4()) + ".log"
-            ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
+            if len(log_files) > 0:
+                ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
+            else:
+                logging.warn("no backend logs found..")
+                return
             if int(ret) == 0:
                 url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
             else:
@@ -164,6 +170,13 @@ def pytest_runtest_teardown(item, nextitem):
 def get_valid_image():
     return env.valid_image
 
+def pull_all_containers():
+    docker_line = ""
+    for f in glob.glob("../docker-compose*.yml"):
+        docker_line += " -f " + f
+
+    cmd = "docker-compose %s pull --parallel" % docker_line
+    subprocess.check_call("docker-compose %s pull --parallel" % docker_line, shell=True)
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here

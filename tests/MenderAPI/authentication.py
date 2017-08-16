@@ -97,17 +97,17 @@ class Authentication:
         if tenant_id != "":
             tenant_id = "--tenant-id " + tenant_id
 
-        cmd = '-f %s exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s %s' % (conftest.mt_docker_compose_file,
-                                                                                                            username,
-                                                                                                            password, tenant_id)
+        cmd = '%s exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s %s' % (conftest.mt_docker_compose_file,
+                                                                                                         username,
+                                                                                                         password, tenant_id)
         docker_compose_cmd(cmd)
 
     def _create_tenant(self, username):
-        cmd = '-f %s exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (conftest.mt_docker_compose_file,
-                                                                                             username)
+        cmd = '%s exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (conftest.mt_docker_compose_file,
+                                                                                          username)
         return docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f %s exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (conftest.mt_docker_compose_file,
-                                                                                        tenant_id)
+        cmd = '%s exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (conftest.mt_docker_compose_file,
+                                                                                     tenant_id)
         return docker_compose_cmd(cmd)

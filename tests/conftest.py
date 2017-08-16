@@ -74,11 +74,13 @@ def pytest_configure(config):
     env.valid_image = config.getoption("image")
 
     inline_logs = config.getoption("--inline-logs")
-    mt_docker_compose_file = config.getoption("--mt-docker-compose-file")
 
-    if mt_docker_compose_file is None and os.path.exists("../docker-compose.mt.yml"):
-        logger.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
-        mt_docker_compose_file = "../docker-compose.mt.yml"
+    if config.getoption("--mt-docker-compose-file") is None:
+        if os.path.exists("../docker-compose.mt.yml"):
+            logger.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
+            mt_docker_compose_file = "-f ../docker-compose.mt.yml"
+    else:
+        mt_docker_compose_file = "-f %s" % config.getoption("--mt-docker-compose-file")
 
     env.password = ""
 

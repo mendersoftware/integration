@@ -24,17 +24,18 @@ import subprocess
 import os
 import pytest
 import distutils.spawn
+import log
 
-logging.basicConfig(level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
+logging.getLogger("filelock").setLevel(logging.INFO)
+
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
 docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
-extra_files = []
 inline_logs = False
 
 try:
@@ -57,7 +58,6 @@ def pytest_addoption(parser):
     parser.addoption("--runs3", action="store_true", help="run fast tests")
 
     parser.addoption("--upgrade-from", action="store", help="perform upgrade test", default="")
-    parser.addoption("--docker-compose-file", action="append", help="Additional docker-compose files to use for test")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
@@ -68,7 +68,6 @@ def pytest_configure(config):
     env.api_version = config.getoption("api")
     env.valid_image = config.getoption("image")
 
-    extra_files = config.getoption("--docker-compose-file")
     inline_logs = config.getoption("--inline-logs")
 
     env.password = ""
@@ -98,6 +97,10 @@ def pytest_configure(config):
     env.eagerly_disconnect = True
     env.banner_timeout = 60
 
+
+def pytest_runtest_setup(item):
+    logger = log.setup_custom_logger("root", item.name)
+    logger.info("%s is starting.... " % item.name)
 
 def pytest_exception_interact(node, call, report):
     if report.failed:

@@ -8,3 +8,5 @@ services:
         image: mendersoftware/mender-client-qemu:1.2.x
         networks:
             - mender
+        stdin_open: true
+        tty: true

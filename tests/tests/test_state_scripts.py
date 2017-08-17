@@ -651,12 +651,7 @@ class TestStateScripts(MenderTesting):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        if not env.host_string:
-            execute(self.test_state_scripts, test_set,
-                    hosts=get_mender_clients())
-            return
-
-        client = env.host_string
+        client = get_mender_clients()[0]
 
         work_dir = "test_state_scripts.%s" % client
         deployment_id = None
@@ -664,7 +659,7 @@ class TestStateScripts(MenderTesting):
             script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
-            old_active = Helpers.get_active_partition()
+            old_active = execute(Helpers.get_active_partition, hosts=[client])
 
             # Make rootfs-scripts and put them in rootfs image.
             rootfs_script_dir = os.path.join(work_dir, "rootfs-scripts")
@@ -709,16 +704,17 @@ class TestStateScripts(MenderTesting):
             # quite slow.
             subprocess.check_call(["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir)
             # Stop client first to avoid race conditions.
-            run("systemctl stop mender")
+            execute(run, "systemctl stop mender", hosts=[client])
             try:
-                put(os.path.join(work_dir, "rootfs-scripts.tar.gz"),
-                    remote_path="/")
-                run("mkdir -p cd /etc/mender/scripts && "
-                    + "cd /etc/mender/scripts && "
-                    + "tar xzf /rootfs-scripts.tar.gz && "
-                    + "rm -f /rootfs-scripts.tar.gz")
+                execute(put, os.path.join(work_dir, "rootfs-scripts.tar.gz"),
+                    remote_path="/", hosts=[client])
+                execute(run, "mkdir -p cd /etc/mender/scripts && "
+                        + "cd /etc/mender/scripts && "
+                        + "tar xzf /rootfs-scripts.tar.gz && "
+                        + "rm -f /rootfs-scripts.tar.gz",
+                        hosts=[client])
             finally:
-                run("systemctl start mender")
+                execute(run, "systemctl start mender", hosts=[client])
 
             # Put artifact-scripts in the artifact.
             artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -760,7 +756,7 @@ class TestStateScripts(MenderTesting):
                 while attempts < 60:
                     try:
                         attempts = attempts + 1
-                        run("grep Error /data/test_state_scripts.log")
+                        execute(run, "grep Error /data/test_state_scripts.log", hosts=[client])
                         # If it succeeds, stop.
                         break
                     except:
@@ -769,7 +765,7 @@ class TestStateScripts(MenderTesting):
                 else:
                     # TODO REMOVE
                     if True in ["Error" in state for state in test_set['ScriptOrder']]:
-                        output = run("cat /data/test_state_scripts.log")
+                        output = execute(run, "cat /data/test_state_scripts.log", hosts=[client])
                         assert False, 'Waited too long for "Error" to appear in log:\n%s' % output
             else:
                 deploy.check_expected_statistics(deployment_id, test_set['ExpectedStatus'], 1)
@@ -778,10 +774,10 @@ class TestStateScripts(MenderTesting):
             # state after an update.
             time.sleep(10)
 
-            output = run_after_connect("cat /data/test_state_scripts.log")
+            output = execute(run_after_connect, "cat /data/test_state_scripts.log", hosts=[client])
             self.verify_script_log_correct(test_set, output.split('\n'))
 
-            new_active = Helpers.get_active_partition()
+            new_active = execute(Helpers.get_active_partition, hosts=[client])
             should_switch_partition = (test_set['ExpectedStatus'] == "success")
 
             # TODO
@@ -800,11 +796,13 @@ class TestStateScripts(MenderTesting):
                     deploy.abort(deployment_id)
                 except:
                     pass
-            run_after_connect("systemctl stop mender && "
-                              + "rm -f /data/test_state_scripts.log && "
-                              + "rm -rf /etc/mender/scripts && "
-                              + "rm -rf /data/mender/scripts && "
-                              + "systemctl start mender")
+            execute(run_after_connect,
+                    "systemctl stop mender && "
+                    + "rm -f /data/test_state_scripts.log && "
+                    + "rm -rf /etc/mender/scripts && "
+                    + "rm -rf /data/mender/scripts && "
+                    + "systemctl start mender",
+                    hosts=[client])
 
     def verify_script_log_correct(self, test_set, log):
         expected_order = test_set['ScriptOrder']

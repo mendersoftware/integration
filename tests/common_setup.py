@@ -106,11 +106,7 @@ def standard_setup_with_signed_artifact_client(request):
 
     stop_docker_compose()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f  ../extra/signed-artifact-client-testing/docker-compose.signed-client.yml  \
-                        -f ../docker-compose.testing.yml up -d",
-                        use_common_files=False)
+    docker_compose_cmd("-f ../extra/signed-artifact-client-testing/docker-compose.signed-client.yml up -d")
 
     ssh_is_opened()
     auth.reset_auth_token()

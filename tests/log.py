@@ -4,7 +4,7 @@ import logging
 def setup_custom_logger(name, testname):
     log_format = "%(asctime)s [%(levelname)s]: >> %(message)s"
 
-    logging.basicConfig(format=log_format, level=logging.INFO)
+    logging.basicConfig(format=log_format, level=logging.DEBUG)
     logger = logging.getLogger(name)
 
     for h in list(logger.handlers):

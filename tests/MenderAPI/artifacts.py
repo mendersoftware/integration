@@ -19,6 +19,10 @@ from MenderAPI import *
 class Artifacts():
     artifacts_tool_path = "mender-artifact"
 
+    def reset(self):
+        # Reset all temporary values.
+        pass
+
     def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[]):
         signed_arg = ""
 

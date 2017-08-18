@@ -19,7 +19,12 @@ class Inventory():
     auth = None
 
     def __init__(self, auth):
+        self.reset()
         self.auth = auth
+
+    def reset(self):
+        # Reset all temporary values.
+        pass
 
     def get_inv_base_path(self):
         return "https://%s/api/management/%s/inventory/" % (get_mender_gateway(), api_version)

@@ -19,10 +19,16 @@ class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
     auth = None
+    adm = None
 
     def __init__(self, auth, adm):
+        self.reset()
         self.auth = auth
         self.adm = adm
+
+    def reset(self):
+        # Reset all temporary values.
+        self.last_statistic = Deployments.last_statistic
 
     def get_deployments_base_path(self):
         return "https://%s/api/management/%s/deployments/" % (get_mender_gateway(), api_version)

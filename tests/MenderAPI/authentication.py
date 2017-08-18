@@ -18,17 +18,27 @@ from MenderAPI import *
 class Authentication:
     auth_header = None
 
-    username = ""
-    email = ""
-    password = ""
+    username = "admin"
+    email = "admin@admin.net"
+    password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
     multitenancy = False
     current_tenant = {}
 
-    def __init__(self, username="admin", email="admin@admin.net", password="averyverystrongpasswordthatyouwillneverguess!haha!"):
+    def __init__(self, username=username, email=password, password=password):
+        self.reset()
         self.username = username
         self.email = email
         self.password = password
+
+    def reset(self):
+        # Reset all temporary values.
+        self.auth_header = Authentication.auth_header
+        self.username = Authentication.username
+        self.email = Authentication.email
+        self.password = Authentication.password
+        self.multitenancy = Authentication.multitenancy
+        self.current_tenant = Authentication.current_tenant
 
     def set_tenant(self, username, password):
         return self.new_tenant(username, password)

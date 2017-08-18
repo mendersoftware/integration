@@ -13,7 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-from MenderAPI import auth, adm
+from MenderAPI import auth, adm, reset_mender_api
 from common import *
 from common_docker import *
 import conftest
@@ -24,7 +24,7 @@ def standard_setup_one_client(request):
         return
 
     restart_docker_compose()
-    auth.reset_auth_token()
+    reset_mender_api()
 
     set_setup_type(ST_OneClient)
 
@@ -45,7 +45,7 @@ def standard_setup_one_client_bootstrapped():
         return
 
     restart_docker_compose()
-    auth.reset_auth_token()
+    reset_mender_api()
     adm.accept_devices(1)
 
     set_setup_type(ST_OneClientBootstrapped)
@@ -57,7 +57,7 @@ def standard_setup_two_clients_bootstrapped():
         return
 
     restart_docker_compose(2)
-    auth.reset_auth_token()
+    reset_mender_api()
     adm.accept_devices(2)
 
     set_setup_type(ST_TwoClientsBootstrapped)
@@ -68,6 +68,7 @@ def standard_setup_one_client_bootstrapped_with_s3():
         return
 
     stop_docker_compose()
+    reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.client.yml \
                         -f ../docker-compose.storage.s3.yml \
@@ -90,6 +91,7 @@ def standard_setup_without_client():
         return
 
     stop_docker_compose()
+    reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
@@ -105,6 +107,7 @@ def standard_setup_with_signed_artifact_client(request):
         return
 
     stop_docker_compose()
+    reset_mender_api()
 
     docker_compose_cmd("-f ../extra/signed-artifact-client-testing/docker-compose.signed-client.yml up -d")
 
@@ -120,6 +123,7 @@ def standard_setup_with_short_lived_token():
         return
 
     stop_docker_compose()
+    reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
@@ -136,6 +140,8 @@ def standard_setup_with_short_lived_token():
 @pytest.fixture(scope="function")
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
+
+    reset_mender_api()
 
     # since we are starting a manual instance of the backend,
     # let the script know the instance is called "testprod"
@@ -157,6 +163,8 @@ def multitenancy_setup_without_client():
         return
 
     stop_docker_compose()
+    reset_mender_api()
+
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml \

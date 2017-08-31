@@ -1,7 +1,7 @@
 version: '2'
 services:
     mender-conductor-ui:
-        image: mendersoftware/conductor-ui:1.7.0
+        image: mendersoftware/conductor-ui:1.7.7
         environment:
             - WF_SERVER=http://mender-conductor:8080/api/
         depends_on:

@@ -1,4 +1,4 @@
-version: '2'
+version: '2' 
 services:
 
     mender-useradm:
@@ -9,6 +9,9 @@ services:
         command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+
+    mender-device-adm:
+        command: server --automigrate
 
     mender-api-gateway:
         ports:

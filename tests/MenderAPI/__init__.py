@@ -30,6 +30,16 @@ deploy = deployments.Deployments(auth, adm)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)
 deviceauth = device_authentication.DeviceAuthentication(auth)
+# -- When adding something here, also add a reset method and add it below --
+
+def reset_mender_api():
+    auth.reset()
+    adm.reset()
+    deploy.reset()
+    image.reset()
+    inv.reset()
+    deviceauth.reset()
+reset_mender_api()
 
 logger = logging.getLogger('mender')
 logger.info("Setting api_version as: " + api_version)

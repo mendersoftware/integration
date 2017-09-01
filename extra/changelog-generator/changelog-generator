@@ -2,13 +2,12 @@
 
 # Used to generate changelogs from the repository.
 
-from __future__ import print_function
-
-import subprocess
-import re
-import sys
+import argparse
 import os
 import os.path
+import re
+import subprocess
+import sys
 
 # Holds each changelog entry indexed by SHA
 ENTRIES = {}
@@ -25,17 +24,6 @@ TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
 
 POSSIBLE_MISSED_TICKETS = {}
 
-# Only for testing.
-SORT_CHANGELOG = False
-
-# Type of log to generate, this is bitwise.
-LOG_TYPE = 0
-# Values for the above.
-LOG_REPO = 1
-LOG_COMMUNITY = 2
-LOG_ENTERPRISE = 4
-LOG_MASTERFILES = 8
-
 def add_entry(sha, msg):
     sha_list = ENTRIES.get(sha)
     if sha_list is None:
@@ -43,68 +31,83 @@ def add_entry(sha, msg):
     sha_list.append(msg)
     ENTRIES[sha] = sha_list
 
+parser = argparse.ArgumentParser(description='Generates a changelog for Mender repositories.')
+parser.add_argument('range', metavar='<commit-range>',
+                    help='Range of commits to generate log for')
+parser.add_argument('--repo', dest='repo', action='store_true',
+                    default=False,
+                    help='Includes only the current repository. '
+                    + 'Mutually exclusive with --all')
+parser.add_argument('--all', dest='all', action='store_true',
+                    help='(Default) Includes all versioned Mender repositories. '
+                    + 'Commit range should be given relative to the integration '
+                    + 'repository, and the generator will use release_tool.py '
+                    + 'to figure out versions of other repositories. '
+                    + 'Mutually exclusive with --repo')
+parser.add_argument('--base-dir', dest='base_dir',
+                    help="Base directory containing all the Mender repositories. "
+                    + "Ignored if using --repo")
+parser.add_argument('--sort-changelog', dest='sort_changelog', action='store_true',
+                    # Not used except in the test.
+                    help=argparse.SUPPRESS)
 
-if len(sys.argv) < 2 or sys.argv[1] == "-h" or sys.argv[1] == "--help":
-    sys.stderr.write('''Usage:
-changelog-generator [options] <commit-range>
+args = parser.parse_args()
 
-The command accepts all the same options that git-log does.
-
-Options:
-  --community   Automatically includes all repositories for community builds.
-  --enterprise  Automatically includes Enterprise specific repositories.
-  --masterfiles Automatically includes masterfiles repository.
-  --repo        Includes only the current repository.
-
---community and --enterprise can be given together to generate one master log
-for both.
-''')
+if args.all and args.repo:
+    print("--repo and --all are mutually exclusive!")
     sys.exit(1)
-
-while True:
-    if sys.argv[1] == "--sort-changelog":
-        SORT_CHANGELOG = True
-        sys.argv[1:] = sys.argv[2:]
-    elif sys.argv[1] == "--community":
-        LOG_TYPE |= LOG_COMMUNITY
-        sys.argv[1:] = sys.argv[2:]
-    elif sys.argv[1] == "--enterprise":
-        LOG_TYPE |= LOG_ENTERPRISE
-        sys.argv[1:] = sys.argv[2:]
-    elif sys.argv[1] == "--masterfiles":
-        LOG_TYPE |= LOG_MASTERFILES
-        sys.argv[1:] = sys.argv[2:]
-    elif sys.argv[1] == "--repo":
-        LOG_TYPE |= LOG_REPO
-        sys.argv[1:] = sys.argv[2:]
-    else:
-        break
-
-if LOG_TYPE == 0:
-    sys.stderr.write("Must give one of --community, --enterprise, --masterfiles or --repo\n")
-    sys.exit(1)
+elif not args.all and not args.repo:
+    args.all = True
 
 repos = []
-base_path = os.path.dirname(sys.argv[0])
-if LOG_TYPE & LOG_COMMUNITY != 0:
-    repos.append("../buildscripts")
-    repos.append("../core")
-    repos.append("../masterfiles")
-    repos.append("../design-center")
-if LOG_TYPE & LOG_ENTERPRISE != 0:
-    repos.append("../enterprise")
-    repos.append("../nova")
-    repos.append("../mission-portal")
-if LOG_TYPE & LOG_MASTERFILES != 0:
-    repos.append("../masterfiles")
-if LOG_TYPE == LOG_REPO:
-    repos.append(".")
+if args.base_dir:
+    base_dir = args.base_dir
 else:
-    os.chdir(base_path + "/../..")
+    base_dir = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "../../.."))
+
+if args.all:
+    # This is hardcoded for now, but could theoretically be queried for by using
+    # release_tool.py.
+    repos.append(os.path.join(base_dir, "deployments"))
+    repos.append(os.path.join(base_dir, "deviceadm"))
+    repos.append(os.path.join(base_dir, "deviceauth"))
+    repos.append(os.path.join(base_dir, "gui"))
+    repos.append(os.path.join(base_dir, "integration"))
+    repos.append(os.path.join(base_dir, "inventory"))
+    repos.append(os.path.join(base_dir, "mender"))
+    repos.append(os.path.join(base_dir, "mender-artifact"))
+    repos.append(os.path.join(base_dir, "mender-api-gateway-docker"))
+    repos.append(os.path.join(base_dir, "useradm"))
+else:
+    repos.append(os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "..")))
+
+def get_range_for_repo(repo, range):
+    endpoints = args.range.split("..")
+    if len(endpoints) != 2:
+        print("Don't know how to handle range which is not of the form 'A.B.C..X.Y.Z': %s"
+              % args.range)
+        sys.exit(1)
+    start = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                     "--version-of", repo, "--in-integration-version", endpoints[0]])
+    start = start.decode().strip()
+    end = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                   "--version-of", repo, "--in-integration-version", endpoints[1]])
+    end = end.decode().strip()
+    return "%s..%s" % (start, end)
 
 for repo in repos:
-    os.chdir(repo)
-    sha_list = subprocess.Popen(["git", "rev-list", "--reverse"] + sys.argv[1:], stdout=subprocess.PIPE)
+    try:
+        os.chdir(repo)
+    except FileNotFoundError:
+        print(("Could not find %s. Maybe use --base-dir option and point to a "
+               + "directory containing all repositories") % repo)
+        raise
+    if args.all and not repo.endswith("integration"):
+        range = get_range_for_repo(os.path.basename(repo), args.range)
+    else:
+        range = args.range
+    sys.stderr.write("Checking %s: %s:\n" % (repo, range))
+    sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range], stdout=subprocess.PIPE)
     for sha in sha_list.stdout:
         sha = sha.decode().rstrip('\n')
         blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)
@@ -239,7 +242,7 @@ for sha_entry in ENTRIES:
             entry += tracker
         entry_list.append(entry)
 
-if SORT_CHANGELOG:
+if args.sort_changelog:
     entry_list.sort()
 for entry in entry_list:
     entry = "\t- " + entry

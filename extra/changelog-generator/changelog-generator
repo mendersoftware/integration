@@ -230,7 +230,8 @@ for repo in repos:
     for sha_entry in ENTRIES:
         tracker = ""
         if SHA_TO_TRACKER.get(sha_entry):
-            jiras = [ticket.upper() for ticket in SHA_TO_TRACKER[sha_entry]]
+            jiras = ["[%s](https://tracker.mender.io/browse/%s)"
+                     % (ticket.upper(), ticket.upper()) for ticket in SHA_TO_TRACKER[sha_entry]]
             tracker = ""
             if len(jiras) > 0:
                 tracker += "(" + ", ".join(sorted(jiras)) + ")"
@@ -253,14 +254,14 @@ for repo in repos:
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
-        print("%s:" % os.path.basename(repo))
+        print("#### %s" % os.path.basename(repo))
     for entry in entry_list:
-        entry = "\t- " + entry
+        entry = "* " + entry
         # Blank lines look bad in changelog because entries don't have blank lines
         # between them, so remove that from commit messages.
         entry = re.sub("\n\n+", "\n", entry)
         # Indent all lines.
-        entry = entry.replace("\n", "\n\t  ")
+        entry = entry.replace("\n", "\n  ")
         print(entry)
     if len(entry_list) > 0:
         print()

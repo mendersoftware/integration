@@ -25,6 +25,9 @@ TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
 POSSIBLE_MISSED_TICKETS = {}
 
 def add_entry(sha, msg):
+    if msg.lower().strip() == "none":
+        return
+
     sha_list = ENTRIES.get(sha)
     if sha_list is None:
         sha_list = []

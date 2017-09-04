@@ -2,6 +2,7 @@ version: '2'
 services:
 
     mender-useradm:
+        command: server --automigrate
         volumes:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
 

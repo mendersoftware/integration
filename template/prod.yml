@@ -22,6 +22,7 @@ version: '2'
 services:
 
     mender-useradm:
+        command: server --automigrate
         volumes:
             - ./template/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
         logging:

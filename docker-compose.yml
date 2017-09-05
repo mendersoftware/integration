@@ -53,6 +53,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
+        command: server --automigrate
         image: mendersoftware/deviceauth:master
         extends:
             file: common.yml
@@ -73,6 +74,7 @@ services:
     # mender-device-adm
     #
     mender-device-adm:
+        command: server --automigrate
         image: mendersoftware/deviceadm:master
         extends:
             file: common.yml
@@ -113,6 +115,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
+        command: server --automigrate
         image: mendersoftware/useradm:master
         extends:
             file: common.yml

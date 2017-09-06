@@ -254,7 +254,7 @@ for repo in repos:
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
-        print("#### %s" % os.path.basename(repo))
+        print("#### %s (%s)" % (os.path.basename(repo), range.split("..")[1]))
     for entry in entry_list:
         entry = "* " + entry
         # Blank lines look bad in changelog because entries don't have blank lines

@@ -94,6 +94,7 @@ services:
             - ./template/keys-generated/certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key:ro
 
     mender-deployments:
+        command: server --automigrate
         volumes:
             - ./template/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
         environment:

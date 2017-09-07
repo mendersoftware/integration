@@ -63,7 +63,7 @@ def common_update_procedure(install_image,
 
     return deployment_id, artifact_id
 
-def update_image_successful(install_image, regenerate_image_id=True, signed=False):
+def update_image_successful(install_image, regenerate_image_id=True, signed=False, skip_reboot_verification=False, expected_mender_clients=1):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -76,7 +76,6 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
     deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                regenerate_image_id,
                                                                signed=signed)
-
     Helpers.verify_reboot_performed()
 
     try:
@@ -89,12 +88,14 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
         pytest.fail("device did not flip partitions during update, here are the device logs:\n\n %s" % (logs))
 
 
-    deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+    deploy.check_expected_statistics(deployment_id, "success", expected_mender_clients)
 
     for d in adm.get_devices():
         deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
-    Helpers.verify_reboot_not_performed()
+    if not skip_reboot_verification:
+        Helpers.verify_reboot_not_performed()
+
     assert Helpers.yocto_id_installed_on_machine() == expected_image_id
 
     deploy.check_expected_status("finished", deployment_id)
@@ -107,7 +108,7 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
     return deployment_id
 
 
-def update_image_failed(install_image="broken_update.ext4"):
+def update_image_failed(install_image="broken_update.ext4", expected_mender_clients=1):
     """
         Perform a upgrade using a broken image (random data)
         The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
@@ -123,7 +124,7 @@ def update_image_failed(install_image="broken_update.ext4"):
     Helpers.verify_reboot_performed()
     assert Helpers.get_active_partition() == previous_active_part
 
-    deploy.check_expected_statistics(deployment_id, "failure", len(devices_accepted))
+    deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
     for d in adm.get_devices():
         assert "running rollback image" in deploy.get_logs(d["device_id"], deployment_id)

@@ -19,21 +19,24 @@ from common import *
 from common_docker import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import auth, adm, deploy, image, logger
-from common_update import update_image_successful
+from MenderAPI import auth, adm, deploy, image, logger, inv, deviceauth
+from common_update import update_image_successful, update_image_failed
 from mendertesting import MenderTesting
 
 
 @pytest.mark.skipif(conftest.mt_docker_compose_file is None,
                     reason="set --mt-docker-compose-file to run test")
 class TestMultiTenancy(MenderTesting):
-    def perform_update(self):
-        if not env.host_string:
-            execute(self.perform_update,
-                    hosts=get_mender_clients())
-            return
+    def perform_update(self, mender_client_container="mender-client", fail=False):
 
-        update_image_successful(install_image=conftest.get_valid_image())
+        if fail:
+            execute(update_image_failed,
+                    hosts=get_mender_client_by_image_name(mender_client_container))
+        else:
+            execute(update_image_successful,
+                    install_image=conftest.get_valid_image(),
+                    skip_reboot_verification=True,
+                    hosts=get_mender_client_by_image_name(mender_client_container))
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_token_validity(self):
@@ -66,7 +69,7 @@ class TestMultiTenancy(MenderTesting):
             run("systemctl restart mender")
 
         auth.reset_auth_token()
-        auth.new_tenant("bob@bob.com", "hunter2hunter2")
+        auth.new_tenant("admin", "bob@bob.com", "hunter2hunter2")
         token = auth.current_tenant["tenant_token"]
 
         # create a new client with an incorrect token set
@@ -83,35 +86,124 @@ class TestMultiTenancy(MenderTesting):
         set_correct_tenant_token(token)
         adm.get_devices(expected_devices=1)
 
-    @pytest.mark.skip(reason="MT-1357")
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
-    def test_multi_tenancy_setup(self):
+    def test_artifacts_exclusive_to_user(self):
+        users = [
+            {"email": "greg1@greg1.com", "password": "hunter2hunter2", "username": "greg1"},
+            {"email": "greg2@greg2.com", "password": "hunter2hunter2", "username": "greg2"},
+            {"email": "greg3@greg2.com", "password": "hunter2hunter2", "username": "greg3"}
+        ]
+
+        for user in users:
+            auth.set_tenant(user["username"], user["email"], user["password"])
+
+            with tempfile.NamedTemporaryFile() as artifact_file:
+                artifact = image.make_artifact(conftest.get_valid_image(),
+                                    "vexpress-qemu",
+                                    user["email"],
+                                    artifact_file)
+
+                deploy.upload_image(artifact)
+
+        for user in users:
+            auth.set_tenant(user["username"], user["email"], user["password"])
+            artifacts_for_user = deploy.get_artifacts()
+
+            # make sure that one a single artifact exist for a given tenant
+            assert len(artifacts_for_user)
+            assert artifacts_for_user[0]["name"] == user["email"]
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_clients_exclusive_to_user(self):
+        users = [
+            {
+              "email": "foo1@foo1.com",
+              "password": "hunter2" * 2,
+              "username": "foo1",
+              "container": "mender-client-foo1",
+              "client_id": "",
+              "device_id": ""
+            },
+            {
+               "email": "bar1@bar1.com",
+               "password": "hunter2" * 2,
+               "username": "bar1",
+               "container": "mender-client-bar1",
+               "client_id": "",
+               "device_id": ""
+            }
+        ]
+
+        logger.setLevel(logging.DEBUG)
+
+        for user in users:
+            auth.set_tenant(user["username"], user["email"], user["password"])
+
+            t = auth.current_tenant["tenant_token"]
+            new_tenant_client(user["container"], t)
+            adm.accept_devices(1)
+
+            # get the new devices client_id and setting it to the our test parameter
+            assert len(inv.get_devices()) == 1
+            user["client_id"] = inv.get_devices()[0]["id"]
+            user["device_id"] = adm.get_devices()[0]["device_id"]
+
+        for user in users:
+            # make sure that the correct number of clients appear for the given tenant
+            auth.set_tenant(user["username"], user["email"], user["password"])
+            assert len(inv.get_devices()) == 1
+            assert inv.get_devices()[0]["id"] == user["client_id"]
+
+        for user in users:
+            # wait until inventory is populated
+            auth.set_tenant(user["username"], user["email"], user["password"])
+            deviceauth.decommission(user["client_id"])
+            timeout = time.time() + (60 * 5)
+            while time.time() < timeout:
+                    newAdmissions = adm.get_devices()[0]
+                    if device_id != newAdmissions["device_id"] \
+                       and adm_id != newAdmissions["id"]:
+                        logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
+                        break
+                    else:
+                        logger.info("device [%s] found in inventory..." % (device_id))
+                    time.sleep(.5)
+            else:
+                assert False, "decommissioned device still available in admissions"
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_multi_tenancy_deployment(self):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
 
         auth.reset_auth_token()
 
         users = [
-            {"email": "greg@greg.com", "password": "astrongpassword12345", "container": "mender-client"},
-            {"email": "bob@bob.com", "password": "hunter2hunter2", "container": "client2"},
+            {
+                "email": "foo2@foo2.com",
+                "password": "hunter2"*2,
+                "username": "foo2",
+                "container": "mender-client-foo2",
+                "fail": False
+            },
+            {
+                "email": "bar2@bar2.com",
+                "password": "hunter2"*2,
+                "username": "bar2",
+                "container": "mender-client-bar2",
+                "fail": True
+            }
         ]
 
         for user in users:
-            auth.new_tenant(user["email"], user["password"])
+            auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             new_tenant_client(user["container"], t)
-
-            print "sleeping"
-            time.sleep(1000)
-
             adm.accept_devices(1)
-            print adm.get_devices()
 
-            self.perform_update()
-
-
-        # deploy to each device
         for user in users:
-            auth.set_tenant(user["email"], user["password"])
-            t = auth.current_tenant["tenant_token"]
-            adm.accept_devices(1)
+            auth.new_tenant(user["username"], user["email"], user["password"])
+
+            assert len(inv.get_devices()) == 1
+            self.perform_update(mender_client_container=user["container"],
+                                fail=user["fail"])

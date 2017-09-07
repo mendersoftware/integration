@@ -115,6 +115,11 @@ def get_mender_clients(service="mender-client"):
     clients = [ip + ":8822" for ip in docker_get_ip_of(service)]
     return clients
 
+def get_mender_client_by_image_name(image_name):
+    cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s" % (image_name)
+    output = subprocess.check_output(cmd, shell=True)
+    return output.strip() + ":8822"
+
 def get_mender_gateway():
     gateway = docker_get_ip_of("mender-api-gateway")
 

@@ -1,0 +1,273 @@
+#!/usr/bin/python3
+
+# Used to generate changelogs from the repository.
+
+import argparse
+import os
+import os.path
+import re
+import subprocess
+import sys
+
+# Holds each changelog entry indexed by SHA
+ENTRIES = {}
+# Links SHAs together, if we have a "X cherry-picked from Y" situation, those
+# two commits will be linked, and this will be used in cases where we have
+# reverted a commit.
+LINKED_SHAS = {}
+# A map of shas to a list of bugtracker numbers, as extracted from the commit
+# messages.
+SHA_TO_TRACKER = {}
+
+JIRA_REGEX = r"(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA)-[0-9]+)"
+TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
+
+POSSIBLE_MISSED_TICKETS = {}
+
+def add_entry(sha, msg):
+    if msg.lower().strip() == "none":
+        return
+
+    sha_list = ENTRIES.get(sha)
+    if sha_list is None:
+        sha_list = []
+    sha_list.append(msg)
+    ENTRIES[sha] = sha_list
+
+parser = argparse.ArgumentParser(description='Generates a changelog for Mender repositories.')
+parser.add_argument('range', metavar='<commit-range>',
+                    help='Range of commits to generate log for')
+parser.add_argument('--repo', dest='repo', action='store_true',
+                    default=False,
+                    help='Includes only the current repository. '
+                    + 'Mutually exclusive with --all')
+parser.add_argument('--all', dest='all', action='store_true',
+                    help='(Default) Includes all versioned Mender repositories. '
+                    + 'Commit range should be given relative to the integration '
+                    + 'repository, and the generator will use release_tool.py '
+                    + 'to figure out versions of other repositories. '
+                    + 'Mutually exclusive with --repo')
+parser.add_argument('--base-dir', dest='base_dir',
+                    help="Base directory containing all the Mender repositories. "
+                    + "Ignored if using --repo")
+parser.add_argument('--sort-changelog', dest='sort_changelog', action='store_true',
+                    # Not used except in the test.
+                    help=argparse.SUPPRESS)
+
+args = parser.parse_args()
+
+if args.all and args.repo:
+    print("--repo and --all are mutually exclusive!")
+    sys.exit(1)
+elif not args.all and not args.repo:
+    args.all = True
+
+repos = []
+if args.base_dir:
+    base_dir = args.base_dir
+else:
+    base_dir = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "../../.."))
+
+if args.all:
+    # This is hardcoded for now, but could theoretically be queried for by using
+    # release_tool.py.
+    repos.append(os.path.join(base_dir, "deployments"))
+    repos.append(os.path.join(base_dir, "deviceadm"))
+    repos.append(os.path.join(base_dir, "deviceauth"))
+    repos.append(os.path.join(base_dir, "gui"))
+    repos.append(os.path.join(base_dir, "integration"))
+    repos.append(os.path.join(base_dir, "inventory"))
+    repos.append(os.path.join(base_dir, "mender"))
+    repos.append(os.path.join(base_dir, "mender-artifact"))
+    repos.append(os.path.join(base_dir, "mender-api-gateway-docker"))
+    repos.append(os.path.join(base_dir, "useradm"))
+else:
+    repos.append(os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "..")))
+
+def get_range_for_repo(repo, range):
+    endpoints = args.range.split("..")
+    if len(endpoints) != 2:
+        print("Don't know how to handle range which is not of the form 'A.B.C..X.Y.Z': %s"
+              % args.range)
+        sys.exit(1)
+    start = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                     "--version-of", repo, "--in-integration-version", endpoints[0]])
+    start = start.decode().strip()
+    end = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                   "--version-of", repo, "--in-integration-version", endpoints[1]])
+    end = end.decode().strip()
+    return "%s..%s" % (start, end)
+
+for repo in repos:
+    ENTRIES = {}
+    LINKED_SHAS = {}
+    SHA_TO_TRACKER = {}
+    POSSIBLE_MISSED_TICKETS = {}
+
+    try:
+        os.chdir(repo)
+    except FileNotFoundError:
+        print(("Could not find %s. Maybe use --base-dir option and point to a "
+               + "directory containing all repositories") % repo)
+        raise
+    if args.all and not repo.endswith("integration"):
+        range = get_range_for_repo(os.path.basename(repo), args.range)
+    else:
+        range = args.range
+    sys.stderr.write("Checking %s: %s:\n" % (repo, range))
+    sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range], stdout=subprocess.PIPE)
+    for sha in sha_list.stdout:
+        sha = sha.decode().rstrip('\n')
+        blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)
+
+        msg_started = False
+        title_fetched = False
+        title = ""
+        commit_msg = ""
+        log_entry_commit = False
+        log_entry_local = False
+        log_entry = ""
+        for line in blob.stdout:
+            line = line.decode().rstrip('\r\n')
+            if line == "":
+                if not msg_started:
+                    msg_started = True
+                    continue
+
+                if log_entry:
+                    add_entry(sha, log_entry)
+                    log_entry = ""
+                log_entry_local = False
+
+            if not msg_started:
+                continue
+
+            # Tracker reference, remove from string.
+            for match in re.finditer(TRACKER_REGEX, line, re.IGNORECASE):
+                if not SHA_TO_TRACKER.get(sha):
+                    SHA_TO_TRACKER[sha] = set()
+                SHA_TO_TRACKER[sha].add("".join(match.groups("")))
+                tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
+                line = tracker_removed.strip(' ')
+
+            if not title_fetched:
+                title = line
+                title_fetched = True
+
+            match = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
+            if match:
+                if log_entry:
+                    add_entry(sha, log_entry)
+                    log_entry = ""
+                log_entry_local = False
+
+                if re.match("^Title[ .]*$", match.group(1), re.IGNORECASE):
+                    log_entry = title
+                elif re.match("^Commit[ .]*$", match.group(1), re.IGNORECASE):
+                    log_entry_commit = True
+                else:
+                    log_entry_local = True
+                    log_entry = match.group(1)
+                continue
+
+            for cancel_expr in ["^ *Cancel-Changelog: *([0-9a-f]+).*",
+                                "^This reverts commit ([0-9a-f]+).*"]:
+                match = re.match(cancel_expr, line, re.IGNORECASE)
+                if match:
+                    if log_entry:
+                        add_entry(sha, log_entry)
+                        log_entry = ""
+                    log_entry_local = False
+
+                    linked_shas = [match.group(1)]
+                    if LINKED_SHAS.get(match.group(1)):
+                        for linked_sha in LINKED_SHAS.get(match.group(1)):
+                            linked_shas.append(linked_sha)
+                    for linked_sha in linked_shas:
+                        if LINKED_SHAS.get(linked_sha):
+                            del LINKED_SHAS[linked_sha]
+                        if ENTRIES.get(linked_sha):
+                            del ENTRIES[linked_sha]
+                    continue
+
+            match = re.match("^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE)
+            if match:
+                if log_entry:
+                    add_entry(sha, log_entry)
+                    log_entry = ""
+                log_entry_local = False
+
+                if not LINKED_SHAS.get(sha):
+                    LINKED_SHAS[sha] = []
+                LINKED_SHAS[sha].append(match.group(1))
+                if not LINKED_SHAS.get(match.group(1)):
+                    LINKED_SHAS[match.group(1)] = []
+                LINKED_SHAS[match.group(1)].append(sha)
+                continue
+
+            match = re.match("^Signed-off-by:.*", line, re.IGNORECASE)
+            if match:
+                # Ignore such lines.
+                continue
+
+            if log_entry_local:
+                log_entry += "\n" + line
+            else:
+                if commit_msg:
+                    commit_msg += "\n"
+                commit_msg += line
+
+        blob.wait()
+
+        if log_entry_commit:
+            add_entry(sha, commit_msg)
+        if log_entry:
+            add_entry(sha, log_entry)
+
+    sha_list.wait()
+
+    entry_list = []
+    for sha_entry in ENTRIES:
+        tracker = ""
+        if SHA_TO_TRACKER.get(sha_entry):
+            jiras = ["[%s](https://tracker.mender.io/browse/%s)"
+                     % (ticket.upper(), ticket.upper()) for ticket in SHA_TO_TRACKER[sha_entry]]
+            tracker = ""
+            if len(jiras) > 0:
+                tracker += "(" + ", ".join(sorted(jiras)) + ")"
+        for entry in ENTRIES[sha_entry]:
+            # Safety check. See if there are still numbers at least four digits long in
+            # the output, and if so, warn about it. This may be ticket references that
+            # we missed.
+            match = re.search("[0-9]{4,}", entry)
+            if match:
+                POSSIBLE_MISSED_TICKETS[sha_entry] = match.group(0)
+            entry = entry.strip("\n")
+            if tracker:
+                if len(entry) - entry.rfind("\n") + len(tracker) >= 70:
+                    entry += "\n"
+                else:
+                    entry += " "
+                entry += tracker
+            entry_list.append(entry)
+
+    if args.sort_changelog:
+        entry_list.sort()
+    if len(entry_list) > 0:
+        print("#### %s (%s)" % (os.path.basename(repo), range.split("..")[1]))
+    for entry in entry_list:
+        entry = "* " + entry
+        # Blank lines look bad in changelog because entries don't have blank lines
+        # between them, so remove that from commit messages.
+        entry = re.sub("\n\n+", "\n", entry)
+        # Indent all lines.
+        entry = entry.replace("\n", "\n  ")
+        print(entry)
+    if len(entry_list) > 0:
+        print()
+
+    for missed in POSSIBLE_MISSED_TICKETS:
+        sys.stderr.write("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked.\n"
+                         % (missed, POSSIBLE_MISSED_TICKETS[missed]))
+
+sys.exit(0)

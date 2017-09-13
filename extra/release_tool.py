@@ -894,6 +894,39 @@ def do_beta_to_final_transition(state):
     version = re.sub("b[0-9]+$", "", version)
     update_state(state, ['version'], version)
 
+def do_docker_compose_branches_from_follows(state):
+    try:
+        execute_git(state, "integration", ["diff", "-s", "--exit-code"])
+    except subprocess.CalledProcessError:
+        print("The integration work tree is not clean, cannot use this command!")
+        return
+
+    print("Unlike most actions, this action works on your actual checked out repository.")
+    print("Make sure that you are on the right branch, and that the work tree is clean.")
+    print()
+    branch = execute_git(state, "integration", ["symbolic-ref", "--short", "HEAD"], capture=True).strip()
+    print("Currently checked out branch is: %s" % branch)
+    print()
+    reply = ask("Is this ok? ")
+
+    if not reply.upper().startswith("Y"):
+        return
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        branch = state[repo.git]["following"]
+        slash = branch.rfind('/')
+        if slash >= 0:
+            bare_branch = branch[slash+1:]
+        else:
+            bare_branch = branch
+
+        reply = ask("Change %s to %s? " % (repo.docker, bare_branch))
+        if reply.upper().startswith("Y"):
+            set_docker_compose_version_to(os.path.join(state["repo_dir"], "integration"),
+                                          repo.docker, bare_branch)
+
+    print("Alright, done! The committing you will have to do yourself.")
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
@@ -987,6 +1020,9 @@ def do_release():
         print("  S) Switch fetching branch between remote and local branch (affects next")
         print("       tagging)")
         print("  C) Create new series branch (A.B.x style) for each repository that lacks one")
+        print("  I) Put currently followed branch names into integration's docker-compose ")
+        print("     files. Use this to update the integration repository to new branch names")
+        print("     after you've branched it.")
 
         reply = ask("Choice? ")
 
@@ -1028,6 +1064,8 @@ def do_release():
         elif reply == "O" or reply == "o":
             do_beta_to_final_transition(state)
             tag_avail = check_tag_availability(state)
+        elif reply == "I" or reply == "i":
+            do_docker_compose_branches_from_follows(state)
         else:
             print("Invalid choice!")
 

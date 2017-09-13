@@ -196,10 +196,29 @@ def get_docker_compose_data(dir):
 
     return get_docker_compose_data_from_json_list(json_list)
 
+def get_docker_compose_data_for_rev(git_dir, rev):
+    yamls = []
+    files = execute_git(None, git_dir, ["ls-tree", "--name-only", rev],
+                        capture=True).strip().split('\n')
+    for filename in files:
+        if (filename != "other-components.yml"
+            and not (filename.startswith("docker-compose") and filename.endswith(".yml"))):
+            continue
+
+        output = execute_git(None, git_dir, ["show", "%s:%s" % (rev, filename)],
+                             capture=True)
+        yamls.append(output)
+
+    return get_docker_compose_data_from_json_list(yamls)
+
 def do_version_of(args):
     """Process --version-of argument."""
 
-    data = get_docker_compose_data(integration_dir())
+    if args.in_integration_version is not None:
+        data = get_docker_compose_data_for_rev(integration_dir(), args.in_integration_version)
+    else:
+        data = get_docker_compose_data(integration_dir())
+
     try:
         repo = determine_repo(args.version_of)
     except KeyError:
@@ -1053,19 +1072,7 @@ def do_integration_versions_including(args):
     # ones contain the version of the service we are querying.
     matches = []
     for candidate in candidates:
-        yamls = []
-        files = execute_git(None, git_dir, ["ls-tree", "--name-only", candidate],
-                            capture=True).strip().split('\n')
-        for filename in files:
-            if (filename != "other-components.yml"
-                and not (filename.startswith("docker-compose") and filename.endswith(".yml"))):
-                continue
-
-            output = execute_git(None, git_dir, ["show", "%s:%s" % (candidate, filename)],
-                                 capture=True)
-            yamls.append(output)
-
-        data = get_docker_compose_data_from_json_list(yamls)
+        data = get_docker_compose_data_for_rev(git_dir, candidate)
         try:
             repo = determine_repo(args.integration_versions_including)
         except KeyError:
@@ -1183,6 +1190,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--version-of", dest="version_of", metavar="SERVICE",
                         help="Determine version of given service")
+    parser.add_argument("--in-integration-version", dest="in_integration_version", metavar="VERSION",
+                        help="Used together with the above argument to query for a version of a "
+                        + "service which is in the given version of integration, instead of the "
+                        + "currently checked out version of integration")
     parser.add_argument("--set-version-of", dest="set_version_of", metavar="SERVICE",
                         help="Write version of given service into docker-compose.yml")
     parser.add_argument("--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",

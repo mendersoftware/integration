@@ -310,6 +310,18 @@ this command is to create a new 1.1.x branch off of master when 1.1.0 is to be
 released. This command is automatically invoked when the script starts, but one
 can say no if it's not desired.
 
+#### Put followed branch names into docker-compose
+
+This action updates the docker-compose YAML files to point to the branch names
+that the current release is following. The typical use of this action is after
+having branched integration, and started the release process using the
+`release_tool.py` script, you run this to record the all the new branch
+references in the new version.
+
+For example, if you just branched integration version 1.2.x, this still has YAML
+files that point to master. By using this action, you can update all of them to
+point to the respective 1.x.x branches.
+
 
 ## Verifying integration references
 

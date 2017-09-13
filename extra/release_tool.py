@@ -211,21 +211,42 @@ def get_docker_compose_data_for_rev(git_dir, rev):
 
     return get_docker_compose_data_from_json_list(yamls)
 
+def version_of(integration_dir, repo_container, in_integration_version=None):
+    if in_integration_version is not None:
+        data = get_docker_compose_data_for_rev(integration_dir, in_integration_version)
+    else:
+        data = get_docker_compose_data(integration_dir)
+
+    image = data['services'][repo_container]['image']
+    return image[(image.index(":") + 1):]
+
 def do_version_of(args):
     """Process --version-of argument."""
-
-    if args.in_integration_version is not None:
-        data = get_docker_compose_data_for_rev(integration_dir(), args.in_integration_version)
-    else:
-        data = get_docker_compose_data(integration_dir())
 
     try:
         repo = determine_repo(args.version_of)
     except KeyError:
         print("Unrecognized repository: %s" % args.version_of)
         sys.exit(1)
-    image = data['services'][repo.container]['image']
-    print(image[(image.index(":") + 1):])
+
+    print(version_of(integration_dir(), repo.container, args.in_integration_version))
+
+def sorted_final_version_list(git_dir):
+    """Returns a sorted list of all final version tags."""
+
+    tags = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
+                                       "--sort=-version:refname",
+                                       # Two digits for each component ought to be enough...
+                                       "refs/tags/[0-9].[0-9].[0-9]",
+                                       "refs/tags/[0-9].[0-9].[0-9][0-9]",
+                                       "refs/tags/[0-9].[0-9][0-9].[0-9]",
+                                       "refs/tags/[0-9].[0-9][0-9].[0-9][0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9].[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9].[0-9][0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9][0-9]"],
+                       capture=True)
+    return tags.split()
 
 def state_value(state, key_list):
     """Gets a value from the state variable stored in the RELEASE_STATE yaml
@@ -498,6 +519,33 @@ def annotation_version(repo, tag_avail):
     else:
         return "%s version %s Build %s." % (repo.git, match.group(1), match.group(2))
 
+def find_prev_version(tag_list, version):
+    """Finds the highest version in tag_list which is less than version.
+    tag_list is expected to be sorted with highest version first."""
+
+    match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", version)
+    version_major = int(match.group(1))
+    version_minor = int(match.group(2))
+    version_patch = int(match.group(3))
+
+    for tag in tag_list:
+        match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", tag)
+        tag_major = int(match.group(1))
+        tag_minor = int(match.group(2))
+        tag_patch = int(match.group(3))
+
+        if tag_major < version_major:
+            return tag
+        elif tag_major == version_major:
+            if tag_minor < version_minor:
+                return tag
+            elif tag_minor == version_minor:
+                if tag_patch < version_patch:
+                    return tag
+
+    # No lower version found.
+    return None
+
 def generate_new_tags(state, tag_avail, final):
     """Creates new build tags, and returns the new tags in a modified tag_avail. If
     interrupted anywhere, it makes no change, and returns the original tag_avail
@@ -566,10 +614,29 @@ def generate_new_tags(state, tag_avail, final):
     # Create temporary directory to make changes in.
     tmpdir = setup_temp_git_checkout(state, "integration", state['integration']['following'])
     try:
+        data = get_docker_compose_data(tmpdir)
+        prev_version = find_prev_version(sorted_final_version_list(tmpdir),
+                                         next_tag_avail['integration']['build_tag'])
+
+        changelogs = []
+
         # Modify docker tags in docker-compose file.
-        for repo in REPOS.values():
-            set_docker_compose_version_to(tmpdir, repo.docker,
-                                          next_tag_avail[repo.git]['build_tag'])
+        for repo in sorted(REPOS.values(), key=repo_sort_key):
+            if repo.git == "integration":
+                continue
+
+            if prev_version:
+                prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
+                                               repo.container, in_integration_version=prev_version)
+            else:
+                prev_repo_version = ""
+            if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
+                set_docker_compose_version_to(tmpdir, repo.docker,
+                                              next_tag_avail[repo.git]['build_tag'])
+                changelogs.append("Changelog: Upgrade %s to %s."
+                                  % (repo.git, next_tag_avail[repo.git]['build_tag']))
+        if len(changelogs) == 0:
+            changelogs.append("Changelog: None")
 
         print("-----------------------------------------------")
         print("Changes to commit:")
@@ -578,8 +645,9 @@ def generate_new_tags(state, tag_avail, final):
         git_list = []
         git_list.append((state, tmpdir,
                          ["commit", "-a", "-s", "-m",
-                          "%s %s.\n\nChangelog: None"
-                          % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'])]))
+                          "%s %s.\n\n%s"
+                          % (VERSION_BUMP_STRING, next_tag_avail["integration"]['build_tag'],
+                             "\n".join(changelogs))]))
         if not query_execute_git_list(git_list):
             return tag_avail
 

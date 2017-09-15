@@ -40,13 +40,14 @@ class Authentication:
         self.multitenancy = Authentication.multitenancy
         self.current_tenant = Authentication.current_tenant
 
-    def set_tenant(self, username, password):
-        return self.new_tenant(username, password)
+    def set_tenant(self, username, email, password):
+        self.new_tenant(username, email, password)
 
-    def new_tenant(self, username, password):
+    def new_tenant(self, username, email, password):
         self.multitenancy = True
         self.reset_auth_token()
-        self.email = username
+        self.username = username
+        self.email = email
         self.password = password
         self.get_auth_token()
 
@@ -71,7 +72,7 @@ class Authentication:
 
                 self.current_tenant = {"tenant_id": tenant_id,
                                        "tenant_token": tenant_data_json["tenant_token"],
-                                        "name": tenant_data_json["name"]}
+                                       "name": tenant_data_json["name"]}
 
             else:
                 self._create_user(self.email, self.password)

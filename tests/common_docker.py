@@ -20,6 +20,8 @@ import conftest
 import psutil
 import logging
 import common
+import os
+
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -46,8 +48,12 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
 
         logger.info("running with: %s" % cmd)
 
+        penv = dict(os.environ)
+        if env:
+            penv.update(env)
+
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=env)
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
         except subprocess.CalledProcessError as e:
             raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
@@ -114,6 +120,11 @@ def docker_get_ip_of(service):
 def get_mender_clients(service="mender-client"):
     clients = [ip + ":8822" for ip in docker_get_ip_of(service)]
     return clients
+
+def get_mender_client_by_image_name(image_name):
+    cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s" % (image_name)
+    output = subprocess.check_output(cmd, shell=True)
+    return output.strip() + ":8822"
 
 def get_mender_gateway():
     gateway = docker_get_ip_of("mender-api-gateway")

@@ -158,10 +158,7 @@ def running_custom_production_setup(request):
 
 
 @pytest.fixture(scope="function")
-def multitenancy_setup_without_client():
-    if setup_type() == ST_MultiTenancyNoClient:
-        return
-
+def multitenancy_setup_without_client(request):
     stop_docker_compose()
     reset_mender_api()
 
@@ -172,4 +169,8 @@ def multitenancy_setup_without_client():
                         -f %s up -d" % (conftest.mt_docker_compose_file),
                         use_common_files=False)
 
+    def fin():
+        stop_docker_compose()
+
+    request.addfinalizer(fin)
     set_setup_type(ST_MultiTenancyNoClient)

@@ -170,6 +170,12 @@ class Deployments(object):
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
+    def get_artifacts(self):
+        artifact_url = self.get_deployments_base_path() + "artifacts"
+        r = requests.get(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        assert r.status_code == requests.status_codes.codes.ok
+        return r.json()
+
     def abort(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
         r = requests.put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})

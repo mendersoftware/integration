@@ -159,10 +159,11 @@ class TestMultiTenancy(MenderTesting):
             auth.set_tenant(user["username"], user["email"], user["password"])
             deviceauth.decommission(user["client_id"])
             timeout = time.time() + (60 * 5)
+            device_id = user["device_id"]
             while time.time() < timeout:
                     newAdmissions = adm.get_devices()[0]
                     if device_id != newAdmissions["device_id"] \
-                       and adm_id != newAdmissions["id"]:
+                       and user["client_id"] != newAdmissions["id"]:
                         logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
                         break
                     else:

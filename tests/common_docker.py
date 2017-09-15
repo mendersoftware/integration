@@ -20,6 +20,8 @@ import conftest
 import psutil
 import logging
 import common
+import os
+
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -46,8 +48,12 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
 
         logger.info("running with: %s" % cmd)
 
+        penv = dict(os.environ)
+        if env:
+            penv.update(env)
+
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=env)
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
         except subprocess.CalledProcessError as e:
             raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 

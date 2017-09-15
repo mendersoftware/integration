@@ -68,7 +68,7 @@ class Admission():
         return matching
 
     def set_device_status(self, device_id, status):
-        headers={"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
         r = requests.put(self.get_admission_base_path() + "devices/%s/status" % device_id,
@@ -76,7 +76,6 @@ class Admission():
                          headers=headers,
                          data=json.dumps({"status": status}))
         assert r.status_code == requests.status_codes.codes.ok
-
 
     def check_expected_status(self, status, expected_value, max_wait=180, polling_frequency=1):
         timeout = time.time() + max_wait
@@ -100,7 +99,6 @@ class Admission():
 
         if time.time() > timeout:
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))
-
 
     def accept_devices(self, expected_devices):
         if len(self.get_devices_status("accepted", expected_devices=expected_devices)) == len(get_mender_clients()):

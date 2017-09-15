@@ -89,19 +89,17 @@ class TestMultiTenancy(MenderTesting):
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_artifacts_exclusive_to_user(self):
         users = [
-            {"email": "greg1@greg1.com", "password": "hunter2hunter2", "username": "greg1"},
-            {"email": "greg2@greg2.com", "password": "hunter2hunter2", "username": "greg2"},
-            {"email": "greg3@greg2.com", "password": "hunter2hunter2", "username": "greg3"}
+            {"email": "foo1@foo1.com", "password": "hunter2"*2, "username": "foo1"},
+            {"email": "bar2@bar2.com", "password": "hunter2"*2, "username": "bar2"},
         ]
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])
-
             with tempfile.NamedTemporaryFile() as artifact_file:
                 artifact = image.make_artifact(conftest.get_valid_image(),
-                                    "vexpress-qemu",
-                                    user["email"],
-                                    artifact_file)
+                                               "vexpress-qemu",
+                                               user["email"],
+                                               artifact_file)
 
                 deploy.upload_image(artifact)
 
@@ -133,8 +131,6 @@ class TestMultiTenancy(MenderTesting):
                "device_id": ""
             }
         ]
-
-        logger.setLevel(logging.DEBUG)
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])

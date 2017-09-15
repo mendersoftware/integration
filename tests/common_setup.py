@@ -17,6 +17,7 @@ from MenderAPI import auth, adm, reset_mender_api
 from common import *
 from common_docker import *
 import conftest
+import time
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
@@ -168,6 +169,9 @@ def multitenancy_setup_without_client(request):
                         -f ../docker-compose.tenant.yml \
                         -f %s up -d" % (conftest.mt_docker_compose_file),
                         use_common_files=False)
+
+    # wait a bit for the backend to start
+    time.sleep(30)
 
     def fin():
         stop_docker_compose()

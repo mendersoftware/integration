@@ -111,7 +111,7 @@ HTML_REPORT="--html=report.html --self-contained-html"
 UPGRADE_TEST_ARG=""
 SPECIFIC_INTEGRATION_TEST_ARG=""
 
-if ! pip list |grep -e pytest-xdist >/dev/null 2>&1; then
+if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
     XDIST_ARGS=""
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
@@ -124,7 +124,7 @@ else
     fi
 fi
 
-if ! pip list|grep -e pytest-html >/dev/null 2>&1; then
+if ! pip2 list|grep -e pytest-html >/dev/null 2>&1; then
     HTML_REPORT=""
     echo "WARNING: install pytest-html for html results report"
 fi

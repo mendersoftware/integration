@@ -20,13 +20,27 @@ from common_docker import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import auth, adm, deploy, image, logger, inv, deviceauth
-from common_update import update_image_successful, update_image_failed
+from common_update import update_image_successful, update_image_failed, \
+                          common_update_procedure
 from mendertesting import MenderTesting
 
 
 @pytest.mark.skipif(conftest.mt_docker_compose_file is None,
                     reason="set --mt-docker-compose-file to run test")
 class TestMultiTenancy(MenderTesting):
+    def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
+        expected_string = "deployment aborted at the backend"
+
+        for _ in range(10):
+            with settings(hide('everything'), warn_only=True):
+                out = run("journalctl -u mender | grep \"%s\"" % expected_string)
+                if out.succeeded:
+                    return
+                else:
+                    time.sleep(2)
+
+        pytest.fail("deployment never aborted.")
+
     def perform_update(self, mender_client_container="mender-client", fail=False):
 
         if fail:
@@ -204,3 +218,34 @@ class TestMultiTenancy(MenderTesting):
             assert len(inv.get_devices()) == 1
             self.perform_update(mender_client_container=user["container"],
                                 fail=user["fail"])
+
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_multi_tenancy_deployment_aborting(self):
+        """ Simply make sure we are able to run the multi tenancy setup and
+           bootstrap 2 different devices to different tenants """
+
+        auth.reset_auth_token()
+
+        users = [
+            {
+                "email": "foo1@foo1.com",
+                "password": "hunter2"*2,
+                "username": "foo1",
+                "container": "mender-client-foo1",
+            }
+        ]
+
+        for user in users:
+            auth.new_tenant(user["username"], user["email"], user["password"])
+            t = auth.current_tenant["tenant_token"]
+            new_tenant_client(user["container"], t)
+            adm.accept_devices(1)
+
+        for user in users:
+            deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
+            deploy.abort(deployment_id)
+            deploy.check_expected_statistics(deployment_id, "aborted", 1)
+
+            execute(self.mender_log_contains_aborted_string,
+                    hosts=get_mender_client_by_image_name(user["container"]))

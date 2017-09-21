@@ -17,6 +17,21 @@ fi
 echo "Detected Mender branch: $MENDER_BRANCH"
 echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
 
+function modify_services_for_testing() {
+    # Remove all published ports for testing
+    sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
+    # disable download speed limits
+    sed -e 's/DOWNLOAD_SPEED/#DOWNLOAD_SPEED/' -i ../docker-compose.testing.yml
+    # whitelist *all* IPs/DNS names in the gateway (will be accessed via dynamically assigned IP in tests)
+    sed -e 's/ALLOWED_HOSTS: .*/ALLOWED_HOSTS: ~./' -i ../docker-compose.testing.yml
+    # disable dynomite logs, NOTE indentation is important in this one
+    cat <<EOF  >> ../docker-compose.testing.yml
+    mender-dynomite:
+        logging:
+            driver: "none"
+EOF
+}
+
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
@@ -39,6 +54,8 @@ function get_requirements() {
     chmod +x downloaded-tools/mender-stress-test-client
 
     export PATH=$PWD/downloaded-tools:$PATH
+
+    modify_services_for_testing
 }
 
 if [[ $1 == "--get-requirements" ]]; then
@@ -67,23 +84,11 @@ if [[ -n "$BUILDDIR" ]]; then
     # mender-stress-test-client is here
     export PATH=$PATH:~/go/bin/
 
+    modify_services_for_testing
 else
     get_requirements
 fi
 
-
-# Remove all published ports for testing
-sed -e '/9000:9000/d' -e '/443:443/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
-# disable download speed limits
-sed -e 's/DOWNLOAD_SPEED/#DOWNLOAD_SPEED/' -i ../docker-compose.testing.yml
-# whitelist *all* IPs/DNS names in the gateway (will be accessed via dynamically assigned IP in tests)
-sed -e 's/ALLOWED_HOSTS: .*/ALLOWED_HOSTS: ~./' -i ../docker-compose.testing.yml
-# disable dynomite logs, NOTE indentation is important in this one
-cat <<EOF  >> ../docker-compose.testing.yml
-    mender-dynomite:
-        logging:
-            driver: "none"
-EOF
 
 
 cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4

@@ -45,12 +45,12 @@ class TestMultiTenancy(MenderTesting):
 
         if fail:
             execute(update_image_failed,
-                    hosts=get_mender_client_by_image_name(mender_client_container))
+                    hosts=get_mender_client_by_container_name(mender_client_container))
         else:
             execute(update_image_successful,
                     install_image=conftest.get_valid_image(),
                     skip_reboot_verification=True,
-                    hosts=get_mender_client_by_image_name(mender_client_container))
+                    hosts=get_mender_client_by_container_name(mender_client_container))
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_token_validity(self):
@@ -103,8 +103,8 @@ class TestMultiTenancy(MenderTesting):
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_artifacts_exclusive_to_user(self):
         users = [
-            {"email": "foo1@foo1.com", "password": "hunter2"*2, "username": "foo1"},
-            {"email": "bar2@bar2.com", "password": "hunter2"*2, "username": "bar2"},
+            {"email": "foo1@foo1.com", "password": "hunter2hunter2", "username": "foo1"},
+            {"email": "bar2@bar2.com", "password": "hunter2hunter2", "username": "bar2"},
         ]
 
         for user in users:
@@ -130,17 +130,17 @@ class TestMultiTenancy(MenderTesting):
         users = [
             {
               "email": "foo1@foo1.com",
-              "password": "hunter2" * 2,
+              "password": "hunter2hunter2",
               "username": "foo1",
-              "container": "mender-client-foo1",
+              "container": "mender-client-exclusive-1",
               "client_id": "",
               "device_id": ""
             },
             {
                "email": "bar1@bar1.com",
-               "password": "hunter2" * 2,
+               "password": "hunter2hunter2",
                "username": "bar1",
-               "container": "mender-client-bar1",
+               "container": "mender-client-exclusive-2",
                "client_id": "",
                "device_id": ""
             }
@@ -192,16 +192,16 @@ class TestMultiTenancy(MenderTesting):
         users = [
             {
                 "email": "foo2@foo2.com",
-                "password": "hunter2"*2,
+                "password": "hunter2hunter2",
                 "username": "foo2",
-                "container": "mender-client-foo2",
+                "container": "mender-client-deployment-1",
                 "fail": False
             },
             {
                 "email": "bar2@bar2.com",
-                "password": "hunter2"*2,
+                "password": "hunter2hunter2",
                 "username": "bar2",
-                "container": "mender-client-bar2",
+                "container": "mender-client-deployment-2",
                 "fail": True
             }
         ]
@@ -230,9 +230,9 @@ class TestMultiTenancy(MenderTesting):
         users = [
             {
                 "email": "foo1@foo1.com",
-                "password": "hunter2"*2,
+                "password": "hunter2hunter2",
                 "username": "foo1",
-                "container": "mender-client-foo1",
+                "container": "mender-client-deployment-aborting-1",
             }
         ]
 
@@ -248,4 +248,4 @@ class TestMultiTenancy(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
             execute(self.mender_log_contains_aborted_string,
-                    hosts=get_mender_client_by_image_name(user["container"]))
+                    hosts=get_mender_client_by_container_name(user["container"]))

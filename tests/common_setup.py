@@ -19,6 +19,18 @@ from common_docker import *
 import conftest
 import time
 
+def wait_for_containers(expected_containers, defined_in):
+    out = subprocess.check_output("docker-compose -p %s %s ps -q" % (conftest.docker_compose_instance, "-f " + " -f ".join(defined_in)), shell=True)
+
+    for _ in range(60 * 5):
+        if len(out.split()) == expected_containers:
+            time.sleep(60)
+            return
+        else:
+            time.sleep(1)
+
+    pytest.fail("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, conftest.docker_compose_instance))
+
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
     if getattr(request, 'param', False) and request.param != "force_new" and setup_type() == ST_OneClient:
@@ -171,7 +183,9 @@ def multitenancy_setup_without_client(request):
                         use_common_files=False)
 
     # wait a bit for the backend to start
-    time.sleep(30)
+    wait_for_containers(19, ["../docker-compose.yml",
+                             "../docker-compose.tenant.yml",
+                             "../docker-compose.storage.minio.yml"])
 
     def fin():
         stop_docker_compose()

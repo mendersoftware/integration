@@ -101,9 +101,9 @@ services:
         environment:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/storage-proxy.crt
             # access key, the same value as MINIO_ACCESS_KEY
-            DEPLOYMENTS_AWS_AUTH_KEY:
+            DEPLOYMENTS_AWS_AUTH_KEY: ${S3_KEY}
             # secret, the same valie as MINIO_SECRET_KEY
-            DEPLOYMENTS_AWS_AUTH_SECRET:
+            DEPLOYMENTS_AWS_AUTH_SECRET: ${S3_SECRET}
 
             # deployments service uses signed URLs, hence it needs to access
             # storage-proxy using exactly the same name as devices will; if
@@ -118,9 +118,9 @@ services:
     minio:
         environment:
             # access key
-            MINIO_ACCESS_KEY:
+            MINIO_ACCESS_KEY: ${S3_KEY}
             # secret
-            MINIO_SECRET_KEY:
+            MINIO_SECRET_KEY: ${S3_SECRET}
         volumes:
             # mounts a docker volume named `mender-artifacts` as /export directory
             - mender-artifacts:/export:rw

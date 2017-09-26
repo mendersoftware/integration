@@ -64,7 +64,6 @@ class Authentication:
                 tenant_id = self._create_tenant(self.username)
                 tenant_id = tenant_id.strip()
 
-                self._create_tenant_user(self.email, tenant_id)
                 self._create_user(self.email, self.password, tenant_id)
 
                 tenant_data = self._get_tenant_data(tenant_id)
@@ -107,12 +106,6 @@ class Authentication:
         cmd = '-f %s exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (conftest.mt_docker_compose_file,
                                                                                              username)
         return docker_compose_cmd(cmd)
-
-    def _create_tenant_user(self, email, tenant_id):
-        cmd = '-f %s exec -T mender-tenantadm /usr/bin/tenantadm create-user --name %s --tenant_id %s' % (conftest.mt_docker_compose_file,
-                                                                                                            email,
-                                                                                                            tenant_id)
-        docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
         cmd = '-f %s exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (conftest.mt_docker_compose_file,

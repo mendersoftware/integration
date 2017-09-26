@@ -121,8 +121,8 @@ def get_mender_clients(service="mender-client"):
     clients = [ip + ":8822" for ip in docker_get_ip_of(service)]
     return clients
 
-def get_mender_client_by_image_name(image_name):
-    cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s" % (image_name)
+def get_mender_client_by_container_name(image_name):
+    cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s_%s" % (conftest.docker_compose_instance, image_name)
     output = subprocess.check_output(cmd, shell=True)
     return output.strip() + ":8822"
 
@@ -161,4 +161,7 @@ def ssh_is_opened_impl(cmd="true", wait=60):
 def new_tenant_client(name, tenant):
     logging.info("creating client connected to tenant: " + tenant)
     docker_compose_cmd("-f %s -f ../docker-compose.mt.client.yml \
-                        run -d --name=%s mender-client" % (conftest.mt_docker_compose_file, name), env={"TENANT_TOKEN": "%s" % tenant})
+                        run -d --name=%s_%s mender-client" % (conftest.mt_docker_compose_file,
+                                                              conftest.docker_compose_instance,
+                                                              name),
+                       env={"TENANT_TOKEN": "%s" % tenant})

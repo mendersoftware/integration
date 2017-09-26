@@ -20,23 +20,37 @@ from common_docker import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import auth, adm, deploy, image, logger, inv, deviceauth
-from common_update import update_image_successful, update_image_failed
+from common_update import update_image_successful, update_image_failed, \
+                          common_update_procedure
 from mendertesting import MenderTesting
 
 
 @pytest.mark.skipif(conftest.mt_docker_compose_file is None,
                     reason="set --mt-docker-compose-file to run test")
 class TestMultiTenancy(MenderTesting):
+    def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
+        expected_string = "deployment aborted at the backend"
+
+        for _ in range(10):
+            with settings(hide('everything'), warn_only=True):
+                out = run("journalctl -u mender | grep \"%s\"" % expected_string)
+                if out.succeeded:
+                    return
+                else:
+                    time.sleep(2)
+
+        pytest.fail("deployment never aborted.")
+
     def perform_update(self, mender_client_container="mender-client", fail=False):
 
         if fail:
             execute(update_image_failed,
-                    hosts=get_mender_client_by_image_name(mender_client_container))
+                    hosts=get_mender_client_by_container_name(mender_client_container))
         else:
             execute(update_image_successful,
                     install_image=conftest.get_valid_image(),
                     skip_reboot_verification=True,
-                    hosts=get_mender_client_by_image_name(mender_client_container))
+                    hosts=get_mender_client_by_container_name(mender_client_container))
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_token_validity(self):
@@ -89,19 +103,17 @@ class TestMultiTenancy(MenderTesting):
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_artifacts_exclusive_to_user(self):
         users = [
-            {"email": "greg1@greg1.com", "password": "hunter2hunter2", "username": "greg1"},
-            {"email": "greg2@greg2.com", "password": "hunter2hunter2", "username": "greg2"},
-            {"email": "greg3@greg2.com", "password": "hunter2hunter2", "username": "greg3"}
+            {"email": "foo1@foo1.com", "password": "hunter2hunter2", "username": "foo1"},
+            {"email": "bar2@bar2.com", "password": "hunter2hunter2", "username": "bar2"},
         ]
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])
-
             with tempfile.NamedTemporaryFile() as artifact_file:
                 artifact = image.make_artifact(conftest.get_valid_image(),
-                                    "vexpress-qemu",
-                                    user["email"],
-                                    artifact_file)
+                                               "vexpress-qemu",
+                                               user["email"],
+                                               artifact_file)
 
                 deploy.upload_image(artifact)
 
@@ -118,23 +130,21 @@ class TestMultiTenancy(MenderTesting):
         users = [
             {
               "email": "foo1@foo1.com",
-              "password": "hunter2" * 2,
+              "password": "hunter2hunter2",
               "username": "foo1",
-              "container": "mender-client-foo1",
+              "container": "mender-client-exclusive-1",
               "client_id": "",
               "device_id": ""
             },
             {
                "email": "bar1@bar1.com",
-               "password": "hunter2" * 2,
+               "password": "hunter2hunter2",
                "username": "bar1",
-               "container": "mender-client-bar1",
+               "container": "mender-client-exclusive-2",
                "client_id": "",
                "device_id": ""
             }
         ]
-
-        logger.setLevel(logging.DEBUG)
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])
@@ -182,16 +192,16 @@ class TestMultiTenancy(MenderTesting):
         users = [
             {
                 "email": "foo2@foo2.com",
-                "password": "hunter2"*2,
+                "password": "hunter2hunter2",
                 "username": "foo2",
-                "container": "mender-client-foo2",
+                "container": "mender-client-deployment-1",
                 "fail": False
             },
             {
                 "email": "bar2@bar2.com",
-                "password": "hunter2"*2,
+                "password": "hunter2hunter2",
                 "username": "bar2",
-                "container": "mender-client-bar2",
+                "container": "mender-client-deployment-2",
                 "fail": True
             }
         ]
@@ -208,3 +218,34 @@ class TestMultiTenancy(MenderTesting):
             assert len(inv.get_devices()) == 1
             self.perform_update(mender_client_container=user["container"],
                                 fail=user["fail"])
+
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_multi_tenancy_deployment_aborting(self):
+        """ Simply make sure we are able to run the multi tenancy setup and
+           bootstrap 2 different devices to different tenants """
+
+        auth.reset_auth_token()
+
+        users = [
+            {
+                "email": "foo1@foo1.com",
+                "password": "hunter2hunter2",
+                "username": "foo1",
+                "container": "mender-client-deployment-aborting-1",
+            }
+        ]
+
+        for user in users:
+            auth.new_tenant(user["username"], user["email"], user["password"])
+            t = auth.current_tenant["tenant_token"]
+            new_tenant_client(user["container"], t)
+            adm.accept_devices(1)
+
+        for user in users:
+            deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
+            deploy.abort(deployment_id)
+            deploy.check_expected_statistics(deployment_id, "aborted", 1)
+
+            execute(self.mender_log_contains_aborted_string,
+                    hosts=get_mender_client_by_container_name(user["container"]))

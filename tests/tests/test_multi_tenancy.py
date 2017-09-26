@@ -31,7 +31,7 @@ class TestMultiTenancy(MenderTesting):
     def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
         expected_string = "deployment aborted at the backend"
 
-        for _ in range(10):
+        for _ in range(60*5):
             with settings(hide('everything'), warn_only=True):
                 out = run("journalctl -u mender | grep \"%s\"" % expected_string)
                 if out.succeeded:

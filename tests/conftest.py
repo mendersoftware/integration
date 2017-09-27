@@ -104,7 +104,7 @@ def pytest_configure(config):
 
     env.connection_attempts = 50
     env.eagerly_disconnect = True
-    env.banner_timeout = 60
+    env.banner_timeout = 60 * 3
 
 
 def pytest_runtest_setup(item):

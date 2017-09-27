@@ -20,9 +20,8 @@ import conftest
 import time
 
 def wait_for_containers(expected_containers, defined_in):
-    out = subprocess.check_output("docker-compose -p %s %s ps -q" % (conftest.docker_compose_instance, "-f " + " -f ".join(defined_in)), shell=True)
-
     for _ in range(60 * 5):
+        out = subprocess.check_output("docker-compose -p %s %s ps -q" % (conftest.docker_compose_instance, "-f " + " -f ".join(defined_in)), shell=True)
         if len(out.split()) == expected_containers:
             time.sleep(60)
             return

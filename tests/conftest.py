@@ -30,6 +30,7 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("filelock").setLevel(logging.INFO)
+logger = log.setup_custom_logger("root", "master")
 
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 
@@ -76,7 +77,7 @@ def pytest_configure(config):
     mt_docker_compose_file = config.getoption("--mt-docker-compose-file")
 
     if mt_docker_compose_file is None and os.path.exists("../docker-compose.mt.yml"):
-        logging.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
+        logger.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
         mt_docker_compose_file = "../docker-compose.mt.yml"
 
     env.password = ""
@@ -114,7 +115,7 @@ def pytest_runtest_setup(item):
 def pytest_exception_interact(node, call, report):
     if report.failed:
         for log in log_files:
-            logging.info("printing content of : %s" % log)
+            logger.info("printing content of : %s" % log)
             with open(log) as f:
                 for line in f.readlines():
                     print line,
@@ -138,9 +139,9 @@ def pytest_runtest_makereport(item, call):
             if int(ret) == 0:
                 url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
             else:
-                logging.warn("uploading backend logs failed.")
+                logger.warn("uploading backend logs failed.")
         else:
-            logging.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
+            logger.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
 
         # always add url to report
         extra.append(pytest_html.extras.url(url))

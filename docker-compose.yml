@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:1.2.0
+        image: mendersoftware/deployments:1.2.1
         extends:
             file: common.yml
             service: mender-base

@@ -36,8 +36,6 @@ class TestFailures(MenderTesting):
                     install_image=install_image)
             return
 
-        previous_inactive_part = Helpers.get_passive_partition()
-
         deployment_id, expected_image_id = common_update_procedure(install_image, True)
         Helpers.verify_reboot_performed()
 

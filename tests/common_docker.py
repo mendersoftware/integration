@@ -139,8 +139,9 @@ def ssh_is_opened():
 
 
 @parallel
-def ssh_is_opened_impl(cmd="true", wait=60):
+def ssh_is_opened_impl(cmd="true", wait=300):
     count = 0
+    sleeptime = 30
 
     while count < wait:
         try:
@@ -148,13 +149,12 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             with quiet():
                 return run(cmd)
         except BaseException:
-            time.sleep(1)
-            count += 1
+            time.sleep(sleeptime)
+            count += sleeptime
             continue
         else:
             break
-
-    if count >= 60:
+    else:
         logger.fatal("Unable to connect to host: %s", env.host_string)
 
 

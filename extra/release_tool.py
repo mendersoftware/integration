@@ -625,14 +625,14 @@ def generate_new_tags(state, tag_avail, final):
             if repo.git == "integration":
                 continue
 
+            set_docker_compose_version_to(tmpdir, repo.docker,
+                                          next_tag_avail[repo.git]['build_tag'])
             if prev_version:
                 prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
                                                repo.container, in_integration_version=prev_version)
             else:
                 prev_repo_version = ""
             if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
-                set_docker_compose_version_to(tmpdir, repo.docker,
-                                              next_tag_avail[repo.git]['build_tag'])
                 changelogs.append("Changelog: Upgrade %s to %s."
                                   % (repo.git, next_tag_avail[repo.git]['build_tag']))
         if len(changelogs) == 0:

@@ -47,7 +47,7 @@ if [[ $1 == "--get-requirements" ]]; then
 fi
 
 if [[ ! -f large_image.dat ]]; then
-    dd if=/dev/zero of=large_image.dat bs=200M count=0 seek=1
+    dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
 fi
 
 if [[ -n "$BUILDDIR" ]]; then

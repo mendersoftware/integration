@@ -749,14 +749,12 @@ class TestStateScripts(MenderTesting):
                         run("grep Error /data/test_state_scripts.log")
                         # If it succeeds, stop.
                         break
-                    except:
+                    except subprocess.CalledProcessError:
                         time.sleep(10)
                         continue
                 else:
-                    # TODO REMOVE
-                    if True in ["Error" in state for state in test_set['ScriptOrder']]:
-                        output = run("cat /data/test_state_scripts.log")
-                        assert False, 'Waited too long for "Error" to appear in log:\n%s' % output
+                    output = run("cat /data/test_state_scripts.log 1>&2")
+                    assert False, 'Waited too long for "Error" to appear in log:\n%s' % output
             else:
                 deploy.check_expected_statistics(deployment_id, test_set['ExpectedStatus'], 1)
 

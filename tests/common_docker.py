@@ -141,7 +141,7 @@ def ssh_is_opened():
 @parallel
 def ssh_is_opened_impl(cmd="true", wait=300):
     count = 0
-    sleeptime = 30
+    sleeptime = 1
 
     while count < wait:
         try:
@@ -151,6 +151,7 @@ def ssh_is_opened_impl(cmd="true", wait=300):
         except BaseException:
             time.sleep(sleeptime)
             count += sleeptime
+            sleeptime *= 2
             continue
         else:
             break

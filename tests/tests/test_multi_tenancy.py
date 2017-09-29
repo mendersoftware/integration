@@ -23,7 +23,7 @@ from MenderAPI import auth, adm, deploy, image, logger, inv, deviceauth
 from common_update import update_image_successful, update_image_failed, \
                           common_update_procedure
 from mendertesting import MenderTesting
-
+from tests import artifact_lock
 
 @pytest.mark.skipif(conftest.mt_docker_compose_file is None,
                     reason="set --mt-docker-compose-file to run test")
@@ -109,13 +109,14 @@ class TestMultiTenancy(MenderTesting):
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])
-            with tempfile.NamedTemporaryFile() as artifact_file:
-                artifact = image.make_artifact(conftest.get_valid_image(),
-                                               "vexpress-qemu",
-                                               user["email"],
-                                               artifact_file)
+            with artifact_lock:
+                with tempfile.NamedTemporaryFile() as artifact_file:
+                    artifact = image.make_artifact(conftest.get_valid_image(),
+                                                   "vexpress-qemu",
+                                                   user["email"],
+                                                   artifact_file)
 
-                deploy.upload_image(artifact)
+                    deploy.upload_image(artifact)
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])

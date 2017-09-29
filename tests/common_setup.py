@@ -178,7 +178,7 @@ def multitenancy_setup_without_client(request):
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml \
                         -f ../docker-compose.tenant.yml \
-                        -f %s up -d" % (conftest.mt_docker_compose_file),
+                        %s up -d" % (conftest.mt_docker_compose_file),
                         use_common_files=False)
 
     # wait a bit for the backend to start

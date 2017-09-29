@@ -14,6 +14,7 @@
 #    limitations under the License.
 
 import json
+import logging
 import shutil
 import time
 
@@ -26,6 +27,8 @@ from common_docker import *
 from common_setup import *
 from common_update import *
 from common import *
+
+logger = logging.getLogger("root")
 
 TEST_SETS = [
     {
@@ -742,6 +745,21 @@ class TestStateScripts(MenderTesting):
                 # until there is at least one Error script in the log, which
                 # will always be the case if ExpectedStatus is none (since one
                 # of them is preventing the update from being attempted).
+                def fetch_info(cmd_list):
+                    all_output = ""
+                    for cmd in cmd_list:
+                        with settings(warn_only=True):
+                            output = run(cmd)
+                        logger.error("%s:\n%s" % (cmd, output))
+                        all_output += "%s\n" % output
+                    return all_output
+                info_query = [
+                    "cat /data/test_state_scripts.log 1>&2",
+                    "journalctl -u mender",
+                    "top -n5 -b",
+                    "ls -l /proc/`pgrep mender`/fd",
+                    "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
+                ]
                 attempts = 0
                 while attempts < 60:
                     try:
@@ -750,11 +768,12 @@ class TestStateScripts(MenderTesting):
                         # If it succeeds, stop.
                         break
                     except subprocess.CalledProcessError:
+                        fetch_info(info_query)
                         time.sleep(10)
                         continue
                 else:
-                    output = run("cat /data/test_state_scripts.log 1>&2")
-                    assert False, 'Waited too long for "Error" to appear in log:\n%s' % output
+                    info = fetch_info(info_query)
+                    pytest.fail('Waited too long for "Error" to appear in log:\n%s' % info)
             else:
                 deploy.check_expected_statistics(deployment_id, test_set['ExpectedStatus'], 1)
 

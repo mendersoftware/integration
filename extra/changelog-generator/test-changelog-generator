@@ -330,7 +330,19 @@ Changelog: Make sure the bugtracker reference is taken from the title
 
 ################################################################################
 
+git commit --allow-empty -m 'Squashed commits N69
 
+Changelog: Title
+
+Signed-off-by: Joe Average <joe@average.com>
+
+This is the real changelog entry of the second commit, but will be hidden because of the squash.
+
+Changelog: Title
+
+Signed-off-by: Joe Average <joe@average.com>'
+
+################################################################################
 
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
@@ -407,6 +419,8 @@ cat > expected.txt <<EOF
   ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
 * Some other reference. N61
   ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* Squashed commits N69
+* Squashed commits N69
 * This should be in changelog N8
   And this N9
 * This too. N33
@@ -416,7 +430,9 @@ diff -u expected.txt result.txt
 
 # After filtering out these lines, there should be nothing left.
 if [ $(egrep -v '^\*\*\* Commit [0-9a-f]{40} had a number 1234 which may be a ticket reference we missed\. Should be manually checked\.$' stderr.txt \
-             | egrep -v '^Checking .: HEAD:$' | wc -c) -ne 0 ]
+             | egrep -v '^\*\*\* Commit [0-9a-f]{40} had conflicting changelog tags\. This might be a squashed commit which will not work correctly with changelogs\. Should be manually checked\.$' \
+             | egrep -v '^Checking .: HEAD:$' \
+             | wc -c) -ne 0 ]
 then
     echo 'Unexpected error message in:'
     cat stderr.txt

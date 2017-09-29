@@ -22,8 +22,6 @@ SHA_TO_TRACKER = {}
 JIRA_REGEX = r"(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA)-[0-9]+)"
 TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
 
-POSSIBLE_MISSED_TICKETS = {}
-
 def add_entry(sha, msg):
     if msg.lower().strip() == "none":
         return
@@ -102,7 +100,7 @@ for repo in repos:
     ENTRIES = {}
     LINKED_SHAS = {}
     SHA_TO_TRACKER = {}
-    POSSIBLE_MISSED_TICKETS = {}
+    POSSIBLE_PROBLEMATIC_SHAS = []
 
     try:
         os.chdir(repo)
@@ -127,6 +125,7 @@ for repo in repos:
         log_entry_commit = False
         log_entry_local = False
         log_entry = ""
+        exclusive_tag_seen = False
         for line in blob.stdout:
             line = line.decode().rstrip('\r\n')
             if line == "":
@@ -160,6 +159,17 @@ for repo in repos:
                     add_entry(sha, log_entry)
                     log_entry = ""
                 log_entry_local = False
+
+                if re.match("^(Title|Commit|None)[ .]*$", match.group(1), re.IGNORECASE):
+                    if exclusive_tag_seen:
+                        # This doesn't really mean that the tags are exclusive, but rather that it
+                        # is quite uncommon to see any of them together, and might indicate a
+                        # squashed commit.
+                        POSSIBLE_PROBLEMATIC_SHAS.append("*** Commit %s had conflicting changelog tags. "
+                                                         "This might be a squashed commit which will not work correctly with changelogs. "
+                                                         "Should be manually checked."
+                                                         % sha)
+                    exclusive_tag_seen = True
 
                 if re.match("^Title[ .]*$", match.group(1), re.IGNORECASE):
                     log_entry = title
@@ -241,7 +251,8 @@ for repo in repos:
             # we missed.
             match = re.search("[0-9]{4,}", entry)
             if match:
-                POSSIBLE_MISSED_TICKETS[sha_entry] = match.group(0)
+                POSSIBLE_PROBLEMATIC_SHAS.append("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
+                                                 % (sha_entry, match.group(0)))
             entry = entry.strip("\n")
             if tracker:
                 if len(entry) - entry.rfind("\n") + len(tracker) >= 70:
@@ -269,8 +280,7 @@ for repo in repos:
     if len(entry_list) > 0:
         print()
 
-    for missed in POSSIBLE_MISSED_TICKETS:
-        sys.stderr.write("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked.\n"
-                         % (missed, POSSIBLE_MISSED_TICKETS[missed]))
+    for problem in POSSIBLE_PROBLEMATIC_SHAS:
+        sys.stderr.write("%s\n" % (problem))
 
 sys.exit(0)

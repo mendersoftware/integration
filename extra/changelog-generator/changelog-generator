@@ -96,6 +96,10 @@ def get_range_for_repo(repo, range):
     end = end.decode().strip()
     return "%s..%s" % (start, end)
 
+if ".." in args.range:
+    print("## v%s\n" % args.range.split("..")[1])
+    print("_Released xx.xx.xxxx_\n")
+
 for repo in repos:
     ENTRIES = {}
     LINKED_SHAS = {}

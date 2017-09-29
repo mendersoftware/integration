@@ -82,7 +82,7 @@ if args.all:
     repos.append(os.path.join(base_dir, "mender-api-gateway-docker"))
     repos.append(os.path.join(base_dir, "useradm"))
 else:
-    repos.append(os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "..")))
+    repos.append(".")
 
 def get_range_for_repo(repo, range):
     endpoints = args.range.split("..")
@@ -254,7 +254,10 @@ for repo in repos:
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
-        print("#### %s (%s)" % (os.path.basename(repo), range.split("..")[1]))
+        service_header = "#### %s" % os.path.basename(repo)
+        if args.range.find("..") >= 0:
+            service_header += " (%s)" % range.split("..")[1]
+        print(service_header)
     for entry in entry_list:
         entry = "* " + entry
         # Blank lines look bad in changelog because entries don't have blank lines

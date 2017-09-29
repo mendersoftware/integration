@@ -343,62 +343,80 @@ Changelog: Make sure the bugtracker reference is taken from the title
     exit 1
 }
 cat > expected.txt <<EOF
-	- As well as this. N34
-	- Changelog commit with trailing dot. N53
-	- Changelog title with trailing dot. N54
-	- Changelog with GPG entry N67
-	- Changelog with Jira tracker. N56 (ARCHIVE-2, MEN-1, MEN-1111, MEN-9)
-	- Changelog with Jira. N55 (ARCHIVE-2, MEN-1, MEN-1111, MEN-9)
-	- Changelog with Windows line endings N66
-	- Changelog with inline Jira refs. N58a
-	  (ARCHIVE-7777, MEN-7778, MEN-80, MEN-81)
-	- Changelog with invalid signed-off N65
-	  Commit message
-	  Mention "Signed-off-by: " mid sentence
-	- Changelog with many Jira refs. N57
-	  (ARCHIVE-2, MEN-1, MEN-1111, MEN-12345, MEN-9)
-	- Changelog with signed-off N64
-	  Commit message
-	- Changelog with suspicious number in it. N62
-	  1234
-	- Changelog with suspicious number outside of it. N63
-	- Complete Fix for changelog N4
-	  Should be included N5
-	- Fix for changelog N1
-	- Jira duplicate (commit) N51
-	  More stuff. N52 (MEN-1234)
-	- Jira entries in parentheses (commit) N45
-	  Stuff. N46 (MEN-4321, MEN-54321)
-	- Jira entries in parentheses (title) N41 (MEN-1234, MEN-2345)
-	- Jira entries inline (commit) N47
-	  Stuff N48 (MEN-2345)
-	- Jira entries inline (title) N43 (MEN-2345)
-	- Jira entry N36
-	  Should be included N37 (MEN-645)
-	- Jira entry in title N38 (MEN-76)
-	- Jira twice (commit) N49
-	  More stuff. N50 (MEN-1234, MEN-2345)
-	- Make sure the bugtracker reference is taken from the title
-	             and goes after this message. The title should not be
-	             included. N68 (MEN-1234)
-	- Several entries for changelog N30
-	  Should be included N31
-	  And finally this, part of the commit message. N35
-	- Should also be included, but separately and not twice. N32
-	- Should be in changelog though. N29
-	- Should be there N40 (MEN-123, MEN-1234)
-	- Some inline reference. N58b (ARCHIVE-7777, MEN-7778, MEN-80, MEN-81)
-	- Some inline reference. N60 (ARCHIVE-7777, MEN-7778, MEN-80, MEN-81)
-	- Some other reference. N59 (ARCHIVE-7777, MEN-7778, MEN-80, MEN-81)
-	- Some other reference. N61 (ARCHIVE-7777, MEN-7778, MEN-80, MEN-81)
-	- This should be in changelog N8
-	  And this N9
-	- This too. N33
+#### .
+* As well as this. N34
+* Changelog commit with trailing dot. N53
+* Changelog title with trailing dot. N54
+* Changelog with GPG entry N67
+* Changelog with Jira tracker. N56
+  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+* Changelog with Jira. N55
+  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+* Changelog with Windows line endings N66
+* Changelog with inline Jira refs. N58a
+  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* Changelog with invalid signed-off N65
+  Commit message
+  Mention "Signed-off-by: " mid sentence
+* Changelog with many Jira refs. N57
+  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-12345](https://tracker.mender.io/browse/MEN-12345), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+* Changelog with signed-off N64
+  Commit message
+* Changelog with suspicious number in it. N62
+  1234
+* Changelog with suspicious number outside of it. N63
+* Complete Fix for changelog N4
+  Should be included N5
+* Fix for changelog N1
+* Jira duplicate (commit) N51
+  More stuff. N52
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+* Jira entries in parentheses (commit) N45
+  Stuff. N46
+  ([MEN-4321](https://tracker.mender.io/browse/MEN-4321), [MEN-54321](https://tracker.mender.io/browse/MEN-54321))
+* Jira entries in parentheses (title) N41
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+* Jira entries inline (commit) N47
+  Stuff N48 ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+* Jira entries inline (title) N43
+  ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+* Jira entry N36
+  Should be included N37
+  ([MEN-645](https://tracker.mender.io/browse/MEN-645))
+* Jira entry in title N38
+  ([MEN-76](https://tracker.mender.io/browse/MEN-76))
+* Jira twice (commit) N49
+  More stuff. N50
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+* Make sure the bugtracker reference is taken from the title
+             and goes after this message. The title should not be
+             included. N68
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+* Several entries for changelog N30
+  Should be included N31
+  And finally this, part of the commit message. N35
+* Should also be included, but separately and not twice. N32
+* Should be in changelog though. N29
+* Should be there N40
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-123](https://tracker.mender.io/browse/MEN-123))
+* Some inline reference. N58b
+  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* Some inline reference. N60
+  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* Some other reference. N59
+  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* Some other reference. N61
+  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+* This should be in changelog N8
+  And this N9
+* This too. N33
+
 EOF
 diff -u expected.txt result.txt
 
-# This line should be there, but no others (note the -v and the inverted error condition).
-if egrep -v '\*\*\* Commit [0-9a-f]{40} had a number 1234 which may be a ticket reference we missed\. Should be manually checked\.' stderr.txt
+# After filtering out these lines, there should be nothing left.
+if [ $(egrep -v '^\*\*\* Commit [0-9a-f]{40} had a number 1234 which may be a ticket reference we missed\. Should be manually checked\.$' stderr.txt \
+             | egrep -v '^Checking .: HEAD:$' | wc -c) -ne 0 ]
 then
     echo 'Unexpected error message in:'
     cat stderr.txt

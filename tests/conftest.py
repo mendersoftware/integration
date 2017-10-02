@@ -135,13 +135,16 @@ def pytest_runtest_makereport(item, call):
     if report.failed:
         url = ""
         if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
-            # we already have s3cmd configured on our build machine, so use it directly
-            s3_object_name = str(uuid.uuid4()) + ".log"
-            ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
-            if int(ret) == 0:
-                url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
+            if len(log_files) > 0:
+                # we already have s3cmd configured on our build machine, so use it directly
+                s3_object_name = str(uuid.uuid4()) + ".log"
+                ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
+                if int(ret) == 0:
+                    url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
+                else:
+                    logger.warn("uploading backend logs failed.")
             else:
-                logger.warn("uploading backend logs failed.")
+                logger.warn("no log files found, did the backend actually start?")
         else:
             logger.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
 

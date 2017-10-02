@@ -62,11 +62,11 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
                 return output
 
             except subprocess.CalledProcessError as e:
-                    logger.warn("failed to run docker-compose: error: %s, retrying..." % (e.output))
-                    time.sleep (count * 30)
-                    continue
+                logger.warn("failed to run docker-compose: error: %s, retrying..." % (e.output))
+                time.sleep (count * 30)
+                continue
 
-        raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
+        raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
 
 def stop_docker_compose():

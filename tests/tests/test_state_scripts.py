@@ -762,15 +762,16 @@ class TestStateScripts(MenderTesting):
                 ]
                 attempts = 0
                 while attempts < 60:
-                    try:
+                    with settings(warn_only=True):
                         attempts = attempts + 1
-                        run("grep Error /data/test_state_scripts.log")
-                        # If it succeeds, stop.
-                        break
-                    except subprocess.CalledProcessError:
-                        fetch_info(info_query)
-                        time.sleep(10)
-                        continue
+                        result = run("grep Error /data/test_state_scripts.log")
+                        if result.succeeded:
+                            # If it succeeds, stop.
+                            break
+                        else:
+                            fetch_info(info_query)
+                            time.sleep(10)
+                            continue
                 else:
                     info = fetch_info(info_query)
                     pytest.fail('Waited too long for "Error" to appear in log:\n%s' % info)

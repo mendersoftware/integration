@@ -32,6 +32,13 @@ function modify_services_for_testing() {
 EOF
 }
 
+function inject_pre_generated_ssh_keys() {
+    ssh-keygen -f /tmp/mender-id_rsa -t rsa -N ''
+    echo "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa" | debugfs -w core-image-full-cmdline-vexpress-qemu.ext4
+    rm /tmp/mender-id_rsa.pub
+    rm /tmp/mender-id_rsa
+}
+
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
@@ -56,6 +63,7 @@ function get_requirements() {
     export PATH=$PWD/downloaded-tools:$PATH
 
     modify_services_for_testing
+    inject_pre_generated_ssh_keys
 }
 
 if [[ $1 == "--get-requirements" ]]; then

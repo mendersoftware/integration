@@ -35,6 +35,10 @@ log_files = []
 logger = logging.getLogger("root")
 
 def docker_compose_cmd(arg_list, use_common_files=True, env=None):
+    """
+        start a specific docker-compose setup, and retry a few times due to:
+        - https://github.com/opencontainers/runc/issues/1326
+    """
     files_args = ""
 
     if use_common_files:
@@ -52,12 +56,18 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
         if env:
             penv.update(env)
 
-        try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
-        except subprocess.CalledProcessError as e:
-            raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
+        for count in range(3):
+            try:
+                output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
+                return output
 
-        return output
+            except subprocess.CalledProcessError as e:
+                    logger.warn("failed to run docker-compose: error: %s, retrying..." % (e.output))
+                    time.sleep (count * 30)
+                    continue
+
+        raise SystemExit("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
+
 
 def stop_docker_compose():
     # take down all COMPOSE_FILES and the s3 specific files

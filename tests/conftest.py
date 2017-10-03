@@ -16,7 +16,7 @@
 from fabric.api import *
 import logging
 import requests
-from common_docker import stop_docker_compose, log_files
+from common_docker import stop_docker_compose, log_files, get_mender_clients
 import random
 import filelock
 import uuid
@@ -25,6 +25,7 @@ import os
 import pytest
 import distutils.spawn
 import log
+from helpers import Helpers
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -107,7 +108,7 @@ def pytest_configure(config):
 
     env.connection_attempts = 50
     env.eagerly_disconnect = True
-    env.banner_timeout = 10
+    env.banner_timeout = 60
 
 
 def pytest_runtest_setup(item):
@@ -134,6 +135,8 @@ def pytest_runtest_makereport(item, call):
     extra = getattr(report, 'extra', [])
     if report.failed:
         url = ""
+
+
         if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
             # we already have s3cmd configured on our build machine, so use it directly
             s3_object_name = str(uuid.uuid4()) + ".log"
@@ -146,7 +149,23 @@ def pytest_runtest_makereport(item, call):
             logger.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
 
         # always add url to report
-        extra.append(pytest_html.extras.url(url))
+        extra.append(pytest_html.extras.url(url, name="Backend logs"))
+
+        # add the mender logs
+        try:
+            log = execute(Helpers.get_mender_logs,
+                          hosts=get_mender_clients())
+
+            ip = log.keys()[0]
+            mender_journalctl_logs = log[ip][0]
+            deployment_logs = log[ip][1]
+
+            if mender_journalctl_logs != None or deployment_logs != None:
+                extra.append(pytest_html.extras.text(mender_journalctl_logs, name="Mender Service Logs"))
+                extra.append(pytest_html.extras.text(deployment_logs, name="Deployment logs"))
+        except:
+            logger.warn("failed to get mender logs")
+
         report.extra = extra
 
 def pytest_unconfigure(config):

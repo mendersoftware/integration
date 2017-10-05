@@ -15,6 +15,7 @@
 
 from fabric.api import *
 import pytest
+import re
 import time
 from common import *
 from common_setup import *
@@ -23,17 +24,29 @@ from MenderAPI import adm, deploy, image, logger
 from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
+DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
+    {
+        "blockAfterStart": False,
+        "logMessageToLookFor": "update fetch failed:",
+    },
+    {
+        "blockAfterStart": True,
+        "logMessageToLookFor": "Download connection broken:",
+    },
+]
+
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFaultTolerance(MenderTesting):
 
-    def wait_for_download_retry_attempts(self):
+    def wait_for_download_retry_attempts(self, search_string):
         """ Block until logs contain messages related to failed downlaod attempts """
 
         timeout_time = int(time.time()) + (60 * 10)
 
         while int(time.time()) < timeout_time:
             with quiet():
-                output = run("journalctl -u mender -l --no-pager | grep 'msg=\"update fetch failed:' | wc -l")
+                output = run("journalctl -u mender -l --no-pager | grep 'msg=\".*%s' | wc -l"
+                             % re.escape(search_string))
                 time.sleep(2)
                 if int(output) >= 2:  # check that some retries have occured
                     logging.info("Looks like the download was retried 2 times, restoring download functionality")
@@ -132,7 +145,8 @@ class TestFaultTolerance(MenderTesting):
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
 
     @MenderTesting.slow
-    def test_image_download_retry_1(self, install_image=conftest.get_valid_image()):
+    @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
+    def test_image_download_retry_timeout(self, test_set, install_image=conftest.get_valid_image()):
         """
             Install an update, and block storage connection when we detect it's
             being copied over to the inactive parition.
@@ -140,7 +154,8 @@ class TestFaultTolerance(MenderTesting):
             The test should result in a successful download retry.
         """
         if not env.host_string:
-            execute(self.test_image_download_retry_1,
+            execute(self.test_image_download_retry_timeout,
+                    test_set,
                     hosts=get_mender_clients(),
                     install_image=install_image)
             return
@@ -154,20 +169,29 @@ class TestFaultTolerance(MenderTesting):
         run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
         inactive_part = Helpers.get_passive_partition()
-        deployment_id, new_yocto_id = common_update_procedure(install_image)
 
-        # use iptables to block traffic to storage when installing starts
-        for _ in range(60):
-            time.sleep(0.5)
-            with quiet():
-                # make sure we are writing to the inactive partition
-                output = run("fuser -mv %s" % (inactive_part))
-            if output.return_code == 0:
-                Helpers.gateway_connectivity(False, hosts=["s3.docker.mender.io"])  # disable connectivity
-                break
+        if test_set['blockAfterStart']:
+            # Block after we start the download.
+            deployment_id, new_yocto_id = common_update_procedure(install_image)
+            for _ in range(60):
+                time.sleep(0.5)
+                with quiet():
+                    # make sure we are writing to the inactive partition
+                    output = run("fuser -mv %s" % (inactive_part))
+                if output.return_code == 0:
+                    break
+            else:
+                pytest.fail("Download never started?")
+
+        # use iptables to block traffic to storage
+        Helpers.gateway_connectivity(False, hosts=["s3.docker.mender.io"])  # disable connectivity
+
+        if not test_set['blockAfterStart']:
+            # Block before we start the download.
+            deployment_id, new_yocto_id = common_update_procedure(install_image)
 
         # re-enable connectivity after 2 retries
-        self.wait_for_download_retry_attempts()
+        self.wait_for_download_retry_attempts(test_set['logMessageToLookFor'])
         Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
 
         Helpers.verify_reboot_performed()
@@ -176,13 +200,13 @@ class TestFaultTolerance(MenderTesting):
         Helpers.verify_reboot_not_performed()
 
     @MenderTesting.nightly
-    def test_image_download_retry_2(self, install_image=conftest.get_valid_image()):
+    def test_image_download_retry_hosts_broken(self, install_image=conftest.get_valid_image()):
         """
             Block storage host (minio) by modifying the hosts file.
         """
 
         if not env.host_string:
-            execute(self.test_image_download_retry_2,
+            execute(self.test_image_download_retry_hosts_broken,
                     hosts=get_mender_clients(),
                     install_image=install_image)
             return

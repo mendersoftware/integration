@@ -207,3 +207,20 @@ class Helpers:
             ip_to_device_id[identity_to_ip[device['device_identity']]] = device['device_id']
 
         return ip_to_device_id
+
+    @staticmethod
+    def get_mender_logs():
+        output_from_deployment_logs = ""
+
+        try:
+            output_from_journalctl = run("journalctl -u mender -l")
+            logs_exist = int(run("find '/data/mender' -name '*.log' -type f | wc -l").strip())
+
+            if logs_exist:
+                output_from_deployment_logs = run("grep '' -H /data/mender/*.log")
+
+        except (BaseException):
+            logger.warn("failed to grab logs from mender client")
+            return None, None
+        else:
+            return output_from_journalctl, output_from_deployment_logs

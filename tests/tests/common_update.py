@@ -73,10 +73,12 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
     """
 
     previous_inactive_part = Helpers.get_passive_partition()
+    token = Helpers.place_reboot_token()
     deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                regenerate_image_id,
                                                                signed=signed)
-    Helpers.verify_reboot_performed()
+    token.verify_reboot_performed()
+    token = Helpers.place_reboot_token()
 
     try:
         assert Helpers.get_active_partition() == previous_inactive_part
@@ -94,7 +96,7 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
         deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
     if not skip_reboot_verification:
-        Helpers.verify_reboot_not_performed()
+        token.verify_reboot_not_performed()
 
     assert Helpers.yocto_id_installed_on_machine() == expected_image_id
 
@@ -119,9 +121,11 @@ def update_image_failed(install_image="broken_update.ext4", expected_mender_clie
     original_image_id = Helpers.yocto_id_installed_on_machine()
 
     previous_active_part = Helpers.get_active_partition()
+    token = Helpers.place_reboot_token()
     deployment_id, _ = common_update_procedure(install_image, broken_image=True)
 
-    Helpers.verify_reboot_performed()
+    token.verify_reboot_performed()
+    token = Helpers.place_reboot_token()
     assert Helpers.get_active_partition() == previous_active_part
 
     deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
@@ -130,6 +134,6 @@ def update_image_failed(install_image="broken_update.ext4", expected_mender_clie
         assert "running rollback image" in deploy.get_logs(d["device_id"], deployment_id)
 
     assert Helpers.yocto_id_installed_on_machine() == original_image_id
-    Helpers.verify_reboot_not_performed()
+    token.verify_reboot_not_performed()
 
     deploy.check_expected_status("finished", deployment_id)

@@ -121,21 +121,26 @@ class TestGrouping(MenderTesting):
 
         inv.put_device_in_group(id_alpha, "Update")
 
+        @parallel
+        def place_reboot_tokens():
+            return Helpers.place_reboot_token()
+        tokens = execute(place_reboot_tokens, hosts=clients)
+
         deployment_id, expected_image_id = common_update_procedure(conftest.get_valid_image(),
                                                                    devices=[id_alpha])
 
         @parallel
-        def verify_reboot_performed_for_alpha_only():
+        def verify_reboot_performed_for_alpha_only(tokens):
             if env.host_string == alpha:
-                Helpers.verify_reboot_performed()
+                tokens[alpha].verify_reboot_performed()
             elif env.host_string == bravo:
                 # Extra long wait here, because a real update takes quite a lot
                 # of time.
-                Helpers.verify_reboot_not_performed(180)
+                tokens[bravo].verify_reboot_not_performed(180)
             else:
                 raise Exception("verify_reboot_performed_for_alpha_only() called with unknown host")
 
-        execute(verify_reboot_performed_for_alpha_only, hosts=clients)
+        execute(verify_reboot_performed_for_alpha_only, tokens, hosts=clients)
 
         ret = execute(Helpers.get_passive_partition, hosts=clients)
         assert ret[alpha] != pass_part_alpha

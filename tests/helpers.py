@@ -129,54 +129,8 @@ class Helpers:
             logger.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def verify_reboot_performed(max_wait=60*30):
-        successful_connections = 0
-        tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
-        cmd = "touch %s" % (tfile)
-
-        logger.info("waiting for system to reboot")
-        try:
-            with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
-                run(cmd)
-        except (FabricFatalException, EOFError, BaseException):
-            logger.info("failed to touch /tmp/ folder, is the device already rebooting?")
-
-        timeout = time.time() + max_wait
-
-        while time.time() <= timeout:
-            try:
-                with settings(warn_only=True, abort_exception=FabricFatalException):
-                    time.sleep(1)
-                    if exists(tfile):
-                        logger.debug("temp. file still exists, device hasn't rebooted.")
-                        continue
-                    else:
-                        logger.debug("temp. file no longer exists, device has rebooted.")
-                        successful_connections += 1
-
-                    # try connecting 10 times before returning
-                    if successful_connections <= 9:
-                        continue
-                    return
-
-            except (BaseException):
-                logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
-                continue
-
-        if time.time() > timeout:
-            pytest.fail("Device never rebooted!")
-
-    @staticmethod
-    def verify_reboot_not_performed(wait=60):
-        with quiet():
-            try:
-                cmd = "cat /proc/uptime | awk {'print $1'}"
-                t1 = float(run(cmd).strip())
-                time.sleep(wait)
-                t2 = float(run(cmd).strip())
-            except:
-                pytest.fail("A reboot was performed when it was not expected")
-        assert t2 > t1
+    def place_reboot_token():
+        return RebootToken()
 
     @staticmethod
     def identity_script_to_identity_string(output):
@@ -207,3 +161,45 @@ class Helpers:
             ip_to_device_id[identity_to_ip[device['device_identity']]] = device['device_id']
 
         return ip_to_device_id
+
+class RebootToken:
+    tfile = None
+
+    def __init__(self):
+        self.tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
+        cmd = "touch %s" % (self.tfile)
+        with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
+            run(cmd)
+
+    def verify_reboot_performed(self, max_wait=60*30):
+        logger.info("waiting for system to reboot")
+
+        successful_connections = 0
+        timeout = time.time() + max_wait
+
+        while time.time() <= timeout:
+            try:
+                with settings(warn_only=True, abort_exception=FabricFatalException):
+                    time.sleep(1)
+                    if exists(self.tfile):
+                        logger.debug("temp. file still exists, device hasn't rebooted.")
+                        continue
+                    else:
+                        logger.debug("temp. file no longer exists, device has rebooted.")
+                        successful_connections += 1
+
+                    # try connecting 10 times before returning
+                    if successful_connections <= 9:
+                        continue
+                    return
+
+            except (BaseException):
+                logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
+                continue
+
+        if time.time() > timeout:
+            pytest.fail("Device never rebooted!")
+
+    def verify_reboot_not_performed(self, wait=60):
+        time.sleep(wait)
+        assert exists(self.tfile)

@@ -60,8 +60,9 @@ class TestFaultTolerance(MenderTesting):
                     install_image=install_image)
             return
 
+        token = Helpers.place_reboot_token()
         deployment_id, _ = common_update_procedure(install_image)
-        Helpers.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
+        token.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
         deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
 
     @MenderTesting.fast
@@ -80,6 +81,7 @@ class TestFaultTolerance(MenderTesting):
         installed_yocto_id = Helpers.yocto_id_installed_on_machine()
 
         inactive_part = Helpers.get_passive_partition()
+        token = Helpers.place_reboot_token()
         deployment_id, _ = common_update_procedure(install_image)
         active_part = Helpers.get_active_partition()
 
@@ -95,10 +97,11 @@ class TestFaultTolerance(MenderTesting):
                 break
 
         logging.info("Waiting for system to finish reboot")
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
         assert Helpers.get_active_partition() == active_part
+        token = Helpers.place_reboot_token()
         deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
-        Helpers.verify_reboot_not_performed()
+        token.verify_reboot_not_performed()
 
         assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
 
@@ -117,6 +120,7 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
+        token = Helpers.place_reboot_token()
         deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
         time.sleep(60)
 
@@ -126,7 +130,7 @@ class TestFaultTolerance(MenderTesting):
         Helpers.gateway_connectivity(True)
 
         logging.info("Network stabilized")
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
@@ -154,6 +158,7 @@ class TestFaultTolerance(MenderTesting):
         run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
         inactive_part = Helpers.get_passive_partition()
+        token = Helpers.place_reboot_token()
         deployment_id, new_yocto_id = common_update_procedure(install_image)
 
         # use iptables to block traffic to storage when installing starts
@@ -170,10 +175,11 @@ class TestFaultTolerance(MenderTesting):
         self.wait_for_download_retry_attempts()
         Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
 
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
+        token = Helpers.place_reboot_token()
         assert Helpers.get_active_partition() == inactive_part
         assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
-        Helpers.verify_reboot_not_performed()
+        token.verify_reboot_not_performed()
 
     @MenderTesting.nightly
     def test_image_download_retry_2(self, install_image=conftest.get_valid_image()):
@@ -190,12 +196,14 @@ class TestFaultTolerance(MenderTesting):
         inactive_part = Helpers.get_passive_partition()
 
         run("echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts")  # break s3 connectivity before triggering deployment
+        token = Helpers.place_reboot_token()
         deployment_id, new_yocto_id = common_update_procedure(install_image)
 
         self.wait_for_download_retry_attempts()
         run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
+        token = Helpers.place_reboot_token()
         assert Helpers.get_active_partition() == inactive_part
         assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
-        Helpers.verify_reboot_not_performed()
+        token.verify_reboot_not_performed()

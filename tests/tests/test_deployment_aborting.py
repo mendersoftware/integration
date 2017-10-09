@@ -44,6 +44,7 @@ class TestDeploymentAborting(MenderTesting):
         install_image=conftest.get_valid_image()
         expected_partition = Helpers.get_active_partition()
         expected_image_id = Helpers.yocto_id_installed_on_machine()
+        token = Helpers.place_reboot_token()
         deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
         if abort_step is not None:
@@ -56,10 +57,10 @@ class TestDeploymentAborting(MenderTesting):
             deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
         if not mender_performs_reboot:
-            Helpers.verify_reboot_not_performed()
+            token.verify_reboot_not_performed()
             run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
 
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
 
         assert Helpers.get_active_partition() == expected_partition
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
@@ -90,9 +91,10 @@ class TestDeploymentAborting(MenderTesting):
             return
 
         install_image = conftest.get_valid_image()
+        token = Helpers.place_reboot_token()
         deployment_id, _ = common_update_procedure(install_image)
 
-        Helpers.verify_reboot_performed()
+        token.verify_reboot_performed()
 
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
         deploy.abort_finished_deployment(deployment_id)

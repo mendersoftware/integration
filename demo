@@ -1,10 +1,32 @@
 #!/bin/bash
 
-
 CLIENT="-f docker-compose.client.yml"
 if [ -n "${NO_CLIENT}" ]; then
     unset CLIENT
     echo "-- disabling client containers"
+fi
+
+if [ "$#" -eq 0 ]; then
+    echo "Arguments passed to this command are passed directly to docker-compose, if you want to run the demo, run:"
+    echo ""
+    echo "'./demo up'"
+    exit 1
+fi
+
+# speed up first start by pulling containers in parallel
+docker images | grep -q 'mendersoftware/deployments'
+
+if [[ "$?" -eq 1 ]]; then
+    docker_compose_output=$(docker-compose pull -h)
+    echo "$docker_compose_output" | grep -q -- '--parallel'
+
+    if [[ "$?" -eq 0 ]]; then
+        docker-compose pull --parallel
+    fi
+fi
+
+if [[ "$1" == "up" ]]; then
+    echo "Starting Mender demo environment.."
 fi
 
 exec docker-compose \

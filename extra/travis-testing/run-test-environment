@@ -89,6 +89,6 @@ if [ -n "$failed" ]; then
 fi
 
 # fold everything
-[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH down && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH rm || true
+[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH down -v && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH rm || true
 
 exit $failed

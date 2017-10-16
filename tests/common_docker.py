@@ -56,7 +56,7 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
         if env:
             penv.update(env)
 
-        for count in range(3):
+        for count in range(5):
             try:
                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
                 return output

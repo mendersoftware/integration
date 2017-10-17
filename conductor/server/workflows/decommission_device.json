@@ -48,7 +48,7 @@
                         "taskReferenceName": "delete_device_deviceadm",
                         "inputParameters": {
                             "http_request": {
-                                "uri": "http://mender-device-adm:8080/api/0.1.0/devices?device_id=${workflow.input.device_id}",
+                                "uri": "http://mender-device-adm:8080/api/internal/v1/admission/devices?device_id=${workflow.input.device_id}",
                                 "method": "DELETE",
                                 "headers": {
                                     "X-MEN-RequestID": "${workflow.input.request_id}",

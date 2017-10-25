@@ -13,6 +13,9 @@ services:
 
     mender-mongo-tenantadm:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:

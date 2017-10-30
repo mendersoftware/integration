@@ -1,0 +1,11 @@
+[
+    {
+        "name": "prepare_welcome_email",
+        "retryCount": 3,
+        "timeoutSeconds": 1200,
+        "timeoutPolicy": "TIME_OUT_WF",
+        "retryLogic": "FIXED",
+        "retryDelaySeconds": 600,
+        "responseTimeoutSeconds": 3600
+    }
+]

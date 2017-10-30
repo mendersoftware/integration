@@ -1,0 +1,31 @@
+{
+    "name": "create_organization",
+    "version": 2,
+    "tasks": [
+        {
+            "name": "prepare_welcome_email",
+            "taskReferenceName": "prepare_welcome_emailx",
+            "type": "SIMPLE",
+            "inputParameters": {
+                "tenant_name": "${workflow.input.tenant_name}",
+                "username": "${workflow.input.username}"
+            }
+        },
+        {
+            "name": "send_email",
+            "taskReferenceName": "send_welcome_email",
+            "type": "SIMPLE",
+            "inputParameters": {
+                "email": "${prepare_welcome_emailx.output.email}",
+                "title": "${prepare_welcome_emailx.output.title}",
+                "body": "${prepare_welcome_emailx.output.body}"
+            }
+        }
+    ],
+    "schemaVersion": 2,
+    "inputParameters":[
+        "tenant_name",
+        "username",
+        "password"
+    ]
+}

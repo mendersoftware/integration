@@ -83,3 +83,14 @@ services:
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
+
+    mender-conductor-workers:
+        build: ./conductor-workers
+        extends:
+            file: common.yml
+            service: mender-base
+        depends_on:
+            - mender-conductor
+            - mender-dynomite
+        networks:
+            - mender

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 tenant_name username password"
+    exit 1
+fi
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"tenant_name": "'"$1"'", "username": "'"$2"'", "password": "'"$3"'"}' http://localhost:8080/api/workflow/create_organization

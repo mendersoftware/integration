@@ -83,18 +83,8 @@ else:
     repos.append(".")
 
 def get_range_for_repo(repo, range):
-    endpoints = args.range.split("..")
-    if len(endpoints) != 2:
-        print("Don't know how to handle range which is not of the form 'A.B.C..X.Y.Z': %s"
-              % args.range)
-        sys.exit(1)
-    start = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                     "--version-of", repo, "--in-integration-version", endpoints[0]])
-    start = start.decode().strip()
-    end = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                   "--version-of", repo, "--in-integration-version", endpoints[1]])
-    end = end.decode().strip()
-    return "%s..%s" % (start, end)
+    return subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                    "--version-of", repo, "--in-integration-version", range]).decode().strip()
 
 if ".." in args.range:
     print("## v%s\n" % args.range.split("..")[1])

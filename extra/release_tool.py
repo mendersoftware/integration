@@ -215,12 +215,30 @@ def get_docker_compose_data_for_rev(git_dir, rev):
 
 def version_of(integration_dir, repo_container, in_integration_version=None):
     if in_integration_version is not None:
-        data = get_docker_compose_data_for_rev(integration_dir, in_integration_version)
+        # Check if there is a range, and if so, return range.
+        range_type = ""
+        rev_range = in_integration_version.split("...")
+        if len(rev_range) > 1:
+            range_type = "..."
+        else:
+            rev_range = in_integration_version.split("..")
+            if len(rev_range) > 1:
+                range_type = ".."
+        repo_range = []
+        for rev in rev_range:
+            match = re.match("^(.*/)", rev)
+            if match is not None:
+                remote = match.group(1)
+            else:
+                remote = ""
+            data = get_docker_compose_data_for_rev(integration_dir, rev)
+            image = data['services'][repo_container]['image']
+            repo_range.append(remote + image[(image.index(":") + 1):])
+        return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)
-
-    image = data['services'][repo_container]['image']
-    return image[(image.index(":") + 1):]
+        image = data['services'][repo_container]['image']
+        return image[(image.index(":") + 1):]
 
 def do_version_of(args):
     """Process --version-of argument."""
@@ -1301,7 +1319,8 @@ def main():
     parser.add_argument("--in-integration-version", dest="in_integration_version", metavar="VERSION",
                         help="Used together with the above argument to query for a version of a "
                         + "service which is in the given version of integration, instead of the "
-                        + "currently checked out version of integration")
+                        + "currently checked out version of integration. If a range is given here "
+                        + "it will return the range of the corresponding service.")
     parser.add_argument("--set-version-of", dest="set_version_of", metavar="SERVICE",
                         help="Write version of given service into docker-compose.yml")
     parser.add_argument("--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",

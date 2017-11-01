@@ -114,6 +114,8 @@ GIT_TO_BUILDPARAM_MAP = {
 EXTRA_BUILDPARAMS = {
     "BUILD_BBB": "on",
     "BUILD_QEMU": "on",
+    "BUILD_QEMU_RAW_FLASH": "on",
+    "BUILD_RPI3": "on",
     "CLEAN_BUILD_CACHE": "",
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",

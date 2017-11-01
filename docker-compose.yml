@@ -16,6 +16,9 @@ services:
 
     mender-mongo-deployments:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:
@@ -26,6 +29,9 @@ services:
     #
     mender-gui:
         image: mendersoftware/gui:1.1.x
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
 
@@ -64,6 +70,9 @@ services:
 
     mender-mongo-device-auth:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:
@@ -84,6 +93,9 @@ services:
 
     mender-mongo-device-adm:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:
@@ -104,6 +116,9 @@ services:
 
     mender-mongo-inventory:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:
@@ -124,6 +139,9 @@ services:
 
     mender-mongo-useradm:
         image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             mender:
                 aliases:
@@ -134,16 +152,25 @@ services:
         depends_on:
             - mender-elasticsearch
             - mender-dynomite
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
 
     mender-elasticsearch:
         image: mendersoftware/elasticsearch:2.4
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
 
     mender-dynomite:
         image: mendersoftware/dynomite:stable
+        extends:
+            file: common.yml
+            service: mender-base
         networks:
             - mender
 

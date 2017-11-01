@@ -126,6 +126,7 @@ EXTRA_BUILDPARAMS = {
     "TENANTADM_REV": "master",
     "TEST_BBB": "",
     "TEST_QEMU": "on",
+    "TEST_RPI3": "on",
     "UPLOAD_OUTPUT": "",
 }
 

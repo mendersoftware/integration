@@ -120,6 +120,8 @@ EXTRA_BUILDPARAMS = {
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",
     "META_MENDER_REV": "pyro",
+    "META_OPENEMBEDDED_REV": "pyro",
+    "META_RASPBERRYPI_REV": "pyro",
     "POKY_REV": "pyro",
     "PUSH_CONTAINERS": "on",
     "RUN_INTEGRATION_TESTS": "on",

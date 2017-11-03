@@ -20,3 +20,13 @@ services:
             mender:
                 aliases:
                     - mongo-tenantadm
+
+    mender-conductor-workers:
+        image: mendersoftware/conductor-workers:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-conductor

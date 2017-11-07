@@ -182,7 +182,7 @@ def multitenancy_setup_without_client(request):
                         use_common_files=False)
 
     # wait a bit for the backend to start
-    wait_for_containers(19, ["../docker-compose.yml",
+    wait_for_containers(20, ["../docker-compose.yml",
                              "../docker-compose.tenant.yml",
                              "../docker-compose.storage.minio.yml"])
 

@@ -129,6 +129,7 @@ EXTRA_BUILDPARAMS = {
     "TEST_BBB": "",
     "TEST_QEMU": "on",
     "TEST_RPI3": "on",
+    "TESTS_IN_PARALLEL": "8",
     "UPLOAD_OUTPUT": "",
 }
 

@@ -83,6 +83,12 @@ REPOS = {
     "mender-integration": RepoName("mender-integration", "integration", "integration", False),
 }
 
+# These are optional repositories that aren't included when iterating over
+# repositories, but that are available for querying.
+OPTIONAL_REPOS = {
+    "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
+}
+
 # Some convenient aliases, mainly because Git phrasing differs slightly from
 # Docker.
 REPO_ALIASES = {
@@ -175,7 +181,10 @@ def determine_repo(repoish):
     if not repoish.startswith("mender-"):
         repoish = "mender-" + repoish
 
-    return REPOS[repoish]
+    # Return elements from both REPOS and OPTIONAL_REPOS.
+    both_lists = REPOS.copy()
+    both_lists.update(OPTIONAL_REPOS)
+    return both_lists[repoish]
 
 def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""

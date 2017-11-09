@@ -1111,7 +1111,7 @@ def do_release():
 
         print("What do you want to do?")
         print("-- Main operations")
-        if re.search("b[0-9]+$", state['version']):
+        if re.search("b[0-9]+$", state['version']) and tag_avail['integration']['already_released']:
             print("  O) Move from beta build tags to final build tags")
         print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")

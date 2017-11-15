@@ -12,7 +12,7 @@ cd extra/changelog-generator
 ## Setup
 
 Make sure you have one directory that contains a copy of all the repositories
-for Mender. They should also be up to date using `git fetch`.
+for Mender. They should also be up to date using `git fetch --tags`.
 
 ## Running
 

@@ -83,3 +83,25 @@ services:
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
+        ports:
+            - 8080:8080
+
+    mender-conductor-ui:
+        environment:
+            - WF_SERVER=http://mender-conductor:8080/api/
+        image: mendersoftware/conductor-ui:1.7.7
+        ports:
+            - 5000:5000
+        networks:
+            - mender
+
+    mender-conductor-workers:
+        build: ./conductor-workers
+        extends:
+            file: common.yml
+            service: mender-base
+        depends_on:
+            - mender-conductor
+            - mender-dynomite
+        networks:
+            - mender

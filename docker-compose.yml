@@ -173,6 +173,8 @@ services:
             service: mender-base
         networks:
             - mender
+        logging:
+            driver: none
 
 networks:
     mender:

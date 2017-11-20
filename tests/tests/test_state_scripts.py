@@ -632,6 +632,8 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Error_55", # Error for this state doesn't exist, should never run.
     ]
 
+    
+    @pytest.mark.skip(reason="broken")
     @MenderTesting.slow
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     @pytest.mark.parametrize("test_set", TEST_SETS)

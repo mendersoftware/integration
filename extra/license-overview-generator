@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -170,7 +171,10 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.""",
 
     "Public Domain":
-"""This software is in the public domain."""
+"""This software is in the public domain.""",
+
+    '(WTFPL OR MIT)': MIT_LICENSE,
+
 }
 #-------------------------------------------------------------------------------
 
@@ -334,11 +338,20 @@ def do_gui_repos():
             if module in ['.bin']:
                 continue
 
-            # Exception: This one doesn't come with a valid license, but it is
-            # MIT according to web page.
             if module == "indexof":
+                # Exception: This one doesn't come with a valid license, but it
+                # is MIT according to web page.
                 add_to_licenses("www.npmjs.com/package/%s" % module,
                                 select_license_text("MIT", "indexof"))
+                continue
+            elif module == "string-hash":
+                # Exception: This one has the license listed inside the
+                # README.md file, together with other stuff.
+                h = hashlib.md5()
+                h.update(open(os.path.join(modules_path, module, "README.md"), "rb").read())
+                assert(h.hexdigest() == "b0bd7b52b5b02d7465184cfe66e66d32")
+                add_to_licenses("www.npmjs.com/package/%s" % module,
+                                select_license_text("Public Domain", "string-hash"))
                 continue
 
             process_node_module(modules_path, module)

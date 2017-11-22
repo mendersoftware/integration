@@ -20,17 +20,17 @@ except ImportError:
 # Disable pager during menu navigation.
 os.environ['GIT_PAGER'] = "cat"
 
-# This is basically a YAML file which contains the state of the release process.
+# This is basically a YAML file which contains the state of the release tool.
 # The easiest way to understand its format is by just looking at it after the
 # key fields have been filled in. This is updated continuously while the script
 # is operating.
 # The repositories are indexed by their Git repository names.
-RELEASE_STATE = "release-state.yml"
+RELEASE_TOOL_STATE = None
 
 JENKINS_SERVER = "https://mender-jenkins.mender.io"
 JENKINS_JOB = "job/mender-builder"
-JENKINS_USER = ""
-JENKINS_PASSWORD = ""
+JENKINS_USER = os.getenv("JENKINS_USER")
+JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
@@ -272,7 +272,7 @@ def sorted_final_version_list(git_dir):
     return tags.split()
 
 def state_value(state, key_list):
-    """Gets a value from the state variable stored in the RELEASE_STATE yaml
+    """Gets a value from the state variable stored in the RELEASE_TOOL_STATE yaml
     file. The key_list is a list of indexes, where each element represents a
     subkey of the previous key.
 
@@ -290,7 +290,7 @@ def state_value(state, key_list):
         return None
 
 def update_state(state, key_list, value):
-    """Updates the state variable and writes this to the RELEASE_STATE state
+    """Updates the state variable and writes this to the RELEASE_TOOL_STATE state
     file. key_list is the same value as the state_value function."""
     next = state
     prev = state
@@ -301,7 +301,7 @@ def update_state(state, key_list, value):
         next = next[key]
     prev[key_list[-1]] = value
 
-    fd = open(RELEASE_STATE, "w")
+    fd = open(RELEASE_TOOL_STATE, "w")
     fd.write(yaml.dump(state))
     fd.close()
 
@@ -709,11 +709,15 @@ def trigger_jenkins_build(state, tag_avail):
     try:
         import requests
     except ImportError:
-        print("PyYAML missing, try running 'sudo pip3 install requests'.")
+        print("requests module missing, try running 'sudo pip3 install requests'.")
         sys.exit(2)
 
     if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
         raise SystemExit("unable to trigger build with JENKINS_USER or JENKINS_PASSWORD not set")
+
+    for param in EXTRA_BUILDPARAMS.keys():
+        if state_value(state, ["extra_buildparams", param]) is None:
+            update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
     # We'll be adding parameters here that shouldn't be in 'state', so make a
     # copy.
@@ -1017,17 +1021,55 @@ def do_docker_compose_branches_from_follows(state):
 
     print("Alright, done! The committing you will have to do yourself.")
 
+def do_build(args):
+    """Handles building: triggering a build of the given Mender version. Saves
+    the used parameters in the home directory so they can be reused in the next
+    build."""
+
+    global RELEASE_TOOL_STATE
+    RELEASE_TOOL_STATE = os.path.join(os.environ['HOME'], ".release-tool.yml")
+
+    if os.path.exists(RELEASE_TOOL_STATE):
+        print("Fetching cached parameters from %s. Delete to reset."
+              % RELEASE_TOOL_STATE)
+        with open(RELEASE_TOOL_STATE) as fd:
+            state = yaml.load(fd)
+    else:
+        state = {}
+
+    if args.build is True:
+        if state_value(state, ['version']) is None:
+            print("When there is no earlier cached build, you must give --build a VERSION argument.")
+            sys.exit(1)
+    else:
+        if state_value(state, ['version']) != args.build:
+            update_state(state, ["version"], args.build)
+            for repo in REPOS.values():
+                if repo.git == "integration":
+                    update_state(state, [repo.git, "version"], args.build)
+                else:
+                    version = version_of(integration_dir(), repo.container, args.build)
+                    update_state(state, [repo.git, "version"], version)
+
+    if state_value(state, ['repo_dir']) is None:
+        repo_dir = os.path.normpath(os.path.join(integration_dir(), ".."))
+        print(("Guessing that your directory of all repositories is %s. "
+               + "Edit %s manually to change it.")
+              % (repo_dir, RELEASE_TOOL_STATE))
+        update_state(state, ["repo_dir"], repo_dir)
+
+    trigger_jenkins_build(state, check_tag_availability(state))
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
-    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
+    global RELEASE_TOOL_STATE
+    RELEASE_TOOL_STATE = "release-state.yml"
+
+    if not JENKINS_USER or not JENKINS_PASSWORD:
         logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
 
-    global JENKINS_USER, JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
-
-    if os.path.exists(RELEASE_STATE):
+    if os.path.exists(RELEASE_TOOL_STATE):
         while True:
             reply = ask("Release already in progress. Continue or start a new one [C/S]? ")
             if reply == "C" or reply == "c":
@@ -1047,8 +1089,8 @@ def do_release():
         state = {}
     else:
         print("Loading existing release state data...")
-        print("Note that you can always edit or delete %s manually" % RELEASE_STATE)
-        fd = open(RELEASE_STATE)
+        print("Note that you can always edit or delete %s manually" % RELEASE_TOOL_STATE)
+        fd = open(RELEASE_TOOL_STATE)
         state = yaml.load(fd)
         fd.close()
 
@@ -1079,10 +1121,6 @@ def do_release():
             # Follow "1.0.x" style branches by default.
             assign_default_following_branch(state, repo)
 
-    for param in EXTRA_BUILDPARAMS.keys():
-        if state_value(state, ["extra_buildparams", param]) is None:
-            update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
-
     create_release_branches(state, tag_avail)
 
     first_time = True
@@ -1108,7 +1146,7 @@ def do_release():
         print("  B) Trigger new Jenkins build using current tags")
         print("  F) Tag and push final tag, based on current build tag")
         print('  D) Update ":%s" and/or ":latest" Docker tags to current release' % minor_version)
-        print("  Q) Quit (your state is saved in %s)" % RELEASE_STATE)
+        print("  Q) Quit (your state is saved in %s)" % RELEASE_TOOL_STATE)
         print()
         print("-- Less common operations")
         print("  P) Push current build tags (not necessary unless -s was used before)")
@@ -1330,6 +1368,9 @@ def main():
                         + " where version is given with --version. Returned as a newline separated list")
     parser.add_argument("--version", dest="version",
                         help="Version which is used in above two arguments")
+    parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
+                        const=True, nargs="?",
+                        help="Build the given version of Mender")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -1368,6 +1409,8 @@ def main():
         do_set_version_to(args)
     elif args.integration_versions_including is not None:
         do_integration_versions_including(args)
+    elif args.build:
+        do_build(args)
     elif args.release:
         do_release()
     elif args.verify_integration_references:

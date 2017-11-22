@@ -56,6 +56,14 @@ $
 ```
 
 
+## Building
+
+The `--build` argument can be used to build a version of Mender, including
+correct versions of all the micro services, without having to specify all of
+them. Before the build starts, you'll also be given the chance to alter build
+parameters.
+
+
 ## Releasing
 
 Releasing is an interactive part of the tool. Below is a tutorial to get into

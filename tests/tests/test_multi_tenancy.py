@@ -250,3 +250,59 @@ class TestMultiTenancy(MenderTesting):
 
             execute(self.mender_log_contains_aborted_string,
                     hosts=get_mender_client_by_container_name(user["container"]))
+
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3_and_mt")
+    def test_multi_tenancy_deployment_s3(self):
+
+        def verify_object_id_and_tagging():
+            from boto3 import client
+
+            tenant = auth.get_tenant_id()
+            conn = client('s3')
+
+            artifacts = deploy.get_artifacts()
+            assert len(artifacts) == 1
+
+            artifact_id = artifacts[0]["id"]
+
+            # verify object ID of proper MT format
+            for key in conn.list_objects(Bucket='mender-artifacts-int-testing')['Contents']:
+                if key['Key'].startswith(tenant):
+                    expectedObject = "%s/%s" % (tenant, artifact_id)
+                    assert key['Key'] == expectedObject
+
+            # verify tagging is working
+            tags = conn.get_object_tagging(Bucket='mender-artifacts-int-testing', Key=expectedObject)["TagSet"][0]
+            assert tags["Value"] == tenant
+            assert tags["Key"] == "tenant_id"
+
+            # Delete artifact and make sure it's really gone
+            conn.delete_object(Bucket="mender-artifacts-int-testing",
+                               Key=expectedObject)
+
+            deploy.delete_artifact(artifact_id)
+
+            conn.list_objects(Bucket='mender-artifacts-int-testing')
+
+            for key in conn.list_objects(Bucket='mender-artifacts-int-testing').get('Contents', []):
+                if key['Key'].startswith(tenant):
+                    pytest.fail("failed to delete artifact from s3")
+
+        auth.reset_auth_token()
+
+        users = [
+            {
+                "email": "foo1@foo1.com",
+                "password": "hunter2hunter2",
+                "username": "foo1",
+                "container": "mender-client-mt-s3",
+            }
+        ]
+
+        for user in users:
+            auth.new_tenant(user["username"], user["email"], user["password"])
+            t = auth.current_tenant["tenant_token"]
+            new_tenant_client(user["container"], t)
+            adm.accept_devices(1)
+            self.perform_update(mender_client_container=user["container"])
+            verify_object_id_and_tagging()

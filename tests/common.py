@@ -31,7 +31,7 @@ ST_SignedClient = 5
 ST_ShortLivedAuthToken = 6
 ST_CustomSetup = 7
 ST_MultiTenancyNoClient = 8
-
+ST_OneClientsBootstrapped_AWS_S3_MT = 9
 
 
 def setup_type():
@@ -101,4 +101,3 @@ def run_after_connect(cmd, wait = 120):
                     time.sleep(5 - (now - attempt_time))
                 continue
     return output
-

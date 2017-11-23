@@ -170,6 +170,11 @@ class Deployments(object):
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
+    def delete_artifact(self, artifact_id):
+        artifact_url = self.get_deployments_base_path() + "artifacts/%s" % (artifact_id)
+        r = requests.delete(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        assert r.status_code == requests.status_codes.codes.no_content
+
     def get_artifacts(self):
         artifact_url = self.get_deployments_base_path() + "artifacts"
         r = requests.get(artifact_url, headers=self.auth.get_auth_token(), verify=False)

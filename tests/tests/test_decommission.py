@@ -22,6 +22,7 @@ from helpers import Helpers
 from common_update import common_update_procedure
 from MenderAPI import inv, adm, deviceauth
 from mendertesting import MenderTesting
+from conductor import Conductor
 
 
 class TestDeviceDecommissioning(MenderTesting):
@@ -54,22 +55,31 @@ class TestDeviceDecommissioning(MenderTesting):
         else:
             assert False, "never got inventory"
 
+        # get all completed decommission_device WFs for reference
+        c = Conductor(get_mender_conductor())
+        initial_wfs = c.get_decommission_device_wfs(device_id)
+
         # decommission actual device
         deviceauth.decommission(device_id)
 
-        # now check that the device no longer exists in admissions
+        # check that the workflow completed successfully
         timeout = time.time() + (60 * 5)
         while time.time() < timeout:
-                newAdmissions = adm.get_devices()[0]
-                if device_id != newAdmissions["device_id"] \
-                   and adm_id != newAdmissions["id"]:
-                    logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
-                    break
-                else:
-                    logger.info("device [%s] found in inventory..." % (device_id))
+            wfs = c.get_decommission_device_wfs(device_id)
+            if wfs['totalHits'] == initial_wfs['totalHits'] + 1:
+                break
+            else:
+                logger.info("waiting for decommission_device workflow...")
                 time.sleep(.5)
         else:
-            assert False, "decommissioned device still available in admissions"
+            assert False, "decommission_device workflow didn't complete for [%s]" % (device_id,)
+
+        # now check that the device no longer exists in admission
+        newAdmissions = adm.get_devices()[0]
+        if device_id != newAdmissions["device_id"] and adm_id != newAdmissions["id"]:
+            logger.info("device [%s] successfully removed from admission: [%s]" % (device_id, str(newAdmissions)))
+        else:
+            assert False, "device [%s] not removed from admission: [%s]" % (device_id, str(newAdmissions))
 
         # disabled for time being due to new deployment process
 

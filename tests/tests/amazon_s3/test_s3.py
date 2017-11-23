@@ -20,10 +20,10 @@ from common_setup import *
 from tests import MenderTesting
 from tests import common_update
 
+@MenderTesting.fast
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3")
 class TestBasicIntegrationWithS3(MenderTesting):
 
-    @MenderTesting.aws_s3
     def test_update_image_with_aws_s3(self,
                                       install_image=conftest.get_valid_image(),
                                       name=None,

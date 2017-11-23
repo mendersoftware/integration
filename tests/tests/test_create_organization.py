@@ -32,6 +32,8 @@ import socket
 import time
 import requests
 import fake_smtp
+from threading import Thread
+import asyncore
 
 class TestCreateOrganization(MenderTesting):
 
@@ -40,7 +42,11 @@ class TestCreateOrganization(MenderTesting):
 
         print("Starting TestCreateOrganization")
         smtp_mock = SMTPMock()
-        smtp_mock.start()
+
+        thread = Thread(target=smtp_mock.start)
+        thread.daemon = True
+        thread.start()
+
         payload = {"request_id": "123456", "tenant_id":"123456", "organization": "tenant-foo", "email":"piotr.przybylak@gmail.com", "password": "asdfqwer1234"}
         requests.post("http://localhost:8080/api/workflow/create_organization", json=payload)
         print("TestCreateOrganization: workflow started. Waiting...")
@@ -48,11 +54,14 @@ class TestCreateOrganization(MenderTesting):
         print("TestCreateOrganization: Waiting finished. Stoping mock")
         smtp_mock.stop()
         print("TestCreateOrganization: Mock stopped.")
+        smtp_mock.assert_called()
+        print("TestCreateOrganization: Assert ok.")
 
 
 class SMTPMock:
     def start(self):
         self.server = fake_smtp.FakeSMTPServer(('0.0.0.0', 4444), None)
+        asyncore.loop()
 
     def stop(self):
         self.server.close()

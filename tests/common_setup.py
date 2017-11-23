@@ -82,10 +82,11 @@ def standard_setup_one_client_bootstrapped_with_s3():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.client.yml \
-                        -f ../docker-compose.storage.s3.yml \
-                        -f ../docker-compose.yml \
-                        -f ../extra/travis-testing/s3.yml up -d",
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.storage.s3.yml up -d",
                         use_common_files=False)
 
     docker_compose_cmd("logs -f &")

@@ -18,6 +18,7 @@ from common import *
 from common_docker import *
 import conftest
 import time
+import subprocess
 
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):
@@ -197,6 +198,10 @@ def multitenancy_setup_without_client_with_smtp(request):
     stop_docker_compose()
     reset_mender_api()
 
+    host_ip = subprocess\
+        .check_output("HOST_IP=($(hostname -I)[0]) && echo $HOST_IP", shell=True)\
+        .rstrip()
+
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml \
@@ -204,7 +209,7 @@ def multitenancy_setup_without_client_with_smtp(request):
                         %s \
                         -f ../extra/smtp-testing/conductor-workers-smtp-test.yml \
                         up -d"  % (conftest.mt_docker_compose_file),
-                       use_common_files=False)
+                       use_common_files=False, env={"HOST_IP": host_ip})
 
     # wait a bit for the backend to start
     wait_for_containers(20, ["../docker-compose.yml",

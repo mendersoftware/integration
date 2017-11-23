@@ -4,7 +4,7 @@ services:
     mender-conductor-workers:
         environment:
             - CONDUCTOR=http://mender-conductor:8080
-            - SMTP_ADDRESS=172.29.0.107:4444
+            - SMTP_ADDRESS=${HOST_IP}:4444
             - EMAIL_SENDER=Mender <testpodioom@gmail.com>
 networks:
     mender:

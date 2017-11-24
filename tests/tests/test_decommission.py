@@ -38,6 +38,13 @@ class TestDeviceDecommissioning(MenderTesting):
         r = deviceauth.get_device(device_id)
         assert r.status_code == 404, "device [%s] not removed from deviceauth" % (device_id,)
 
+    def check_gone_from_deviceadm(self, adm_id, device_id):
+        admissions = adm.get_devices()[0]
+        if device_id != admissions["device_id"] and adm_id != admissions["id"]:
+            logger.info("device [%s] successfully removed from admission: [%s]" % (device_id, str(admissions)))
+        else:
+            assert False, "device [%s] not removed from admission: [%s]" % (device_id, str(admissions))
+
     @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_device_decommissioning(self):
@@ -89,11 +96,7 @@ class TestDeviceDecommissioning(MenderTesting):
         self.check_gone_from_deviceauth(device_id)
 
         # now check that the device no longer exists in admission
-        newAdmissions = adm.get_devices()[0]
-        if device_id != newAdmissions["device_id"] and adm_id != newAdmissions["id"]:
-            logger.info("device [%s] successfully removed from admission: [%s]" % (device_id, str(newAdmissions)))
-        else:
-            assert False, "device [%s] not removed from admission: [%s]" % (device_id, str(newAdmissions))
+        self.check_gone_from_deviceadm(adm_id, device_id)
 
         # disabled for time being due to new deployment process
 

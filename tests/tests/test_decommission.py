@@ -30,6 +30,10 @@ class TestDeviceDecommissioning(MenderTesting):
         if common.setup_type() == common.ST_OneClient:
             stop_docker_compose()
 
+    def check_gone_from_inventory(self, device_id):
+        r = inv.get_device(device_id)
+        assert r.status_code == 404, "device [%s] not removed from inventory" % (device_id,)
+
     @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_device_decommissioning(self):
@@ -73,6 +77,9 @@ class TestDeviceDecommissioning(MenderTesting):
                 time.sleep(.5)
         else:
             assert False, "decommission_device workflow didn't complete for [%s]" % (device_id,)
+
+        # check device gone from inventory
+        self.check_gone_from_inventory(device_id)
 
         # now check that the device no longer exists in admission
         newAdmissions = adm.get_devices()[0]

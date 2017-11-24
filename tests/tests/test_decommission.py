@@ -34,6 +34,10 @@ class TestDeviceDecommissioning(MenderTesting):
         r = inv.get_device(device_id)
         assert r.status_code == 404, "device [%s] not removed from inventory" % (device_id,)
 
+    def check_gone_from_deviceauth(self, device_id):
+        r = deviceauth.get_device(device_id)
+        assert r.status_code == 404, "device [%s] not removed from deviceauth" % (device_id,)
+
     @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_device_decommissioning(self):
@@ -80,6 +84,9 @@ class TestDeviceDecommissioning(MenderTesting):
 
         # check device gone from inventory
         self.check_gone_from_inventory(device_id)
+
+        # check device gone from deviceauth
+        self.check_gone_from_deviceauth(device_id)
 
         # now check that the device no longer exists in admission
         newAdmissions = adm.get_devices()[0]

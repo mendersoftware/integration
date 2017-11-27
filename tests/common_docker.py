@@ -144,6 +144,14 @@ def get_mender_gateway():
 
     return gateway[0]
 
+def get_mender_conductor():
+    conductor = docker_get_ip_of("mender-conductor")
+
+    if len(conductor) != 1:
+        raise SystemExit("expected one instance of mender-conductor running, but found: %d instance(s)" % len(conductor))
+
+    return conductor[0]
+
 def ssh_is_opened():
     execute(ssh_is_opened_impl, hosts=get_mender_clients())
 

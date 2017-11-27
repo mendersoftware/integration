@@ -36,3 +36,7 @@ class DeviceAuthentication(object):
                             headers=self.auth.get_auth_token())
         assert r.status_code == expected_http_code
         logger.info("device [%s] is decommissioned" % (deviceID))
+
+    def get_device(self, device_id):
+        url = self.get_deviceauth_base_path() + device_id
+        return requests.get(url, verify=False, headers=self.auth.get_auth_token())

@@ -39,6 +39,13 @@ class Inventory():
         assert ret.status_code == requests.status_codes.codes.ok
         return ret.json()
 
+    def get_device(self, device_id):
+        headers = self.auth.get_auth_token()
+        devurl = "%s%s/%s" % (self.get_inv_base_path(), "device", device_id)
+        ret = requests.get(devurl, headers=self.auth.get_auth_token(), verify=False)
+        return ret
+
+
     def get_groups(self):
         ret = requests.get(self.get_inv_base_path() + "groups", headers=self.auth.get_auth_token(), verify=False)
         assert ret.status_code == requests.status_codes.codes.ok

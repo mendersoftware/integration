@@ -1,6 +1,6 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
-import httplib
+import http.client
 import json
 import argparse
 import logging
@@ -23,7 +23,7 @@ def request(addr, method, url, body=None, headers=None):
     if not headers:
         headers = {}
 
-    with closing(httplib.HTTPConnection(addr)) as conn:
+    with closing(http.client.HTTPConnection(addr)) as conn:
         conn.request(method, url, body=body, headers=headers)
         resp = conn.getresponse()
         return (resp.status, resp.read())

@@ -82,6 +82,9 @@ class Authentication:
         logging.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
 
+    def get_tenant_id(self):
+        return self.current_tenant["tenant_id"]
+
     def reset_auth_token(self):
         self.auth_header = None
 

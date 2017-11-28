@@ -192,3 +192,33 @@ def multitenancy_setup_without_client(request):
 
     request.addfinalizer(fin)
     set_setup_type(ST_MultiTenancyNoClient)
+
+
+@pytest.fixture(scope="function")
+def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
+    if setup_type() == ST_OneClientsBootstrapped_AWS_S3_MT:
+        return
+
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.storage.s3.yml \
+                        -f ../docker-compose.tenant.yml \
+                        %s up -d" % (conftest.mt_docker_compose_file),
+                        use_common_files=False)
+
+
+    wait_for_containers(20, ["../docker-compose.yml",
+                             "../docker-compose.testing.yml ",
+                             "../docker-compose.tenant.yml",
+                             "../docker-compose.storage.minio.yml",
+                             "../docker-compose.storage.s3.yml"])
+
+    def fin():
+        stop_docker_compose()
+
+    request.addfinalizer(fin)
+    set_setup_type(ST_OneClientsBootstrapped_AWS_S3_MT)

@@ -18,22 +18,15 @@ import pytest
 from common import *
 from common_docker import *
 from common_setup import *
-from helpers import Helpers
-from MenderAPI import auth, adm, deploy, image, logger
-from common_update import common_update_procedure
 from mendertesting import MenderTesting
-import subprocess
 import sys
 sys.path.insert(0, '..')
-import conftest
-import contextlib
-import ssl
-import socket
 import time
 import requests
 import fake_smtp
 from threading import Thread
 import asyncore
+from MenderAPI import *
 
 class TestCreateOrganization(MenderTesting):
 
@@ -47,10 +40,17 @@ class TestCreateOrganization(MenderTesting):
         thread.daemon = True
         thread.start()
 
-        payload = {"request_id": "123456", "tenant_id":"123456", "organization": "tenant-foo", "email":"piotr.przybylak@gmail.com", "password": "asdfqwer1234"}
-        requests.post("http://localhost:8080/api/workflow/create_organization", json=payload)
+        print("TestCreateOrganization: making request")
+
+        payload = {"request_id": "123456", "tenant_id":"123456", "organization": "tenant-foo", "email":"piotr.przybylak@gmail.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+
         print("TestCreateOrganization: workflow started. Waiting...")
-        time.sleep( 15 )
+        for i in range(100):
+            print("waiting: ", i)
+            if smtp_mock.server.recieved == True:
+                break
+            time.sleep(0.5)
         print("TestCreateOrganization: Waiting finished. Stoping mock")
         smtp_mock.stop()
         print("TestCreateOrganization: Mock stopped.")

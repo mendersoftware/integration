@@ -208,6 +208,7 @@ def multitenancy_setup_without_client_with_smtp(request):
                         -f ../docker-compose.tenant.yml \
                         %s \
                         -f ../extra/smtp-testing/conductor-workers-smtp-test.yml \
+                        -f ../extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
                         up -d"  % (conftest.mt_docker_compose_file),
                        use_common_files=False, env={"HOST_IP": host_ip})
 

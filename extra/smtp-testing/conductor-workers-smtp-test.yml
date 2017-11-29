@@ -6,5 +6,7 @@ services:
             - CONDUCTOR=http://mender-conductor:8080
             - SMTP_ADDRESS=${HOST_IP}:4444
             - EMAIL_SENDER=Mender <testpodioom@gmail.com>
+            - DEMO=false
+
 networks:
     mender:

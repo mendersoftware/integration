@@ -18,6 +18,7 @@ from common import *
 from common_docker import *
 import conftest
 import time
+import socket
 
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):
@@ -222,3 +223,39 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
 
     request.addfinalizer(fin)
     set_setup_type(ST_OneClientsBootstrapped_AWS_S3_MT)
+
+@pytest.fixture(scope="function")
+def multitenancy_setup_without_client_with_smtp(request):
+    stop_docker_compose()
+    reset_mender_api()
+
+    host_ip = get_host_ip()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.tenant.yml \
+                        %s \
+                        -f ../extra/smtp-testing/conductor-workers-smtp-test.yml \
+                        -f ../extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
+                        up -d"  % (conftest.mt_docker_compose_file),
+                       use_common_files=False, env={"HOST_IP": host_ip})
+
+    # wait a bit for the backend to start
+    wait_for_containers(20, ["../docker-compose.yml",
+                             "../docker-compose.tenant.yml",
+                             "../docker-compose.storage.minio.yml"])
+
+    def fin():
+        stop_docker_compose()
+
+    request.addfinalizer(fin)
+    set_setup_type(ST_MultiTenancyNoClient)
+
+
+def get_host_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    host_ip = s.getsockname()[0]
+    s.close()
+    return host_ip

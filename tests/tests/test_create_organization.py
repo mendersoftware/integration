@@ -42,7 +42,7 @@ class TestCreateOrganization(MenderTesting):
 
         print("TestCreateOrganization: making request")
 
-        payload = {"request_id": "123456", "tenant_id":"123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
         print("TestCreateOrganization: workflow started. Waiting...")
@@ -56,6 +56,26 @@ class TestCreateOrganization(MenderTesting):
         print("TestCreateOrganization: Mock stopped.")
         smtp_mock.assert_called()
         print("TestCreateOrganization: Assert ok.")
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    def test_duplicate_tenant(self):
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 202
+        payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user2@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        print(rsp.text)
+        assert rsp.status_code == 409
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    def test_duplicate_email(self):
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 202
+        payload = {"request_id": "123457", "organization": "tenant-foo2", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        print(rsp.text)
+        assert rsp.status_code == 409
 
 
 class SMTPMock:

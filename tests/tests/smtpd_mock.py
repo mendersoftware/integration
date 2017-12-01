@@ -21,5 +21,9 @@ class SMTPServerMock(smtpd.SMTPServer):
         self.received = False
         smtpd.SMTPServer.__init__(self, *args, **kwargs)
 
-    def process_message(self, *args, **kwargs):
+    def process_message(self, peer, mailfrom, rcpttos, data):
+        print(peer)
+        print(mailfrom)
+        print(rcpttos)
+        print(data)
         self.received = True

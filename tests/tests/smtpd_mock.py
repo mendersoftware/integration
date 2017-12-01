@@ -15,15 +15,19 @@
 
 import smtpd
 
+class Message():
+
+    def __init__(self, peer, mailfrom, rcpttos, data):
+        self.peer = peer
+        self.mailfrom = mailfrom
+        self.rcpttos = rcpttos
+        self.data = data
+
 class SMTPServerMock(smtpd.SMTPServer):
 
     def __init__(self, *args, **kwargs):
-        self.received = False
+        self.messages = []
         smtpd.SMTPServer.__init__(self, *args, **kwargs)
 
     def process_message(self, peer, mailfrom, rcpttos, data):
-        print(peer)
-        print(mailfrom)
-        print(rcpttos)
-        print(data)
-        self.received = True
+        self.messages.append(Message(peer, mailfrom, rcpttos, data))

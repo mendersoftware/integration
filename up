@@ -12,14 +12,14 @@ REQHOSTS="s3.docker.mender.io docker.mender.io"
 DOCKER_HOST_IP="127.0.0.1"
 
 log() {
-    echo "--" $*
+    echo "--" "$*"
 }
 
 addhost() {
-    ip=$1
-    h=$2
-    tmpfile=$3
-    echo "$ip $h # added by mender integration" >> $tmpfile
+    local ip=$1
+    local h=$2
+    local tmpfile=$3
+    echo "$ip $h # added by mender integration" >> "$tmpfile"
 }
 
 setuphosts() {
@@ -35,16 +35,15 @@ setuphosts() {
     # add hosts as needed
     for h in $REQHOSTS; do
         if ! grep "\s$h" /etc/hosts >/dev/null 2>&1 ; then
-            addhost $REQUIRED_HOSTFILE_IP $h $tmpfile
+            addhost "$REQUIRED_HOSTFILE_IP" "$h" "$tmpfile"
         fi
     done
 
-    if [ -s $tmpfile ] ; then
+    if [ -s "$tmpfile" ] ; then
        log "adding the following entries to /etc/hosts:"
-       cat $tmpfile
-       cat $tmpfile | sudo tee -a /etc/hosts >/dev/null
+       sudo tee -a /etc/hosts < "$tmpfile"
     fi
-    rm -f $tmpfile
+    rm -f "$tmpfile"
 }
 
 rundocker() {
@@ -53,7 +52,7 @@ rundocker() {
 }
 
 showhelp() {
-    echo "usage: $(basename $0) [-n] [-h]"
+    echo "usage: $(basename "$0") [-n] [-h]"
     echo "   -n   do not run docker-compose"
     echo "   -h   show help"
 }

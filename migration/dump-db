@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-SELFDIR=$(dirname $(readlink -f $0))
+SELFDIR=$(dirname "$(readlink -f "$0")")
 SCRIPT=${SCRIPT:=./run}
 
 SERVICES="\
@@ -19,13 +19,16 @@ DB_SERVICES="\
 "
 
 # stop service that are using DBs
+# shellcheck disable=SC2086
 ${SCRIPT} stop ${SERVICES}
 
 # make sure that DB services are up
+# shellcheck disable=SC2086
 ${SCRIPT} start ${DB_SERVICES}
 
 # dump DB
-DUMP_PATH=$PWD ${SCRIPT} -f ${SELFDIR}/migration-helper.yml \
+# shellcheck disable=SC2016
+DUMP_PATH=$PWD ${SCRIPT} -f "${SELFDIR}/migration-helper.yml" \
          run \
          --rm \
          -e DB_SERVICES="${DB_SERVICES}" \

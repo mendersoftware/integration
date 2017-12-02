@@ -3,7 +3,7 @@ set -e
 
 if [ -z "$CERT_API_CN" ] || [ -z "$CERT_STORAGE_CN" ] ; then
     echo "Environment variables CERT_API_CN and CERT_STORAGE_CN need to be set."
-    echo "Example: CERT_API_CN="docker.mender.io" CERT_STORAGE_CN="s3.docker.mender.io" $0"
+    echo "Example: CERT_API_CN=\"docker.mender.io\" CERT_STORAGE_CN=\"s3.docker.mender.io\" $0"
     exit 1
 fi
 
@@ -17,7 +17,7 @@ command -v openssl >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the open
 
 OPENSSL_VERSION_REGEX_MAJOR_BACKREF="OpenSSL ([0-9]+).*"
 OPENSSL_VERSION_STRING=$(openssl version)
-OPENSSL_VERSION_MAJOR=$(echo $OPENSSL_VERSION_STRING | sed -En "s/$OPENSSL_VERSION_REGEX_MAJOR_BACKREF/\1/p")
+OPENSSL_VERSION_MAJOR=$(echo "$OPENSSL_VERSION_STRING" | sed -En "s/$OPENSSL_VERSION_REGEX_MAJOR_BACKREF/\1/p")
 
 if [ "$OPENSSL_VERSION_MAJOR" != "1" ]; then
   echo "ERROR: openssl is too old, need version 1.0.0 or newer"
@@ -34,17 +34,17 @@ KEYDIR=$ROOTDIR/keys
 
 # generate web certs and corresponding private keys
 
-mkdir -p $CERTDIR
-cd $CERTDIR
+mkdir -p "$CERTDIR"
+cd "$CERTDIR"
 
 mkdir api-gateway storage-proxy
 
 cd api-gateway
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_API_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN="$CERT_API_CN"
 cd ..
 
 cd storage-proxy
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN=$CERT_STORAGE_CN
+openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN="$CERT_STORAGE_CN"
 cd ..
 
 # concatenate the certificates for inclusion on the Mender client
@@ -53,19 +53,20 @@ cat api-gateway/$FILE_NAME_CERT storage-proxy/$FILE_NAME_CERT > server.crt
 
 # generate keys for signing JSON Web Tokens
 
-mkdir -p $KEYDIR
-cd $KEYDIR
+mkdir -p "$KEYDIR"
+cd "$KEYDIR"
 
 for DIR in deviceauth useradm
 do
   mkdir $DIR
-  cd $DIR
-  openssl genpkey -algorithm RSA -out $FILE_NAME_PRIVATE_KEY -pkeyopt rsa_keygen_bits:3072
+  (
+    cd $DIR
+    openssl genpkey -algorithm RSA -out $FILE_NAME_PRIVATE_KEY -pkeyopt rsa_keygen_bits:3072
 
-  # convert to RSA private key format, otherwise services complain:"
-  # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
-  openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY
-  cd ..
+    # convert to RSA private key format, otherwise services complain:"
+    # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
+    openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY
+  )
 done
 
 echo "All keys and certificates have been generated in directory $ROOTDIR."

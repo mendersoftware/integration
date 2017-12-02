@@ -30,13 +30,13 @@ shopt -s nullglob
 # load task definitions
 for task in /srv/tasks/*.json; do
     echo "-- loading task $task"
-    /srv/conductor-load --conductor-address ${CONDUCTOR} -t task $task
+    /srv/conductor-load --conductor-address "${CONDUCTOR}" -t task "$task"
 done
 
 # load workflow definitions
 for workflow in /srv/workflows/*.json; do
     echo "-- loading workflow $workflow"
-    /srv/conductor-load --conductor-address ${CONDUCTOR} -t workflow $workflow
+    /srv/conductor-load --conductor-address "${CONDUCTOR}" -t workflow "$workflow"
 done
 
 wait

@@ -33,29 +33,46 @@ class TestCreateOrganization(MenderTesting):
     @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
     def test_success(self):
 
-        print("Starting TestCreateOrganization")
+        logging.info("Starting TestCreateOrganization")
         smtp_mock = SMTPMock()
 
         thread = Thread(target=smtp_mock.start)
         thread.daemon = True
         thread.start()
 
-        print("TestCreateOrganization: making request")
+        logging.info("TestCreateOrganization: making request")
 
-        payload = {"request_id": "123456", "tenant_id":"123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
-        print("TestCreateOrganization: workflow started. Waiting...")
+        logging.info("TestCreateOrganization: workflow started. Waiting...")
         for i in range(100):
-            print("waiting: ", i)
-            if smtp_mock.server.received == True:
+            if len(smtp_mock.server.messages) > 0:
                 break
             time.sleep(0.5)
-        print("TestCreateOrganization: Waiting finished. Stoping mock")
+        logging.info("TestCreateOrganization: Waiting finished. Stoping mock")
         smtp_mock.stop()
-        print("TestCreateOrganization: Mock stopped.")
+        logging.info("TestCreateOrganization: Mock stopped.")
         smtp_mock.assert_called()
-        print("TestCreateOrganization: Assert ok.")
+        logging.info("TestCreateOrganization: Assert ok.")
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    def test_duplicate_tenant(self):
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 202
+        payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user2@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 409
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    def test_duplicate_email(self):
+        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 202
+        payload = {"request_id": "123457", "organization": "tenant-foo2", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        assert rsp.status_code == 409
 
 
 class SMTPMock:
@@ -67,4 +84,9 @@ class SMTPMock:
         self.server.close()
 
     def assert_called(self):
-        assert self.server.received == True
+        assert len(self.server.messages) == 1
+        m = self.server.messages[0]
+        assert m.mailfrom == "contact@mender.io"
+        assert m.rcpttos[0] == "some.user@example.com"
+        assert len(m.data) > 0
+

@@ -1,0 +1,22 @@
+{
+    "name": "create_tenant_artifacts_images",
+    "description": "Create mender artifacts and sdimg for onboarding new tenant to SaaS",
+    "version": 1,
+    "tasks": [
+        {
+            "name": "create_artifacts",
+            "taskReferenceName": "create_tenant_artifacts_images",
+            "type": "SIMPLE",
+            "inputParameters": {
+                "tenant_id": "${workflow.input.tenant_id}",
+                "tenant_token": "${workflow.input.tenant_token}"
+            }
+        }
+    ],
+
+    "inputParameters":[
+        "tenant_id",
+        "tenant_token"    
+    ],
+    "schemaVersion": 2
+}

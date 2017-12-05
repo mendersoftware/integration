@@ -227,6 +227,14 @@ def get_docker_compose_data_for_rev(git_dir, rev):
     return get_docker_compose_data_from_json_list(yamls)
 
 def version_of(integration_dir, repo_container, in_integration_version=None):
+    if repo_container == "mender-integration":
+        if in_integration_version is not None:
+            # Just return the supplied version string.
+            return in_integration_version
+        else:
+            return execute_git(None, integration_dir, ["describe", "--all", "--always"],
+                               capture=True)
+
     if in_integration_version is not None:
         # Check if there is a range, and if so, return range.
         range_type = ""

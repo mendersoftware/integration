@@ -1,6 +1,5 @@
 #!/bin/bash
 set -x -e
-RUN_S3=""
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
 if [[ $? -ne 0 ]]; then
@@ -34,7 +33,7 @@ EOF
 
 function inject_pre_generated_ssh_keys() {
     ssh-keygen -f /tmp/mender-id_rsa -t rsa -N ''
-    echo "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa" | debugfs -w core-image-full-cmdline-vexpress-qemu.ext4
+    printf "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa\n" | debugfs -w core-image-full-cmdline-vexpress-qemu.ext4
     rm /tmp/mender-id_rsa.pub
     rm /tmp/mender-id_rsa
 }
@@ -81,13 +80,13 @@ if [[ -n "$BUILDDIR" ]]; then
     # On branches without recipe specific sysroots, the next step will fail
     # because the prepare_recipe_sysroot task doesn't exist. Use that failure
     # to fall back to the old generic sysroot path.
-    if ( cd $BUILDDIR && bitbake -c prepare_recipe_sysroot mender-test-dependencies ); then
-        eval `cd $BUILDDIR && bitbake -e mender-test-dependencies | grep '^export PATH='`:$PATH
+    if ( cd "$BUILDDIR" && bitbake -c prepare_recipe_sysroot mender-test-dependencies ); then
+        eval "$(cd "$BUILDDIR" && bitbake -e mender-test-dependencies | grep '^export PATH=')":"$PATH"
     else
-        eval `cd $BUILDDIR && bitbake -e core-image-minimal | grep '^export PATH='`:$PATH
+        eval "$(cd "$BUILDDIR" && bitbake -e core-image-minimal | grep '^export PATH=')":"$PATH"
     fi
 
-    cp -f $BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4 .
+    cp -f "$BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4" .
 
     # mender-stress-test-client is here
     export PATH=$PATH:~/go/bin/

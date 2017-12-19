@@ -110,7 +110,7 @@ else
     fi
 fi
 
-XDIST_ARGS="-n auto"
+XDIST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
 MAX_FAIL_ARG="--maxfail=1"
 HTML_REPORT="--html=report.html --self-contained-html"
 UPGRADE_TEST_ARG=""
@@ -122,11 +122,6 @@ if ! pip list |grep -e pytest-xdist >/dev/null 2>&1; then
 else
     # run all tests when running in parallel
     MAX_FAIL_ARG=""
-
-    # allow you to run something else besides -n auto
-    if [[ -n $XDIST_PARALLEL_ARG ]]; then
-        XDIST_ARGS="-n $XDIST_PARALLEL_ARG"
-    fi
 fi
 
 if ! pip list|grep -e pytest-html >/dev/null 2>&1; then

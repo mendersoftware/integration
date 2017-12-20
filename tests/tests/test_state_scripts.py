@@ -632,6 +632,72 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Error_55", # Error for this state doesn't exist, should never run.
     ]
 
+
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
+    def test_reboot_recovery(self):
+        if not env.host_string:
+            execute(self.test_reboot_recovery, hosts=get_mender_clients())
+            return
+
+
+        client = env.host_string
+        work_dir = "test_state_scripts.%s" % client
+
+        scripts = ["ArtifactInstall_Enter_01",
+                   "ArtifactInstall_Enter_02",
+                   "ArtifactInstall_Leave_01",
+                   "ArtifactInstall_Leave_03",
+                   "ArtifactReboot_Enter_01",
+                   "ArtifactReboot_Enter_11",
+                   "ArtifactReboot_Leave_01",
+                   "ArtifactReboot_Leave_89"]
+
+        rebootScript = [ "ArtifactInstall_Leave_03", "ArtifactReboot_Enter_01"]
+
+        script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
+        script_failure_runs_once = 'test "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -gt 1 && sleep 10 && exit 0\n'
+        script_failure_content = script_content + script_failure_runs_once + 'echo "$(basename $0)" >> /data/test_state_script_killed && killall -s9 mender; systemctl start mender'
+        broken_artifact_id = False
+
+        # Put artifact-scripts in the artifact.
+        artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
+
+        if os.path.exists(work_dir):
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+        os.mkdir(work_dir)
+        os.mkdir(artifact_script_dir)
+
+        new_rootfs = os.path.join(work_dir, "rootfs.ext4")
+        shutil.copy(conftest.get_valid_image(), new_rootfs)
+
+        ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
+        ps.stdin.write("cd /etc/mender\n"
+                       "mkdir scripts\n"
+                       "cd scripts\n")
+
+        ps.stdin.close()
+        ps.wait()
+
+        for script in scripts:
+            if not script.startswith("Artifact"):
+                # Not an artifact script, skip this one.
+                continue
+            with open(os.path.join(artifact_script_dir, script), "w") as fd:
+                if script in rebootScript:
+                    fd.write(script_failure_content)
+                else:
+                    fd.write(script_content)
+
+        # Now create the artifact, and make the deployment.
+        device_id = Helpers.ip_to_device_id_map([client])[client]
+        deployment_id = common_update_procedure(install_image=new_rootfs,
+                                                broken_image=broken_artifact_id,
+                                                verify_status=False,
+                                                devices=[device_id],
+                                                scripts=[artifact_script_dir])[0]
+        time.sleep(1000)
+
     @MenderTesting.slow
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     @pytest.mark.parametrize("test_set", TEST_SETS)

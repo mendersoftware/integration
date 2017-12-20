@@ -32,6 +32,7 @@ ST_ShortLivedAuthToken = 6
 ST_CustomSetup = 7
 ST_MultiTenancyNoClient = 8
 ST_OneClientsBootstrapped_AWS_S3_MT = 9
+ST_MultiTenancyNoClientWithSmtp = 10
 
 
 def setup_type():

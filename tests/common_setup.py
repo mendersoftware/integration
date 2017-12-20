@@ -226,6 +226,9 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
 
 @pytest.fixture(scope="function")
 def multitenancy_setup_without_client_with_smtp(request):
+    if setup_type() == ST_MultiTenancyNoClientWithSmtp:
+        return
+
     stop_docker_compose()
     reset_mender_api()
 
@@ -250,7 +253,7 @@ def multitenancy_setup_without_client_with_smtp(request):
         stop_docker_compose()
 
     request.addfinalizer(fin)
-    set_setup_type(ST_MultiTenancyNoClient)
+    set_setup_type(ST_MultiTenancyNoClientWithSmtp)
 
 
 def get_host_ip():

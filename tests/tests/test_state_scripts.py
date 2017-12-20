@@ -576,6 +576,138 @@ TEST_SETS = [
     },
 ]
 
+
+REBOOT_TEST_SET = [
+    {
+        # test-set0
+        "RebootScripts": [
+            "ArtifactInstall_Enter_01",
+        ],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactFailure_Enter_01",
+            "ArtifactFailure_Leave_89",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",  # kill!
+            "ArtifactFailure_Enter_01",  # run failure scripts
+            "ArtifactFailure_Leave_89"
+        ],
+    },
+
+    # test-set1
+    {
+        "RebootScripts": ["ArtifactInstall_Leave_02"],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "DoubleReboot": [True],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_02",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactFailure_Enter_01",
+            "ArtifactFailure_Leave_89"
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_02",  # reboot
+            "ArtifactFailure_Enter_01",  # rerun failure scripts
+            "ArtifactFailure_Leave_89"
+        ],
+    },
+    {
+        # test-set2
+        "ErrorScripts": ["ArtifactInstall_Enter_01"],
+        "RebootScripts": ["ArtifactInstall_Error_01"],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",
+            "ArtifactFailure_Enter_22",
+            "ArtifactFailure_Leave_44",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",  # reboot
+            "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
+            "ArtifactFailure_Leave_44",
+        ],
+    },
+    {
+        # test-set3
+        "RebootScripts": ["ArtifactReboot_Enter_01"],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "DoubleReboot": [True],
+        "ScriptOrder": [
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactFailure_Enter_02",
+            "ArtifactFailure_Leave_09",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactReboot_Enter_01", # kill!
+            "ArtifactFailure_Enter_02",  # run failure scripts on the committed (old) partition
+            "ArtifactFailure_Leave_09",
+        ],
+    },
+    {
+        # test-set4
+        "RebootScripts": ["ArtifactCommit_Enter_89"],
+        "DeviceDieSecondPartition": True,  # tests need an alternate execution path in this case
+        "StopSecondPartition": ["ArtifactReboot_Leave_01"],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactCommit_Enter_89",
+            "ArtifactRollbackReboot_Enter_89", # Should never be run
+            "ArtifactFailure_Enter_89",
+            "ArtifactFailure_Leave_09",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",  # on second partition, stop mender client
+            "ArtifactCommit_Enter_89",  # sync and kill!
+            "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
+            "ArtifactFailure_Leave_09",
+        ],
+    },
+    {
+        # test-set5
+        "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
+        "DeviceDieSecondPartition": True,
+        "StopSecondPartition": ["ArtifactReboot_Leave_01"],
+        "ExpectedFinalPartition": ["OtherPartition"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Leave_01",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Leave_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Leave_01",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Leave_01",  # kill!
+            "ArtifactCommit_Leave_01",  # rerun
+        ],
+    },
+]
+
+
+
 class TestStateScripts(MenderTesting):
     scripts = [
         "Idle_Enter_08_testing",
@@ -631,6 +763,139 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Leave_55",
         "ArtifactFailure_Error_55", # Error for this state doesn't exist, should never run.
     ]
+
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
+    @pytest.mark.parametrize("test_set", REBOOT_TEST_SET)
+    def test_reboot_recovery(self, test_set):
+        if not env.host_string:
+            execute(
+                self.test_reboot_recovery,
+                test_set,
+                hosts=get_mender_clients())
+            return
+
+        client = env.host_string
+        work_dir = "test_state_scripts.%s" % client
+
+        script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
+        # Even though this script is actually run twice, only show it once in the logs
+        script_stop_mender_on_entry = '#!/bin/sh\ntest "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -eq 0 && echo "$(basename $0)" >> /data/test_state_scripts.log && systemctl stop mender\nexit 0\n'
+        script_failure_content = script_content + 'sync\necho b > /proc/sysrq-trigger\n' # flush to disk before killing
+        script_reboot_once = '#!/bin/sh\ntest "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -eq 0 && echo "$(basename $0)" >> /data/test_state_scripts.log && sync && echo b > /proc/sysrq-trigger\necho "$(basename $0)" >> /data/test_state_scripts.log\nexit 0'
+        script_error_content = script_content + "exit 1"
+        broken_image = test_set.get("Rollback", False)
+
+        # Put artifact-scripts in the artifact.
+        artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
+
+        if os.path.exists(work_dir):
+            shutil.rmtree(work_dir, ignore_errors=True)
+
+        os.mkdir(work_dir)
+        os.mkdir(artifact_script_dir)
+
+        new_rootfs = os.path.join(work_dir, "rootfs.ext4")
+        shutil.copy(conftest.get_valid_image(), new_rootfs)
+
+        ps = subprocess.Popen(
+            ["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
+        ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
+        ps.stdin.close()
+        ps.wait()
+
+        for script in test_set.get("ScriptOrder"):
+            if not script.startswith("Artifact"):
+                # Not an artifact script, skip this one.
+                continue
+            with open(os.path.join(artifact_script_dir, script), "w") as fd:
+                if script in test_set.get("RebootScripts", []):
+                    fd.write(script_failure_content)
+                if script in test_set.get("RebootOnceScripts", []):
+                    fd.write(script_reboot_once)
+                elif script in test_set.get("StopSecondPartition", []):
+                    fd.write(script_stop_mender_on_entry)
+                elif script in test_set.get("ErrorScripts", []):
+                    fd.write(script_error_content)
+                else:
+                    fd.write(script_content)
+
+        # Now create the artifact, and make the deployment.
+        device_id = Helpers.ip_to_device_id_map([client])[client]
+        deployment_id = common_update_procedure(
+            install_image=new_rootfs,
+            broken_image=broken_image,
+            verify_status=True,
+            devices=[device_id],
+            scripts=[artifact_script_dir])[0]
+
+        try:
+
+            orig_part = Helpers.get_active_partition()
+
+            token = Helpers.place_reboot_token()
+
+            # handle case where the client has not finished the update
+            # path on the committed partition, but new partition is installed,
+            # thus we will not get a valid entrypoint into the uncommitted parition(reboot_leave)
+            # and the client will thus reboot straight after starting, and u-boot will
+            # fall back to the committed partition
+            if test_set.get("DoubleReboot", False):
+                token.verify_device_double_reboot()
+            else:
+                token.verify_reboot_performed(sleeptime=3, ntimes=3)
+
+            # if scripts are killed on a script that is run on the second partition,
+            # we need to wait for a second reboot
+            if test_set.get("DeviceDieSecondPartition", False) and len(
+                    test_set.get("StopSecondPartition", [])) > 0:
+
+                # Give it some time to settle
+                timeout = time.time() + 60
+                while timeout > time.time():
+                    logger.info("sleeping")
+                    time.sleep(3) # not in a hurry here, the client should be stopped
+                    output = run("journalctl -xn")
+                    logger.info(output)
+                    if "mender.service has finished shutting down" not in output:
+                        continue
+                    else:
+                        break
+                if time.time() > timeout:
+                    pytest.fail("could not restart mender")
+                token = Helpers.place_reboot_token()
+                run("systemctl start mender")
+                token.verify_reboot_performed(ntimes=3)
+
+            # settle down
+            timeout = time.time() + 60
+            while timeout > time.time():
+                logger.info("sleeping")
+                time.sleep(1)
+                if exists("/data/test_state_scripts.log"):
+                    break
+                else:
+                    pytest.fail("never found log files")
+
+            # make sure the client ended up on the right partition
+            if   "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
+                assert orig_part != Helpers.get_active_partition()
+            else:
+                assert orig_part == Helpers.get_active_partition()
+
+
+            output = run("cat /data/test_state_scripts.log")
+            assert output.split() == test_set.get("ExpectedScriptFlow")
+
+        finally:
+            run_after_connect("systemctl stop mender && "
+                              + "rm -f /data/test_state_scripts.log && "
+                              + "rm -rf /etc/mender/scripts && "
+                              + "rm -rf /data/mender/scripts && "
+                              + "systemctl start mender")
+
+
+
+
 
     @MenderTesting.slow
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")

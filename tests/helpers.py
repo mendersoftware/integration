@@ -171,7 +171,7 @@ class RebootToken:
         with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
             run(cmd)
 
-    def verify_reboot_performed(self, max_wait=60*30):
+    def verify_reboot_performed(self, max_wait=60*30, ntimes=9, sleeptime=1):
         logger.info("waiting for system to reboot")
 
         successful_connections = 0
@@ -180,7 +180,7 @@ class RebootToken:
         while time.time() <= timeout:
             try:
                 with settings(warn_only=True, abort_exception=FabricFatalException):
-                    time.sleep(1)
+                    time.sleep(sleeptime)
                     if exists(self.tfile):
                         logger.debug("temp. file still exists, device hasn't rebooted.")
                         continue
@@ -188,13 +188,16 @@ class RebootToken:
                         logger.debug("temp. file no longer exists, device has rebooted.")
                         successful_connections += 1
 
-                    # try connecting 10 times before returning
-                    if successful_connections <= 9:
+                    # try connecting ntimes before returning
+                    if successful_connections <= ntimes:
                         continue
                     return
 
             except (BaseException):
                 logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
+                # don't wait for a connection
+                if ntimes == 0:
+                    return
                 continue
 
         if time.time() > timeout:
@@ -203,3 +206,32 @@ class RebootToken:
     def verify_reboot_not_performed(self, wait=60):
         time.sleep(wait)
         assert exists(self.tfile)
+
+    def verify_device_double_reboot(self, wait=60*5):
+        self.dbootfile = "/mender-testing.%s" % (random.randint(1, 999999))
+        cmd = "touch %s" % (self.dbootfile)
+        with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
+            run(cmd)
+        # no time to wait for successfull connections
+        # mender never enters state-machine on the new partition
+        self.verify_reboot_performed(ntimes=0, sleeptime=3)
+        logger.debug("reboot in progress")
+        timeout = time.time() + wait
+        # wait until the dbootfile reappears
+        while time.time() <= timeout:
+            try:
+                with settings(warn_only=True, abort_exception=FabricFatalException):
+                    time.sleep(3)
+                    if not exists(self.dbootfile):
+                        logger.debug("reboot file has not reappeared, waiting")
+                        continue
+                    else:
+                        logger.debug("reboot file has reappeared. success!")
+                        return
+            except (BaseException):
+                logger.debug("no SSH connection. reboot in progress...")
+                continue
+
+        if time.time() > timeout:
+            pytest.fail("Device did not reboot back into the original partition")
+

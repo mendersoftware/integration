@@ -109,7 +109,6 @@ for repo in repos:
         range = get_range_for_repo(os.path.basename(repo), args.range)
     else:
         range = args.range
-    sys.stderr.write("Checking %s: %s:\n" % (repo, range))
     sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range] + args.gitargs,
                                 stdout=subprocess.PIPE)
     for sha in sha_list.stdout:

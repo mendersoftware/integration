@@ -576,6 +576,271 @@ TEST_SETS = [
     },
 ]
 
+REBOOT_TEST_SET = [
+    {
+        "RebootScripts": ["ArtifactInstall_Enter_01",
+                          "ArtifactInstall_Leave_03",
+                          "ArtifactReboot_Enter_01",
+                          "ArtifactReboot_Leave_89"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89"
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89"
+        ],
+
+    },
+    {
+        "RebootScripts": ["ArtifactReboot_Leave_89"],
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+        ],
+
+    },
+    {
+        "RebootScripts": ["ArtifactInstall_Enter_02"],
+                          
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89"
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89"
+        ],
+    },
+    {
+        "Rollback": True,
+        "RebootScripts": ["ArtifactInstall_Enter_01"],
+
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactRollback_Enter_01",
+            "ArtifactRollback_Leave_01",
+            "ArtifactRollbackReboot_Enter_00",
+            "ArtifactRollbackReboot_Enter_99",
+            "ArtifactRollbackReboot_Leave_01",
+            "ArtifactRollbackReboot_Leave_99",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactRollback_Enter_01",
+            "ArtifactRollback_Leave_01",
+            "ArtifactRollbackReboot_Enter_00",
+            "ArtifactRollbackReboot_Enter_99",
+            "ArtifactRollbackReboot_Leave_01",
+            "ArtifactRollbackReboot_Leave_99",
+        ],
+    },
+    {
+        "ErrorScripts": ["ArtifactInstall_Enter_01"],
+        "RebootScripts": ["ArtifactInstall_Error_01"],
+        "DeviceReboots": False,
+
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",
+            "ArtifactFailure_Enter_22",
+            "ArtifactFailure_Enter_33",
+            "ArtifactFailure_Leave_44",
+            "ArtifactFailure_Leave_55",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",
+            "ArtifactFailure_Enter_22",
+            "ArtifactFailure_Enter_33",
+            "ArtifactFailure_Leave_44",
+            "ArtifactFailure_Leave_55",
+        ],
+    },
+    {
+        "RebootScripts": ["ArtifactReboot_Leave_01"],
+
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactFailure_Enter_89",
+            "ArtifactFailure_Enter_99",
+            "ArtifactFailure_Leave_09",
+            "ArtifactFailure_Leave_99",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01", # powerloss
+            "ArtifactFailure_Enter_89", # run failure scripts on the committed partition
+            "ArtifactFailure_Enter_99",
+            "ArtifactFailure_Leave_09",
+            "ArtifactFailure_Leave_99",
+        ],
+    },
+    {
+        "RebootScripts": ["ArtifactCommit_Enter_99"],
+
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Enter_99", # powerloss
+            "ArtifactFailure_Enter_89", # run failure scripts on the committed partition
+            "ArtifactFailure_Enter_99",
+            "ArtifactFailure_Leave_09",
+            "ArtifactFailure_Leave_99",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Enter_99",
+            "ArtifactFailure_Enter_89",
+            "ArtifactFailure_Enter_99",
+            "ArtifactFailure_Leave_09",
+            "ArtifactFailure_Leave_99",
+        ],
+    },
+    {
+        "RebootScripts": ["ArtifactCommit_Leave_01"],
+
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactReboot_Leave_89",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Enter_99",
+            "ArtifactCommit_Leave_00",
+            "ArtifactCommit_Leave_01",
+        ],
+
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Enter_02",
+            "ArtifactInstall_Leave_01",
+            "ArtifactInstall_Leave_03",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Enter_01",
+            "ArtifactReboot_Enter_11",
+            "ArtifactReboot_Leave_01",
+            "ArtifactCommit_Enter_89",
+            "ArtifactCommit_Enter_99",
+            "ArtifactCommit_Leave_00",
+            "ArtifactCommit_Leave_01", # powerloss
+            "ArtifactCommit_Leave_00", # rerun
+            "ArtifactCommit_Leave_01", # rerun
+        ],
+    },
+]
+
+
 class TestStateScripts(MenderTesting):
     scripts = [
         "Idle_Enter_08_testing",
@@ -634,30 +899,20 @@ class TestStateScripts(MenderTesting):
 
 
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_reboot_recovery(self):
+    @pytest.mark.parametrize("test_set", REBOOT_TEST_SET)
+    def test_reboot_recovery(self, test_set):
         if not env.host_string:
-            execute(self.test_reboot_recovery, hosts=get_mender_clients())
+            execute(self.test_reboot_recovery, test_set, hosts=get_mender_clients())
             return
-
 
         client = env.host_string
         work_dir = "test_state_scripts.%s" % client
 
-        scripts = ["ArtifactInstall_Enter_01",
-                   "ArtifactInstall_Enter_02",
-                   "ArtifactInstall_Leave_01",
-                   "ArtifactInstall_Leave_03",
-                   "ArtifactReboot_Enter_01",
-                   "ArtifactReboot_Enter_11",
-                   "ArtifactReboot_Leave_01",
-                   "ArtifactReboot_Leave_89"]
-
-        rebootScript = [ "ArtifactInstall_Leave_03", "ArtifactReboot_Enter_01"]
-
         script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
-        script_failure_runs_once = 'test "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -gt 1 && sleep 10 && exit 0\n'
-        script_failure_content = script_content + script_failure_runs_once + 'echo "$(basename $0)" >> /data/test_state_script_killed && killall -s9 mender; systemctl start mender'
-        broken_artifact_id = False
+        script_runs_once = 'test "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -gt 1 && exit 0\n'
+        script_failure_content = script_content + script_runs_once + 'echo "$(basename $0)" >> /data/test_state_scripts_killed.log && killall -s9 mender; systemctl start mender'
+        script_error_content = script_content + script_runs_once + "exit 1"
+        broken_image = test_set.get("Rollback", False)
 
         # Put artifact-scripts in the artifact.
         artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -675,28 +930,71 @@ class TestStateScripts(MenderTesting):
         ps.stdin.write("cd /etc/mender\n"
                        "mkdir scripts\n"
                        "cd scripts\n")
-
         ps.stdin.close()
         ps.wait()
 
-        for script in scripts:
+        for script in test_set.get("ScriptOrder"):
             if not script.startswith("Artifact"):
                 # Not an artifact script, skip this one.
                 continue
             with open(os.path.join(artifact_script_dir, script), "w") as fd:
-                if script in rebootScript:
+                if script in test_set.get("RebootScripts", []):
                     fd.write(script_failure_content)
+                if script in test_set.get("ErrorScripts", []):
+                    fd.write(script_error_content)
                 else:
                     fd.write(script_content)
 
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map([client])[client]
         deployment_id = common_update_procedure(install_image=new_rootfs,
-                                                broken_image=broken_artifact_id,
-                                                verify_status=False,
+                                                broken_image=broken_image,
+                                                verify_status=True,
                                                 devices=[device_id],
                                                 scripts=[artifact_script_dir])[0]
-        time.sleep(1000)
+
+        try:
+
+            if test_set.get("DeviceReboots", True):
+                token = Helpers.place_reboot_token()
+                token.verify_reboot_performed()
+
+            # wait until log files are created...
+            timeout = time.time() + 600
+
+            while timeout > time.time():
+                time.sleep(1)
+                if exists("/data/test_state_scripts.log") and \
+                    exists("/data/test_state_scripts_killed.log"):
+                    break
+            else:
+                pytest.fail("never found log files")
+
+
+            output = run("cat /data/mender/deployments*")
+            logger.info("Log from deployment: ")
+            logger.info(output)
+
+            output = run("cat /data/test_state_scripts.log")
+            logger.info("Execution flow of state scripts: ")
+            logger.info(output)
+
+            assert output.split() == test_set.get("ExpectedScriptFlow")
+
+            output = run("cat /data/test_state_scripts_killed.log")
+            logger.info("State scripts that killed Mender: ")
+            logger.info(output)
+
+            logger.info("Expected state script runs: ")
+            logger.info(test_set.get("ScriptOrder"))
+
+        finally:
+            run_after_connect("systemctl stop mender && "
+                              + "rm -f /data/test_state_scripts.log && "
+                              + "rm -rf /etc/mender/scripts && "
+                              + "rm -rf /data/mender/scripts && "
+                              + "systemctl start mender")
+
 
     @MenderTesting.slow
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")

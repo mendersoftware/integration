@@ -3,3 +3,4 @@ pytest>=3.0
 Fabric>=1.13.0
 filelock>=2.0
 psutil
+selenium

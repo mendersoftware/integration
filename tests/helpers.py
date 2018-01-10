@@ -174,24 +174,24 @@ class RebootToken:
     def verify_reboot_performed(self, max_wait=60*30):
         logger.info("waiting for system to reboot")
 
-        successful_connections = 0
+        waittime = 1
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
             try:
                 with settings(warn_only=True, abort_exception=FabricFatalException):
-                    time.sleep(1)
+                    time.sleep(waittime)
+                    # Use linear backoff, but not more than a minute.
+                    # We don't use exponential backoff, because some tests need
+                    # some granularity.
+                    if waittime < 60:
+                        waittime = waittime + 1
                     if exists(self.tfile):
                         logger.debug("temp. file still exists, device hasn't rebooted.")
                         continue
                     else:
                         logger.debug("temp. file no longer exists, device has rebooted.")
-                        successful_connections += 1
-
-                    # try connecting 10 times before returning
-                    if successful_connections <= 9:
-                        continue
-                    return
+                        return
 
             except (BaseException):
                 logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")

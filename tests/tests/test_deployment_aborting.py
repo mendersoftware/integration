@@ -62,8 +62,20 @@ class TestDeploymentAborting(MenderTesting):
 
         token.verify_reboot_performed()
 
-        assert Helpers.get_active_partition() == expected_partition
-        assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+        starttime = time.time()
+        while True:
+            try:
+                assert Helpers.get_active_partition() == expected_partition
+                assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+                break
+            except AssertionError:
+                # Check the above multiple times if failed. Because aborting
+                # during a reboot will in fact reboot, it may be that the agent
+                # is temporarily on the wrong partition. But it should recover.
+                if time.time() - starttime > 300:
+                    raise
+                time.sleep(10)
+                run_after_connect("true")
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast

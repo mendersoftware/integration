@@ -83,7 +83,7 @@ def ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-def run_after_connect(cmd, wait = 120):
+def run_after_connect(cmd, wait = 300):
     output = ""
     start_time = time.time()
     # Use shorter timeout to get a faster cycle.

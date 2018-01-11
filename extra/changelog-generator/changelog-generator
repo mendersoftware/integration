@@ -33,8 +33,6 @@ def add_entry(sha, msg):
     ENTRIES[sha] = sha_list
 
 parser = argparse.ArgumentParser(description='Generates a changelog for Mender repositories.')
-parser.add_argument('range', metavar='<commit-range>',
-                    help='Range of commits to generate log for')
 parser.add_argument('--repo', dest='repo', action='store_true',
                     default=False,
                     help='Includes only the current repository. '
@@ -51,6 +49,11 @@ parser.add_argument('--base-dir', dest='base_dir',
 parser.add_argument('--sort-changelog', dest='sort_changelog', action='store_true',
                     # Not used except in the test.
                     help=argparse.SUPPRESS)
+parser.add_argument('range', metavar='<commit-range> [--]',
+                    help='Range of commits to generate log for')
+parser.add_argument('gitargs', metavar='git-argument', nargs='*',
+                    help='Additional git arguments to tailor the commit range. '
+                    + 'Note that for technical reasons these must come last.')
 
 args = parser.parse_args()
 
@@ -83,18 +86,8 @@ else:
     repos.append(".")
 
 def get_range_for_repo(repo, range):
-    endpoints = args.range.split("..")
-    if len(endpoints) != 2:
-        print("Don't know how to handle range which is not of the form 'A.B.C..X.Y.Z': %s"
-              % args.range)
-        sys.exit(1)
-    start = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                     "--version-of", repo, "--in-integration-version", endpoints[0]])
-    start = start.decode().strip()
-    end = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                   "--version-of", repo, "--in-integration-version", endpoints[1]])
-    end = end.decode().strip()
-    return "%s..%s" % (start, end)
+    return subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                    "--version-of", repo, "--in-integration-version", range]).decode().strip()
 
 if ".." in args.range:
     print("## v%s\n" % args.range.split("..")[1])
@@ -116,8 +109,8 @@ for repo in repos:
         range = get_range_for_repo(os.path.basename(repo), args.range)
     else:
         range = args.range
-    sys.stderr.write("Checking %s: %s:\n" % (repo, range))
-    sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range], stdout=subprocess.PIPE)
+    sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range] + args.gitargs,
+                                stdout=subprocess.PIPE)
     for sha in sha_list.stdout:
         sha = sha.decode().rstrip('\n')
         blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)

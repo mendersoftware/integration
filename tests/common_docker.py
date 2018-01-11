@@ -52,15 +52,14 @@ def docker_compose_cmd(arg_list, use_common_files=True):
 
 
 def stop_docker_compose():
-    # take down all COMPOSE_FILES and the s3 specific files
-    docker_compose_cmd(" -f ../docker-compose.storage.s3.yml -f ../extra/travis-testing/s3.yml down -v")
-
-    # docker-compose issue: https://github.com/docker/compose/issues/4046
-    # under some unknown circumstances, docker-compose log fails to quit, and hangs pytest
-    for p in psutil.process_iter():
-        if "docker-compose -p %s" % (conftest.docker_compose_instance) in p.cmdline() and "logs" in p.cmdline():
-            logger.info("killing lingering 'docker-compose log' process (pid: %s)" % p.cmdline())
-            p.kill()
+    with conftest.docker_lock:
+        # Take down all docker instances in this namespace.
+        cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % conftest.docker_compose_instance
+        logger.info("running %s" % cmd)
+        subprocess.check_call(cmd, shell=True)
+        cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % conftest.docker_compose_instance
+        logger.info("running %s" % cmd)
+        subprocess.check_call(cmd, shell=True)
 
     common.set_setup_type(None)
 
@@ -73,10 +72,12 @@ def start_docker_compose(clients=1):
         docker_compose_cmd("scale mender-client=%d" % clients)
 
     if inline_logs:
-        docker_compose_cmd("logs -f &")
+        docker_compose_cmd("logs -f &",
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
     else:
         tfile = tempfile.mktemp("mender_testing")
-        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile)
+        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
         logger.info("docker-compose log file stored here: %s" % tfile)
         log_files.append(tfile)
 
@@ -126,8 +127,9 @@ def ssh_is_opened():
 
 
 @parallel
-def ssh_is_opened_impl(cmd="true", wait=60):
+def ssh_is_opened_impl(cmd="true", wait=300):
     count = 0
+    sleeptime = 1
 
     while count < wait:
         try:
@@ -135,11 +137,11 @@ def ssh_is_opened_impl(cmd="true", wait=60):
             with quiet():
                 return run(cmd)
         except BaseException:
-            time.sleep(1)
-            count += 1
+            time.sleep(sleeptime)
+            count += sleeptime
+            sleeptime *= 2
             continue
         else:
             break
-
-    if count >= 60:
+    else:
         logger.fatal("Unable to connect to host: %s", env.host_string)

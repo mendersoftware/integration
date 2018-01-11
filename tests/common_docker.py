@@ -72,10 +72,12 @@ def start_docker_compose(clients=1):
         docker_compose_cmd("scale mender-client=%d" % clients)
 
     if inline_logs:
-        docker_compose_cmd("logs -f &")
+        docker_compose_cmd("logs -f &",
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
     else:
         tfile = tempfile.mktemp("mender_testing")
-        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile)
+        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
         logger.info("docker-compose log file stored here: %s" % tfile)
         log_files.append(tfile)
 

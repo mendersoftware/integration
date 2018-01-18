@@ -151,7 +151,7 @@ services:
         image: mendersoftware/conductor:1.8.1
         depends_on:
             - mender-elasticsearch
-            - mender-dynomite
+            - mender-redis
         extends:
             file: common.yml
             service: mender-base
@@ -166,15 +166,13 @@ services:
         networks:
             - mender
 
-    mender-dynomite:
-        image: mendersoftware/dynomite:stable
+    mender-redis:
+        image: redis:3.2.11-alpine
         extends:
             file: common.yml
             service: mender-base
         networks:
             - mender
-        logging:
-            driver: none
 
 networks:
     mender:

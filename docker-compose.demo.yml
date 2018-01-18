@@ -83,3 +83,10 @@ services:
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
+
+    mender-redis:
+        volumes:
+            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
+            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
+            - /var/lib/redis
+        entrypoint: /redis/entrypoint.sh

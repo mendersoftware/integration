@@ -46,10 +46,12 @@ class TestCreateOrganization(MenderTesting):
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
         logging.info("TestCreateOrganization: workflow started. Waiting...")
-        for i in range(100):
+
+        for i in range(60 * 5):
             if len(smtp_mock.server.messages) > 0:
                 break
-            time.sleep(0.5)
+            time.sleep(1)
+
         logging.info("TestCreateOrganization: Waiting finished. Stoping mock")
         smtp_mock.stop()
         logging.info("TestCreateOrganization: Mock stopped.")

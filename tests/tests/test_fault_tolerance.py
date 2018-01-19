@@ -73,10 +73,10 @@ class TestFaultTolerance(MenderTesting):
                     install_image=install_image)
             return
 
-        token = Helpers.place_reboot_token()
-        deployment_id, _ = common_update_procedure(install_image)
-        token.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
-        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, _ = common_update_procedure(install_image)
+            reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
+            deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
 
     @MenderTesting.fast
     def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
@@ -94,27 +94,26 @@ class TestFaultTolerance(MenderTesting):
         installed_yocto_id = Helpers.yocto_id_installed_on_machine()
 
         inactive_part = Helpers.get_passive_partition()
-        token = Helpers.place_reboot_token()
-        deployment_id, _ = common_update_procedure(install_image)
-        active_part = Helpers.get_active_partition()
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, _ = common_update_procedure(install_image)
+            active_part = Helpers.get_active_partition()
 
-        for i in range(60):
-            time.sleep(0.5)
-            with quiet():
-                # make sure we are writing to the inactive partition
-                output = run("fuser -mv %s" % (inactive_part))
-            if output.return_code == 0:
-                run("killall -s 9 mender")
-                with settings(warn_only=True):
-                    run("( sleep 3 ; reboot ) 2>/dev/null >/dev/null &")
-                break
+            for i in range(60):
+                time.sleep(0.5)
+                with quiet():
+                    # make sure we are writing to the inactive partition
+                    output = run("fuser -mv %s" % (inactive_part))
+                if output.return_code == 0:
+                    run("killall -s 9 mender")
+                    with settings(warn_only=True):
+                        run("( sleep 3 ; reboot ) 2>/dev/null >/dev/null &")
+                    break
 
-        logging.info("Waiting for system to finish reboot")
-        token.verify_reboot_performed()
-        assert Helpers.get_active_partition() == active_part
-        token = Helpers.place_reboot_token()
-        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
-        token.verify_reboot_not_performed()
+            logging.info("Waiting for system to finish reboot")
+            reboot.verify_reboot_performed()
+            assert Helpers.get_active_partition() == active_part
+            deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
+            reboot.verify_reboot_not_performed()
 
         assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
 
@@ -133,18 +132,18 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
-        token = Helpers.place_reboot_token()
-        deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
-        time.sleep(60)
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
+            time.sleep(60)
 
-        for i in range(5):
-            time.sleep(5)
-            Helpers.gateway_connectivity(i % 2 == 0)
-        Helpers.gateway_connectivity(True)
+            for i in range(5):
+                time.sleep(5)
+                Helpers.gateway_connectivity(i % 2 == 0)
+            Helpers.gateway_connectivity(True)
 
-        logging.info("Network stabilized")
-        token.verify_reboot_performed()
-        deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+            logging.info("Network stabilized")
+            reboot.verify_reboot_performed()
+            deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
 
@@ -173,37 +172,36 @@ class TestFaultTolerance(MenderTesting):
         run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
         inactive_part = Helpers.get_passive_partition()
-        token = Helpers.place_reboot_token()
 
-        if test_set['blockAfterStart']:
-            # Block after we start the download.
-            deployment_id, new_yocto_id = common_update_procedure(install_image)
-            for _ in range(60):
-                time.sleep(0.5)
-                with quiet():
-                    # make sure we are writing to the inactive partition
-                    output = run("fuser -mv %s" % (inactive_part))
-                if output.return_code == 0:
-                    break
-            else:
-                pytest.fail("Download never started?")
+        with Helpers.RebootDetector() as reboot:
+            if test_set['blockAfterStart']:
+                # Block after we start the download.
+                deployment_id, new_yocto_id = common_update_procedure(install_image)
+                for _ in range(60):
+                    time.sleep(0.5)
+                    with quiet():
+                        # make sure we are writing to the inactive partition
+                        output = run("fuser -mv %s" % (inactive_part))
+                    if output.return_code == 0:
+                        break
+                else:
+                    pytest.fail("Download never started?")
 
-        # use iptables to block traffic to storage
-        Helpers.gateway_connectivity(False, hosts=["s3.docker.mender.io"])  # disable connectivity
+            # use iptables to block traffic to storage
+            Helpers.gateway_connectivity(False, hosts=["s3.docker.mender.io"])  # disable connectivity
 
-        if not test_set['blockAfterStart']:
-            # Block before we start the download.
-            deployment_id, new_yocto_id = common_update_procedure(install_image)
+            if not test_set['blockAfterStart']:
+                # Block before we start the download.
+                deployment_id, new_yocto_id = common_update_procedure(install_image)
 
-        # re-enable connectivity after 2 retries
-        self.wait_for_download_retry_attempts(test_set['logMessageToLookFor'])
-        Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
+            # re-enable connectivity after 2 retries
+            self.wait_for_download_retry_attempts(test_set['logMessageToLookFor'])
+            Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
 
-        token.verify_reboot_performed()
-        token = Helpers.place_reboot_token()
-        assert Helpers.get_active_partition() == inactive_part
-        assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
-        token.verify_reboot_not_performed()
+            reboot.verify_reboot_performed()
+            assert Helpers.get_active_partition() == inactive_part
+            assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
+            reboot.verify_reboot_not_performed()
 
     @MenderTesting.nightly
     def test_image_download_retry_hosts_broken(self, install_image=conftest.get_valid_image()):
@@ -220,14 +218,13 @@ class TestFaultTolerance(MenderTesting):
         inactive_part = Helpers.get_passive_partition()
 
         run("echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts")  # break s3 connectivity before triggering deployment
-        token = Helpers.place_reboot_token()
-        deployment_id, new_yocto_id = common_update_procedure(install_image)
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, new_yocto_id = common_update_procedure(install_image)
 
-        self.wait_for_download_retry_attempts()
-        run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
+            self.wait_for_download_retry_attempts()
+            run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
-        token.verify_reboot_performed()
-        token = Helpers.place_reboot_token()
-        assert Helpers.get_active_partition() == inactive_part
-        assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
-        token.verify_reboot_not_performed()
+            reboot.verify_reboot_performed()
+            assert Helpers.get_active_partition() == inactive_part
+            assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
+            reboot.verify_reboot_not_performed()

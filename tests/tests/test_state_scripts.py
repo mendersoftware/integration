@@ -614,7 +614,7 @@ REBOOT_TEST_SET = [
         ],
         "ExpectedScriptFlow": [
             "ArtifactInstall_Enter_01",
-            "ArtifactInstall_Leave_02",  # reboot
+            "ArtifactInstall_Leave_02",  # reboot_detector
             "ArtifactFailure_Enter_01",  # rerun failure scripts
             "ArtifactFailure_Leave_89"
         ],
@@ -632,13 +632,32 @@ REBOOT_TEST_SET = [
         ],
         "ExpectedScriptFlow": [
             "ArtifactInstall_Enter_01",
-            "ArtifactInstall_Error_01",  # reboot
+            "ArtifactInstall_Error_01",  # kill!
             "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
             "ArtifactFailure_Leave_44",
         ],
     },
     {
         # test-set3
+        "ErrorScripts": ["ArtifactInstall_Leave_01"],
+        "RebootScripts": ["ArtifactInstall_Error_01"],
+        "ExpectedFinalPartition": ["OriginalPartition"],
+        "DoubleReboot": [True], # As the new image has already been installed, expect a double reboot
+        "ScriptOrder": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",
+            "ArtifactFailure_Enter_22",
+            "ArtifactFailure_Leave_44",
+        ],
+        "ExpectedScriptFlow": [
+            "ArtifactInstall_Enter_01",
+            "ArtifactInstall_Error_01",  # kill!
+            "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
+            "ArtifactFailure_Leave_44",
+        ],
+    },
+    {
+        # test-set4
         "RebootScripts": ["ArtifactReboot_Enter_01"],
         "ExpectedFinalPartition": ["OriginalPartition"],
         "DoubleReboot": [True],
@@ -655,7 +674,7 @@ REBOOT_TEST_SET = [
         ],
     },
     {
-        # test-set4
+        # test-set5
         "RebootScripts": ["ArtifactCommit_Enter_89"],
         "DeviceDieSecondPartition": True,  # tests need an alternate execution path in this case
         "StopSecondPartition": ["ArtifactReboot_Leave_01"],
@@ -681,7 +700,7 @@ REBOOT_TEST_SET = [
         ],
     },
     {
-        # test-set5
+        # test-set6
         "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
         "DeviceDieSecondPartition": True,
         "StopSecondPartition": ["ArtifactReboot_Leave_01"],
@@ -779,9 +798,21 @@ class TestStateScripts(MenderTesting):
 
         script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
         # Even though this script is actually run twice, only show it once in the logs
-        script_stop_mender_on_entry = '#!/bin/sh\ntest "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -eq 0 && echo "$(basename $0)" >> /data/test_state_scripts.log && systemctl stop mender\nexit 0\n'
+        script_stop_mender_on_entry = (
+        '''#!/bin/sh
+        if [ $(grep -c $(basename $0) /data/test_state_scripts.log) -eq 0 ]; then
+            echo "$(basename $0)" >> /data/test_state_scripts.log && systemctl stop mender
+        fi
+        exit 0 ''')
+
         script_failure_content = script_content + 'sync\necho b > /proc/sysrq-trigger\n' # flush to disk before killing
-        script_reboot_once = '#!/bin/sh\ntest "$(grep -c "$(basename $0)" /data/test_state_scripts.log)" -eq 0 && echo "$(basename $0)" >> /data/test_state_scripts.log && sync && echo b > /proc/sysrq-trigger\necho "$(basename $0)" >> /data/test_state_scripts.log\nexit 0'
+        script_reboot_once =(
+        '''#!/bin/sh
+        if [ $(grep -c $(basename $0) /data/test_state_scripts.log) -eq 0 ]; then
+            echo "$(basename $0)" >> /data/test_state_scripts.log && sync && echo b > /proc/sysrq-trigger
+        fi
+        echo "$(basename $0)" >> /data/test_state_scripts.log
+        exit 0''')
         script_error_content = script_content + "exit 1"
         broken_image = test_set.get("Rollback", False)
 
@@ -828,70 +859,70 @@ class TestStateScripts(MenderTesting):
             devices=[device_id],
             scripts=[artifact_script_dir])[0]
 
-        try:
+        with Helpers.RebootDetector() as reboot_detector:
 
-            orig_part = Helpers.get_active_partition()
+            try:
 
-            token = Helpers.place_reboot_token()
+                orig_part = Helpers.get_active_partition()
 
-            # handle case where the client has not finished the update
-            # path on the committed partition, but new partition is installed,
-            # thus we will not get a valid entrypoint into the uncommitted parition(reboot_leave)
-            # and the client will thus reboot straight after starting, and u-boot will
-            # fall back to the committed partition
-            if test_set.get("DoubleReboot", False):
-                token.verify_device_double_reboot()
-            else:
-                token.verify_reboot_performed(sleeptime=3, ntimes=3)
+                # handle case where the client has not finished the update
+                # path on the committed partition, but new partition is installed,
+                # thus we will not get a valid entrypoint into the uncommitted parition(reboot_leave)
+                # and the client will thus reboot straight after starting, and u-boot will
+                # fall back to the committed partition
+                if test_set.get("DoubleReboot", False):
+                    reboot_detector.verify_reboot_performed(number_of_reboots=2)
+                else:
+                    reboot_detector.verify_reboot_performed()
 
-            # if scripts are killed on a script that is run on the second partition,
-            # we need to wait for a second reboot
-            if test_set.get("DeviceDieSecondPartition", False) and len(
-                    test_set.get("StopSecondPartition", [])) > 0:
+                # if scripts are killed on a script that is run on the second partition,
+                # we need to wait for a second reboot_detector
+                if test_set.get("DeviceDieSecondPartition", False) and len(
+                        test_set.get("StopSecondPartition", [])) > 0:
 
-                # Give it some time to settle
+                    # Give it some time to settle
+                    timeout = time.time() + 60
+                    while timeout > time.time():
+                        logger.info("sleeping")
+                        time.sleep(3) # not in a hurry here, the client should be stopped
+                        # TODO use systemctl is-active mender instead
+                        output = run("journalctl -xn")
+                        logger.info(output)
+                        if "mender.service has finished shutting down" not in output:
+                            continue
+                        else:
+                            break
+                    if time.time() > timeout:
+                        pytest.fail("could not restart mender")
+                    run("systemctl start mender")
+                    reboot_detector.verify_reboot_performed()
+
+                # settle down
                 timeout = time.time() + 60
                 while timeout > time.time():
                     logger.info("sleeping")
-                    time.sleep(3) # not in a hurry here, the client should be stopped
-                    output = run("journalctl -xn")
-                    logger.info(output)
-                    if "mender.service has finished shutting down" not in output:
-                        continue
-                    else:
+                    time.sleep(1)
+                    if exists("/data/test_state_scripts.log"):
                         break
-                if time.time() > timeout:
-                    pytest.fail("could not restart mender")
-                token = Helpers.place_reboot_token()
-                run("systemctl start mender")
-                token.verify_reboot_performed(ntimes=3)
+                    else:
+                        pytest.fail("never found log files")
 
-            # settle down
-            timeout = time.time() + 60
-            while timeout > time.time():
-                logger.info("sleeping")
-                time.sleep(1)
-                if exists("/data/test_state_scripts.log"):
-                    break
+                # make sure the client ended up on the right partition
+                if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
+                    assert orig_part != Helpers.get_active_partition()
                 else:
-                    pytest.fail("never found log files")
-
-            # make sure the client ended up on the right partition
-            if   "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
-                assert orig_part != Helpers.get_active_partition()
-            else:
-                assert orig_part == Helpers.get_active_partition()
+                    assert orig_part == Helpers.get_active_partition()
 
 
-            output = run("cat /data/test_state_scripts.log")
-            assert output.split() == test_set.get("ExpectedScriptFlow")
+                output = run("cat /data/test_state_scripts.log")
+                assert output.split() == test_set.get("ExpectedScriptFlow")
 
-        finally:
-            run_after_connect("systemctl stop mender && "
-                              + "rm -f /data/test_state_scripts.log && "
-                              + "rm -rf /etc/mender/scripts && "
-                              + "rm -rf /data/mender/scripts && "
-                              + "systemctl start mender")
+            finally:
+                run_after_connect("systemctl stop mender && "
+                                + "rm -f /data/test_state_scripts.log && "
+                                + "rm -rf /etc/mender/scripts && "
+                                + "rm -rf /data/mender/scripts && "
+                                + "systemctl start mender")
 
 
 

@@ -46,10 +46,12 @@ class TestCreateOrganization(MenderTesting):
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
         logging.info("TestCreateOrganization: workflow started. Waiting...")
-        for i in range(100):
+
+        for i in range(60 * 5):
             if len(smtp_mock.server.messages) > 0:
                 break
-            time.sleep(0.5)
+            time.sleep(1)
+
         logging.info("TestCreateOrganization: Waiting finished. Stoping mock")
         smtp_mock.stop()
         logging.info("TestCreateOrganization: Mock stopped.")
@@ -69,9 +71,12 @@ class TestCreateOrganization(MenderTesting):
     def test_duplicate_email(self):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        logging.debug("first request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 202
+        
         payload = {"request_id": "123457", "organization": "tenant-foo2", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        logging.debug("second request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 409
 
 

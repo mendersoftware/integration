@@ -56,11 +56,16 @@ class TestDeploymentAborting(MenderTesting):
             for d in adm.get_devices():
                 deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
-            if not mender_performs_reboot:
+            if mender_performs_reboot:
+                # If Mender performs reboot, we need to wait for it to reboot
+                # back into the original filesystem.
+                reboot.verify_reboot_performed(number_of_reboots=2)
+            else:
+                # Else we reboot ourselves, just to make sure that we have not
+                # unintentionally switched to the new partition.
                 reboot.verify_reboot_not_performed()
                 run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
-
-            reboot.verify_reboot_performed()
+                reboot.verify_reboot_performed()
 
         assert Helpers.get_active_partition() == expected_partition
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id

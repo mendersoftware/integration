@@ -723,6 +723,7 @@ class TestStateScripts(MenderTesting):
                     fd.write("1000")
                 else:
                     fd.write("2")
+            ps.stdin.write("rm version\n")
             ps.stdin.write("write %s version\n" % os.path.join(rootfs_script_dir, "version"))
             for script in self.scripts:
                 if script.startswith("Artifact"):

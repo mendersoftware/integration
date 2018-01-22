@@ -33,7 +33,7 @@ def setup_docker_volumes():
                       "mender-deployments-db",
                       "mender-deviceadm-db",
                       "mender-deviceauth-db",
-                      "mender-dynomite-db",
+                      "mender-redis-db",
                       "mender-elasticsearch-db",
                       "mender-inventory-db",
                       "mender-useradm-db"]

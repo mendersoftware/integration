@@ -209,9 +209,9 @@ class Helpers:
             cmd = "systemctl stop mender-reboot-detector ; rm -f /data/mender/test.mender-reboot-detector.txt"
             try:
                 if env.host_string:
-                    run_after_connect(cmd)
+                    run(cmd)
                 else:
-                    execute(run_after_connect, cmd, hosts=self.client_ip)
+                    execute(run, cmd, hosts=self.client_ip)
             except:
                 logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
                 # Only produce our own exception if we won't be hiding an

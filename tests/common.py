@@ -108,6 +108,12 @@ def run(cmd, *args, **kw):
                 if now - attempt_time < 5:
                     time.sleep(5 - (now - attempt_time))
                 continue
+            finally:
+                # Taken from disconnect_all() in Fabric.
+                from fabric.state import connections
+                if connections.get(env.host_string) is not None:
+                    connections[env.host_string].close()
+                    del connections[env.host_string]
     return output
 
 # For now just alias sudo() to run(), since we always run as root. This may need

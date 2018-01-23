@@ -93,8 +93,10 @@ def run(cmd, *args, **kw):
     output = ""
     start_time = time.time()
     sleeptime = 1
-    # Use shorter timeout to get a faster cycle.
-    with settings(timeout = 5, abort_exception = Exception):
+    # Use shorter timeout to get a faster cycle. Not recommended though, since
+    # in a heavily loaded environment, QEMU might be quite slow to use the
+    # connection.
+    with settings(timeout = 60, abort_exception = Exception):
         while True:
             try:
                 import fabric.api

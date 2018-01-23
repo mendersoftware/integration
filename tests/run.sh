@@ -23,12 +23,6 @@ function modify_services_for_testing() {
     sed -e 's/DOWNLOAD_SPEED/#DOWNLOAD_SPEED/' -i ../docker-compose.testing.yml
     # whitelist *all* IPs/DNS names in the gateway (will be accessed via dynamically assigned IP in tests)
     sed -e 's/ALLOWED_HOSTS: .*/ALLOWED_HOSTS: ~./' -i ../docker-compose.testing.yml
-    # disable dynomite logs, NOTE indentation is important in this one
-    cat <<EOF  >> ../docker-compose.testing.yml
-    mender-dynomite:
-        logging:
-            driver: "none"
-EOF
 }
 
 function inject_pre_generated_ssh_keys() {

@@ -216,6 +216,10 @@ class Helpers:
                 logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
                 # Only produce our own exception if we won't be hiding an
                 # existing one.
+                # DEBUG
+                if trace is not None:
+                    logger.error("FAILED __exit__: %s" % trace.format_exc())
+                time.sleep(10000000)
                 if type is None:
                     raise
 

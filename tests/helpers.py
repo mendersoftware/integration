@@ -23,6 +23,7 @@ import tempfile
 import pytest
 import os
 import socket
+import traceback
 import json
 from fabric.contrib.files import exists
 import conftest
@@ -200,16 +201,23 @@ class Helpers:
 
             return self
 
-        def __exit__(self, type, value, traceback):
+        def __exit__(self, type, value, trace):
             if self.server:
                 self.server.close()
             self.server = None
 
             cmd = "systemctl stop mender-reboot-detector ; rm -f /data/mender/test.mender-reboot-detector.txt"
-            if env.host_string:
-                run_after_connect(cmd)
-            else:
-                execute(run_after_connect, cmd, hosts=self.client_ip)
+            try:
+                if env.host_string:
+                    run_after_connect(cmd)
+                else:
+                    execute(run_after_connect, cmd, hosts=self.client_ip)
+            except:
+                logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
+                # Only produce our own exception if we won't be hiding an
+                # existing one.
+                if type is None:
+                    raise
 
         def verify_reboot_performed_impl(self, max_wait=60*30, number_of_reboots=1):
             up = True

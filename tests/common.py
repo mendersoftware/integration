@@ -87,25 +87,25 @@ def run(cmd, *args, **kw):
         wait = kw['wait']
         del kw['wait']
     else:
-        wait = 300
+        wait = 1200
 
     output = ""
     start_time = time.time()
+    sleeptime = 1
     # Use shorter timeout to get a faster cycle.
     with settings(timeout = 5, abort_exception = Exception):
         while True:
-            attempt_time = time.time()
             try:
                 import fabric.api
                 output = fabric.api.run(cmd, *args, **kw)
                 break
             except Exception as e:
-                print("Could not connect to host %s: %s" % (env.host_string, e))
-                if attempt_time >= start_time + wait:
-                    raise Exception("Could not reconnect to QEMU")
-                now = time.time()
-                if now - attempt_time < 5:
-                    time.sleep(5 - (now - attempt_time))
+                if time.time() >= start_time + wait:
+                    raise Exception("Could not connect to device")
+                time.sleep(sleeptime)
+                # Back off exponentially to save SSH handshakes in QEMU, which
+                # are quite expensive.
+                sleeptime *= 2
                 continue
             finally:
                 # Taken from disconnect_all() in Fabric.

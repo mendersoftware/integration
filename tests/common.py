@@ -83,7 +83,13 @@ def ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-def run_after_connect(cmd, wait = 300):
+def run(cmd, *args, **kw):
+    if kw.get('wait') is not None:
+        wait = kw['wait']
+        del kw['wait']
+    else:
+        wait = 300
+
     output = ""
     start_time = time.time()
     # Use shorter timeout to get a faster cycle.
@@ -91,7 +97,8 @@ def run_after_connect(cmd, wait = 300):
         while True:
             attempt_time = time.time()
             try:
-                output = run(cmd)
+                import fabric.api
+                output = fabric.api.run(cmd, *args, **kw)
                 break
             except Exception as e:
                 print("Could not connect to host %s: %s" % (env.host_string, e))
@@ -102,3 +109,8 @@ def run_after_connect(cmd, wait = 300):
                     time.sleep(5 - (now - attempt_time))
                 continue
     return output
+
+# For now just alias sudo() to run(), since we always run as root. This may need
+# to be changed later.
+def sudo(*args, **kw):
+    run(*args, **kw)

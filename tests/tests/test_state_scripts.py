@@ -833,7 +833,7 @@ class TestStateScripts(MenderTesting):
             # state after an update.
             time.sleep(10)
 
-            output = run_after_connect("cat /data/test_state_scripts.log")
+            output = run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split('\n'))
 
             new_active = Helpers.get_active_partition()
@@ -855,11 +855,11 @@ class TestStateScripts(MenderTesting):
                     deploy.abort(deployment_id)
                 except:
                     pass
-            run_after_connect("systemctl stop mender && "
-                              + "rm -f /data/test_state_scripts.log && "
-                              + "rm -rf /etc/mender/scripts && "
-                              + "rm -rf /data/mender/scripts && "
-                              + "systemctl start mender")
+            run("systemctl stop mender && "
+                + "rm -f /data/test_state_scripts.log && "
+                + "rm -rf /etc/mender/scripts && "
+                + "rm -rf /data/mender/scripts && "
+                + "systemctl start mender")
 
     def verify_script_log_correct(self, test_set, log):
         expected_order = test_set['ScriptOrder']

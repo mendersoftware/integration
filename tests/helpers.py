@@ -219,7 +219,7 @@ class Helpers:
                 if type is None:
                     raise
 
-        def verify_reboot_performed_impl(self, max_wait=60*30, number_of_reboots=1):
+        def verify_reboot_performed_impl(self, max_wait, number_of_reboots=1):
             up = True
             reboot_count = 0
             start_time = time.time()
@@ -253,7 +253,7 @@ class Helpers:
                     logger.info("Client has rebooted %d time(s)" % reboot_count)
                     return True
 
-        def verify_reboot_performed(self, max_wait=60*30, number_of_reboots=1):
+        def verify_reboot_performed(self, max_wait=60*60, number_of_reboots=1):
             if self.server is None:
                 pytest.fail("verify_reboot_performed() used outside of 'with' scope.")
 

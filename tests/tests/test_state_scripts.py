@@ -629,10 +629,10 @@ TEST_SETS = [
 
 
 REBOOT_TEST_SET = [
+    # test-set0
     (
         "simulate_powerloss_artifact_install_enter",
         {
-        # test-set0
         "RebootScripts": [
             "ArtifactInstall_Enter_01",
         ],
@@ -652,7 +652,6 @@ REBOOT_TEST_SET = [
         ],
     },
     ),
-
     # test-set1
     (
         "simulate_powerloss_in_artifact_install_leave",
@@ -676,10 +675,10 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
+    # test-set2
     (
         "simulate_powerloss_in_artifact_install_error_original_partition",
         {
-            # test-set2
             "ErrorScripts": ["ArtifactInstall_Enter_01"],
             "RebootScripts": ["ArtifactInstall_Error_01"],
             "ExpectedFinalPartition": ["OriginalPartition"],
@@ -697,35 +696,37 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
+    # test-set3
     (
         "simulate_powerloss_in_artifact_install_error_after_install",
         {
-            # test-set3
             "ErrorScripts": ["ArtifactInstall_Leave_01"],
+            "DoubleReboot": [True], # As the new image has already been installed, expect a double reboot
             "RebootScripts": ["ArtifactInstall_Error_01"],
             "ExpectedFinalPartition": ["OriginalPartition"],
-            "DoubleReboot": [True], # As the new image has already been installed, expect a double reboot
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
                 "ArtifactInstall_Error_01",
                 "ArtifactFailure_Enter_22",
                 "ArtifactFailure_Leave_44",
             ],
             "ExpectedScriptFlow": [
                 "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
                 "ArtifactInstall_Error_01",  # kill!
                 "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
                 "ArtifactFailure_Leave_44",
             ],
         },
     ),
+    # test-set4
     (
         "simulate_powerloss_in_reboot_enter",
         {
-            # test-set4
             "RebootScripts": ["ArtifactReboot_Enter_01"],
-            "ExpectedFinalPartition": ["OriginalPartition"],
             "DoubleReboot": [True],
+            "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",
@@ -739,13 +740,12 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
+    # test-set5
     (
         "simulate_powerloss_in_commit_enter",
         {
-            # test-set5
             "RebootScripts": ["ArtifactCommit_Enter_89"],
-            "DeviceDieSecondPartition": True,  # tests need an alternate execution path in this case
-            "StopSecondPartition": ["ArtifactReboot_Leave_01"],
+            "DoubleReboot": [True],
             "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
@@ -768,13 +768,12 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
+    # test-set6
     (
         "simulate_powerloss_in_artifact_commit_leave",
         {
-            # test-set6
             "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
-            "DeviceDieSecondPartition": True,
-            "StopSecondPartition": ["ArtifactReboot_Leave_01"],
+            "DoubleReboot": [True],
             "ExpectedFinalPartition": ["OtherPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
@@ -870,15 +869,11 @@ class TestStateScripts(MenderTesting):
         work_dir = "test_state_scripts.%s" % client
 
         script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
-        # Even though this script is actually run twice, only show it once in the logs
-        script_stop_mender_on_entry = (
-        '''#!/bin/sh
-        if [ $(grep -c $(basename $0) /data/test_state_scripts.log) -eq 0 ]; then
-            echo "$(basename $0)" >> /data/test_state_scripts.log && systemctl stop mender
-        fi
-        exit 0 ''')
 
         script_failure_content = script_content + 'sync\necho b > /proc/sysrq-trigger\n' # flush to disk before killing
+
+        # This is only needed in the case: die commit-leave,
+        # otherwise the device will get stuck in a boot-reboot loop
         script_reboot_once =(
         '''#!/bin/sh
         if [ $(grep -c $(basename $0) /data/test_state_scripts.log) -eq 0 ]; then
@@ -916,8 +911,6 @@ class TestStateScripts(MenderTesting):
                     fd.write(script_failure_content)
                 if script in test_set.get("RebootOnceScripts", []):
                     fd.write(script_reboot_once)
-                elif script in test_set.get("StopSecondPartition", []):
-                    fd.write(script_stop_mender_on_entry)
                 elif script in test_set.get("ErrorScripts", []):
                     fd.write(script_error_content)
                 else:
@@ -925,14 +918,15 @@ class TestStateScripts(MenderTesting):
 
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map([client])[client]
-        deployment_id = common_update_procedure(
-            install_image=new_rootfs,
-            broken_image=broken_image,
-            verify_status=True,
-            devices=[device_id],
-            scripts=[artifact_script_dir])[0]
 
         with Helpers.RebootDetector() as reboot_detector:
+
+            deployment_id = common_update_procedure(
+                install_image=new_rootfs,
+                broken_image=broken_image,
+                verify_status=True,
+                devices=[device_id],
+                scripts=[artifact_script_dir])[0]
 
             try:
 
@@ -948,37 +942,14 @@ class TestStateScripts(MenderTesting):
                 else:
                     reboot_detector.verify_reboot_performed()
 
-                # if scripts are killed on a script that is run on the second partition,
-                # we need to wait for a second reboot_detector
-                if test_set.get("DeviceDieSecondPartition", False) and len(
-                        test_set.get("StopSecondPartition", [])) > 0:
-
-                    # Give it some time to settle
-                    timeout = time.time() + 60
-                    while timeout > time.time():
-                        logger.info("sleeping")
-                        time.sleep(3) # not in a hurry here, the client should be stopped
-                        # TODO use systemctl is-active mender instead
-                        output = run("journalctl -xn")
-                        logger.info(output)
-                        if "mender.service has finished shutting down" not in output:
-                            continue
-                        else:
-                            break
-                    if time.time() > timeout:
-                        pytest.fail("could not restart mender")
-                    run("systemctl start mender")
-                    reboot_detector.verify_reboot_performed()
-
-                # settle down
-                timeout = time.time() + 60
-                while timeout > time.time():
-                    logger.info("sleeping")
-                    time.sleep(1)
-                    if exists("/data/test_state_scripts.log"):
+                # wait until the last script has been run
+                script_logs = ""
+                timeout = time.time() + 60*60
+                while timeout >= time.time():
+                    time.sleep(3)
+                    script_logs = run("cat /data/test_state_scripts.log")
+                    if test_set.get("ExpectedScriptFlow")[-1] in script_logs:
                         break
-                    else:
-                        pytest.fail("never found log files")
 
                 # make sure the client ended up on the right partition
                 if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
@@ -986,12 +957,10 @@ class TestStateScripts(MenderTesting):
                 else:
                     assert orig_part == Helpers.get_active_partition()
 
-
-                output = run("cat /data/test_state_scripts.log")
-                assert output.split() == test_set.get("ExpectedScriptFlow")
+                assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
             finally:
-                run_after_connect("systemctl stop mender && "
+                run("systemctl stop mender && "
                                 + "rm -f /data/test_state_scripts.log && "
                                 + "rm -rf /etc/mender/scripts && "
                                 + "rm -rf /data/mender/scripts && "

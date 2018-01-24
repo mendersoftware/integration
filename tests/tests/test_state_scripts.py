@@ -811,10 +811,9 @@ class TestStateScripts(MenderTesting):
                     "ls -l /proc/`pgrep mender`/fd",
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
-                attempts = 0
-                while attempts < 60:
+                starttime = time.time()
+                while starttime + 60*60 >= time.time():
                     with settings(warn_only=True):
-                        attempts = attempts + 1
                         result = run("grep Error /data/test_state_scripts.log")
                         if result.succeeded:
                             # If it succeeds, stop.

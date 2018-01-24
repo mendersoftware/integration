@@ -88,7 +88,7 @@ def run(cmd, *args, **kw):
         wait = kw['wait']
         del kw['wait']
     else:
-        wait = 1200
+        wait = 60*60
 
     output = ""
     start_time = time.time()

@@ -172,7 +172,7 @@ def ssh_is_opened():
 
 
 @parallel
-def ssh_is_opened_impl(cmd="true", wait=300):
+def ssh_is_opened_impl(cmd="true", wait=60*60):
     count = 0
     sleeptime = 1
 

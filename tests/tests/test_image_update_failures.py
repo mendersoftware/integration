@@ -36,9 +36,9 @@ class TestFailures(MenderTesting):
                     install_image=install_image)
             return
 
-        token = Helpers.place_reboot_token()
-        deployment_id, expected_image_id = common_update_procedure(install_image, True)
-        token.verify_reboot_performed()
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, expected_image_id = common_update_procedure(install_image, True)
+            reboot.verify_reboot_performed()
 
         devices_accepted_id = [device["device_id"] for device in adm.get_devices_status("accepted")]
         deployment_id = deploy.trigger_deployment(name="New valid update",
@@ -55,8 +55,8 @@ class TestFailures(MenderTesting):
             execute(self.test_large_update_image, hosts=get_mender_clients())
             return
 
-        token = Helpers.place_reboot_token()
-        deployment_id, _ = common_update_procedure(install_image="large_image.dat", regenerate_image_id=False, broken_image=True)
-        deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
-        token.verify_reboot_not_performed()
-        deploy.check_expected_status("finished", deployment_id)
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, _ = common_update_procedure(install_image="large_image.dat", regenerate_image_id=False, broken_image=True)
+            deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
+            reboot.verify_reboot_not_performed()
+            deploy.check_expected_status("finished", deployment_id)

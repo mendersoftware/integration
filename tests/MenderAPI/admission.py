@@ -37,10 +37,14 @@ class Admission():
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_admission_base_path() + "devices"
         devices = None
-        tries = 25
+        max_wait = 60*60
+        starttime = time.time()
+        sleeptime = 5
 
-        for c, i in enumerate(range(tries)):
-            time.sleep(c*3+5)
+        while starttime + max_wait >= time.time():
+            time.sleep(sleeptime)
+            # Linear backoff
+            sleeptime += 5
             try:
                 logger.info("getting all devices from :%s" % (device_status_path))
                 devices = requests.get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
@@ -49,9 +53,11 @@ class Admission():
                 break
             except AssertionError:
                 if devices is not None and getattr(devices, "text"):
-                    logger.info("fail to get devices (payload: %s), will try #%d times" % (devices.text, tries-c-1))
+                    logger.info("fail to get devices (payload: %s), will try for at least %d more seconds"
+                                % (devices.text, starttime + max_wait - time.time()))
                 else:
-                    logger.info("failed to get devices, will try #%d times" % (tries-c-1))
+                    logger.info("failed to get devices, will try for at least %d more seconds"
+                                % (starttime + max_wait - time.time()))
                 continue
         else:
             assert False, "Not able to get devices"
@@ -77,7 +83,7 @@ class Admission():
                          data=json.dumps({"status": status}))
         assert r.status_code == requests.status_codes.codes.ok
 
-    def check_expected_status(self, status, expected_value, max_wait=180, polling_frequency=1):
+    def check_expected_status(self, status, expected_value, max_wait=60*60, polling_frequency=1):
         timeout = time.time() + max_wait
         seen = set()
 

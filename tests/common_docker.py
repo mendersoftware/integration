@@ -127,6 +127,20 @@ def docker_get_ip_of(service):
     # Return as list.
     return output.split()
 
+def docker_get_docker_host_ip():
+    """Returns the IP of the host running the Docker containers. The IP will be
+    for the correct docker-compose instance.
+    """
+    temp = "docker ps -q " \
+           "--filter label=com.docker.compose.project={project} "
+    cmd = temp.format(project=conftest.docker_compose_instance)
+
+    output = subprocess.check_output(cmd + \
+                                     "| head -n1 | xargs -r " \
+                                     "docker inspect --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'",
+                                     shell=True)
+    return output.split()[0]
+
 
 def get_mender_clients(service="mender-client"):
     clients = [ip + ":8822" for ip in docker_get_ip_of(service)]
@@ -158,7 +172,7 @@ def ssh_is_opened():
 
 
 @parallel
-def ssh_is_opened_impl(cmd="true", wait=300):
+def ssh_is_opened_impl(cmd="true", wait=60*60):
     count = 0
     sleeptime = 1
 

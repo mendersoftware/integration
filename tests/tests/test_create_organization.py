@@ -29,7 +29,6 @@ import asyncore
 from MenderAPI import *
 
 class TestCreateOrganization(MenderTesting):
-
     @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
     def test_success(self):
 
@@ -93,5 +92,7 @@ class SMTPMock:
         m = self.server.messages[0]
         assert m.mailfrom == "contact@mender.io"
         assert m.rcpttos[0] == "some.user@example.com"
+
+        logging.debug("message data: " + m.data)
         assert len(m.data) > 0
 

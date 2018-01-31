@@ -22,9 +22,13 @@ import random
 import tempfile
 import pytest
 import os
+import socket
+import traceback
 import json
 from fabric.contrib.files import exists
 import conftest
+from common_docker import *
+from common import *
 
 from MenderAPI import adm
 
@@ -129,10 +133,6 @@ class Helpers:
             logger.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
-    def place_reboot_token():
-        return RebootToken()
-
-    @staticmethod
     def identity_script_to_identity_string(output):
         data_dict = {}
         for line in output.split('\n'):
@@ -162,44 +162,109 @@ class Helpers:
 
         return ip_to_device_id
 
-class RebootToken:
-    tfile = None
+    class RebootDetector:
+        server = None
+        client_ip = None
+        # This global one is used to increment each port used.
+        port = 8181
 
-    def __init__(self):
-        self.tfile = "/tmp/mender-testing.%s" % (random.randint(1, 999999))
-        cmd = "touch %s" % (self.tfile)
-        with settings(hide('warnings', 'running', 'stdout', 'stderr'), abort_exception=FabricFatalException):
-            run(cmd)
+        def __init__(self, client_ip=None):
+            self.port = Helpers.RebootDetector.port
+            Helpers.RebootDetector.port += 1
+            self.client_ip = client_ip
 
-    def verify_reboot_performed(self, max_wait=60*30):
-        logger.info("waiting for system to reboot")
+        def __enter__(self):
+            # The mender-reboot-detector service in the image will connect to the
+            # port we list here and tell us about startups and shutdowns.
+            ip = docker_get_docker_host_ip()
 
-        successful_connections = 0
-        timeout = time.time() + max_wait
+            def setup_client():
+                local_name = "test.mender-reboot-detector.txt.%s" % env.host_string
+                with open(local_name, "w") as fd:
+                    fd.write("%s:%d" % (ip, self.port))
+                try:
+                    put(local_name, remote_path="/data/mender/test.mender-reboot-detector.txt")
+                finally:
+                    os.unlink(local_name)
 
-        while time.time() <= timeout:
+                run("systemctl restart mender-reboot-detector")
+
+            if env.host_string:
+                setup_client()
+            else:
+                execute(setup_client, hosts=self.client_ip)
+
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.server.bind((ip, self.port))
+            self.server.listen(1)
+
+            return self
+
+        def __exit__(self, type, value, trace):
+            if self.server:
+                self.server.close()
+            self.server = None
+
+            cmd = "systemctl stop mender-reboot-detector ; rm -f /data/mender/test.mender-reboot-detector.txt"
             try:
-                with settings(warn_only=True, abort_exception=FabricFatalException):
-                    time.sleep(1)
-                    if exists(self.tfile):
-                        logger.debug("temp. file still exists, device hasn't rebooted.")
-                        continue
+                if env.host_string:
+                    run(cmd)
+                else:
+                    execute(run, cmd, hosts=self.client_ip)
+            except:
+                logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
+                # Only produce our own exception if we won't be hiding an
+                # existing one.
+                if type is None:
+                    raise
+
+        def verify_reboot_performed_impl(self, max_wait, number_of_reboots=1):
+            up = True
+            reboot_count = 0
+            start_time = time.time()
+            while True:
+                try:
+                    self.server.settimeout(start_time + max_wait - time.time())
+                    connection, address = self.server.accept()
+                except socket.timeout:
+                    logger.info("Client did not reboot in %d seconds" % max_wait)
+                    return False
+
+                message = connection.recv(4096).strip()
+                connection.close()
+
+                if message == "shutdown":
+                    logger.debug("Got shutdown message from client")
+                    if up:
+                        up = False
                     else:
-                        logger.debug("temp. file no longer exists, device has rebooted.")
-                        successful_connections += 1
+                        pytest.fail("Received message of shutdown when already shut down??")
+                elif message == "startup":
+                    logger.debug("Got startup message from client")
+                    # Tempting to check up flag here, but in the spontaneous
+                    # reboot case, we may not get the shutdown message.
+                    up = True
+                    reboot_count += 1
+                else:
+                    pytest.fail("Unexpected message from mender-reboot-detector")
 
-                    # try connecting 10 times before returning
-                    if successful_connections <= 9:
-                        continue
-                    return
+                if reboot_count >= number_of_reboots:
+                    logger.info("Client has rebooted %d time(s)" % reboot_count)
+                    return True
 
-            except (BaseException):
-                logger.debug("system exit was caught, this is probably because SSH connectivity is broken while the system is rebooting")
-                continue
+        def verify_reboot_performed(self, max_wait=60*60, number_of_reboots=1):
+            if self.server is None:
+                pytest.fail("verify_reboot_performed() used outside of 'with' scope.")
 
-        if time.time() > timeout:
-            pytest.fail("Device never rebooted!")
+            logger.info("Waiting for client to reboot %d time(s)" % number_of_reboots)
+            if not self.verify_reboot_performed_impl(max_wait=max_wait, number_of_reboots=number_of_reboots):
+                pytest.fail("Device never rebooted")
 
-    def verify_reboot_not_performed(self, wait=60):
-        time.sleep(wait)
-        assert exists(self.tfile)
+        def verify_reboot_not_performed(self, wait=60):
+            if self.server is None:
+                pytest.fail("verify_reboot_not_performed() used outside of 'with' scope.")
+
+            logger.info("Waiting %d seconds to check that client does not reboot" % wait)
+            if self.verify_reboot_performed_impl(max_wait=wait):
+                pytest.fail("Device unexpectedly rebooted")

@@ -44,23 +44,28 @@ class TestDeploymentAborting(MenderTesting):
         install_image=conftest.get_valid_image()
         expected_partition = Helpers.get_active_partition()
         expected_image_id = Helpers.yocto_id_installed_on_machine()
-        token = Helpers.place_reboot_token()
-        deployment_id, _ = common_update_procedure(install_image, verify_status=False)
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
-        if abort_step is not None:
-            deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
-        deploy.abort(deployment_id)
-        deploy.check_expected_statistics(deployment_id, "aborted", len(get_mender_clients()))
+            if abort_step is not None:
+                deploy.check_expected_statistics(deployment_id, abort_step, len(get_mender_clients()))
+            deploy.abort(deployment_id)
+            deploy.check_expected_statistics(deployment_id, "aborted", len(get_mender_clients()))
 
-        # no deployment logs are sent by the client, is this expected?
-        for d in adm.get_devices():
-            deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
+            # no deployment logs are sent by the client, is this expected?
+            for d in adm.get_devices():
+                deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
 
-        if not mender_performs_reboot:
-            token.verify_reboot_not_performed()
-            run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
-
-        token.verify_reboot_performed()
+            if mender_performs_reboot:
+                # If Mender performs reboot, we need to wait for it to reboot
+                # back into the original filesystem.
+                reboot.verify_reboot_performed(number_of_reboots=2)
+            else:
+                # Else we reboot ourselves, just to make sure that we have not
+                # unintentionally switched to the new partition.
+                reboot.verify_reboot_not_performed()
+                run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
+                reboot.verify_reboot_performed()
 
         assert Helpers.get_active_partition() == expected_partition
         assert Helpers.yocto_id_installed_on_machine() == expected_image_id
@@ -91,10 +96,10 @@ class TestDeploymentAborting(MenderTesting):
             return
 
         install_image = conftest.get_valid_image()
-        token = Helpers.place_reboot_token()
-        deployment_id, _ = common_update_procedure(install_image)
+        with Helpers.RebootDetector() as reboot:
+            deployment_id, _ = common_update_procedure(install_image)
 
-        token.verify_reboot_performed()
+            reboot.verify_reboot_performed()
 
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
         deploy.abort_finished_deployment(deployment_id)

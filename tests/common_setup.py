@@ -153,17 +153,13 @@ def standard_setup_with_short_lived_token():
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
+    stop_docker_compose()
     reset_mender_api()
-
-    # since we are starting a manual instance of the backend,
-    # let the script know the instance is called "testprod"
-    # so that is cleaned up correctly on test failure/error
 
     def fin():
         conftest.production_setup_lock.release()
         stop_docker_compose()
 
-    conftest.docker_compose_instance = "testprod"
     request.addfinalizer(fin)
 
     set_setup_type(ST_CustomSetup)

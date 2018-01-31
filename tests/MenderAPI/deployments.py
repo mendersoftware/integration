@@ -107,7 +107,7 @@ class Deployments(object):
 
         return json.loads(r.text)
 
-    def check_expected_status(self, expected_status, deployment_id, max_wait=1800, polling_frequency=.2):
+    def check_expected_status(self, expected_status, deployment_id, max_wait=60*60, polling_frequency=.2):
         timeout = time.time() + max_wait
 
         while time.time() <= timeout:
@@ -125,7 +125,7 @@ class Deployments(object):
             pytest.fail("Never found status: %s for %s after %d seconds" % (expected_status, deployment_id, max_wait))
 
 
-    def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=1800, polling_frequency=.2):
+    def check_expected_statistics(self, deployment_id, expected_status, expected_count, max_wait=60*60, polling_frequency=.2):
         timeout = time.time() + max_wait
         seen = set()
 

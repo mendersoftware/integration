@@ -30,3 +30,5 @@ services:
             - mender
         depends_on:
             - mender-conductor
+        environment:
+            CONDUCTOR: "http://mender-conductor:8080"

@@ -82,23 +82,42 @@ def ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-def run_after_connect(cmd, wait = 120):
+def run(cmd, *args, **kw):
+    if kw.get('wait') is not None:
+        wait = kw['wait']
+        del kw['wait']
+    else:
+        wait = 60*60
+
     output = ""
     start_time = time.time()
-    # Use shorter timeout to get a faster cycle.
-    with settings(timeout = 5, abort_exception = Exception):
+    sleeptime = 1
+    # Use shorter timeout to get a faster cycle. Not recommended though, since
+    # in a heavily loaded environment, QEMU might be quite slow to use the
+    # connection.
+    with settings(timeout = 60, abort_exception = Exception):
         while True:
-            attempt_time = time.time()
             try:
-                output = run(cmd)
+                import fabric.api
+                output = fabric.api.run(cmd, *args, **kw)
                 break
             except Exception as e:
-                print("Could not connect to host %s: %s" % (env.host_string, e))
-                if attempt_time >= start_time + wait:
-                    raise Exception("Could not reconnect to QEMU")
-                now = time.time()
-                if now - attempt_time < 5:
-                    time.sleep(5 - (now - attempt_time))
+                if time.time() >= start_time + wait:
+                    raise Exception("Could not connect to device")
+                time.sleep(sleeptime)
+                # Back off exponentially to save SSH handshakes in QEMU, which
+                # are quite expensive.
+                sleeptime *= 2
                 continue
+            finally:
+                # Taken from disconnect_all() in Fabric.
+                from fabric.state import connections
+                if connections.get(env.host_string) is not None:
+                    connections[env.host_string].close()
+                    del connections[env.host_string]
     return output
 
+# For now just alias sudo() to run(), since we always run as root. This may need
+# to be changed later.
+def sudo(*args, **kw):
+    run(*args, **kw)

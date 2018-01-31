@@ -120,7 +120,7 @@ def pytest_exception_interact(node, call, report):
             logger.info("printing content of : %s" % log)
             with open(log) as f:
                 for line in f.readlines():
-                    print line,
+                    logger.info("%s: %s" % (log, line))
 
 
 @pytest.mark.hookwrapper

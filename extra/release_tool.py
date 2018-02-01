@@ -759,6 +759,27 @@ def trigger_jenkins_build(state, tag_avail):
             # that they can be repeated in subsequent builds.
             update_state(state, ['extra_buildparams', name], params[name])
 
+    pr_count = 0
+    pr_repo = None
+    for repo in GIT_TO_BUILDPARAM_MAP:
+        match = re.match("^pull/([0-9]+)/head$", params.get(GIT_TO_BUILDPARAM_MAP[repo]))
+        if match:
+            pr_count += 1
+            pr_repo = repo
+            pr_number = match.group(1)
+    # If there is exactly one pull request, then offer to trigger a job with
+    # Github status updates.
+    if pr_count == 1:
+        print("You are triggering a job for one pull request.")
+        reply = ask("Do you want to enable Github status updates for it? ")
+        if reply.lower().startswith("y"):
+            params['REPO_TO_TEST'] = pr_repo
+            params['PR_TO_TEST'] = pr_number
+            remote = find_upstream_remote(state, pr_repo)
+            execute_git(state, pr_repo, ["fetch", remote, "pull/%s/head" % pr_number])
+            rev = execute_git(state, pr_repo, ["rev-parse", "FETCH_HEAD"], capture=True)
+            params['GIT_COMMIT'] = rev
+
     # Order is important here, because Jenkins passes in the same parameters
     # multiple times, as pairs that complete each other.
     # Jenkins additionally needs the input as json as well, so create that from
@@ -1058,7 +1079,17 @@ def do_build(args):
               % (repo_dir, RELEASE_TOOL_STATE))
         update_state(state, ["repo_dir"], repo_dir)
 
-    trigger_jenkins_build(state, check_tag_availability(state))
+    tag_avail = check_tag_availability(state)
+
+    if args.pr is not None:
+        match = re.match("^([^/]+)/([0-9]+)$", args.pr)
+        if match is None:
+            raise Exception("%s is not a valid repo/pr pair!" % args.pr)
+        repo = match.group(1)
+        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP"
+        tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
+
+    trigger_jenkins_build(state, tag_avail)
 
 def do_release():
     """Handles the interactive menu for doing a release."""
@@ -1371,6 +1402,9 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
+    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER",
+                        help="Can only be used with -b. Specifies one repository and pull request number "
+                        + "that should be triggered with the rest of the repository versions.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",

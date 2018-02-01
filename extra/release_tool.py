@@ -582,20 +582,29 @@ def annotation_version(repo, tag_avail):
     else:
         return "%s version %s Build %s." % (repo.git, match.group(1), match.group(2))
 
+def version_components(version):
+    """Returns a four-tuple containing the version componets major, minor, patch
+    and beta, as ints. Beta does not include the "b"."""
+
+    match = re.match("^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
+    if match is None:
+        raise Exception("Invalid version '%s' passed to version_components." % version)
+
+    if match.group(4) is None:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)), None)
+    else:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)), int(match.group(4)))
+
 def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
     match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", version)
-    version_major = int(match.group(1))
-    version_minor = int(match.group(2))
-    version_patch = int(match.group(3))
+    (version_major, version_minor, version_patch, version_beta) = version_components(version)
 
     for tag in tag_list:
         match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", tag)
-        tag_major = int(match.group(1))
-        tag_minor = int(match.group(2))
-        tag_patch = int(match.group(3))
+        (tag_major, tag_minor, tag_patch, tag_beta) = version_components(tag)
 
         if tag_major < version_major:
             return tag
@@ -605,9 +614,29 @@ def find_prev_version(tag_list, version):
             elif tag_minor == version_minor:
                 if tag_patch < version_patch:
                     return tag
+                elif tag_patch == version_patch:
+                    if tag_beta is not None and version_beta is None:
+                        return tag
+                    elif tag_beta is not None and version_beta is not None and tag_beta < version_beta:
+                        return tag
 
     # No lower version found.
     return None
+
+def next_patch_version(prev_version, next_beta=None):
+    """Returns the next patch version is a series, based on the given version.
+    If next_beta is not None, then the version will be a new beta, instead of a
+    new patch release."""
+
+    (major, minor, patch, beta) = version_components(prev_version)
+    if next_beta:
+        new_version = "%d.%d.%db%d" % (major, minor, patch, next_beta)
+    elif beta is not None:
+        new_version = "%d.%d.%d" % (major, minor, patch)
+    else:
+        new_version = "%d.%d.%d" % (major, minor, patch + 1)
+    assert prev_version != new_version, "Previous and new version should not be the same!"
+    return new_version
 
 def generate_new_tags(state, tag_avail, final):
     """Creates new build tags, and returns the new tags in a modified tag_avail. If
@@ -918,10 +947,14 @@ def switch_following_branch(state, tag_avail):
                 local = current[(current.index('/') + 1):]
                 update_state(state, [repo.git, 'following'], local)
 
-def assign_default_following_branch(state, repo):
+def find_default_following_branch(state, repo, version):
     remote = find_upstream_remote(state, repo.git)
-    branch = re.sub(r"\.[^.]+$", ".x", state[repo.git]['version'])
-    update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
+    branch = re.sub(r"\.[^.]+$", ".x", version)
+    return "%s/%s" % (remote, branch)
+
+def assign_default_following_branch(state, repo):
+    update_state(state, [repo.git, 'following'],
+                 find_default_following_branch(state, repo, state[repo.git]['version']))
 
 def merge_release_tag(state, tag_avail, repo):
     """Merge tag into version branch, but only for Git history's sake, the 'ours'
@@ -1139,6 +1172,63 @@ def do_build(args):
 
     trigger_jenkins_build(state, tag_avail)
 
+def determine_version_to_include_in_release(state, repo):
+    version = state_value(state, [repo.git, 'version'])
+
+    if version is not None:
+        return version
+
+    # Is there already a version in the same series? Look at integration.
+    tag_list = sorted_final_version_list(integration_dir())
+    prev_of_integration = find_prev_version(tag_list, state['version'])
+    (overall_major, overall_minor, overall_patch, overall_beta) = version_components(state['version'])
+    (prev_major, prev_minor, prev_patch, prev_beta) = version_components(prev_of_integration)
+
+    prev_of_repo = None
+    new_repo_version = None
+    follow_branch = None
+    if overall_major == prev_major and overall_minor == prev_minor:
+        # Same series. Us it as basis.
+        prev_of_repo = version_of(integration_dir(), repo.container, in_integration_version=prev_of_integration)
+        new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
+        follow_branch = find_default_following_branch(state, repo, new_repo_version)
+    else:
+        # No series exists. Base on master.
+        prev_of_repo = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))[0]
+        (major, minor, patch, beta) = version_components(prev_of_repo)
+        new_repo_version = "%d.%d.0" % (major, minor + 1)
+        if overall_beta:
+            new_repo_version += "b%d" % overall_beta
+        follow_branch = "%s/master" % find_upstream_remote(state, repo.git)
+
+    cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+
+    print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
+    execute_git(state, repo.git, cmd)
+
+    print()
+    print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
+    reply = ask("Based on this, is there a reason for a new release of %s? "
+                % repo.git)
+
+    if reply.lower().startswith("y"):
+        reply = ask("Should the new release of %s be version %s? "
+                    % (repo.git, new_repo_version))
+        if reply.lower().startswith("y"):
+            update_state(state, [repo.git, 'version'], new_repo_version)
+    else:
+        reply = ask("Should the release of %s be left at the previous version %s? "
+                    % (repo.git, prev_of_repo))
+        if reply.lower().startswith("y"):
+            update_state(state, [repo.git, 'version'], prev_of_repo)
+
+    if state_value(state, [repo.git, 'version']) is None:
+        reply = ask("Ok. Please input the new version of %s manually: " % repo.git)
+        update_state(state, [repo.git, 'version'], reply)
+
+    print()
+    print("--------------------------------------------------------------------------------")
+
 def do_release():
     """Handles the interactive menu for doing a release."""
 
@@ -1189,14 +1279,12 @@ def do_release():
 
     update_state(state, ["integration", 'version'], state['version'])
 
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if state_value(state, [repo.git, 'version']) is None:
-            update_state(state, [repo.git, 'version'],
-                         ask("What version of %s should be included? " % repo.git))
-
     input = ask("Do you want to fetch all the latest tags and branches in all repositories (will not change checked-out branch)? ")
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        determine_version_to_include_in_release(state, repo)
 
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)

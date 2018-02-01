@@ -118,25 +118,25 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
-    "BUILD_BBB": "on",
-    "BUILD_QEMU": "on",
+    "BUILD_BEAGLEBONEBLACK": "on",
+    "BUILD_QEMU_SDIMG": "on",
     "BUILD_QEMU_RAW_FLASH": "on",
-    "BUILD_RPI3": "on",
+    "BUILD_RASPBERRYPI3": "on",
     "CLEAN_BUILD_CACHE": "",
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",
-    "META_MENDER_REV": "pyro",
-    "META_OPENEMBEDDED_REV": "pyro",
-    "META_RASPBERRYPI_REV": "pyro",
-    "POKY_REV": "pyro",
-    "PUSH_CONTAINERS": "on",
+    "META_MENDER_REV": "rocko",
+    "META_OPENEMBEDDED_REV": "rocko",
+    "META_RASPBERRYPI_REV": "rocko",
+    "POKY_REV": "rocko",
+    "PUBLISH_ARTIFACTS": "on",
     "RUN_INTEGRATION_TESTS": "on",
     "TENANTADM_REV": "master",
-    "TEST_BBB": "",
-    "TEST_QEMU": "on",
-    "TEST_RPI3": "on",
-    "TESTS_IN_PARALLEL": "8",
-    "UPLOAD_OUTPUT": "",
+    "TEST_BEAGLEBONEBLACK": "on",
+    "TEST_QEMU_SDIMG": "on",
+    "TEST_QEMU_RAW_FLASH": "on",
+    "TEST_RASPBERRYPI3": "on",
+    "TESTS_IN_PARALLEL": "7",
 }
 
 def integration_dir():

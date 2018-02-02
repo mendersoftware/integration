@@ -131,7 +131,7 @@ def update_image_failed(install_image="broken_update.ext4", expected_mender_clie
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
         for d in adm.get_devices():
-            assert "running rollback image" in deploy.get_logs(d["device_id"], deployment_id)
+            assert "got invalid entrypoint into the state machine" in deploy.get_logs(d["device_id"], deployment_id)
 
         assert Helpers.yocto_id_installed_on_machine() == original_image_id
         reboot.verify_reboot_not_performed()

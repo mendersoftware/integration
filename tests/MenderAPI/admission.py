@@ -115,3 +115,11 @@ class Admission():
             self.set_device_status(d["id"], "accepted")
 
         logger.info("Successfully bootstrap all clients")
+
+    def preauth(self, device_identity, pubkey):
+        path = "https://%s/api/management/%s/admission/devices" % (get_mender_gateway(), api_version)
+        req = {'device_identity': device_identity, 'key': pubkey}
+        headers = {"Content-Type": "application/json"}
+        headers.update(self.auth.get_auth_token())
+
+        return requests.post(path, data=json.dumps(req), headers=headers, verify=False)

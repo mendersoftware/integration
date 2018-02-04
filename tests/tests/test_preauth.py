@@ -24,11 +24,10 @@ from Crypto.PublicKey import RSA
 import time
 
 
-class TestPreauth(MenderTesting):
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_ok_preauth_and_bootstrap(self):
+class TestPreauthBase(MenderTesting):
+    def do_test_ok_preauth_and_bootstrap(self):
         """
-            Test the happy from preauthorizing a device to a successful bootstrap.
+            Test the happy path from preauthorizing a device to a successful bootstrap.
             Verify that the device/auth set appear correctly in admission API results.
         """
         client = get_mender_clients()[0]
@@ -63,7 +62,7 @@ class TestPreauth(MenderTesting):
         res = execute(Client.restart, hosts=client)
 
         # verify api results - after some time the device should be 'accepted'
-        time.sleep(10)
+        time.sleep(30)
         devs = adm.get_devices(2)
         dev_accepted = [d for d in devs if d['status'] == 'accepted']
         assert len(dev_accepted) == 1
@@ -75,8 +74,7 @@ class TestPreauth(MenderTesting):
         res = execute(Client.have_authtoken, hosts=client)
         assert res[client]
 
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_ok_preauth_and_remove(self):
+    def do_test_ok_preauth_and_remove(self):
         """
             Test the removal of a preauthorized auth set, verify it's gone from all API results.
         """
@@ -110,8 +108,7 @@ class TestPreauth(MenderTesting):
         r = inv.get_device(dev_preauth['id'])
         assert r.status_code == 404
 
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_fail_preauth_existing(self):
+    def do_test_fail_preauth_existing(self):
         """
            Test 'conflict' response when an identity data set already exists.
         """
@@ -122,6 +119,43 @@ class TestPreauth(MenderTesting):
         # try to preauthorize the same id data, new key
         r = adm.preauth(dev['device_identity'], 'preauth-key')
         assert r.status_code == 409
+
+
+class TestPreauth(TestPreauthBase):
+    @pytest.mark.usefixtures("standard_setup_one_client")
+    def test_ok_preauth_and_bootstrap(self):
+        self.do_test_ok_preauth_and_bootstrap()
+
+    @pytest.mark.usefixtures("standard_setup_one_client")
+    def test_ok_preauth_and_remove(self):
+        self.do_test_ok_preauth_and_remove()
+
+    @pytest.mark.usefixtures("standard_setup_one_client")
+    def test_fail_preauth_existing(self):
+        self.do_test_fail_preauth_existing()
+
+
+class TestPreauthMultiTenant(TestPreauthBase):
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_ok_preauth_and_bootstrap(self):
+        self.__create_tenant_and_container()
+        self.do_test_ok_preauth_and_bootstrap()
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_ok_preauth_and_remove(self):
+        self.__create_tenant_and_container()
+        self.do_test_ok_preauth_and_remove()
+
+    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    def test_fail_preauth_existing(self):
+        self.__create_tenant_and_container()
+        self.do_test_fail_preauth_existing()
+
+    def __create_tenant_and_container(self):
+        auth.new_tenant("admin", "admin@tenant.com", "hunter2hunter2")
+        token = auth.current_tenant["tenant_token"]
+
+        new_tenant_client("tenant-container", token)
 
 
 class Client:

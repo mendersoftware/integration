@@ -123,3 +123,11 @@ class Admission():
         headers.update(self.auth.get_auth_token())
 
         return requests.post(path, data=json.dumps(req), headers=headers, verify=False)
+
+    def delete_auth_set(self, aid):
+        path = "https://%s/api/management/%s/admission/devices/%s" % (get_mender_gateway(), api_version, aid)
+
+        headers = {"Content-Type": "application/json"}
+        headers.update(self.auth.get_auth_token())
+
+        return requests.delete(path, headers=headers, verify=False)

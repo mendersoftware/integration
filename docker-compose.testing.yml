@@ -80,11 +80,9 @@ services:
         environment:
             - CONFIG_PROP=config.properties
 
-    # mender-conductor-ui:
-    #    environment:
-    #        - WF_SERVER=http://mender-conductor:8080/api/
-    #    image: mendersoftware/conductor-ui:1.7.7
-
-    #        - 5000:5000
-    #    networks:
-    #        - mender
+    mender-redis:
+        volumes:
+            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
+            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
+            - /var/lib/redis
+        entrypoint: /redis/entrypoint.sh

@@ -163,7 +163,7 @@ class Client:
 
     ID_HELPER = '/usr/share/mender/identity/mender-device-identity'
     PRIV_KEY = '/data/mender/mender-agent.pem'
-    KEYGEN_TIMEOUT = 120
+    KEYGEN_TIMEOUT = 300
 
     @staticmethod
     def get_pub_key():

@@ -90,3 +90,25 @@ services:
             - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
             - /var/lib/redis
         entrypoint: /redis/entrypoint.sh
+
+
+    mender-mongo-deployments:
+        command:
+            - --storageEngine=mmapv1
+    
+    mender-mongo-device-auth:
+        command:
+            - --storageEngine=mmapv1
+    
+    mender-mongo-device-adm:
+        command:
+            - --storageEngine=mmapv1
+    
+    mender-mongo-inventory:
+        command:
+            - --storageEngine=mmapv1
+ 
+    mender-mongo-useradm:
+        command:
+            - --storageEngine=mmapv1
+

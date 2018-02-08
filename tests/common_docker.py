@@ -199,3 +199,4 @@ def new_tenant_client(name, tenant):
                                                               conftest.docker_compose_instance,
                                                               name),
                        env={"TENANT_TOKEN": "%s" % tenant})
+    time.sleep(45)

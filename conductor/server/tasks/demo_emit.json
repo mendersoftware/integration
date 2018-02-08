@@ -1,0 +1,12 @@
+[
+    {
+        "name": "demo_emit",
+        "retryCount": 5,
+        "timeoutSeconds": 10,
+        "inputKeys": [],
+        "outputKeys": [],
+        "timeoutPolicy": "RETRY",
+        "retryLogic": "EXPONENTIAL_BACKOFF",
+        "retryDelaySeconds": 60
+    }
+]

@@ -80,9 +80,12 @@ services:
             - ./conductor/server/entrypoint:/srv
             - ./conductor/server/workflows:/srv/workflows
             - ./conductor/server/tasks:/srv/tasks
+            - ./conductor/server/events:/srv/events
         entrypoint: /srv/start_conductor.sh
         environment:
             - CONFIG_PROP=config.properties
+        ports:
+            - "8080:8080"
 
     mender-redis:
         volumes:

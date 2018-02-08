@@ -39,4 +39,10 @@ for workflow in /srv/workflows/*.json; do
     /srv/conductor-load --conductor-address "${CONDUCTOR}" -t workflow "$workflow"
 done
 
+# load event definitions
+for event in /srv/events/*.json; do
+    echo "-- loading event $event"
+    /srv/conductor-load --conductor-address "${CONDUCTOR}" -t event "$event"
+done
+
 wait

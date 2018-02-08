@@ -16,6 +16,11 @@ services:
             mender:
                 aliases:
                     - mongo-tenantadm
+                    - mongo-deployments
+                    - mongo-device-adm
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
 
     mender-conductor-workers:
         image: mendersoftware/conductor-workers:master

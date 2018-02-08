@@ -266,25 +266,25 @@ class TestMultiTenancy(MenderTesting):
             artifact_id = artifacts[0]["id"]
 
             # verify object ID of proper MT format
-            for key in conn.list_objects(Bucket='mender-artifacts-int-testing')['Contents']:
+            for key in conn.list_objects(Bucket='mender-artifacts-int-testing-us')['Contents']:
                 if key['Key'].startswith(tenant):
                     expectedObject = "%s/%s" % (tenant, artifact_id)
                     assert key['Key'] == expectedObject
 
             # verify tagging is working
-            tags = conn.get_object_tagging(Bucket='mender-artifacts-int-testing', Key=expectedObject)["TagSet"][0]
+            tags = conn.get_object_tagging(Bucket='mender-artifacts-int-testing-us', Key=expectedObject)["TagSet"][0]
             assert tags["Value"] == tenant
             assert tags["Key"] == "tenant_id"
 
             # Delete artifact and make sure it's really gone
-            conn.delete_object(Bucket="mender-artifacts-int-testing",
+            conn.delete_object(Bucket="mender-artifacts-int-testing-us",
                                Key=expectedObject)
 
             deploy.delete_artifact(artifact_id)
 
-            conn.list_objects(Bucket='mender-artifacts-int-testing')
+            conn.list_objects(Bucket='mender-artifacts-int-testing-us')
 
-            for key in conn.list_objects(Bucket='mender-artifacts-int-testing').get('Contents', []):
+            for key in conn.list_objects(Bucket='mender-artifacts-int-testing-us').get('Contents', []):
                 if key['Key'].startswith(tenant):
                     pytest.fail("failed to delete artifact from s3")
 

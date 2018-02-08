@@ -17,6 +17,6 @@ services:
             DEPLOYMENTS_AWS_TAG_ARTIFACT: "true"
             DEPLOYMENTS_AWS_AUTH_KEY: ${AWS_ACCESS_KEY_ID}
             DEPLOYMENTS_AWS_AUTH_SECRET: ${AWS_SECRET_ACCESS_KEY}
-            DEPLOYMENTS_AWS_URI: https://s3.amazonaws.com
-            DEPLOYMENTS_AWS_BUCKET: mender-artifacts-int-testing
+            DEPLOYMENTS_AWS_URI: https://s3-accelerate.amazonaws.com
+            DEPLOYMENTS_AWS_BUCKET: mender-artifacts-int-testing-us
 

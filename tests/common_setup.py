@@ -200,15 +200,17 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.storage.s3.yml \
                         -f ../docker-compose.tenant.yml \
                         %s up -d" % (conftest.mt_docker_compose_file),
                         use_common_files=False)
 
 
-    wait_for_containers(13, ["../docker-compose.yml",
+    wait_for_containers(15, ["../docker-compose.yml",
                              "../docker-compose.testing.yml ",
                              "../docker-compose.tenant.yml",
+                             "../docker-compose.storage.minio.yml",
                              "../docker-compose.storage.s3.yml"])
 
     def fin():

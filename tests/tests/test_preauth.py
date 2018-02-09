@@ -14,6 +14,7 @@
 #    limitations under the License.
 from mendertesting import MenderTesting
 from common_setup import *
+from common_docker import ssh_is_opened
 from MenderAPI import adm, deviceauth, inv
 import pytest
 import json
@@ -71,6 +72,7 @@ class TestPreauthBase(MenderTesting):
         assert dev_accepted['key'] == preauth_key
 
         # verify device was issued a token
+        ssh_is_opened(client)
         res = execute(Client.have_authtoken, hosts=client)
         assert res[client]
 

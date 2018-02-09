@@ -14,6 +14,7 @@
 #    limitations under the License.
 from mendertesting import MenderTesting
 from common_setup import *
+from common_docker import ssh_is_opened
 from MenderAPI import adm, deviceauth, inv
 import pytest
 import json
@@ -62,7 +63,8 @@ class TestPreauthBase(MenderTesting):
         res = execute(Client.restart, hosts=client)
 
         # verify api results - after some time the device should be 'accepted'
-        time.sleep(120)
+        time.sleep(60 * 3)
+
         devs = adm.get_devices(2)
         dev_accepted = [d for d in devs if d['status'] == 'accepted']
         assert len(dev_accepted) == 1
@@ -71,6 +73,7 @@ class TestPreauthBase(MenderTesting):
         assert dev_accepted['key'] == preauth_key
 
         # verify device was issued a token
+        ssh_is_opened(client)
         res = execute(Client.have_authtoken, hosts=client)
         assert res[client]
 
@@ -194,7 +197,6 @@ class Client:
     @staticmethod
     def have_authtoken():
         """Verify that the device was authenticated by checking its data store for the authtoken."""
-
         out = run("strings /data/mender/mender-store | grep authtoken")
         return out != ''
 

@@ -21,6 +21,7 @@ from helpers import Helpers
 from common_update import common_update_procedure
 from MenderAPI import adm, deploy, image
 from mendertesting import MenderTesting
+import time
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestDeploymentAborting(MenderTesting):
@@ -102,6 +103,8 @@ class TestDeploymentAborting(MenderTesting):
             reboot.verify_reboot_performed()
 
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+        time.sleep(5)
+
         deploy.abort_finished_deployment(deployment_id)
         deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
         deploy.check_expected_status("finished", deployment_id)

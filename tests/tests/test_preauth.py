@@ -32,6 +32,7 @@ class TestPreauthBase(MenderTesting):
             Verify that the device/auth set appear correctly in admission API results.
         """
         client = get_mender_clients()[0]
+        ssh_is_opened(client)
 
         # we'll use the same pub key for the preauth'd device, so get it
         res = execute(Client.get_pub_key, hosts=client)

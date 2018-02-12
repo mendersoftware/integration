@@ -42,12 +42,11 @@ function get_requirements() {
 
     chmod +x downloaded-tools/mender-artifact
 
-
-    curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
+    curl "https://mender.s3-accelerate.amazonaws.com/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \
          -z core-image-full-cmdline-vexpress-qemu.ext4
 
-   curl "https://s3-eu-west-1.amazonaws.com/stress-client/release/mender-stress-test-client" \
+   curl "https://stress-client.s3-accelerate.amazonaws.com/release/mender-stress-test-client" \
         -o downloaded-tools/mender-stress-test-client \
         -z downloaded-tools/mender-stress-test-client
 

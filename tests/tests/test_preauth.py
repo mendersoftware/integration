@@ -62,11 +62,11 @@ class TestPreauthBase(MenderTesting):
         res = execute(Client.restart, hosts=client)
 
         # verify api results - after some time the device should be 'accepted'
-        time.sleep(120)
-        devs = adm.get_devices(2)
-        dev_accepted = [d for d in devs if d['status'] == 'accepted']
+        dev_accepted = adm.get_devices_status(status="accepted", expected_devices=2)
+
         assert len(dev_accepted) == 1
         dev_accepted = dev_accepted[0]
+
         assert dev_accepted['device_identity'] == preauth_iddata_str
         assert dev_accepted['key'] == preauth_key
 
@@ -156,14 +156,19 @@ class TestPreauthMultiTenant(TestPreauthBase):
         token = auth.current_tenant["tenant_token"]
 
         new_tenant_client("tenant-container", token)
-
+        client = get_mender_clients()[0]
+        ssh_is_opened(client)
 
 class Client:
     """Wraps various actions on the client, performed via SSH (inside fabric.execute())."""
 
     ID_HELPER = '/usr/share/mender/identity/mender-device-identity'
     PRIV_KEY = '/data/mender/mender-agent.pem'
+    MENDER_STORE = '/data/mender/mender-store'
+
     KEYGEN_TIMEOUT = 300
+    DEVICE_ACCEPTED_TIMEOUT = 600
+    MENDER_STORE_TIMEOUT = 600
 
     @staticmethod
     def get_pub_key():
@@ -194,9 +199,17 @@ class Client:
     @staticmethod
     def have_authtoken():
         """Verify that the device was authenticated by checking its data store for the authtoken."""
+        sleepsec = 0
+        while sleepsec < Client.MENDER_STORE_TIMEOUT:
+            try:
+                out = run('strings {} | grep authtoken'.format(Client.MENDER_STORE))
+                return out != ''
+            except:
+                time.sleep(10)
+                sleepsec += 10
+                logging.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
 
-        out = run("strings /data/mender/mender-store | grep authtoken")
-        return out != ''
+        assert sleepsec <= Client.MENDER_STORE_TIMEOUT, "timeout for mender-store file exceeded"
 
     @staticmethod
     def __wait_for_keygen():
@@ -205,10 +218,12 @@ class Client:
             try:
                 run('stat {}'.format(Client.PRIV_KEY))
             except:
-                time.sleep(1)
-                sleepsec += 1
+                time.sleep(10)
+                sleepsec += 10
                 logging.info("waiting for key gen, sleepsec: {}".format(sleepsec))
             else:
+                time.sleep(5)
                 break
 
         assert sleepsec <= Client.KEYGEN_TIMEOUT, "timeout for key generation exceeded"
+

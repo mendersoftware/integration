@@ -9,17 +9,18 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-tenantadm
+            - mender-mongo
 
-    mender-mongo-tenantadm:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
+    mender-mongo:
         networks:
             mender:
                 aliases:
                     - mongo-tenantadm
+                    - mongo-deployments
+                    - mongo-device-adm
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
 
     mender-conductor-workers:
         image: mendersoftware/conductor-workers:master

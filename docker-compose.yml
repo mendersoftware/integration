@@ -34,6 +34,8 @@ services:
             service: mender-base
         networks:
             - mender
+        environment:
+            - INTEGRATION_VERSION
 
     #
     # mender-api-gateway

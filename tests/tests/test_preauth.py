@@ -62,7 +62,7 @@ class TestPreauthBase(MenderTesting):
         res = execute(Client.restart, hosts=client)
 
         # verify api results - after some time the device should be 'accepted'
-        for _ in range(10):
+        for _ in range(20):
             time.sleep(15)
             dev_accepted = adm.get_devices_status(status="accepted", expected_devices=2)
             if len([d for d in dev_accepted if d['status'] == 'accepted']) == 1:
@@ -72,6 +72,7 @@ class TestPreauthBase(MenderTesting):
 
         assert len(dev_accepted) == 1, "looks like the device was never accepted"
         dev_accepted = dev_accepted[0]
+        logging.info("accepted device: " + str(dev_accepted))
 
         assert dev_accepted['device_identity'] == preauth_iddata_str
         assert dev_accepted['key'] == preauth_key
@@ -211,6 +212,9 @@ class Client:
                 out = run('strings {} | grep authtoken'.format(Client.MENDER_STORE))
                 return out != ''
             except:
+                output_from_journalctl = run("journalctl -u mender -l")
+                logging.info("Logs from client: " + output_from_journalctl)
+
                 time.sleep(10)
                 sleepsec += 10
                 logging.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))

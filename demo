@@ -29,6 +29,9 @@ if [[ "$1" == "up" ]]; then
     echo "Starting Mender demo environment.."
 fi
 
+# Pass this value on to the GUI container as an env variable
+export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
+
 exec docker-compose \
      -f docker-compose.yml \
      -f docker-compose.storage.minio.yml \

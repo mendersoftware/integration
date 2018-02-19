@@ -62,7 +62,7 @@ class TestPreauthBase(MenderTesting):
         res = execute(Client.restart, hosts=client)
 
         # verify api results - after some time the device should be 'accepted'
-        for _ in range(20):
+        for _ in range(120):
             time.sleep(15)
             dev_accepted = adm.get_devices_status(status="accepted", expected_devices=2)
             if len([d for d in dev_accepted if d['status'] == 'accepted']) == 1:

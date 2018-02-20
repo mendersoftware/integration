@@ -68,7 +68,12 @@ class TestPreauthBase(MenderTesting):
             if len([d for d in dev_accepted if d['status'] == 'accepted']) == 1:
                 break
 
+
+        logging.info("devices: " + str(dev_accepted))
         dev_accepted = [d for d in dev_accepted if d['status'] == 'accepted']
+        logging.info("accepted devices: " + str(dev_accepted))
+
+        execute(Client.get_logs, hosts=client)
 
         assert len(dev_accepted) == 1, "looks like the device was never accepted"
         dev_accepted = dev_accepted[0]
@@ -176,6 +181,12 @@ class Client:
     KEYGEN_TIMEOUT = 300
     DEVICE_ACCEPTED_TIMEOUT = 600
     MENDER_STORE_TIMEOUT = 600
+
+
+    @staticmethod
+    def get_logs():
+        output_from_journalctl = run("journalctl -u mender -l")
+        logging.info(output_from_journalctl)
 
     @staticmethod
     def get_pub_key():

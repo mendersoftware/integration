@@ -806,27 +806,6 @@ def trigger_jenkins_build(state, tag_avail):
             # that they can be repeated in subsequent builds.
             update_state(state, ['extra_buildparams', name], params[name])
 
-    pr_count = 0
-    pr_repo = None
-    for repo in GIT_TO_BUILDPARAM_MAP:
-        match = re.match("^pull/([0-9]+)/head$", params.get(GIT_TO_BUILDPARAM_MAP[repo]))
-        if match:
-            pr_count += 1
-            pr_repo = repo
-            pr_number = match.group(1)
-    # If there is exactly one pull request, then offer to trigger a job with
-    # Github status updates.
-    if pr_count == 1:
-        print("You are triggering a job for one pull request.")
-        reply = ask("Do you want to enable Github status updates for it? ")
-        if reply.lower().startswith("y"):
-            params['REPO_TO_TEST'] = pr_repo
-            params['PR_TO_TEST'] = pr_number
-            remote = find_upstream_remote(state, pr_repo)
-            execute_git(state, pr_repo, ["fetch", remote, "pull/%s/head" % pr_number])
-            rev = execute_git(state, pr_repo, ["rev-parse", "FETCH_HEAD"], capture=True)
-            params['GIT_COMMIT'] = rev
-
     # Order is important here, because Jenkins passes in the same parameters
     # multiple times, as pairs that complete each other.
     # Jenkins additionally needs the input as json as well, so create that from

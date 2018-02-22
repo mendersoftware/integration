@@ -167,13 +167,11 @@ def get_mender_conductor():
 
     return conductor[0]
 
-
 def ssh_is_opened(host=None):
     if not host:
         execute(ssh_is_opened_impl, hosts=get_mender_clients())
     else:
         execute(ssh_is_opened_impl, hosts=host)
-
 
 @parallel
 def ssh_is_opened_impl(cmd="true", wait=60*60):

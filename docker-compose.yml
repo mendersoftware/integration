@@ -12,17 +12,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-deployments
-
-    mender-mongo-deployments:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-deployments
+            - mender-mongo
 
     #
     # mender-gui
@@ -68,17 +58,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-device-auth
-
-    mender-mongo-device-auth:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-auth
+            - mender-mongo
 
     #
     # mender-device-adm
@@ -91,17 +71,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-device-adm
-
-    mender-mongo-device-adm:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-device-adm
+            - mender-mongo
 
     #
     # mender-inventory
@@ -114,17 +84,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-inventory
-
-    mender-mongo-inventory:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-inventory
+            - mender-mongo
 
     #
     # mender-useradm
@@ -137,17 +97,7 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo-useradm
-
-    mender-mongo-useradm:
-        image: mongo:3.4
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-useradm
+            - mender-mongo
 
     mender-conductor:
         image: mendersoftware/conductor:1.8.1
@@ -175,6 +125,20 @@ services:
             service: mender-base
         networks:
             - mender
+
+    mender-mongo:
+        image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            mender:
+                aliases:
+                     - mongo-deployments
+                     - mongo-device-adm
+                     - mongo-device-auth
+                     - mongo-inventory
+                     - mongo-useradm
 
 networks:
     mender:

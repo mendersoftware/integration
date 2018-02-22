@@ -180,7 +180,7 @@ def multitenancy_setup_without_client(request):
                         use_common_files=False)
 
     # wait a bit for the backend to start
-    wait_for_containers(20, ["../docker-compose.yml",
+    wait_for_containers(15, ["../docker-compose.yml",
                              "../docker-compose.tenant.yml",
                              "../docker-compose.storage.minio.yml"])
 
@@ -208,7 +208,7 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
                         use_common_files=False)
 
 
-    wait_for_containers(20, ["../docker-compose.yml",
+    wait_for_containers(15, ["../docker-compose.yml",
                              "../docker-compose.testing.yml ",
                              "../docker-compose.tenant.yml",
                              "../docker-compose.storage.minio.yml",
@@ -241,7 +241,7 @@ def multitenancy_setup_without_client_with_smtp(request):
                        use_common_files=False, env={"HOST_IP": host_ip})
 
     # wait a bit for the backend to start
-    wait_for_containers(20, ["../docker-compose.yml",
+    wait_for_containers(15, ["../docker-compose.yml",
                              "../docker-compose.tenant.yml",
                              "../docker-compose.storage.minio.yml"])
 

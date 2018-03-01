@@ -15,6 +15,7 @@
 from fabric.contrib.files import *
 from fabric.api import *
 from requests.auth import HTTPBasicAuth
+import logging
 import time
 
 # This is used to remember which docker-compose setup we're currently running.
@@ -32,6 +33,9 @@ ST_ShortLivedAuthToken = 6
 ST_CustomSetup = 7
 ST_MultiTenancyNoClient = 8
 
+
+HAVE_TOKEN_TIMEOUT = 60 * 5
+MENDER_STORE = '/data/mender/mender-store'
 
 
 def setup_type():
@@ -95,7 +99,7 @@ def run(cmd, *args, **kw):
     # Use shorter timeout to get a faster cycle. Not recommended though, since
     # in a heavily loaded environment, QEMU might be quite slow to use the
     # connection.
-    with settings(timeout = 60, abort_exception = Exception):
+    with settings(timeout=60, abort_exception=Exception):
         while True:
             try:
                 import fabric.api
@@ -121,3 +125,19 @@ def run(cmd, *args, **kw):
 # to be changed later.
 def sudo(*args, **kw):
     run(*args, **kw)
+
+
+def have_token():
+    """ Make sure the MENDER_STORE file exists after sometime, else fail test """
+
+    sleepsec = 0
+    while sleepsec < HAVE_TOKEN_TIMEOUT:
+        try:
+            run('strings {} | grep authtoken'.format(MENDER_STORE))
+            return
+        except Exception:
+            sleepsec += 5
+            time.sleep(5)
+            logging.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
+
+    assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"

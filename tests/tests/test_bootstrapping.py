@@ -50,7 +50,7 @@ class TestBootstrapping(MenderTesting):
         adm.check_expected_status("accepted", len(get_mender_clients()))
 
         # make sure mender-store contains authtoken
-        run("strings /data/mender/mender-store | grep -q 'authtoken'")
+        have_token()
 
         # print all device ids
         for device in adm.get_devices_status("accepted"):

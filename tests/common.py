@@ -18,34 +18,9 @@ from requests.auth import HTTPBasicAuth
 import logging
 import time
 
-# This is used to remember which docker-compose setup we're currently running.
-# This is for optimization purposes to avoid respawning the docker-compose
-# environment if we don't have to.
-SETUP_TYPE = None
-
-ST_NoClient = 0
-ST_OneClient = 1
-ST_OneClientBootstrapped = 2
-ST_TwoClientsBootstrapped = 3
-ST_OneClientsBootstrapped_AWS_S3 = 4
-ST_SignedClient = 5
-ST_ShortLivedAuthToken = 6
-ST_CustomSetup = 7
-ST_MultiTenancyNoClient = 8
-ST_OneClientsBootstrapped_AWS_S3_MT = 9
-ST_MultiTenancyNoClientWithSmtp = 10
-
 HAVE_TOKEN_TIMEOUT = 60 * 5
 MENDER_STORE = '/data/mender/mender-store'
 
-
-def setup_type():
-    return SETUP_TYPE
-
-
-def set_setup_type(type):
-    global SETUP_TYPE
-    SETUP_TYPE = type
 
 def put(file, local_path=".", remote_path="."):
     (scp, host, port) = scp_prep_args()

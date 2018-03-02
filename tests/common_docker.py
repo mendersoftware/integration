@@ -79,8 +79,6 @@ def stop_docker_compose():
         logger.info("running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
-    common.set_setup_type(None)
-
 
 def start_docker_compose(clients=1):
     inline_logs = conftest.inline_logs
@@ -100,8 +98,6 @@ def start_docker_compose(clients=1):
         log_files.append(tfile)
 
     ssh_is_opened()
-
-    common.set_setup_type(common.ST_OneClient)
 
 
 def restart_docker_compose(clients=1):

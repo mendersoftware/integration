@@ -80,10 +80,22 @@ class TestBootstrapping(MenderTesting):
 
             else:
                 # use assert to fail, so we can get backend logs
-                assert False, "No error while trying to deploy to rejected device"
+                pytest.fail("no error while trying to deploy to rejected device")
+                return
 
-        # authtoken has been removed from mender-store
-        run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
+        finished = False
+        # wait until auththoken is removed from file
+        for _ in range(10):
+            with settings(abort_exception=Exception):
+                try:
+                    run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
+                except:
+                    time.sleep(60)
+                else:
+                    finished = True
+                    break
 
-        # re-accept device after test is done
         adm.accept_devices(1)
+
+        if not finished:
+            pytest.fail("failed to remove authtoken from mender-store file")

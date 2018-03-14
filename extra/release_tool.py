@@ -1196,6 +1196,12 @@ def do_release():
     if not JENKINS_USER or not JENKINS_PASSWORD:
         logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
 
+    remote = find_upstream_remote(None, integration_dir())
+    local_branch = execute_git(None, integration_dir(), ["symbolic-ref", "HEAD"], capture=True).strip()
+    remote_branches = execute_git(None, integration_dir(), ["branch", "-r", "--contains", "HEAD"], capture=True)
+    if local_branch != "refs/heads/master" and ("%s/master" % remote) not in [branch.strip() for branch in remote_branches.split('\n')]:
+        print("WARNING: It is HIGHLY recommended to run the --release option from the master branch of integration, even if releasing for an older version.")
+
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:
             reply = ask("Release already in progress. Continue or start a new one [C/S]? ")

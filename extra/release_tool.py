@@ -131,6 +131,7 @@ EXTRA_BUILDPARAMS = {
     "POKY_REV": "rocko",
     "PUBLISH_ARTIFACTS": "on",
     "RUN_INTEGRATION_TESTS": "on",
+    "STOP_SLAVE": "",
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "on",
     "TEST_QEMU_SDIMG": "on",

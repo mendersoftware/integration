@@ -794,9 +794,17 @@ def trigger_jenkins_build(state, tag_avail):
         if not reply.startswith("Y") and not reply.startswith("y"):
             return
 
-        name = ask("Which one? ")
-        if params.get(name) is None:
+        substr = ask("Which one (substring is ok as long as it's unique)? ")
+        found = 0
+        for param in params.keys():
+            if param.find(substr) >= 0:
+                name = param
+                found += 1
+        if found == 0:
             print("Parameter not found!")
+            continue
+        elif found > 1:
+            print("String not unique!")
             continue
         params[name] = ask("Ok. New value? ")
 

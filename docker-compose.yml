@@ -150,7 +150,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/conductor:1.8.1
+        image: mendersoftware/mender-conductor:master
         depends_on:
             - mender-elasticsearch
             - mender-redis

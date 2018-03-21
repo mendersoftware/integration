@@ -21,8 +21,23 @@ services:
                 aliases:
                     - mongo-tenantadm
 
-    mender-conductor-workers:
-        image: mendersoftware/conductor-workers:master
+    mender-conductor:
+        image: mendersoftware/mender-conductor-enterprise:master
+
+    mender-org-welcome-email-preparer:
+        image: mendersoftware/org-welcome-email-preparer:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-conductor
+        environment:
+            CONDUCTOR: "http://mender-conductor:8080"
+
+    mender-email-sender:
+        image: mendersoftware/email-sender:master
         extends:
             file: common.yml
             service: mender-base

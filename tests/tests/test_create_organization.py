@@ -44,6 +44,8 @@ class TestCreateOrganization(MenderTesting):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
+        logging.info("tenantadm respond with code: %s" % rsp.status_code)
+
         logging.info("TestCreateOrganization: workflow started. Waiting...")
 
         for i in range(60 * 5):

@@ -720,20 +720,23 @@ def trigger_jenkins_build(state, tag_avail):
         if state_value(state, ["extra_buildparams", param]) is None:
             update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
-    # We'll be adding parameters here that shouldn't be in 'state', so make a
-    # copy.
-    params = copy.deepcopy(state['extra_buildparams'])
-
-    # Populate parameters with build tags for each repository.
-    postdata = []
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if tag_avail[repo.git].get('build_tag') is None:
-            print("One of the repositories doesn't have a build tag yet!")
-            return
-        params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+    params = None
 
     # Allow changing of build parameters.
     while True:
+        if params is None:
+            # We'll be adding parameters here that shouldn't be in 'state', so make a
+            # copy.
+            params = copy.deepcopy(state['extra_buildparams'])
+
+            # Populate parameters with build tags for each repository.
+            postdata = []
+            for repo in sorted(REPOS.values(), key=repo_sort_key):
+                if tag_avail[repo.git].get('build_tag') is None:
+                    print("One of the repositories doesn't have a build tag yet!")
+                    return
+                params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+
         print("--------------------------------------------------------------------------------")
         fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
@@ -744,8 +747,20 @@ def trigger_jenkins_build(state, tag_avail):
         if reply.startswith("Y") or reply.startswith("y"):
             break
 
-        reply = ask("Do you want to change any of the parameters? ")
-        if not reply.startswith("Y") and not reply.startswith("y"):
+        reply = ask("Do you want to change any of the parameters (Y/N/open in Editor)? ")
+        if reply.upper().startswith("E"):
+            if os.environ.get("EDITOR"):
+                editor = os.environ.get("EDITOR")
+            else:
+                editor = "vi"
+            subprocess.call("%s %s" % (editor, RELEASE_TOOL_STATE), shell=True)
+            with open(RELEASE_TOOL_STATE) as fd:
+                state.clear()
+                state.update(yaml.load(fd))
+            # Trigger update of parameters from disk.
+            params = None
+            continue
+        elif not reply.upper().startswith("Y"):
             return
 
         substr = ask("Which one (substring is ok as long as it's unique)? ")

@@ -36,19 +36,34 @@ function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
 
-    curl "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/mender-artifact" \
+    curl --fail "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 
+    if [ $? -ne 0 ]; then
+        echo "failed to download mender-artifact"
+        exit 1
+    fi
+
     chmod +x downloaded-tools/mender-artifact
 
-    curl "https://mender.s3-accelerate.amazonaws.com/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
+    curl --fail "https://mender.s3-accelerate.amazonaws.com/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
          -o core-image-full-cmdline-vexpress-qemu.ext4 \
          -z core-image-full-cmdline-vexpress-qemu.ext4
 
-   curl "https://stress-client.s3-accelerate.amazonaws.com/release/mender-stress-test-client" \
+    if [ $? -ne 0 ]; then
+        echo "failed to download ext4 image" 
+        exit 1
+    fi
+
+   curl --fail "https://stress-client.s3-accelerate.amazonaws.com/release/mender-stress-test-client" \
         -o downloaded-tools/mender-stress-test-client \
         -z downloaded-tools/mender-stress-test-client
+
+    if [ $? -ne 0 ]; then
+        echo "failed to download mender-stress-test-client" 
+        exit 1
+    fi
 
     chmod +x downloaded-tools/mender-stress-test-client
 

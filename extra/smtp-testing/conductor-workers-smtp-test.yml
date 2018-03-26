@@ -1,7 +1,7 @@
 version: '2'
 services:
 
-    mender-conductor-workers:
+    mender-email-sender:
         environment:
             - CONDUCTOR=http://mender-conductor:8080
             - SMTP_ADDRESS=${HOST_IP}:4444

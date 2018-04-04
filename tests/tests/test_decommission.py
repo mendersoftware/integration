@@ -26,10 +26,6 @@ from conductor import Conductor
 
 
 class TestDeviceDecommissioning(MenderTesting):
-    def setup_method(self, method):
-        if common.setup_type() == common.ST_OneClient:
-            stop_docker_compose()
-
     def check_gone_from_inventory(self, device_id):
         r = inv.get_device(device_id)
         assert r.status_code == 404, "device [%s] not removed from inventory" % (device_id,)

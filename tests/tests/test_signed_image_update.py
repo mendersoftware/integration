@@ -39,7 +39,7 @@ class TestSignedUpdates(MenderTesting):
 
         update_image_successful(install_image=conftest.get_valid_image(), signed=True)
 
-    @pytest.mark.parametrize("standard_setup_with_signed_artifact_client", ["force_new"], indirect=True)
+    @pytest.mark.parametrize("standard_setup_with_signed_artifact_client")
     def test_unsigned_artifact_fails_deployment(self, standard_setup_with_signed_artifact_client):
         """
             Make sure that an unsigned image fails, and is handled by the backend.

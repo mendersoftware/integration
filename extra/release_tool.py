@@ -87,6 +87,7 @@ REPOS = {
 # repositories, but that are available for querying.
 OPTIONAL_REPOS = {
     "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
+    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
 }
 
 # Some convenient aliases, mainly because Git phrasing differs slightly from

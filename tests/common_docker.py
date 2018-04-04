@@ -28,7 +28,6 @@ COMPOSE_FILES = [
     "../docker-compose.client.yml",
     "../docker-compose.storage.minio.yml",
     "../docker-compose.testing.yml",
-    "../docker-compose.tenant.yml"
 ]
 
 log_files = []
@@ -198,7 +197,7 @@ def ssh_is_opened_impl(cmd="true", wait=60*60):
 
 def new_tenant_client(name, tenant):
     logging.info("creating client connected to tenant: " + tenant)
-    docker_compose_cmd("%s -f ../docker-compose.mt.client.yml \
+    docker_compose_cmd("-f ../docker-compose.tenant.yml %s -f ../docker-compose.mt.client.yml \
                         run -d --name=%s_%s mender-client" % (conftest.mt_docker_compose_file,
                                                               conftest.docker_compose_instance,
                                                               name),

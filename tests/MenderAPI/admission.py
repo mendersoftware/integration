@@ -114,6 +114,16 @@ class Admission():
         for d in self.get_devices(expected_devices=expected_devices):
             self.set_device_status(d["id"], "accepted")
 
+        # block until devices are actually accepted
+        timeout = time.time() + 30
+        while time.time() <= timeout:
+            time.sleep(1)
+            if len(self.get_devices_status(status="accepted", expected_devices=expected_devices)) == expected_devices:
+                break
+           
+        if time.time() > timeout:
+            pytest.fail("wasn't able to accept device after 30 seconds")
+
         logger.info("Successfully bootstrap all clients")
 
     def preauth(self, device_identity, pubkey):

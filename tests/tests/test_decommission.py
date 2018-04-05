@@ -14,6 +14,7 @@
 #    limitations under the License.
 
 from fabric.api import *
+import time
 import pytest
 import common
 from common_setup import *
@@ -62,8 +63,14 @@ class TestDeviceDecommissioning(MenderTesting):
 
         # wait until inventory is populated
         timeout = time.time() + (60 * 5)
+
         while time.time() < timeout:
             inventoryJSON = inv.get_devices()
+
+            # we haven't gotten an inventory data yet.
+            if len(inventoryJSON) == 0:
+                continue
+
             if "attributes" in inventoryJSON[0]:
                 break
             time.sleep(.5)

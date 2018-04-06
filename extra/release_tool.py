@@ -81,13 +81,14 @@ REPOS = {
     # indexing purposes.
     "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
     "mender-integration": RepoName("mender-integration", "integration", "integration", False),
+    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
 }
 
 # These are optional repositories that aren't included when iterating over
 # repositories, but that are available for querying.
 OPTIONAL_REPOS = {
     "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
-    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
+    "mender-conductor-enterprise": RepoName("mender-conductor-enterprise", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
 }
 
 # Some convenient aliases, mainly because Git phrasing differs slightly from
@@ -115,6 +116,8 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-artifact": "MENDER_ARTIFACT_REV",
 
     "integration": "INTEGRATION_REV",
+    "mender-conductor": "MENDER_CONDUCTOR_REV",
+
 }
 
 # These will be saved along with the state if they are changed.

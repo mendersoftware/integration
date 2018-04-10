@@ -33,6 +33,21 @@ COMPOSE_FILES = [
 log_files = []
 logger = logging.getLogger("root")
 
+
+def store_logs():
+    inline_logs = conftest.inline_logs
+
+    if inline_logs:
+        docker_compose_cmd("logs -f &",
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
+    else:
+        tfile = tempfile.mktemp("mender_testing")
+        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
+                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
+        logger.info("docker-compose log file stored here: %s" % tfile)
+        log_files.append(tfile)
+
+
 def docker_compose_cmd(arg_list, use_common_files=True, env=None):
     """
         start a specific docker-compose setup, and retry a few times due to:
@@ -58,6 +73,10 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
         for count in range(5):
             try:
                 output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
+
+                if "up -d" in arg_list:
+                    store_logs()
+
                 return output
 
             except subprocess.CalledProcessError as e:
@@ -82,21 +101,11 @@ def stop_docker_compose():
 
 
 def start_docker_compose(clients=1):
-    inline_logs = conftest.inline_logs
-
     docker_compose_cmd("up -d")
+    
     if clients > 1:
         docker_compose_cmd("scale mender-client=%d" % clients)
 
-    if inline_logs:
-        docker_compose_cmd("logs -f &",
-                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-    else:
-        tfile = tempfile.mktemp("mender_testing")
-        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
-                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-        logger.info("docker-compose log file stored here: %s" % tfile)
-        log_files.append(tfile)
 
     ssh_is_opened()
 

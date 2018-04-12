@@ -114,6 +114,7 @@ GIT_TO_BUILDPARAM_MAP = {
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",
+    "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",
     "mender-conductor": "MENDER_CONDUCTOR_REV",
@@ -784,7 +785,7 @@ def trigger_jenkins_build(state, tag_avail):
             postdata = []
             for repo in sorted(REPOS.values(), key=repo_sort_key):
                 if tag_avail[repo.git].get('build_tag') is None:
-                    print("One of the repositories doesn't have a build tag yet!")
+                    print("%s doesn't have a build tag yet!" % repo.git)
                     return
                 params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
 
@@ -1116,20 +1117,6 @@ def do_build(args):
     else:
         state = {}
 
-    if args.build is True:
-        if state_value(state, ['version']) is None:
-            print("When there is no earlier cached build, you must give --build a VERSION argument.")
-            sys.exit(1)
-    else:
-        if state_value(state, ['version']) != args.build:
-            update_state(state, ["version"], args.build)
-            for repo in REPOS.values():
-                if repo.git == "integration":
-                    update_state(state, [repo.git, "version"], args.build)
-                else:
-                    version = version_of(integration_dir(), repo.container, args.build)
-                    update_state(state, [repo.git, "version"], version)
-
     if state_value(state, ['repo_dir']) is None:
         repo_dir = os.path.normpath(os.path.join(integration_dir(), ".."))
         print(("Guessing that your directory of all repositories is %s. "
@@ -1137,15 +1124,35 @@ def do_build(args):
               % (repo_dir, RELEASE_TOOL_STATE))
         update_state(state, ["repo_dir"], repo_dir)
 
-    tag_avail = check_tag_availability(state)
+    if args.build is True:
+        if state_value(state, ['version']) is None:
+            print("When there is no earlier cached build, you must give --build a VERSION argument.")
+            sys.exit(1)
+        tag_avail = check_tag_availability(state)
+    else:
+        update_state(state, ["version"], args.build)
+        for repo in REPOS.values():
+            if repo.git == "integration":
+                update_state(state, [repo.git, "version"], args.build)
+            else:
+                version = version_of(integration_dir(), repo.container, args.build)
+                update_state(state, [repo.git, "version"], version)
+        tag_avail = check_tag_availability(state)
+        for repo in REPOS.values():
+            tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
 
-    if args.pr is not None:
-        match = re.match("^([^/]+)/([0-9]+)$", args.pr)
+    for pr in args.pr:
+        match = re.match("^([^/]+)/([0-9]+)$", pr)
         if match is None:
-            raise Exception("%s is not a valid repo/pr pair!" % args.pr)
+            raise Exception("%s is not a valid repo/pr pair!" % pr)
         repo = match.group(1)
-        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP"
-        tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
+        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
+        if GIT_TO_BUILDPARAM_MAP[repo] in EXTRA_BUILDPARAMS:
+            # For non-version repos
+            update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], "pull/%s/head" % match.group(2))
+        else:
+            # For versioned Mender repos.
+            tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
 
     trigger_jenkins_build(state, tag_avail)
 
@@ -1522,9 +1529,10 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
-    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER",
-                        help="Can only be used with -b. Specifies one repository and pull request number "
-                        + "that should be triggered with the rest of the repository versions.")
+    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
+                        help="Can only be used with -b. Specifies a repository and pull request number "
+                        + "that should be triggered with the rest of the repository versions. "
+                        + "May be specified more than once.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",

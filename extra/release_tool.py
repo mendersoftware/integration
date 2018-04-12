@@ -278,6 +278,14 @@ def do_version_of(args):
 
     print(version_of(integration_dir(), repo.container, args.in_integration_version))
 
+def do_list_repos(args):
+    """Lists the repos in REPOS, using the provided name type."""
+
+    assert args.list in ["container", "docker", "git"], "%s is not a valid name type!" % args.list
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        eval("print(repo.%s)" % args.list)
+
 def sorted_final_version_list(git_dir):
     """Returns a sorted list of all final version tags."""
 
@@ -1533,6 +1541,9 @@ def main():
                         help="Can only be used with -b. Specifies a repository and pull request number "
                         + "that should be triggered with the rest of the repository versions. "
                         + "May be specified more than once.")
+    parser.add_argument("-l", "--list", metavar="container|docker|git", dest="list", const="git", nargs="?",
+                        help="List the Mender repositories in use for this release. The optional "
+                        + "argument determines which type of name is returned. The default is git.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -1567,6 +1578,8 @@ def main():
 
     if args.version_of is not None:
         do_version_of(args)
+    elif args.list is not None:
+        do_list_repos(args)
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:

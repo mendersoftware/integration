@@ -116,6 +116,8 @@ GIT_TO_BUILDPARAM_MAP = {
     "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",
+
+    "mender-qa": "MENDER_QA_REV",
 }
 
 # These will be saved along with the state if they are changed.

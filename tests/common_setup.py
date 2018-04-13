@@ -169,6 +169,9 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def multitenancy_setup_without_client(request):
+    if not conftest.run_tenant_tests:
+        pytest.skip("Tenant tests disabled")
+
     stop_docker_compose()
     reset_mender_api()
 
@@ -193,6 +196,9 @@ def multitenancy_setup_without_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
+    if not conftest.run_tenant_tests:
+        pytest.skip("Tenant tests disabled")
+
     if setup_type() == ST_OneClientsBootstrapped_AWS_S3_MT:
         return
 
@@ -222,6 +228,9 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
 
 @pytest.fixture(scope="function")
 def multitenancy_setup_without_client_with_smtp(request):
+    if not conftest.run_tenant_tests:
+        pytest.skip("Tenant tests disabled")
+
     if setup_type() == ST_MultiTenancyNoClientWithSmtp:
         return
 

@@ -105,6 +105,7 @@ REPO_ALIASES = {
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
+    "mender-conductor": "MENDER_CONDUCTOR_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deviceadm": "DEVICEADM_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -114,10 +115,9 @@ GIT_TO_BUILDPARAM_MAP = {
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",
+    "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",
-    "mender-conductor": "MENDER_CONDUCTOR_REV",
-
 }
 
 # These will be saved along with the state if they are changed.
@@ -276,6 +276,14 @@ def do_version_of(args):
         sys.exit(1)
 
     print(version_of(integration_dir(), repo.container, args.in_integration_version))
+
+def do_list_repos(args):
+    """Lists the repos in REPOS, using the provided name type."""
+
+    assert args.list in ["container", "docker", "git"], "%s is not a valid name type!" % args.list
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        eval("print(repo.%s)" % args.list)
 
 def sorted_final_version_list(git_dir):
     """Returns a sorted list of all final version tags."""
@@ -771,20 +779,23 @@ def trigger_jenkins_build(state, tag_avail):
         if state_value(state, ["extra_buildparams", param]) is None:
             update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
-    # We'll be adding parameters here that shouldn't be in 'state', so make a
-    # copy.
-    params = copy.deepcopy(state['extra_buildparams'])
-
-    # Populate parameters with build tags for each repository.
-    postdata = []
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if tag_avail[repo.git].get('build_tag') is None:
-            print("One of the repositories doesn't have a build tag yet!")
-            return
-        params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+    params = None
 
     # Allow changing of build parameters.
     while True:
+        if params is None:
+            # We'll be adding parameters here that shouldn't be in 'state', so make a
+            # copy.
+            params = copy.deepcopy(state['extra_buildparams'])
+
+            # Populate parameters with build tags for each repository.
+            postdata = []
+            for repo in sorted(REPOS.values(), key=repo_sort_key):
+                if tag_avail[repo.git].get('build_tag') is None:
+                    print("%s doesn't have a build tag yet!" % repo.git)
+                    return
+                params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+
         print("--------------------------------------------------------------------------------")
         fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
@@ -795,8 +806,20 @@ def trigger_jenkins_build(state, tag_avail):
         if reply.startswith("Y") or reply.startswith("y"):
             break
 
-        reply = ask("Do you want to change any of the parameters? ")
-        if not reply.startswith("Y") and not reply.startswith("y"):
+        reply = ask("Do you want to change any of the parameters (Y/N/open in Editor)? ")
+        if reply.upper().startswith("E"):
+            if os.environ.get("EDITOR"):
+                editor = os.environ.get("EDITOR")
+            else:
+                editor = "vi"
+            subprocess.call("%s %s" % (editor, RELEASE_TOOL_STATE), shell=True)
+            with open(RELEASE_TOOL_STATE) as fd:
+                state.clear()
+                state.update(yaml.load(fd))
+            # Trigger update of parameters from disk.
+            params = None
+            continue
+        elif not reply.upper().startswith("Y"):
             return
 
         substr = ask("Which one (substring is ok as long as it's unique)? ")
@@ -1101,20 +1124,6 @@ def do_build(args):
     else:
         state = {}
 
-    if args.build is True:
-        if state_value(state, ['version']) is None:
-            print("When there is no earlier cached build, you must give --build a VERSION argument.")
-            sys.exit(1)
-    else:
-        if state_value(state, ['version']) != args.build:
-            update_state(state, ["version"], args.build)
-            for repo in REPOS.values():
-                if repo.git == "integration":
-                    update_state(state, [repo.git, "version"], args.build)
-                else:
-                    version = version_of(integration_dir(), repo.container, args.build)
-                    update_state(state, [repo.git, "version"], version)
-
     if state_value(state, ['repo_dir']) is None:
         repo_dir = os.path.normpath(os.path.join(integration_dir(), ".."))
         print(("Guessing that your directory of all repositories is %s. "
@@ -1122,15 +1131,35 @@ def do_build(args):
               % (repo_dir, RELEASE_TOOL_STATE))
         update_state(state, ["repo_dir"], repo_dir)
 
-    tag_avail = check_tag_availability(state)
+    if args.build is True:
+        if state_value(state, ['version']) is None:
+            print("When there is no earlier cached build, you must give --build a VERSION argument.")
+            sys.exit(1)
+        tag_avail = check_tag_availability(state)
+    else:
+        update_state(state, ["version"], args.build)
+        for repo in REPOS.values():
+            if repo.git == "integration":
+                update_state(state, [repo.git, "version"], args.build)
+            else:
+                version = version_of(integration_dir(), repo.container, args.build)
+                update_state(state, [repo.git, "version"], version)
+        tag_avail = check_tag_availability(state)
+        for repo in REPOS.values():
+            tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
 
-    if args.pr is not None:
-        match = re.match("^([^/]+)/([0-9]+)$", args.pr)
+    for pr in args.pr:
+        match = re.match("^([^/]+)/([0-9]+)$", pr)
         if match is None:
-            raise Exception("%s is not a valid repo/pr pair!" % args.pr)
+            raise Exception("%s is not a valid repo/pr pair!" % pr)
         repo = match.group(1)
-        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP"
-        tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
+        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
+        if GIT_TO_BUILDPARAM_MAP[repo] in EXTRA_BUILDPARAMS:
+            # For non-version repos
+            update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], "pull/%s/head" % match.group(2))
+        else:
+            # For versioned Mender repos.
+            tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
 
     trigger_jenkins_build(state, tag_avail)
 
@@ -1507,9 +1536,13 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
-    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER",
-                        help="Can only be used with -b. Specifies one repository and pull request number "
-                        + "that should be triggered with the rest of the repository versions.")
+    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
+                        help="Can only be used with -b. Specifies a repository and pull request number "
+                        + "that should be triggered with the rest of the repository versions. "
+                        + "May be specified more than once.")
+    parser.add_argument("-l", "--list", metavar="container|docker|git", dest="list", const="git", nargs="?",
+                        help="List the Mender repositories in use for this release. The optional "
+                        + "argument determines which type of name is returned. The default is git.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -1544,6 +1577,8 @@ def main():
 
     if args.version_of is not None:
         do_version_of(args)
+    elif args.list is not None:
+        do_list_repos(args)
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:

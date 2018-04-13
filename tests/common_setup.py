@@ -167,6 +167,9 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def multitenancy_setup_without_client(request):
+    if not conftest.run_tenant_tests:
+        pytest.skip("Tenant tests disabled")
+
     stop_docker_compose()
     reset_mender_api()
 

@@ -22,6 +22,7 @@ import filelock
 import uuid
 import subprocess
 import os
+import re
 import pytest
 import distutils.spawn
 import log
@@ -39,6 +40,7 @@ production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 inline_logs = False
 mt_docker_compose_file = ""
+run_tenant_tests = True
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -108,6 +110,12 @@ def pytest_configure(config):
     env.connection_attempts = 50
     env.eagerly_disconnect = True
     env.banner_timeout = 10
+
+    version = subprocess.check_output(["../extra/release_tool.py", "--version-of", "integration"])
+    if re.match("^[0-9]+\.[0-9]+\.[x0-9]+.*", version):
+        # Don't run tenant tests for release branches.
+        global run_tenant_tests
+        run_tenant_tests = False
 
 
 def pytest_runtest_setup(item):

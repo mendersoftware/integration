@@ -103,6 +103,7 @@ REPO_ALIASES = {
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
+    "mender-conductor": "MENDER_CONDUCTOR_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deviceadm": "DEVICEADM_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -112,8 +113,11 @@ GIT_TO_BUILDPARAM_MAP = {
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",
+    "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",
+
+    "mender-qa": "MENDER_QA_REV",
 }
 
 # These will be saved along with the state if they are changed.
@@ -131,6 +135,7 @@ EXTRA_BUILDPARAMS = {
     "POKY_REV": "rocko",
     "PUBLISH_ARTIFACTS": "on",
     "RUN_INTEGRATION_TESTS": "on",
+    "STOP_SLAVE": "",
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "on",
     "TEST_QEMU_SDIMG": "on",
@@ -232,8 +237,15 @@ def version_of(integration_dir, repo_container, in_integration_version=None):
             # Just return the supplied version string.
             return in_integration_version
         else:
-            return execute_git(None, integration_dir, ["describe", "--all", "--always"],
-                               capture=True)
+            # Return "closest" branch or tag name. Basically we measure the
+            # distance in commits from the merge base of all refs to the current
+            # HEAD, and then pick the shortest one, and we assume that this is
+            # our current version.
+            return subprocess.check_output("""
+                for i in $(git for-each-ref --format='%(refname:short)' refs/tags/* refs/heads/*); do
+                    echo $(git log --oneline $(git merge-base $i HEAD)..HEAD | wc -l) $i
+                done | sort -n | head -n1 | awk '{print $2}'
+            """, shell=True, cwd=integration_dir).strip().decode()
 
     if in_integration_version is not None:
         # Check if there is a range, and if so, return range.
@@ -271,6 +283,14 @@ def do_version_of(args):
         sys.exit(1)
 
     print(version_of(integration_dir(), repo.container, args.in_integration_version))
+
+def do_list_repos(args):
+    """Lists the repos in REPOS, using the provided name type."""
+
+    assert args.list in ["container", "docker", "git"], "%s is not a valid name type!" % args.list
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        eval("print(repo.%s)" % args.list)
 
 def sorted_final_version_list(git_dir):
     """Returns a sorted list of all final version tags."""
@@ -560,20 +580,29 @@ def annotation_version(repo, tag_avail):
     else:
         return "%s version %s Build %s." % (repo.git, match.group(1), match.group(2))
 
+def version_components(version):
+    """Returns a four-tuple containing the version componets major, minor, patch
+    and beta, as ints. Beta does not include the "b"."""
+
+    match = re.match("^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
+    if match is None:
+        raise Exception("Invalid version '%s' passed to version_components." % version)
+
+    if match.group(4) is None:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)), None)
+    else:
+        return (int(match.group(1)), int(match.group(2)), int(match.group(3)), int(match.group(4)))
+
 def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
     match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", version)
-    version_major = int(match.group(1))
-    version_minor = int(match.group(2))
-    version_patch = int(match.group(3))
+    (version_major, version_minor, version_patch, version_beta) = version_components(version)
 
     for tag in tag_list:
         match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", tag)
-        tag_major = int(match.group(1))
-        tag_minor = int(match.group(2))
-        tag_patch = int(match.group(3))
+        (tag_major, tag_minor, tag_patch, tag_beta) = version_components(tag)
 
         if tag_major < version_major:
             return tag
@@ -583,9 +612,29 @@ def find_prev_version(tag_list, version):
             elif tag_minor == version_minor:
                 if tag_patch < version_patch:
                     return tag
+                elif tag_patch == version_patch:
+                    if tag_beta is not None and version_beta is None:
+                        return tag
+                    elif tag_beta is not None and version_beta is not None and tag_beta < version_beta:
+                        return tag
 
     # No lower version found.
     return None
+
+def next_patch_version(prev_version, next_beta=None):
+    """Returns the next patch version is a series, based on the given version.
+    If next_beta is not None, then the version will be a new beta, instead of a
+    new patch release."""
+
+    (major, minor, patch, beta) = version_components(prev_version)
+    if next_beta:
+        new_version = "%d.%d.%db%d" % (major, minor, patch, next_beta)
+    elif beta is not None:
+        new_version = "%d.%d.%d" % (major, minor, patch)
+    else:
+        new_version = "%d.%d.%d" % (major, minor, patch + 1)
+    assert prev_version != new_version, "Previous and new version should not be the same!"
+    return new_version
 
 def generate_new_tags(state, tag_avail, final):
     """Creates new build tags, and returns the new tags in a modified tag_avail. If
@@ -737,20 +786,23 @@ def trigger_jenkins_build(state, tag_avail):
         if state_value(state, ["extra_buildparams", param]) is None:
             update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
 
-    # We'll be adding parameters here that shouldn't be in 'state', so make a
-    # copy.
-    params = copy.deepcopy(state['extra_buildparams'])
-
-    # Populate parameters with build tags for each repository.
-    postdata = []
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if tag_avail[repo.git].get('build_tag') is None:
-            print("One of the repositories doesn't have a build tag yet!")
-            return
-        params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+    params = None
 
     # Allow changing of build parameters.
     while True:
+        if params is None:
+            # We'll be adding parameters here that shouldn't be in 'state', so make a
+            # copy.
+            params = copy.deepcopy(state['extra_buildparams'])
+
+            # Populate parameters with build tags for each repository.
+            postdata = []
+            for repo in sorted(REPOS.values(), key=repo_sort_key):
+                if tag_avail[repo.git].get('build_tag') is None:
+                    print("%s doesn't have a build tag yet!" % repo.git)
+                    return
+                params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+
         print("--------------------------------------------------------------------------------")
         fmt_str = "%-30s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
@@ -761,13 +813,33 @@ def trigger_jenkins_build(state, tag_avail):
         if reply.startswith("Y") or reply.startswith("y"):
             break
 
-        reply = ask("Do you want to change any of the parameters? ")
-        if not reply.startswith("Y") and not reply.startswith("y"):
+        reply = ask("Do you want to change any of the parameters (Y/N/open in Editor)? ")
+        if reply.upper().startswith("E"):
+            if os.environ.get("EDITOR"):
+                editor = os.environ.get("EDITOR")
+            else:
+                editor = "vi"
+            subprocess.call("%s %s" % (editor, RELEASE_TOOL_STATE), shell=True)
+            with open(RELEASE_TOOL_STATE) as fd:
+                state.clear()
+                state.update(yaml.load(fd))
+            # Trigger update of parameters from disk.
+            params = None
+            continue
+        elif not reply.upper().startswith("Y"):
             return
 
-        name = ask("Which one? ")
-        if params.get(name) is None:
+        substr = ask("Which one (substring is ok as long as it's unique)? ")
+        found = 0
+        for param in params.keys():
+            if param.find(substr) >= 0:
+                name = param
+                found += 1
+        if found == 0:
             print("Parameter not found!")
+            continue
+        elif found > 1:
+            print("String not unique!")
             continue
         params[name] = ask("Ok. New value? ")
 
@@ -873,10 +945,14 @@ def switch_following_branch(state, tag_avail):
                 local = current[(current.index('/') + 1):]
                 update_state(state, [repo.git, 'following'], local)
 
-def assign_default_following_branch(state, repo):
+def find_default_following_branch(state, repo, version):
     remote = find_upstream_remote(state, repo.git)
-    branch = re.sub(r"\.[^.]+$", ".x", state[repo.git]['version'])
-    update_state(state, [repo.git, 'following'], "%s/%s" % (remote, branch))
+    branch = re.sub(r"\.[^.]+$", ".x", version)
+    return "%s/%s" % (remote, branch)
+
+def assign_default_following_branch(state, repo):
+    update_state(state, [repo.git, 'following'],
+                 find_default_following_branch(state, repo, state[repo.git]['version']))
 
 def merge_release_tag(state, tag_avail, repo):
     """Merge tag into version branch, but only for Git history's sake, the 'ours'
@@ -1055,20 +1131,6 @@ def do_build(args):
     else:
         state = {}
 
-    if args.build is True:
-        if state_value(state, ['version']) is None:
-            print("When there is no earlier cached build, you must give --build a VERSION argument.")
-            sys.exit(1)
-    else:
-        if state_value(state, ['version']) != args.build:
-            update_state(state, ["version"], args.build)
-            for repo in REPOS.values():
-                if repo.git == "integration":
-                    update_state(state, [repo.git, "version"], args.build)
-                else:
-                    version = version_of(integration_dir(), repo.container, args.build)
-                    update_state(state, [repo.git, "version"], version)
-
     if state_value(state, ['repo_dir']) is None:
         repo_dir = os.path.normpath(os.path.join(integration_dir(), ".."))
         print(("Guessing that your directory of all repositories is %s. "
@@ -1076,7 +1138,94 @@ def do_build(args):
               % (repo_dir, RELEASE_TOOL_STATE))
         update_state(state, ["repo_dir"], repo_dir)
 
-    trigger_jenkins_build(state, check_tag_availability(state))
+    if args.build is True:
+        if state_value(state, ['version']) is None:
+            print("When there is no earlier cached build, you must give --build a VERSION argument.")
+            sys.exit(1)
+        tag_avail = check_tag_availability(state)
+    else:
+        update_state(state, ["version"], args.build)
+        for repo in REPOS.values():
+            if repo.git == "integration":
+                update_state(state, [repo.git, "version"], args.build)
+            else:
+                version = version_of(integration_dir(), repo.container, args.build)
+                update_state(state, [repo.git, "version"], version)
+        tag_avail = check_tag_availability(state)
+        for repo in REPOS.values():
+            tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
+
+    for pr in args.pr:
+        match = re.match("^([^/]+)/([0-9]+)$", pr)
+        if match is None:
+            raise Exception("%s is not a valid repo/pr pair!" % pr)
+        repo = match.group(1)
+        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
+        if GIT_TO_BUILDPARAM_MAP[repo] in EXTRA_BUILDPARAMS:
+            # For non-version repos
+            update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], "pull/%s/head" % match.group(2))
+        else:
+            # For versioned Mender repos.
+            tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
+
+    trigger_jenkins_build(state, tag_avail)
+
+def determine_version_to_include_in_release(state, repo):
+    version = state_value(state, [repo.git, 'version'])
+
+    if version is not None:
+        return version
+
+    # Is there already a version in the same series? Look at integration.
+    tag_list = sorted_final_version_list(integration_dir())
+    prev_of_integration = find_prev_version(tag_list, state['version'])
+    (overall_major, overall_minor, overall_patch, overall_beta) = version_components(state['version'])
+    (prev_major, prev_minor, prev_patch, prev_beta) = version_components(prev_of_integration)
+
+    prev_of_repo = None
+    new_repo_version = None
+    follow_branch = None
+    if overall_major == prev_major and overall_minor == prev_minor:
+        # Same series. Us it as basis.
+        prev_of_repo = version_of(integration_dir(), repo.container, in_integration_version=prev_of_integration)
+        new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
+        follow_branch = find_default_following_branch(state, repo, new_repo_version)
+    else:
+        # No series exists. Base on master.
+        prev_of_repo = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))[0]
+        (major, minor, patch, beta) = version_components(prev_of_repo)
+        new_repo_version = "%d.%d.0" % (major, minor + 1)
+        if overall_beta:
+            new_repo_version += "b%d" % overall_beta
+        follow_branch = "%s/master" % find_upstream_remote(state, repo.git)
+
+    cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+
+    print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
+    execute_git(state, repo.git, cmd)
+
+    print()
+    print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
+    reply = ask("Based on this, is there a reason for a new release of %s? "
+                % repo.git)
+
+    if reply.lower().startswith("y"):
+        reply = ask("Should the new release of %s be version %s? "
+                    % (repo.git, new_repo_version))
+        if reply.lower().startswith("y"):
+            update_state(state, [repo.git, 'version'], new_repo_version)
+    else:
+        reply = ask("Should the release of %s be left at the previous version %s? "
+                    % (repo.git, prev_of_repo))
+        if reply.lower().startswith("y"):
+            update_state(state, [repo.git, 'version'], prev_of_repo)
+
+    if state_value(state, [repo.git, 'version']) is None:
+        reply = ask("Ok. Please input the new version of %s manually: " % repo.git)
+        update_state(state, [repo.git, 'version'], reply)
+
+    print()
+    print("--------------------------------------------------------------------------------")
 
 def do_release():
     """Handles the interactive menu for doing a release."""
@@ -1086,6 +1235,12 @@ def do_release():
 
     if not JENKINS_USER or not JENKINS_PASSWORD:
         logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+
+    remote = find_upstream_remote(None, integration_dir())
+    local_branch = execute_git(None, integration_dir(), ["symbolic-ref", "HEAD"], capture=True).strip()
+    remote_branches = execute_git(None, integration_dir(), ["branch", "-r", "--contains", "HEAD"], capture=True)
+    if local_branch != "refs/heads/master" and ("%s/master" % remote) not in [branch.strip() for branch in remote_branches.split('\n')]:
+        print("WARNING: It is HIGHLY recommended to run the --release option from the master branch of integration, even if releasing for an older version.")
 
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:
@@ -1122,14 +1277,12 @@ def do_release():
 
     update_state(state, ["integration", 'version'], state['version'])
 
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if state_value(state, [repo.git, 'version']) is None:
-            update_state(state, [repo.git, 'version'],
-                         ask("What version of %s should be included? " % repo.git))
-
     input = ask("Do you want to fetch all the latest tags and branches in all repositories (will not change checked-out branch)? ")
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
+
+    for repo in sorted(REPOS.values(), key=repo_sort_key):
+        determine_version_to_include_in_release(state, repo)
 
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)
@@ -1390,6 +1543,13 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
+    parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
+                        help="Can only be used with -b. Specifies a repository and pull request number "
+                        + "that should be triggered with the rest of the repository versions. "
+                        + "May be specified more than once.")
+    parser.add_argument("-l", "--list", metavar="container|docker|git", dest="list", const="git", nargs="?",
+                        help="List the Mender repositories in use for this release. The optional "
+                        + "argument determines which type of name is returned. The default is git.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -1424,6 +1584,8 @@ def main():
 
     if args.version_of is not None:
         do_version_of(args)
+    elif args.list is not None:
+        do_list_repos(args)
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:

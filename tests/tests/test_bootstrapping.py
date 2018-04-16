@@ -50,7 +50,7 @@ class TestBootstrapping(MenderTesting):
         adm.check_expected_status("accepted", len(get_mender_clients()))
 
         # make sure mender-store contains authtoken
-        run("strings /data/mender/mender-store | grep -q 'authtoken'")
+        have_token()
 
         # print all device ids
         for device in adm.get_devices_status("accepted"):
@@ -80,10 +80,22 @@ class TestBootstrapping(MenderTesting):
 
             else:
                 # use assert to fail, so we can get backend logs
-                assert False, "No error while trying to deploy to rejected device"
+                pytest.fail("no error while trying to deploy to rejected device")
+                return
 
-        # authtoken has been removed from mender-store
-        run("strings /data/mender/mender-store | grep -q 'authtoken' || false")
+        finished = False
+        # wait until auththoken is removed from file
+        for _ in range(10):
+            with settings(abort_exception=Exception):
+                try:
+                    run("journalctl -u mender -l -n 3 | grep -q 'authentication request rejected'")
+                except:
+                    time.sleep(30)
+                else:
+                    finished = True
+                    break
 
-        # re-accept device after test is done
         adm.accept_devices(1)
+
+        if not finished:
+            pytest.fail("failed to remove authtoken from mender-store file")

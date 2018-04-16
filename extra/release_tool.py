@@ -118,6 +118,8 @@ GIT_TO_BUILDPARAM_MAP = {
     "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",
+
+    "mender-qa": "MENDER_QA_REV",
 }
 
 # These will be saved along with the state if they are changed.
@@ -237,8 +239,15 @@ def version_of(integration_dir, repo_container, in_integration_version=None):
             # Just return the supplied version string.
             return in_integration_version
         else:
-            return execute_git(None, integration_dir, ["describe", "--all", "--always"],
-                               capture=True)
+            # Return "closest" branch or tag name. Basically we measure the
+            # distance in commits from the merge base of all refs to the current
+            # HEAD, and then pick the shortest one, and we assume that this is
+            # our current version.
+            return subprocess.check_output("""
+                for i in $(git for-each-ref --format='%(refname:short)' refs/tags/* refs/heads/*); do
+                    echo $(git log --oneline $(git merge-base $i HEAD)..HEAD | wc -l) $i
+                done | sort -n | head -n1 | awk '{print $2}'
+            """, shell=True, cwd=integration_dir).strip().decode()
 
     if in_integration_version is not None:
         # Check if there is a range, and if so, return range.

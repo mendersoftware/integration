@@ -100,9 +100,8 @@ class Authentication:
         if tenant_id != "":
             tenant_id = "--tenant-id " + tenant_id
 
-        cmd = '-f ../docker-compose.tenant.yml %s exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s %s' % (conftest.mt_docker_compose_file,
-                                                                                                         username,
-                                                                                                         password, tenant_id)
+        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s %s' % (username,
+                                                                                                      password, tenant_id)
         docker_compose_cmd(cmd)
 
     def _create_tenant(self, username):

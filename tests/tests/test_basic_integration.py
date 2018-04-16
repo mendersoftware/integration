@@ -22,12 +22,11 @@ from common_update import update_image_successful, update_image_failed
 from MenderAPI import adm, deploy
 from mendertesting import MenderTesting
 
-
-@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     def test_double_update(self):
         """Upload a device with two consecutive upgrade images"""
 
@@ -41,6 +40,20 @@ class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
+    @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
+    def test_update_jwt_expired(self):
+        """Upload a device with two consecutive upgrade images"""
+
+        if not env.host_string:
+            execute(self.test_double_update,
+                    hosts=get_mender_clients())
+            return
+
+        update_image_successful(install_image=conftest.get_valid_image())
+
+
+    @MenderTesting.fast
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     def test_failed_updated_and_valid_update(self):
         """Upload a device with a broken image, followed by a valid image"""
 

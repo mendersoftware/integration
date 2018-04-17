@@ -240,11 +240,13 @@ def version_of(integration_dir, repo_container, in_integration_version=None):
             return in_integration_version
         else:
             # Return "closest" branch or tag name. Basically we measure the
-            # distance in commits from the merge base of all refs to the current
-            # HEAD, and then pick the shortest one, and we assume that this is
-            # our current version.
+            # distance in commits from the merge base of most refs to the
+            # current HEAD, and then pick the shortest one, and we assume that
+            # this is our current version. We pick all the refs from tags and
+            # local branches, as well as single level upstream branches (which
+            # avoids pull requests).
             return subprocess.check_output("""
-                for i in $(git for-each-ref --format='%(refname:short)' refs/tags/* refs/heads/*); do
+                for i in $(git for-each-ref --format='%(refname:short)' 'refs/tags/*' 'refs/heads/*' 'refs/remotes/*/*'); do
                     echo $(git log --oneline $(git merge-base $i HEAD)..HEAD | wc -l) $i
                 done | sort -n | head -n1 | awk '{print $2}'
             """, shell=True, cwd=integration_dir).strip().decode()

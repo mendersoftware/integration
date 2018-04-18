@@ -142,7 +142,7 @@ class TestUI(object):
         return self.wait_for_element(driver, By.XPATH, xp, timeout)
 
     def upload_artifacts(self, driver):
-        self.upload_artifact(driver, "vexpress_release_1.mender")
+        self.upload_artifact(driver, "qemux86-64_release_1.mender")
         time.sleep(60)
         xpaths = ["//table/tbody[@class='clickable']/tr[1]/td[1]"]
         # NOTE: These xpaths match the first clickable table
@@ -224,13 +224,13 @@ class TestUI(object):
 
         while time.time() < timeout:
             time.sleep(0.2)
-            if self.wait_for_element(driver, By.XPATH, xp).text == "vexpress-qemu":
+            if self.wait_for_element(driver, By.XPATH, xp).text == "qemux86-64":
                 break
         else:
             raise Exception("Device never appeared for authorization")
 
         print("Found authorized_device: '" + authorized_device.text + "'")
-        assert authorized_device.text == "vexpress-qemu"
+        assert authorized_device.text == "qemux86-64"
         ui_test_success()
         self.destroy_driver(driver)
 
@@ -242,7 +242,7 @@ class TestUI(object):
         authorized_device = self.wait_for_element(driver, By.CSS_SELECTOR, "div.rightFluid.padding-right tbody.clickable > tr")
         assert authorized_device
         authorized_device.click()
-        assert "vexpress-qemu" in authorized_device.text
+        assert "qemux86-64" in authorized_device.text
         assert "mender-image-master" in authorized_device.text
 
         # make sure basic inventory items are there
@@ -325,8 +325,8 @@ class TestUI(object):
         self.destroy_driver(driver)
 
     def create_artifacts(self):
-        Helpers.artifact_id_randomize("core-image-full-cmdline-vexpress-qemu.ext4", specific_image_id="release1")
-        subprocess.call("mender-artifact write rootfs-image -u core-image-full-cmdline-vexpress-qemu.ext4 -t vexpress-qemu -n release1 -o vexpress_release_1.mender", shell=True)
+        Helpers.artifact_id_randomize("core-image-full-cmdline-qemux86-64.ext4", specific_image_id="release1")
+        subprocess.call("mender-artifact write rootfs-image -u core-image-full-cmdline-qemux86-64.ext4 -t qemux86-64 -n release1 -o qemux86-64_release_1.mender", shell=True)
         logging.debug("done creating arifacts")
 
 def get_args():

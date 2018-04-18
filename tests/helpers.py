@@ -62,7 +62,7 @@ class Helpers:
         return output
 
     @classmethod
-    def artifact_id_randomize(self, install_image, device_type="vexpress-qemu", specific_image_id=None):
+    def artifact_id_randomize(self, install_image, device_type=conftest.machine_name, specific_image_id=None):
 
         if specific_image_id:
             imageid = specific_image_id

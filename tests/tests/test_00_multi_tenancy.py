@@ -112,7 +112,7 @@ class TestMultiTenancy(MenderTesting):
             with artifact_lock:
                 with tempfile.NamedTemporaryFile() as artifact_file:
                     artifact = image.make_artifact(conftest.get_valid_image(),
-                                                   "vexpress-qemu",
+                                                   conftest.machine_name,
                                                    user["email"],
                                                    artifact_file)
 

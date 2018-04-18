@@ -2,6 +2,28 @@
 set -x -e
 
 DEFAULT_TESTS=tests/
+MACHINE_NAME=vexpress-qemu
+
+check_tests_arguments() {
+    while [ -n "$1" ]; do
+        case "$1" in
+            --machine-name=*)
+                MACHINE_NAME="${1#--machine-name=}"
+                ;;
+            --machine-name)
+                shift
+                MACHINE_NAME="$1"
+                ;;
+            tests/*)
+                # Allow test files to be named on command line by removing ours.
+                DEFAULT_TESTS=
+                ;;
+        esac
+        shift
+    done
+}
+
+check_tests_arguments "$@"
 
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
@@ -30,7 +52,7 @@ function modify_services_for_testing() {
 
 function inject_pre_generated_ssh_keys() {
     ssh-keygen -f /tmp/mender-id_rsa -t rsa -N ''
-    printf "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa\n" | debugfs -w core-image-full-cmdline-vexpress-qemu.ext4
+    printf "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa\n" | debugfs -w core-image-full-cmdline-$MACHINE_NAME.ext4
     rm /tmp/mender-id_rsa.pub
     rm /tmp/mender-id_rsa
 }
@@ -46,9 +68,9 @@ function get_requirements() {
     chmod +x downloaded-tools/mender-artifact
 
 
-    curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-vexpress-qemu.ext4" \
-         -o core-image-full-cmdline-vexpress-qemu.ext4 \
-         -z core-image-full-cmdline-vexpress-qemu.ext4
+    curl "https://s3.amazonaws.com/mender/temp_${MENDER_BRANCH}/core-image-full-cmdline-$MACHINE_NAME.ext4" \
+         -o core-image-full-cmdline-$MACHINE_NAME.ext4 \
+         -z core-image-full-cmdline-$MACHINE_NAME.ext4
 
    curl "https://s3-eu-west-1.amazonaws.com/stress-client/release/mender-stress-test-client" \
         -o downloaded-tools/mender-stress-test-client \
@@ -83,7 +105,7 @@ if [[ -n "$BUILDDIR" ]]; then
         eval "$(cd "$BUILDDIR" && bitbake -e core-image-minimal | grep '^export PATH=')":"$PATH"
     fi
 
-    cp -f "$BUILDDIR/tmp/deploy/images/vexpress-qemu/core-image-full-cmdline-vexpress-qemu.ext4" .
+    cp -f "$BUILDDIR/tmp/deploy/images/$MACHINE_NAME/core-image-full-cmdline-$MACHINE_NAME.ext4" .
 
     # mender-stress-test-client is here
     export PATH=$PATH:~/go/bin/
@@ -95,8 +117,8 @@ fi
 
 
 
-cp -f core-image-full-cmdline-vexpress-qemu.ext4 core-image-full-cmdline-vexpress-qemu-broken-network.ext4
-debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-vexpress-qemu-broken-network.ext4
+cp -f core-image-full-cmdline-$MACHINE_NAME.ext4 core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
+debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
 
 dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
@@ -140,21 +162,6 @@ fi
 if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_ARG="-k $SPECIFIC_INTEGRATION_TEST"
 fi
-
-check_tests_arguments() {
-    while [ -n "$1" ]; do
-        case "$1" in
-            tests/*)
-                # Allow test files to be named on command line by removing ours.
-                DEFAULT_TESTS=
-                break
-                ;;
-        esac
-        shift
-    done
-}
-
-check_tests_arguments "$@"
 
 if [ $# -eq 0 ]; then
     py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS

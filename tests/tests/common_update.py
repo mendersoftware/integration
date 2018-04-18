@@ -26,7 +26,7 @@ import pytest
 
 def common_update_procedure(install_image,
                             regenerate_image_id=True,
-                            device_type="vexpress-qemu",
+                            device_type=conftest.machine_name,
                             broken_image=False,
                             verify_status=True,
                             signed=False,

@@ -89,9 +89,7 @@ if [[ $1 == "--get-requirements" ]]; then
     exit 0
 fi
 
-if [[ ! -f large_image.dat ]]; then
-    dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
-fi
+dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
 
 if [[ -n "$BUILDDIR" ]]; then
     # Get the necessary path directly from the build.

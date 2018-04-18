@@ -21,6 +21,7 @@ from tests import MenderTesting
 from tests import common_update
 
 @MenderTesting.fast
+@MenderTesting.aws_s3
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3")
 class TestBasicIntegrationWithS3(MenderTesting):
 

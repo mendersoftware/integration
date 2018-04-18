@@ -1,5 +1,8 @@
 #!/bin/bash
 set -x -e
+
+DEFAULT_TESTS=tests/
+
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
 if [[ $? -ne 0 ]]; then
@@ -138,9 +141,24 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_ARG="-k $SPECIFIC_INTEGRATION_TEST"
 fi
 
+check_tests_arguments() {
+    while [ -n "$1" ]; do
+        case "$1" in
+            tests/*)
+                # Allow test files to be named on command line by removing ours.
+                DEFAULT_TESTS=
+                break
+                ;;
+        esac
+        shift
+    done
+}
+
+check_tests_arguments "$@"
+
 if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST_ARG tests/
+    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS
     exit $?
 fi
 
-py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT "$@" tests/
+py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT "$@" $DEFAULT_TESTS

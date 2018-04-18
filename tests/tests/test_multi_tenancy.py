@@ -251,6 +251,7 @@ class TestMultiTenancy(MenderTesting):
             execute(self.mender_log_contains_aborted_string,
                     hosts=get_mender_client_by_container_name(user["container"]))
 
+    @MenderTesting.aws_s3
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3_and_mt")
     def test_multi_tenancy_deployment_s3(self):
 

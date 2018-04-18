@@ -73,6 +73,7 @@ def standard_setup_one_client_bootstrapped_with_s3():
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
+                        -f ../docker-compose.client-privileged.yml \
                         -f ../docker-compose.testing.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.storage.s3.yml up -d",
@@ -120,6 +121,7 @@ def standard_setup_with_short_lived_token():
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
+                        -f ../docker-compose.client-privileged.yml \
                         -f ../docker-compose.storage.minio.yml  \
                         -f ../docker-compose.testing.yml \
                         -f ../extra/expired-token-testing/docker-compose.short-token.yml up -d",

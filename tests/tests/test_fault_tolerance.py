@@ -60,7 +60,7 @@ class TestFaultTolerance(MenderTesting):
         logging.info("Waiting for system to finish download")
 
     @MenderTesting.slow
-    def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-vexpress-qemu-broken-network.ext4"):
+    def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name):
         """
             Install an image without systemd-networkd binary existing.
             The network will not function, mender will not be able to send any logs.

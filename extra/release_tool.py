@@ -123,9 +123,10 @@ GIT_TO_BUILDPARAM_MAP = {
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
     "BUILD_BEAGLEBONEBLACK": "on",
-    "BUILD_QEMU_SDIMG": "on",
-    "BUILD_QEMU_RAW_FLASH": "on",
+    "BUILD_QEMUX86_64_UEFI_GRUB": "on",
     "BUILD_RASPBERRYPI3": "on",
+    "BUILD_VEXPRESS_QEMU": "on",
+    "BUILD_VEXPRESS_QEMU_FLASH": "on",
     "CLEAN_BUILD_CACHE": "",
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",
@@ -138,9 +139,10 @@ EXTRA_BUILDPARAMS = {
     "STOP_SLAVE": "",
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "on",
-    "TEST_QEMU_SDIMG": "on",
-    "TEST_QEMU_RAW_FLASH": "on",
+    "TEST_QEMUX86_64_UEFI_GRUB": "on",
     "TEST_RASPBERRYPI3": "on",
+    "TEST_VEXPRESS_QEMU": "on",
+    "TEST_VEXPRESS_QEMU_FLASH": "on",
     "TESTS_IN_PARALLEL": "7",
 }
 

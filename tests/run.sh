@@ -2,7 +2,7 @@
 set -x -e
 
 DEFAULT_TESTS=tests/
-MACHINE_NAME=vexpress-qemu
+MACHINE_NAME=qemux86-64
 
 check_tests_arguments() {
     while [ -n "$1" ]; do

@@ -67,7 +67,7 @@ def pytest_addoption(parser):
 
     parser.addoption("--mt-docker-compose-file", action="store", type=str, help="Docker-compose file that enables multi-tenancy (required for some tests)")
 
-    parser.addoption("--machine-name", action="store", default="vexpress-qemu",
+    parser.addoption("--machine-name", action="store", default="qemux86-64",
                      help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
 
 

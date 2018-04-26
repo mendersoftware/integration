@@ -69,6 +69,6 @@ do
   )
 done
 
-echo "All keys and certificates have been generated in directory $ROOTDIR."
+echo "All Mender Server keys and certificates have been generated in directory $ROOTDIR."
 echo "Please include them in your docker compose and device builds."
 echo "For more information please see https://docs.mender.io/Administration/Certificates-and-keys."

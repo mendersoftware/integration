@@ -6,7 +6,7 @@ if [[ $? -ne 0 ]]; then
     echo "Failed to determine mender version using release_tool.py"
     exit 1
 fi
-MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of artifact)
+MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
 
 if [[ $? -ne 0 ]]; then
     echo "Failed to determine mender-artifact version using release_tool.py"

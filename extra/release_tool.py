@@ -286,12 +286,15 @@ def do_version_of(args):
 
     print(version_of(integration_dir(), repo.docker, args.in_integration_version))
 
-def do_list_repos(args):
+def do_list_repos(args, optional_too):
     """Lists the repos in REPOS, using the provided name type."""
 
     assert args.list in ["container", "docker", "git"], "%s is not a valid name type!" % args.list
 
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
+    repos = list(REPOS.values())
+    if optional_too:
+        repos += list(OPTIONAL_REPOS.values())
+    for repo in sorted(repos, key=repo_sort_key):
         eval("print(repo.%s)" % args.list)
 
 def sorted_final_version_list(git_dir):
@@ -1475,12 +1478,16 @@ def figure_out_checked_out_revision(state, repo_git):
 
     return (ref, "tag")
 
-def do_verify_integration_references(args):
+def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
     data = get_docker_compose_data(int_dir)
     problem = False
 
-    for repo in REPOS.values():
+    repos = list(REPOS.values())
+    if optional_too:
+        repos += list(OPTIONAL_REPOS.values())
+
+    for repo in repos:
         # integration is not checked, since the current checkout records the
         # version of that one.
         if repo.git == "integration":
@@ -1517,7 +1524,7 @@ def do_verify_integration_references(args):
 
         if ref != version:
             print("%s: Checked out Git ref '%s' does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
-                  % (repo.git, ref, version, image))
+                  % (repo.git, ref, version, repo.docker))
             problem = True
 
     if problem:
@@ -1549,7 +1556,10 @@ def main():
                         + "May be specified more than once.")
     parser.add_argument("-l", "--list", metavar="container|docker|git", dest="list", const="git", nargs="?",
                         help="List the Mender repositories in use for this release. The optional "
-                        + "argument determines which type of name is returned. The default is git.")
+                        + "argument determines which type of name is returned. The default is git. "
+                        + "By default does not list optional repositories.")
+    parser.add_argument("-a", "--all", action="store_true", default=False,
+                        help="When used with -l, list all repositories, including optional ones.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("-s", "--simulate-push", action="store_true",
@@ -1563,7 +1573,7 @@ def main():
                         + "repositories to exist next to the integration repository, and is "
                         + "usually used only in builds. For branch names (not tags), only "
                         + 'well known names are checked: version numbers and "master" (to avoid '
-                        + "pull requests triggering a failure)")
+                        + "pull requests triggering a failure). Respects -a argument.")
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -1585,7 +1595,7 @@ def main():
     if args.version_of is not None:
         do_version_of(args)
     elif args.list is not None:
-        do_list_repos(args)
+        do_list_repos(args, optional_too=args.all)
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:
@@ -1595,7 +1605,7 @@ def main():
     elif args.release:
         do_release()
     elif args.verify_integration_references:
-        do_verify_integration_references(args)
+        do_verify_integration_references(args, optional_too=args.all)
     else:
         parser.print_help()
         sys.exit(1)

@@ -68,38 +68,27 @@ class RepoName:
 # alternate names) and GIT_TO_BUILDPARAM_MAP (which tells the tool how to
 # trigger Jenkins jobs.
 REPOS = {
-    "mender-api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
-    "mender-client": RepoName("mender-client", "mender-client-qemu", "mender", True),
-    "mender-deployments": RepoName("mender-deployments", "deployments", "deployments", True),
-    "mender-device-adm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
-    "mender-device-auth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
-    "mender-gui": RepoName("mender-gui", "gui", "gui", True),
-    "mender-inventory": RepoName("mender-inventory", "inventory", "inventory", True),
-    "mender-useradm": RepoName("mender-useradm", "useradm", "useradm", True),
+    "api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
+    "mender-client-qemu": RepoName("mender-client", "mender-client-qemu", "mender", True),
+    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
+    "deployments": RepoName("mender-deployments", "deployments", "deployments", True),
+    "deviceadm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
+    "deviceauth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
+    "gui": RepoName("mender-gui", "gui", "gui", True),
+    "inventory": RepoName("mender-inventory", "inventory", "inventory", True),
+    "useradm": RepoName("mender-useradm", "useradm", "useradm", True),
 
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.
     "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
-    "mender-integration": RepoName("mender-integration", "integration", "integration", False),
-    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
+    "integration": RepoName("integration", "integration", "integration", False),
 }
 
 # These are optional repositories that aren't included when iterating over
 # repositories, but that are available for querying.
 OPTIONAL_REPOS = {
     "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
-    "mender-conductor-enterprise": RepoName("mender-conductor-enterprise", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
-}
-
-# Some convenient aliases, mainly because Git phrasing differs slightly from
-# Docker.
-REPO_ALIASES = {
-    "api-gateway-docker": "mender-api-gateway",
-    "deviceadm": "mender-device-adm",
-    "deviceauth": "mender-device-auth",
-    "mender": "mender-client",
-    "mender-client-qemu": "mender-client",
-    "mender-api-gateway-docker": "mender-api-gateway",
+    "mender-conductor-enterprise": RepoName("mender-conductor", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
 }
 
 # A map from git repo name to build parameter name in Jenkins.
@@ -166,34 +155,20 @@ def ask(text):
     sys.stdout.write("\n")
     return reply
 
-def deepupdate(original, update):
-    """
-    Recursively update a dict.
-    Subdict's won't be overwritten but also updated.
-    """
-    for key, value in update.items():
-        if key in original and isinstance(original[key], dict) and isinstance(value, dict):
-            deepupdate(original[key], value)
-        else:
-            original[key] = value
-
 def determine_repo(repoish):
     """Based on a repository name, which can be any variant of Docker or Git
     name, return the Repo object assosiated with it."""
 
-    # Try aliases first.
-    alias = REPO_ALIASES.get(repoish)
-    if alias is not None:
-        repoish = alias
+    for repos in [REPOS, OPTIONAL_REPOS]:
+        repo = repos.get(repoish)
+        if repo is not None:
+            return repo
 
-    # Prepend mender if it doesn't start with, since our index map uses that.
-    if not repoish.startswith("mender-"):
-        repoish = "mender-" + repoish
+        for candidate in repos.values():
+            if repoish == candidate.container or repoish == candidate.docker or repoish == candidate.git:
+                return candidate
 
-    # Return elements from both REPOS and OPTIONAL_REPOS.
-    both_lists = REPOS.copy()
-    both_lists.update(OPTIONAL_REPOS)
-    return both_lists[repoish]
+    raise KeyError("Unrecognized repository: %s" % repoish)
 
 def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""
@@ -205,14 +180,35 @@ def docker_compose_files_list(dir):
     return list
 
 def get_docker_compose_data_from_json_list(json_list):
-    """Return the Yaml as data from all strings in the json list."""
+    """Return the Yaml as a simplified structure from the json list:
+    {
+        image_name: {
+            "container": container_name,
+            "version": version,
+        }
+    }
+    """
     data = {}
     for json_str in json_list:
-        deepupdate(data, yaml.load(json_str))
+        json_elem = yaml.load(json_str)
+        for container, cont_info in json_elem['services'].items():
+            image = cont_info.get('image')
+            if image is None or "mendersoftware/" not in image:
+                continue
+            image_and_ver = image.split("/", 1)[1].split(":", 1)
+            if data.get(image_and_ver[0]) is not None:
+                raise Exception(("More than one container is using the image name '%s'. "
+                                 + "The tool currently does not support this.")
+                                % image_and_ver[0])
+            data[image_and_ver[0]] = {
+                "container": container,
+                "version": image_and_ver[1]
+            }
     return data
 
 def get_docker_compose_data(dir):
-    """Return the Yaml as data from all the docker-compose YAML files."""
+    """Return docker-compose data from all the YML files in the directory.
+    See get_docker_compose_data_from_json_list."""
     json_list = []
     for filename in docker_compose_files_list(dir):
         with open(filename) as fd:
@@ -221,6 +217,8 @@ def get_docker_compose_data(dir):
     return get_docker_compose_data_from_json_list(json_list)
 
 def get_docker_compose_data_for_rev(git_dir, rev):
+    """Return docker-compose data from all the YML files in the given revision.
+    See get_docker_compose_data_from_json_list."""
     yamls = []
     files = execute_git(None, git_dir, ["ls-tree", "--name-only", rev],
                         capture=True).strip().split('\n')
@@ -235,8 +233,8 @@ def get_docker_compose_data_for_rev(git_dir, rev):
 
     return get_docker_compose_data_from_json_list(yamls)
 
-def version_of(integration_dir, repo_container, in_integration_version=None):
-    if repo_container == "mender-integration":
+def version_of(integration_dir, repo_docker, in_integration_version=None):
+    if repo_docker == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -271,13 +269,11 @@ def version_of(integration_dir, repo_container, in_integration_version=None):
             else:
                 remote = ""
             data = get_docker_compose_data_for_rev(integration_dir, rev)
-            image = data['services'][repo_container]['image']
-            repo_range.append(remote + image[(image.index(":") + 1):])
+            repo_range.append(remote + data[repo_docker]['version'])
         return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)
-        image = data['services'][repo_container]['image']
-        return image[(image.index(":") + 1):]
+        return data[repo_docker]['version']
 
 def do_version_of(args):
     """Process --version-of argument."""
@@ -288,7 +284,7 @@ def do_version_of(args):
         print("Unrecognized repository: %s" % args.version_of)
         sys.exit(1)
 
-    print(version_of(integration_dir(), repo.container, args.in_integration_version))
+    print(version_of(integration_dir(), repo.docker, args.in_integration_version))
 
 def do_list_repos(args):
     """Lists the repos in REPOS, using the provided name type."""
@@ -725,7 +721,7 @@ def generate_new_tags(state, tag_avail, final):
                                           next_tag_avail[repo.git]['build_tag'])
             if prev_version:
                 prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
-                                               repo.container, in_integration_version=prev_version)
+                                               repo.docker, in_integration_version=prev_version)
             else:
                 prev_repo_version = ""
             if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
@@ -1155,7 +1151,7 @@ def do_build(args):
             if repo.git == "integration":
                 update_state(state, [repo.git, "version"], args.build)
             else:
-                version = version_of(integration_dir(), repo.container, args.build)
+                version = version_of(integration_dir(), repo.docker, args.build)
                 update_state(state, [repo.git, "version"], version)
         tag_avail = check_tag_availability(state)
         for repo in REPOS.values():
@@ -1193,7 +1189,7 @@ def determine_version_to_include_in_release(state, repo):
     follow_branch = None
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
-        prev_of_repo = version_of(integration_dir(), repo.container, in_integration_version=prev_of_integration)
+        prev_of_repo = version_of(integration_dir(), repo.docker, in_integration_version=prev_of_integration)
         new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:
@@ -1423,12 +1419,11 @@ def do_integration_versions_including(args):
             print("Unrecognized repository: %s" % args.integration_versions_including)
             sys.exit(1)
         try:
-            image = data['services'][repo.container]['image']
+            version = data[repo.docker]['version']
         except KeyError:
             # If key doesn't exist it's because the version is from before
             # that component existed. So definitely not a match.
             continue
-        version = image[(image.index(":") + 1):]
         if version == args.version:
             matches.append(candidate)
 
@@ -1518,8 +1513,7 @@ def do_verify_integration_references(args):
             # in the YAML files.
             continue
 
-        image = data['services'][repo.container]['image']
-        version = image[image.rfind(':')+1:]
+        version = data[repo.docker]['version']
 
         if ref != version:
             print("%s: Checked out Git ref '%s' does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"

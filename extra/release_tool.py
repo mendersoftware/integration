@@ -71,6 +71,7 @@ REPOS = {
     "api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
     "mender-client-qemu": RepoName("mender-client", "mender-client-qemu", "mender", True),
     "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
+    "mender-conductor-enterprise": RepoName("mender-conductor", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
     "deployments": RepoName("mender-deployments", "deployments", "deployments", True),
     "deviceadm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
     "deviceauth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
@@ -88,13 +89,13 @@ REPOS = {
 # repositories, but that are available for querying.
 OPTIONAL_REPOS = {
     "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
-    "mender-conductor-enterprise": RepoName("mender-conductor", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
 }
 
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "mender-conductor": "MENDER_CONDUCTOR_REV",
+    "mender-conductor-enterprise": "MENDER_CONDUCTOR_ENTERPRISE_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deviceadm": "DEVICEADM_REV",
     "deviceauth": "DEVICEAUTH_REV",

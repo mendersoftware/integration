@@ -29,8 +29,11 @@ RELEASE_TOOL_STATE = None
 
 JENKINS_SERVER = "https://mender-jenkins.mender.io"
 JENKINS_JOB = "job/mender-builder"
-JENKINS_USER = os.getenv("JENKINS_USER")
-JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+JENKINS_USER = None
+JENKINS_PASSWORD = None
+JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations:
+- JENKINS_USER / JENKINS_PASSWORD environment variables
+- 'pass' password management storage."""
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
@@ -137,6 +140,52 @@ EXTRA_BUILDPARAMS = {
     "TEST_VEXPRESS_QEMU_FLASH": "on",
     "TESTS_IN_PARALLEL": "7",
 }
+
+def init_jenkins_creds():
+    global JENKINS_USER
+    global JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+
+    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
+        return
+
+    try:
+        server = JENKINS_SERVER
+        if server.startswith("https://"):
+            server = server[len("https://"):]
+
+        output = subprocess.check_output(["pass", "find", server]).decode()
+        count = 0
+        for line in output.split('\n'):
+            if line.startswith("Search terms: "):
+                continue
+            count += 1
+        if count == 0:
+            return
+
+        print("Attempting to fetch Jenkins credentials from 'pass'...")
+
+        output = subprocess.check_output(["pass", "show", server]).decode()
+        line_no = 0
+        for line in output.split('\n'):
+            line_no += 1
+
+            if line_no == 1:
+                JENKINS_PASSWORD = line
+                continue
+
+            if line.find(":") < 0:
+                continue
+
+            key, value = line.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            if key in ["login", "user", "username"]:
+                JENKINS_USER = value
+
+    except subprocess.CalledProcessError:
+        return
 
 def integration_dir():
     """Return the location of the integration repository."""
@@ -785,8 +834,9 @@ def trigger_jenkins_build(state, tag_avail):
         print("requests module missing, try running 'sudo pip3 install requests'.")
         sys.exit(2)
 
-    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
-        raise SystemExit("unable to trigger build with JENKINS_USER or JENKINS_PASSWORD not set")
+    init_jenkins_creds()
+    if not JENKINS_USER or not JENKINS_PASSWORD:
+        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
 
     for param in EXTRA_BUILDPARAMS.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
@@ -1239,8 +1289,9 @@ def do_release():
     global RELEASE_TOOL_STATE
     RELEASE_TOOL_STATE = "release-state.yml"
 
+    init_jenkins_creds()
     if not JENKINS_USER or not JENKINS_PASSWORD:
-        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+        logging.warn(JENKINS_CREDS_MISSING_ERR)
 
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:

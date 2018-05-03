@@ -121,6 +121,8 @@ EXTRA_BUILDPARAMS = {
     "CLEAN_BUILD_CACHE": "",
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",
+    "MENDER_CONDUCTOR_REV": "master",
+    "MENDER_CONDUCTOR_ENTERPRISE_REV": "master",
     "META_MENDER_REV": "rocko",
     "META_OPENEMBEDDED_REV": "rocko",
     "META_RASPBERRYPI_REV": "rocko",

@@ -1112,6 +1112,7 @@ def create_release_branches(state, tag_avail):
                         capture=True, capture_stderr=True)
         except subprocess.CalledProcessError:
             any_repo_needs_branch = True
+            print("--------------------------------------------------------------------------------")
             reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
                          + "and base it on latest '%s/master' (if you don't want to base "
                          + "it on '%s/master' you have to do it manually)? ")

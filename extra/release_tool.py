@@ -29,8 +29,11 @@ RELEASE_TOOL_STATE = None
 
 JENKINS_SERVER = "https://mender-jenkins.mender.io"
 JENKINS_JOB = "job/mender-builder"
-JENKINS_USER = os.getenv("JENKINS_USER")
-JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+JENKINS_USER = None
+JENKINS_PASSWORD = None
+JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations:
+- JENKINS_USER / JENKINS_PASSWORD environment variables
+- 'pass' password management storage."""
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
@@ -132,11 +135,57 @@ EXTRA_BUILDPARAMS = {
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "on",
     "TEST_QEMUX86_64_UEFI_GRUB": "on",
-    "TEST_RASPBERRYPI3": "on",
+    "TEST_RASPBERRYPI3": "",
     "TEST_VEXPRESS_QEMU": "on",
     "TEST_VEXPRESS_QEMU_FLASH": "on",
-    "TESTS_IN_PARALLEL": "7",
+    "TESTS_IN_PARALLEL": "8",
 }
+
+def init_jenkins_creds():
+    global JENKINS_USER
+    global JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+
+    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
+        return
+
+    try:
+        server = JENKINS_SERVER
+        if server.startswith("https://"):
+            server = server[len("https://"):]
+
+        output = subprocess.check_output(["pass", "find", server]).decode()
+        count = 0
+        for line in output.split('\n'):
+            if line.startswith("Search terms: "):
+                continue
+            count += 1
+        if count == 0:
+            return
+
+        print("Attempting to fetch Jenkins credentials from 'pass'...")
+
+        output = subprocess.check_output(["pass", "show", server]).decode()
+        line_no = 0
+        for line in output.split('\n'):
+            line_no += 1
+
+            if line_no == 1:
+                JENKINS_PASSWORD = line
+                continue
+
+            if line.find(":") < 0:
+                continue
+
+            key, value = line.split(":", 1)
+            key = key.strip()
+            value = value.strip()
+            if key in ["login", "user", "username"]:
+                JENKINS_USER = value
+
+    except subprocess.CalledProcessError:
+        return
 
 def integration_dir():
     """Return the location of the integration repository."""
@@ -556,7 +605,7 @@ def report_release_state(state, tag_avail):
     tags."""
 
     print("Mender release: %s" % state['version'])
-    fmt_str = "%-25s %-10s %-18s %-20s"
+    fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
     for repo in sorted(REPOS.values(), key=repo_sort_key):
@@ -724,12 +773,21 @@ def generate_new_tags(state, tag_avail, final):
             set_docker_compose_version_to(tmpdir, repo.docker,
                                           next_tag_avail[repo.git]['build_tag'])
             if prev_version:
-                prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
-                                               repo.docker, in_integration_version=prev_version)
+                try:
+                    prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
+                                                   repo.docker, in_integration_version=prev_version)
+                except KeyError:
+                    # Means that this repo didn't exist in earlier integration
+                    # versions.
+                    prev_repo_version = None
             else:
-                prev_repo_version = ""
-            if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
-                changelogs.append("Changelog: Upgrade %s to %s."
+                prev_repo_version = None
+            if prev_repo_version:
+                if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
+                    changelogs.append("Changelog: Upgrade %s to %s."
+                                      % (repo.git, next_tag_avail[repo.git]['build_tag']))
+            else:
+                changelogs.append("Changelog: Add %s %s."
                                   % (repo.git, next_tag_avail[repo.git]['build_tag']))
         if len(changelogs) == 0:
             changelogs.append("Changelog: None")
@@ -785,8 +843,9 @@ def trigger_jenkins_build(state, tag_avail):
         print("requests module missing, try running 'sudo pip3 install requests'.")
         sys.exit(2)
 
-    if not os.getenv("JENKINS_USER") or not os.getenv("JENKINS_PASSWORD"):
-        raise SystemExit("unable to trigger build with JENKINS_USER or JENKINS_PASSWORD not set")
+    init_jenkins_creds()
+    if not JENKINS_USER or not JENKINS_PASSWORD:
+        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
 
     for param in EXTRA_BUILDPARAMS.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
@@ -810,7 +869,7 @@ def trigger_jenkins_build(state, tag_avail):
                 params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
 
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-30s %-20s"
+        fmt_str = "%-32s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
@@ -1061,6 +1120,7 @@ def create_release_branches(state, tag_avail):
                         capture=True, capture_stderr=True)
         except subprocess.CalledProcessError:
             any_repo_needs_branch = True
+            print("--------------------------------------------------------------------------------")
             reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
                          + "and base it on latest '%s/master' (if you don't want to base "
                          + "it on '%s/master' you have to do it manually)? ")
@@ -1198,24 +1258,31 @@ def determine_version_to_include_in_release(state, repo):
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:
         # No series exists. Base on master.
-        prev_of_repo = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))[0]
-        (major, minor, patch, beta) = version_components(prev_of_repo)
-        new_repo_version = "%d.%d.0" % (major, minor + 1)
+        version_list = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))
+        if len(version_list) > 0:
+            prev_of_repo = version_list[0]
+            (major, minor, patch, beta) = version_components(prev_of_repo)
+            new_repo_version = "%d.%d.0" % (major, minor + 1)
+        else:
+            # No previous version at all. Start at 1.0.0.
+            prev_of_repo = None
+            new_repo_version = "1.0.0"
         if overall_beta:
             new_repo_version += "b%d" % overall_beta
         follow_branch = "%s/master" % find_upstream_remote(state, repo.git)
 
-    cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+    if prev_of_repo:
+        cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
 
-    print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
-    execute_git(state, repo.git, cmd)
+        print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
+        execute_git(state, repo.git, cmd)
 
-    print()
-    print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
-    reply = ask("Based on this, is there a reason for a new release of %s? "
-                % repo.git)
+        print()
+        print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
+        reply = ask("Based on this, is there a reason for a new release of %s? "
+                    % repo.git)
 
-    if reply.lower().startswith("y"):
+    if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask("Should the new release of %s be version %s? "
                     % (repo.git, new_repo_version))
         if reply.lower().startswith("y"):
@@ -1239,8 +1306,9 @@ def do_release():
     global RELEASE_TOOL_STATE
     RELEASE_TOOL_STATE = "release-state.yml"
 
+    init_jenkins_creds()
     if not JENKINS_USER or not JENKINS_PASSWORD:
-        logging.warn("WARNING: JENKINS_USER and JENKINS_PASSWORD env. variables not set")
+        logging.warn(JENKINS_CREDS_MISSING_ERR)
 
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:

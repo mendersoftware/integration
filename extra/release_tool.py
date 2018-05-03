@@ -773,12 +773,21 @@ def generate_new_tags(state, tag_avail, final):
             set_docker_compose_version_to(tmpdir, repo.docker,
                                           next_tag_avail[repo.git]['build_tag'])
             if prev_version:
-                prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
-                                               repo.docker, in_integration_version=prev_version)
+                try:
+                    prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
+                                                   repo.docker, in_integration_version=prev_version)
+                except KeyError:
+                    # Means that this repo didn't exist in earlier integration
+                    # versions.
+                    prev_repo_version = None
             else:
-                prev_repo_version = ""
-            if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
-                changelogs.append("Changelog: Upgrade %s to %s."
+                prev_repo_version = None
+            if prev_repo_version:
+                if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
+                    changelogs.append("Changelog: Upgrade %s to %s."
+                                      % (repo.git, next_tag_avail[repo.git]['build_tag']))
+            else:
+                changelogs.append("Changelog: Add %s %s."
                                   % (repo.git, next_tag_avail[repo.git]['build_tag']))
         if len(changelogs) == 0:
             changelogs.append("Changelog: None")
@@ -1249,24 +1258,31 @@ def determine_version_to_include_in_release(state, repo):
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:
         # No series exists. Base on master.
-        prev_of_repo = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))[0]
-        (major, minor, patch, beta) = version_components(prev_of_repo)
-        new_repo_version = "%d.%d.0" % (major, minor + 1)
+        version_list = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))
+        if len(version_list) > 0:
+            prev_of_repo = version_list[0]
+            (major, minor, patch, beta) = version_components(prev_of_repo)
+            new_repo_version = "%d.%d.0" % (major, minor + 1)
+        else:
+            # No previous version at all. Start at 1.0.0.
+            prev_of_repo = None
+            new_repo_version = "1.0.0"
         if overall_beta:
             new_repo_version += "b%d" % overall_beta
         follow_branch = "%s/master" % find_upstream_remote(state, repo.git)
 
-    cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+    if prev_of_repo:
+        cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
 
-    print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
-    execute_git(state, repo.git, cmd)
+        print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
+        execute_git(state, repo.git, cmd)
 
-    print()
-    print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
-    reply = ask("Based on this, is there a reason for a new release of %s? "
-                % repo.git)
+        print()
+        print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
+        reply = ask("Based on this, is there a reason for a new release of %s? "
+                    % repo.git)
 
-    if reply.lower().startswith("y"):
+    if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask("Should the new release of %s be version %s? "
                     % (repo.git, new_repo_version))
         if reply.lower().startswith("y"):

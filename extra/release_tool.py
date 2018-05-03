@@ -605,7 +605,7 @@ def report_release_state(state, tag_avail):
     tags."""
 
     print("Mender release: %s" % state['version'])
-    fmt_str = "%-25s %-10s %-18s %-20s"
+    fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
     for repo in sorted(REPOS.values(), key=repo_sort_key):
@@ -860,7 +860,7 @@ def trigger_jenkins_build(state, tag_avail):
                 params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
 
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-30s %-20s"
+        fmt_str = "%-32s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))

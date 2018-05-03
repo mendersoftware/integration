@@ -136,10 +136,10 @@ EXTRA_BUILDPARAMS = {
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "on",
     "TEST_QEMUX86_64_UEFI_GRUB": "on",
-    "TEST_RASPBERRYPI3": "on",
+    "TEST_RASPBERRYPI3": "",
     "TEST_VEXPRESS_QEMU": "on",
     "TEST_VEXPRESS_QEMU_FLASH": "on",
-    "TESTS_IN_PARALLEL": "7",
+    "TESTS_IN_PARALLEL": "8",
 }
 
 def init_jenkins_creds():

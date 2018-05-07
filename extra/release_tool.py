@@ -494,24 +494,41 @@ def query_execute_list(execute_list):
 
     return True
 
-def setup_temp_git_checkout(state, repo_git, branch):
+def setup_temp_git_checkout(state, repo_git, ref):
     """Checks out a temporary Git directory, and returns an absolute path to
-    it. Checks out the branch specified in branch."""
+    it. Checks out the ref specified in ref."""
 
-    tmpdir = os.path.join(state['repo_dir'], repo_git, "tmp_checkout")
+    tmpdir = os.path.join(state['repo_dir'], "tmp_checkout", repo_git)
     cleanup_temp_git_checkout(tmpdir)
+    os.makedirs(tmpdir)
 
-    if branch.find('/') < 0:
+    if not os.path.exists(os.path.join(state['repo_dir'], repo_git)):
+        raise Exception("%s does not exist in %s!" % (repo_git, state['repo_dir']))
+
+    if ref.find('/') < 0:
         # Local branch.
         checkout_cmd = ["checkout"]
     else:
         # Remote branch.
         checkout_cmd = ["checkout", "-t"]
 
-    execute_git(state, repo_git, ["init", "tmp_checkout"], capture=True, capture_stderr=True)
-    execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
-                                "--tags", "%s:%s" % (branch, branch)], capture=True, capture_stderr=True)
-    execute_git(state, tmpdir, checkout_cmd + [branch])
+    try:
+        output = execute_git(state, tmpdir, ["init"], capture=True, capture_stderr=True)
+        output = execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
+                                    "--tags"], capture=True, capture_stderr=True)
+        output = execute_git(state, tmpdir, ["tag"], capture=True)
+        tags = output.split('\n')
+        output = execute_git(state, tmpdir, ["branch"], capture=True)
+        branches = output.split('\n')
+        if ref not in tags and ref not in branches:
+            # Try to mirror all branches locally instead of just as remote branches.
+            output = execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
+                                                 "--tags", "%s:%s" % (ref, ref)], capture=True,
+                                 capture_stderr=True)
+        output = execute_git(state, tmpdir, checkout_cmd + [ref], capture=True, capture_stderr=True)
+    except:
+        print("Output from previous Git command: %s" % output)
+        raise
 
     return tmpdir
 
@@ -541,7 +558,7 @@ def refresh_repos(state):
 
     git_list = []
 
-    for repo in REPOS.values():
+    for repo in list(REPOS.values()) + list(OPTIONAL_REPOS.values()):
         remote = find_upstream_remote(state, repo.git)
         git_list.append((state, repo.git, ["fetch", "--tags", remote,
                                            "+refs/heads/*:refs/remotes/%s/*" % remote]))
@@ -955,6 +972,28 @@ def trigger_jenkins_build(state, tag_avail):
     except Exception:
         print("Failed to start build:")
         traceback.print_exc()
+
+def do_license_generation(state, tag_avail):
+    print("Setting up temporary Git workspace...")
+
+    tmpdirs = []
+    for repo in REPOS.values():
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git, tag_avail[repo.git]['build_tag']))
+    for repo in OPTIONAL_REPOS.values():
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git, "origin/master"))
+
+    try:
+        print("Output is captured in generated-license-text.txt.")
+        with open("generated-license-text.txt", "w") as fd:
+            subprocess.check_call([os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "license-overview-generator")),
+                                   "--called-from-release-tool", "--dir", os.path.dirname(tmpdirs[0])],
+                                  stdout=fd)
+    except subprocess.CalledProcessError:
+        print()
+        print("Command failed with the above error.")
+    finally:
+        for tmpdir in tmpdirs:
+            cleanup_temp_git_checkout(tmpdir)
 
 def set_docker_compose_version_to(dir, repo_docker, tag):
     """Modifies docker-compose files in the given directory so that repo_docker
@@ -1383,6 +1422,7 @@ def do_release():
         print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")
         print("  B) Trigger new Jenkins build using current tags")
+        print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
         print('  D) Update ":%s" and/or ":latest" Docker tags to current release' % minor_version)
         print("  Q) Quit (your state is saved in %s)" % RELEASE_TOOL_STATE)
@@ -1400,45 +1440,47 @@ def do_release():
 
         reply = ask("Choice? ")
 
-        if reply == "Q" or reply == "q":
+        if reply.lower() == "q":
             break
-        if reply == "R" or reply == "r":
+        if reply.lower() == "r":
             refresh_repos(state)
             # Refill data about available tags, since it may have changed.
             tag_avail = check_tag_availability(state)
-        elif reply == "T" or reply == "t":
+        elif reply.lower() == "t":
             tag_avail = generate_new_tags(state, tag_avail, final=False)
-        elif reply == "F" or reply == "f":
+        elif reply.lower() == "f":
             tag_avail = generate_new_tags(state, tag_avail, final=True)
             print()
             reply = ask("Purge all build tags from all repositories (recommended)? ")
-            if reply == "Y" or reply == "y":
+            if reply.lower() == "y":
                 purge_build_tags(state, tag_avail)
             reply = ask('Merge "integration" release tag into version branch (recommended)? ')
-            if reply == "Y" or reply == "y":
+            if reply.lower() == "y":
                 merge_release_tag(state, tag_avail, determine_repo("integration"))
-        elif reply == "D" or reply == "d":
+        elif reply.lower() == "d":
             push_latest_docker_tags(state, tag_avail)
-        elif reply == "P" or reply == "p":
+        elif reply.lower() == "p":
             git_list = []
             for repo in REPOS.values():
                 remote = find_upstream_remote(state, repo.git)
                 git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
             query_execute_git_list(git_list)
-        elif reply == "B" or reply == "b":
+        elif reply.lower() == "b":
             trigger_jenkins_build(state, tag_avail)
-        elif reply == "U" or reply == "u":
+        elif reply.lower() == "l":
+            do_license_generation(state, tag_avail)
+        elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
-        elif reply == "S" or reply == "s":
+        elif reply.lower() == "s":
             switch_following_branch(state, tag_avail)
-        elif reply == "M" or reply == "m":
+        elif reply.lower() == "m":
             merge_release_tag(state, tag_avail, determine_repo("integration"))
-        elif reply == "C" or reply == "c":
+        elif reply.lower() == "c":
             create_release_branches(state, tag_avail)
-        elif reply == "O" or reply == "o":
+        elif reply.lower() == "o":
             do_beta_to_final_transition(state)
             tag_avail = check_tag_availability(state)
-        elif reply == "I" or reply == "i":
+        elif reply.lower() == "i":
             do_docker_compose_branches_from_follows(state)
         else:
             print("Invalid choice!")

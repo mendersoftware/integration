@@ -364,6 +364,11 @@ def do_gui_repo(repopath):
     verify_no_license_leftovers(repopath)
 
 def check_base_license(repopath):
+    # Temporary workaround for older branches: License is slightly different,
+    # but not wrong. Fixed in master.
+    if os.path.basename(repopath) == "mender-artifact":
+        return
+
     # Use the license in the integration repository (this repository) as a basis
     with open(os.path.join(os.path.dirname(sys.argv[0]), "..", "LICENSE")) as fd:
         expected_lines = fd.read().strip().split('\n')

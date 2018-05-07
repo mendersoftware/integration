@@ -6,33 +6,27 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 
-# Go style licenses repos.
-GO_REPOS = [ 'deployments',
-             'deviceadm',
-             'deviceauth',
-             'inventory',
-             'mender',
-             'mender-artifact',
-             'useradm'
-]
-# GUI style licenses repos.
-GUI_REPOS = [ 'gui' ]
-# We don't currently care about this one.
-OTHER_REPOS = [ 'mender-api-gateway-docker' ]
+# Only do basic checks on these.
+OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'mender-conductor' ]
+# We don't currently care about these.
+IGNORE_REPOS = [ 'mender-conductor-enterprise' ]
 
 # The directories to look in.
 DIRS = [os.path.join(os.path.dirname(sys.argv[0]), "../..")]
 
 # Candidates for license files.
-LICENSE_CANDIDATES = [ "LICENSE", "LICENCE", "COPYING" ]
+LICENSE_CANDIDATES = [ "LICENSE", "LICENCE", "LICENSE.txt", "COPYING" ]
 
 # A dictionary of the licenses we have collected, key is module, value is text.
 LICENSES = {}
 
 # A dictionary of license files we have covered.
 LICENSE_FILES_COVERED = {}
+
+CALLED_FROM_RELEASE_TOOL = False
 
 
 #-------------------------------------------------------------------------------
@@ -182,12 +176,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 parser = argparse.ArgumentParser(description='Generate a license overview for Mender repositories.')
 parser.add_argument('--dir', dest='DIRS', action='append',
                     help='Directories to look for repositories. Later directories take precedence.')
+parser.add_argument('--called-from-release-tool', dest='CALLED_FROM_RELEASE_TOOL', action='store_true',
+                    help=argparse.SUPPRESS)
 parsed = parser.parse_args()
 
 if parsed.DIRS is not None:
     DIRS += parsed.DIRS
 # In order for latest directories to be searched first.
 DIRS.reverse()
+
+if parsed.CALLED_FROM_RELEASE_TOOL:
+    CALLED_FROM_RELEASE_TOOL = True
+
 
 def select_license_text(license, author):
     if KNOWN_LICENSES[license].find('%s') == -1:
@@ -312,62 +312,105 @@ def process_node_module(modules_path, module):
                             select_license_text(license_type, author))
 
 # Go style licenses.
-def do_go_repos():
-    for repo in GO_REPOS:
-        loc = find_repo(repo)
+def do_go_repo(repopath):
+    lic_chksums = os.path.join(repopath, "LIC_FILES_CHKSUM.sha256")
+    if not os.path.exists(lic_chksums):
+        raise Exception("No license checksums found at %s" % lic_chksums)
 
-        lic_chksums = os.path.join(loc, "LIC_FILES_CHKSUM.sha256")
-        if not os.path.exists(lic_chksums):
-            raise Exception("No license checksums found at %s" % lic_chksums)
+    process_chksum_file(lic_chksums)
 
-        process_chksum_file(lic_chksums)
-
-        verify_no_license_leftovers(loc)
+    verify_no_license_leftovers(repopath)
 
 # Licenses for GUI repos.
-def do_gui_repos():
-    for repo in GUI_REPOS:
-        loc = find_repo(repo)
+def do_gui_repo(repopath):
+    # Our own license is covered.
+    LICENSE_FILES_COVERED[os.path.join(repopath, "LICENSE")] = True
 
-        # Our own license is covered.
-        LICENSE_FILES_COVERED[os.path.join(loc, "LICENSE")] = True
+    modules_path = os.path.join(repopath, "node_modules")
+    modules = os.listdir(modules_path)
+    for module in modules:
+        if module in ['.bin']:
+            continue
 
-        modules_path = os.path.join(loc, "node_modules")
-        modules = os.listdir(modules_path)
-        for module in modules:
-            if module in ['.bin']:
+        if module == "indexof":
+            # Exception: This one doesn't come with a valid license, but it
+            # is MIT according to web page.
+            add_to_licenses("www.npmjs.com/package/%s" % module,
+                            select_license_text("MIT", "indexof"))
+            continue
+        elif module == "string-hash":
+            # Exception: This one has the license listed inside the
+            # README.md file, together with other stuff.
+            h = hashlib.md5()
+            h.update(open(os.path.join(modules_path, module, "README.md"), "rb").read())
+            assert(h.hexdigest() == "b0bd7b52b5b02d7465184cfe66e66d32")
+            add_to_licenses("www.npmjs.com/package/%s" % module,
+                            select_license_text("Public Domain", "string-hash"))
+            continue
+
+        process_node_module(modules_path, module)
+
+    # Node modules that are sub modules we don't care about, they are
+    # covered by their top license.
+    for path, dirs, files in os.walk(repopath):
+        for file in files:
+            if file not in LICENSE_CANDIDATES:
                 continue
 
-            if module == "indexof":
-                # Exception: This one doesn't come with a valid license, but it
-                # is MIT according to web page.
-                add_to_licenses("www.npmjs.com/package/%s" % module,
-                                select_license_text("MIT", "indexof"))
-                continue
-            elif module == "string-hash":
-                # Exception: This one has the license listed inside the
-                # README.md file, together with other stuff.
-                h = hashlib.md5()
-                h.update(open(os.path.join(modules_path, module, "README.md"), "rb").read())
-                assert(h.hexdigest() == "b0bd7b52b5b02d7465184cfe66e66d32")
-                add_to_licenses("www.npmjs.com/package/%s" % module,
-                                select_license_text("Public Domain", "string-hash"))
-                continue
+            full_path = os.path.join(path, file)
+            if re.search("node_modules/.*/node_modules/", full_path):
+                LICENSE_FILES_COVERED[full_path] = True
 
-            process_node_module(modules_path, module)
+    verify_no_license_leftovers(repopath)
 
-        # Node modules that are sub modules we don't care about, they are
-        # covered by their top license.
-        for path, dirs, files in os.walk(loc):
-            for file in files:
-                if file not in LICENSE_CANDIDATES:
-                    continue
+def check_base_license(repopath):
+    # Temporary workaround for older branches: License is slightly different,
+    # but not wrong. Fixed in master.
+    if os.path.basename(repopath) == "mender-artifact":
+        return
 
-                full_path = os.path.join(path, file)
-                if re.search("node_modules/.*/node_modules/", full_path):
-                    LICENSE_FILES_COVERED[full_path] = True
+    # Use the license in the integration repository (this repository) as a basis
+    with open(os.path.join(os.path.dirname(sys.argv[0]), "..", "LICENSE")) as fd:
+        expected_lines = fd.read().strip().split('\n')
+        expected_top = expected_lines[0]
+        # Lose first line, which depends on copyright year.
+        del expected_lines[0]
 
-        verify_no_license_leftovers(loc)
+    with open(os.path.join(repopath, "LICENSE")) as fd:
+        license_lines = fd.read().strip().split('\n')
+        license_top = license_lines[0]
+        # Lose first line, which depends on copyright year.
+        del license_lines[0]
+
+    assert license_lines == expected_lines, "%s doesn't have correct license text" % repopath
+
+    # Now compare top lines, but omitting copyright year.
+    expected_top_altered = re.sub("2[01][0-9][0-9]", "", expected_top)
+    license_top_altered = re.sub("2[01][0-9][0-9]", "", license_top)
+    assert license_top_altered == expected_top_altered, "%s != %s" % (license_top_altered, expected_top_altered)
+
+def do_repos():
+    release_tool = os.path.join(os.path.dirname(sys.argv[0]), "release_tool.py")
+    output = subprocess.check_output([release_tool, "-l"])
+
+    for repo in output.decode().strip().split('\n'):
+        repopath = find_repo(repo)
+        for path, dirs, files in os.walk(repopath):
+            if repo in IGNORE_REPOS:
+                break
+
+            check_base_license(repopath)
+            if any([file.endswith(".go") for file in files]):
+                do_go_repo(repopath)
+                break
+            elif "node_modules" in dirs:
+                do_gui_repo(repopath)
+                break
+            elif repo in OTHER_REPOS:
+                # The check above is enough.
+                break
+        else:
+            raise Exception("Unrecognized repository type: %s" % repopath)
 
 def verify_no_license_leftovers(location):
     for path, dirs, files in os.walk(location):
@@ -375,8 +418,7 @@ def verify_no_license_leftovers(location):
             if file in LICENSE_CANDIDATES and not LICENSE_FILES_COVERED.get(os.path.join(path, file)):
                 raise Exception("Found unhandled license in %s" % os.path.join(path, file))
 
-do_go_repos()
-do_gui_repos()
+do_repos()
 
 def case_insensitive_item(item):
     return item[0].lower()
@@ -393,3 +435,6 @@ for component in sorted_licenses:
 print("Third party licenses used in Mender.")
 print(separator)
 print(separator.join(component_texts))
+
+if not CALLED_FROM_RELEASE_TOOL:
+    sys.stderr.write("WARNING: It is recommended to call this tool from release_tool.py, to get the versions right.\n")

@@ -34,6 +34,8 @@ LICENSES = {}
 # A dictionary of license files we have covered.
 LICENSE_FILES_COVERED = {}
 
+CALLED_FROM_RELEASE_TOOL = False
+
 
 #-------------------------------------------------------------------------------
 # Used as reference in the below variable.
@@ -182,12 +184,18 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 parser = argparse.ArgumentParser(description='Generate a license overview for Mender repositories.')
 parser.add_argument('--dir', dest='DIRS', action='append',
                     help='Directories to look for repositories. Later directories take precedence.')
+parser.add_argument('--called-from-release-tool', dest='CALLED_FROM_RELEASE_TOOL', action='store_true',
+                    help=argparse.SUPPRESS)
 parsed = parser.parse_args()
 
 if parsed.DIRS is not None:
     DIRS += parsed.DIRS
 # In order for latest directories to be searched first.
 DIRS.reverse()
+
+if parsed.CALLED_FROM_RELEASE_TOOL:
+    CALLED_FROM_RELEASE_TOOL = True
+
 
 def select_license_text(license, author):
     if KNOWN_LICENSES[license].find('%s') == -1:
@@ -393,3 +401,6 @@ for component in sorted_licenses:
 print("Third party licenses used in Mender.")
 print(separator)
 print(separator.join(component_texts))
+
+if not CALLED_FROM_RELEASE_TOOL:
+    sys.stderr.write("WARNING: It is recommended to call this tool from release_tool.py, to get the versions right.\n")

@@ -1400,45 +1400,45 @@ def do_release():
 
         reply = ask("Choice? ")
 
-        if reply == "Q" or reply == "q":
+        if reply.lower() == "q":
             break
-        if reply == "R" or reply == "r":
+        if reply.lower() == "r":
             refresh_repos(state)
             # Refill data about available tags, since it may have changed.
             tag_avail = check_tag_availability(state)
-        elif reply == "T" or reply == "t":
+        elif reply.lower() == "t":
             tag_avail = generate_new_tags(state, tag_avail, final=False)
-        elif reply == "F" or reply == "f":
+        elif reply.lower() == "f":
             tag_avail = generate_new_tags(state, tag_avail, final=True)
             print()
             reply = ask("Purge all build tags from all repositories (recommended)? ")
-            if reply == "Y" or reply == "y":
+            if reply.lower() == "y":
                 purge_build_tags(state, tag_avail)
             reply = ask('Merge "integration" release tag into version branch (recommended)? ')
-            if reply == "Y" or reply == "y":
+            if reply.lower() == "y":
                 merge_release_tag(state, tag_avail, determine_repo("integration"))
-        elif reply == "D" or reply == "d":
+        elif reply.lower() == "d":
             push_latest_docker_tags(state, tag_avail)
-        elif reply == "P" or reply == "p":
+        elif reply.lower() == "p":
             git_list = []
             for repo in REPOS.values():
                 remote = find_upstream_remote(state, repo.git)
                 git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
             query_execute_git_list(git_list)
-        elif reply == "B" or reply == "b":
+        elif reply.lower() == "b":
             trigger_jenkins_build(state, tag_avail)
-        elif reply == "U" or reply == "u":
+        elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
-        elif reply == "S" or reply == "s":
+        elif reply.lower() == "s":
             switch_following_branch(state, tag_avail)
-        elif reply == "M" or reply == "m":
+        elif reply.lower() == "m":
             merge_release_tag(state, tag_avail, determine_repo("integration"))
-        elif reply == "C" or reply == "c":
+        elif reply.lower() == "c":
             create_release_branches(state, tag_avail)
-        elif reply == "O" or reply == "o":
+        elif reply.lower() == "o":
             do_beta_to_final_transition(state)
             tag_avail = check_tag_availability(state)
-        elif reply == "I" or reply == "i":
+        elif reply.lower() == "i":
             do_docker_compose_branches_from_follows(state)
         else:
             print("Invalid choice!")

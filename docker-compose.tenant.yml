@@ -22,7 +22,7 @@ services:
                     - mongo-tenantadm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor-enterprise:1.0.x
+        image: mendersoftware/mender-conductor-enterprise:1.0.0b1
 
     mender-org-welcome-email-preparer:
         image: mendersoftware/org-welcome-email-preparer:master

@@ -85,6 +85,7 @@ REPOS = {
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.
     "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
+    "mender-cli": RepoName("mender-cli", "mender-cli", "mender-cli", False),
     "integration": RepoName("integration", "integration", "integration", False),
 }
 
@@ -108,6 +109,7 @@ GIT_TO_BUILDPARAM_MAP = {
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",
+    "mender-cli": "MENDER_CLI_REV",
     "meta-mender": "META_MENDER_REV",
 
     "integration": "INTEGRATION_REV",

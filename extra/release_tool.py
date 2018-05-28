@@ -1262,7 +1262,7 @@ def do_build(args):
         for repo in REPOS.values():
             tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
 
-    for pr in args.pr:
+    for pr in args.pr or []:
         match = re.match("^([^/]+)/([0-9]+)$", pr)
         if match is None:
             raise Exception("%s is not a valid repo/pr pair!" % pr)

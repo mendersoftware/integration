@@ -131,7 +131,7 @@ EXTRA_BUILDPARAMS = {
     "META_OPENEMBEDDED_REV": "rocko",
     "META_RASPBERRYPI_REV": "rocko",
     "POKY_REV": "rocko",
-    "PUBLISH_ARTIFACTS": "on",
+    "PUBLISH_ARTIFACTS": "",
     "RUN_INTEGRATION_TESTS": "on",
     "STOP_SLAVE": "",
     "TENANTADM_REV": "master",

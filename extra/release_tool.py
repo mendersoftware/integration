@@ -135,12 +135,12 @@ EXTRA_BUILDPARAMS = {
     "RUN_INTEGRATION_TESTS": "on",
     "STOP_SLAVE": "",
     "TENANTADM_REV": "master",
-    "TEST_BEAGLEBONEBLACK": "on",
+    "TEST_BEAGLEBONEBLACK": "",
     "TEST_QEMUX86_64_UEFI_GRUB": "on",
     "TEST_RASPBERRYPI3": "",
     "TEST_VEXPRESS_QEMU": "on",
     "TEST_VEXPRESS_QEMU_FLASH": "on",
-    "TESTS_IN_PARALLEL": "8",
+    "TESTS_IN_PARALLEL": "6",
 }
 
 def init_jenkins_creds():

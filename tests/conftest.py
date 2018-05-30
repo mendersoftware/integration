@@ -41,6 +41,7 @@ production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 inline_logs = False
 mt_docker_compose_file = ""
 run_tenant_tests = True
+machine_name = None
 
 try:
     requests.packages.urllib3.disable_warnings()
@@ -55,7 +56,6 @@ def pytest_addoption(parser):
                      help="Host of mender gateway")
 
     parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
-    parser.addoption("--image", action="store_true", default="core-image-full-cmdline-vexpress-qemu.ext4", help="Valid update image")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
     parser.addoption("--runnightly", action="store_true", help="run nightly (very slow) tests")
@@ -67,13 +67,15 @@ def pytest_addoption(parser):
 
     parser.addoption("--mt-docker-compose-file", action="store", type=str, help="Docker-compose file that enables multi-tenancy (required for some tests)")
 
+    parser.addoption("--machine-name", action="store", default="qemux86-64",
+                     help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
+
 
 def pytest_configure(config):
     global extra_files, inline_logs, mt_docker_compose_file
     verify_sane_test_environment()
 
     env.api_version = config.getoption("api")
-    env.valid_image = config.getoption("image")
 
     inline_logs = config.getoption("--inline-logs")
 
@@ -83,6 +85,10 @@ def pytest_configure(config):
             mt_docker_compose_file = "-f ../docker-compose.mt.yml"
     else:
         mt_docker_compose_file = "-f %s" % config.getoption("--mt-docker-compose-file")
+
+    global machine_name
+    machine_name = config.getoption("--machine-name")
+    env.valid_image = "core-image-full-cmdline-%s.ext4" % machine_name
 
     env.password = ""
 

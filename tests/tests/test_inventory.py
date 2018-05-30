@@ -30,7 +30,7 @@ class TestInventory(MenderTesting):
     def test_inventory(self):
         """Test that device reports inventory after having bootstrapped."""
 
-        attempts = 3
+        attempts = 10
 
         while True:
             attempts = attempts - 1
@@ -50,25 +50,35 @@ class TestInventory(MenderTesting):
                         attrs = device['attributes']
 
                         # Check individual attributes.
-                        assert(json.loads('{"name": "network_interfaces", "value": "eth0"}') in attrs)
-                        assert(json.loads('{"name": "hostname", "value": "vexpress-qemu"}') in attrs)
-                        assert(json.loads('{"name": "device_type", "value": "vexpress-qemu"}') in attrs)
+                        network_interfaces = [elem for elem in attrs if elem['name'] == "network_interfaces"]
+                        assert len(network_interfaces) == 1
+                        network_interfaces = network_interfaces[0]
+                        if type(network_interfaces['value']) is str:
+                            assert any(network_interfaces['value'] == iface for iface in ["eth0", "enp0s3"])
+                        else:
+                            assert any(iface in network_interfaces['value'] for iface in ["eth0", "enp0s3"])
+                        assert(json.loads('{"name": "hostname", "value": "%s"}' % conftest.machine_name) in attrs)
+                        assert(json.loads('{"name": "device_type", "value": "%s"}' % conftest.machine_name) in attrs)
 
                         # Check that all known keys are present.
-                        keys = [attr['name'] for attr in attrs]
+                        keys = [str(attr['name']) for attr in attrs]
                         expected_keys = [
                             "hostname",
                             "network_interfaces",
                             "cpu_model",
                             "mem_total_kB",
                             "device_type",
-                            "ipv4_eth0",
-                            "mac_eth0",
+                            ["ipv4_enp0s3", "ipv6_enp0s3", "ipv4_eth0"], # Multiple possibilities
+                            ["mac_enp0s3", "mac_eth0"],
                             "mender_client_version",
                             "artifact_name",
                             "kernel"
                         ]
-                        assert(sorted(keys) == sorted(expected_keys))
+                        for key in expected_keys:
+                            if type(key) is list:
+                                assert any([subkey in keys for subkey in key])
+                            else:
+                                assert key in keys
 
                     except:
                         print("Exception caught, 'device' json: ", device)

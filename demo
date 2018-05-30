@@ -1,17 +1,45 @@
 #!/bin/bash
 
-CLIENT="-f docker-compose.client.yml"
-if [ -n "${NO_CLIENT}" ]; then
-    unset CLIENT
-    echo "-- disabling client containers"
-fi
+usage() {
+    cat <<EOF
+$(basename $0) [--kvm] docker-options
 
-if [ "$#" -eq 0 ]; then
-    echo "Arguments passed to this command are passed directly to docker-compose, if you want to run the demo, run:"
-    echo ""
-    echo "'./demo up'"
-    exit 1
-fi
+--kvm
+	Enable KVM hardware acceleration of client VM.
+--no-client
+	Disable emulated client.
+
+All other arguments passed to this command are passed directly to
+docker-compose, if you want to run the demo, run:
+
+'$(basename $0) up'
+EOF
+}
+
+CLIENT="-f docker-compose.client.yml"
+while [ -n "$1" ]; do
+    if [ -n "${NO_CLIENT}" -o "$1" = "--no-client" ]; then
+        unset CLIENT
+        echo "-- disabling client containers"
+        if [ -n "$NO_CLIENT" ]; then
+            unset NO_CLIENT
+            continue
+        fi
+    elif [ "$1" = "--kvm" ]; then
+        if [ -z "$CLIENT" ]; then
+            echo "$1 cannot be used when there is no client!"
+            exit 1
+        fi
+        CLIENT="$CLIENT -f docker-compose.client-privileged.yml"
+    else
+        if [ "$#" -eq 0 ]; then
+            usage
+            exit 1
+        fi
+        break
+    fi
+    shift
+done
 
 # speed up first start by pulling containers in parallel
 docker images | grep -q 'mendersoftware/deployments'

@@ -33,9 +33,6 @@ def wait_for_containers(expected_containers, defined_in):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
-    if getattr(request, 'param', False) and request.param != "force_new" and setup_type() == ST_OneClient:
-        return
-
     restart_docker_compose()
     reset_mender_api()
 
@@ -54,9 +51,6 @@ def setup_set_client_number_bootstrapped(clients):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped():
-    if setup_type() == ST_OneClientBootstrapped:
-        return
-
     restart_docker_compose()
     reset_mender_api()
     adm.accept_devices(1)
@@ -66,9 +60,6 @@ def standard_setup_one_client_bootstrapped():
 
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped():
-    if setup_type() == ST_TwoClientsBootstrapped:
-        return
-
     restart_docker_compose(2)
     reset_mender_api()
     adm.accept_devices(2)
@@ -77,14 +68,12 @@ def standard_setup_two_clients_bootstrapped():
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped_with_s3():
-    if setup_type() == ST_OneClientsBootstrapped_AWS_S3:
-        return
-
     stop_docker_compose()
     reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
+                        -f ../docker-compose.client-privileged.yml \
                         -f ../docker-compose.testing.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.storage.s3.yml up -d",
@@ -101,9 +90,6 @@ def standard_setup_one_client_bootstrapped_with_s3():
 
 @pytest.fixture(scope="function")
 def standard_setup_without_client():
-    if setup_type() == ST_NoClient:
-        return
-
     stop_docker_compose()
     reset_mender_api()
 
@@ -117,9 +103,6 @@ def standard_setup_without_client():
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):
-    if getattr(request, 'param', False) and request.param != "force_new" and setup_type() == ST_SignedClient:
-        return
-
     stop_docker_compose()
     reset_mender_api()
 
@@ -133,14 +116,12 @@ def standard_setup_with_signed_artifact_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_with_short_lived_token():
-    if setup_type() == ST_ShortLivedAuthToken:
-        return
-
     stop_docker_compose()
     reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
+                        -f ../docker-compose.client-privileged.yml \
                         -f ../docker-compose.storage.minio.yml  \
                         -f ../docker-compose.testing.yml \
                         -f ../extra/expired-token-testing/docker-compose.short-token.yml up -d",
@@ -199,9 +180,6 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
     if not conftest.run_tenant_tests:
         pytest.skip("Tenant tests disabled")
 
-    if setup_type() == ST_OneClientsBootstrapped_AWS_S3_MT:
-        return
-
     stop_docker_compose()
     reset_mender_api()
 
@@ -230,9 +208,6 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
 def multitenancy_setup_without_client_with_smtp(request):
     if not conftest.run_tenant_tests:
         pytest.skip("Tenant tests disabled")
-
-    if setup_type() == ST_MultiTenancyNoClientWithSmtp:
-        return
 
     stop_docker_compose()
     reset_mender_api()

@@ -161,7 +161,7 @@ class BackendUpdating():
 
         # perform upgrade
         devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
-        deployment_id, artifact_id = common_update_procedure("core-image-full-cmdline-vexpress-qemu.ext4",
+        deployment_id, artifact_id = common_update_procedure("core-image-full-cmdline-%s.ext4" % conftest.machine_name,
                                                              device_type="test",
                                                              devices=devices_to_update)
 

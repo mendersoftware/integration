@@ -22,3 +22,9 @@ services:
             - minio
         volumes:
             - ./storage-proxy/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+volumes:
+    # mender artifacts storage
+    mender-artifacts:
+      external:
+          # use external volume created manually
+          name: mender-artifacts

@@ -157,11 +157,6 @@ services:
         entrypoint: /redis/entrypoint.sh
 
 volumes:
-    # mender artifacts storage
-    mender-artifacts:
-      external:
-          # use external volume created manually
-          name: mender-artifacts
     # deployments service database
     mender-deployments-db:
       external:

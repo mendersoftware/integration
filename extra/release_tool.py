@@ -117,6 +117,7 @@ GIT_TO_BUILDPARAM_MAP = {
 # These will be saved along with the state if they are changed.
 EXTRA_BUILDPARAMS = {
     "BUILD_BEAGLEBONEBLACK": "on",
+    "BUILD_QEMUX86_64_BIOS_GRUB": "on",
     "BUILD_QEMUX86_64_UEFI_GRUB": "on",
     "BUILD_RASPBERRYPI3": "on",
     "BUILD_VEXPRESS_QEMU": "on",
@@ -136,6 +137,7 @@ EXTRA_BUILDPARAMS = {
     "STOP_SLAVE": "",
     "TENANTADM_REV": "master",
     "TEST_BEAGLEBONEBLACK": "",
+    "TEST_QEMUX86_64_BIOS_GRUB": "on",
     "TEST_QEMUX86_64_UEFI_GRUB": "on",
     "TEST_RASPBERRYPI3": "",
     "TEST_VEXPRESS_QEMU": "on",

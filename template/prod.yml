@@ -131,21 +131,9 @@ services:
         environment:
             - CONFIG_PROP=config.properties
 
-    mender-mongo-deployments:
+    mender-mongo:
         volumes:
-            - mender-deployments-db:/data/db:rw
-    mender-mongo-device-adm:
-        volumes:
-            - mender-deviceadm-db:/data/db:rw
-    mender-mongo-device-auth:
-        volumes:
-            - mender-deviceauth-db:/data/db:rw
-    mender-mongo-inventory:
-        volumes:
-            - mender-inventory-db:/data/db:rw
-    mender-mongo-useradm:
-        volumes:
-            - mender-useradm-db:/data/db:rw
+            - mender-db:/data:rw
     mender-elasticsearch:
         volumes:
             - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
@@ -162,31 +150,11 @@ volumes:
       external:
           # use external volume created manually
           name: mender-artifacts
-    # deployments service database
-    mender-deployments-db:
+    # mongo service database
+    mender-db:
       external:
           # use external volume created manually
-          name: mender-deployments-db
-    # user administration service database
-    mender-useradm-db:
-      external:
-          # use external volume created manually
-          name: mender-useradm-db
-    # inventory service database
-    mender-inventory-db:
-      external:
-          # use external volume created manually
-          name: mender-inventory-db
-    # device authentication service database
-    mender-deviceauth-db:
-      external:
-          # use external volume created manually
-          name: mender-deviceauth-db
-    # device admission service database
-    mender-deviceadm-db:
-      external:
-          # use external volume created manually
-          name: mender-deviceadm-db
+          name: mender-db
     # elasticsearch database
     mender-elasticsearch-db:
       external:

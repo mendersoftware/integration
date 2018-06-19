@@ -1570,7 +1570,10 @@ def figure_out_checked_out_revision(state, repo_git):
             if ref_sha != checked_out_sha:
                 # Why isn't the branch mentioned in the build parameters checked
                 # out? This should not happen.
-                raise Exception("%s: SHA %s from %s does not match checked out SHA %s. This should not happen!"
+                raise Exception(("%s: SHA %s from %s does not match checked out SHA %s. "
+                                 + "Although rare, this sometimes happens if a repository is "
+                                 + "updated in the very same instant it is pulled. Just restarting "
+                                 + "the build should get rid of the problem in most cases.")
                                 % (repo_git, ref_sha, ref, checked_out_sha))
 
             return (ref, "branch")

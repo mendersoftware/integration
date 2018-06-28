@@ -133,19 +133,19 @@ services:
 
     mender-mongo-deployments:
         volumes:
-            - mender-deployments-db:/data:rw
+            - mender-deployments-db:/data/db:rw
     mender-mongo-device-adm:
         volumes:
-            - mender-deviceadm-db:/data:rw
+            - mender-deviceadm-db:/data/db:rw
     mender-mongo-device-auth:
         volumes:
-            - mender-deviceauth-db:/data:rw
+            - mender-deviceauth-db:/data/db:rw
     mender-mongo-inventory:
         volumes:
-            - mender-inventory-db:/data:rw
+            - mender-inventory-db:/data/db:rw
     mender-mongo-useradm:
         volumes:
-            - mender-useradm-db:/data:rw
+            - mender-useradm-db:/data/db:rw
     mender-elasticsearch:
         volumes:
             - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw

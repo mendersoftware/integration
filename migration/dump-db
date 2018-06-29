@@ -11,11 +11,7 @@ SERVICES="\
   mender-deployments \
 "
 DB_SERVICES="\
-  mender-mongo-useradm \
-  mender-mongo-inventory \
-  mender-mongo-device-adm \
-  mender-mongo-device-auth \
-  mender-mongo-deployments \
+  mender-mongo
 "
 
 # stop service that are using DBs

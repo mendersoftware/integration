@@ -19,13 +19,22 @@ DB_SERVICES="\
   mender-mongo-deployments \
 "
 
+OLD_DB_VOLUMES="\
+  mender-useradm-db \
+  mender-inventory-db \
+  mender-deviceadm-db \
+  mender-deviceauth-db \
+  mender-deployments-db \
+"
+
+
 # stop service that are using DBs
 # shellcheck disable=SC2086
 ${SCRIPT} stop ${SERVICES}
 
 # start mongodb container
 # shellcheck disable=SC2016
-DUMP_PATH=$PWD ${SCRIPT} up -d mender-mongo
+${SCRIPT} up -d mender-mongo
 
 # wait for mongodb
 sleep 10
@@ -36,3 +45,9 @@ DUMP_PATH=$PWD ${SCRIPT} -f ${SELFDIR}/migration-helper.yml run \
          -e DB_SERVICES="${DB_SERVICES}" \
          mongo-helper \
          sh -c 'for s in ${DB_SERVICES}; do mongorestore -h mender-mongo --drop "/srv/db-dump/$s"; done'
+
+# remove old database volumes
+# shellcheck disable=SC2016
+for v in ${OLD_DB_VOLUMES}; do
+    docker volume rm $v
+done

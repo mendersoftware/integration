@@ -44,7 +44,7 @@ class TestSecurity(MenderTesting):
         # get all exposed ports from docker
 
         for _ in range(3):
-            exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*'" % ("testprod"), shell=True)
+            exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat" % ("testprod"), shell=True)
 
             try:
                 for host in exposed_hosts.split():

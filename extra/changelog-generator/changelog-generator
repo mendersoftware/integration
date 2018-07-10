@@ -70,18 +70,9 @@ else:
     base_dir = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "../../.."))
 
 if args.all:
-    # This is hardcoded for now, but could theoretically be queried for by using
-    # release_tool.py.
-    repos.append(os.path.join(base_dir, "deployments"))
-    repos.append(os.path.join(base_dir, "deviceadm"))
-    repos.append(os.path.join(base_dir, "deviceauth"))
-    repos.append(os.path.join(base_dir, "gui"))
-    repos.append(os.path.join(base_dir, "integration"))
-    repos.append(os.path.join(base_dir, "inventory"))
-    repos.append(os.path.join(base_dir, "mender"))
-    repos.append(os.path.join(base_dir, "mender-artifact"))
-    repos.append(os.path.join(base_dir, "mender-api-gateway-docker"))
-    repos.append(os.path.join(base_dir, "useradm"))
+    repo_list = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
+                                         "--list"]).decode().strip()
+    repos += [os.path.join(base_dir, repo) for repo in repo_list.split()]
 else:
     repos.append(".")
 

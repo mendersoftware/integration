@@ -80,10 +80,9 @@ def get_range_for_repo(repo, range):
     return subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
                                     "--version-of", repo, "--in-integration-version", range]).decode().strip()
 
-print("## %s %s\n"
-      % ("Mender" if args.all else os.path.basename(subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()),
-         args.range.split("..")[1] if ".." in args.range else args.range))
-print("_Released xx.xx.xxxx_\n")
+if ".." in args.range:
+    print("## v%s\n" % args.range.split("..")[1])
+    print("_Released xx.xx.xxxx_\n")
 
 for repo in repos:
     ENTRIES = {}

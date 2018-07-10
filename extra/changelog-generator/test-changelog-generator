@@ -355,7 +355,11 @@ Signed-off-by: Joe Average <joe@average.com>'
     exit 1
 }
 cat > expected.txt <<EOF
-#### .
+## test-changelog-generator.$$ HEAD
+
+_Released xx.xx.xxxx_
+
+#### test-changelog-generator.$$
 * As well as this. N34
 * Changelog commit with trailing dot. N53
 * Changelog title with trailing dot. N54

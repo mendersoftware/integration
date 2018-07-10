@@ -719,18 +719,20 @@ REBOOT_TEST_SET = [
         "simulate_powerloss_in_reboot_enter",
         {
             "RebootScripts": ["ArtifactReboot_Enter_01"],
-            "DoubleReboot": [True],
-            "ExpectedFinalPartition": ["OriginalPartition"],
+            "ExpectedFinalPartition": ["OtherPartition"],
             "ScriptOrder": [
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",
                 "ArtifactFailure_Enter_02",
                 "ArtifactFailure_Leave_09",
             ],
             "ExpectedScriptFlow": [
-                "ArtifactReboot_Enter_01", # kill!
-                "ArtifactFailure_Enter_02",  # run failure scripts on the committed (old) partition
-                "ArtifactFailure_Leave_09",
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
+                "ArtifactReboot_Enter_01",  # kill!
+                "ArtifactReboot_Leave_01",  # Continue execution on the new partition.
             ],
         },
     ),
@@ -939,6 +941,7 @@ class TestStateScripts(MenderTesting):
                     reboot_detector.verify_reboot_performed()
 
                 # wait until the last script has been run
+                logger.debug("waint until the last script has been run")
                 script_logs = ""
                 timeout = time.time() + 60*60
                 while timeout >= time.time():

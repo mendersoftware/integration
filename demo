@@ -45,12 +45,20 @@ done
 docker images | grep -q 'mendersoftware/deployments'
 
 if [[ "$?" -eq 1 ]]; then
+    compose_args=""
     docker_compose_output=$(docker-compose pull -h)
-    echo "$docker_compose_output" | grep -q -- '--parallel'
 
-    if [[ "$?" -eq 0 ]]; then
-        docker-compose pull --parallel
+    # If --no-parallel option exists, it means that docker-compose is
+    # running a version where --parallel is default and will warn about
+    # deprecated option if used.
+    #
+    # This behavior was changed in version docker-compose 1.21.0
+    echo "$docker_compose_output" | grep -q -- '--no-parallel'
+    if [[ "$?" -eq 1 ]]; then
+        compose_args = "--parallel"
     fi
+
+    docker-compose pull ${compose_args}
 fi
 
 if [[ "$1" == "up" ]]; then

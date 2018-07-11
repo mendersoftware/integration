@@ -133,7 +133,7 @@ services:
 
     mender-mongo:
         volumes:
-            - mender-db:/data:rw
+            - mender-db:/data/db:rw
     mender-elasticsearch:
         volumes:
             - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw

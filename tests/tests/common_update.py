@@ -31,7 +31,9 @@ def common_update_procedure(install_image,
                             verify_status=True,
                             signed=False,
                             devices=None,
-                            scripts=[]):
+                            scripts=[],
+                            pre_deployment_callback=lambda: None,
+                            deployment_triggered_callback=lambda: None):
 
     with artifact_lock:
         if broken_image:
@@ -50,6 +52,7 @@ def common_update_procedure(install_image,
                 deploy.upload_image(created_artifact)
                 if devices is None:
                     devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
+                pre_deployment_callback()
                 deployment_id = deploy.trigger_deployment(name="New valid update",
                                                           artifact_name=artifact_id,
                                                           devices=devices)
@@ -57,13 +60,20 @@ def common_update_procedure(install_image,
                 logger.warn("failed to create artifact")
                 pytest.fail("error creating artifact")
 
+    deployment_triggered_callback()
     # wait until deployment is in correct state
     if verify_status:
         deploy.check_expected_status("inprogress", deployment_id)
 
     return deployment_id, artifact_id
 
-def update_image_successful(install_image, regenerate_image_id=True, signed=False, skip_reboot_verification=False, expected_mender_clients=1):
+def update_image_successful(install_image,
+                            regenerate_image_id=True,
+                            signed=False,
+                            skip_reboot_verification=False,
+                            expected_mender_clients=1,
+                            pre_deployment_callback=lambda: None,
+                            deployment_triggered_callback=lambda: None):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -76,7 +86,9 @@ def update_image_successful(install_image, regenerate_image_id=True, signed=Fals
     with Helpers.RebootDetector() as reboot:
         deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                    regenerate_image_id,
-                                                                   signed=signed)
+                                                                   signed=signed,
+                                                                   pre_deployment_callback=pre_deployment_callback,
+                                                                   deployment_triggered_callback=deployment_triggered_callback)
         reboot.verify_reboot_performed()
 
     with Helpers.RebootDetector() as reboot:

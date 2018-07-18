@@ -323,7 +323,10 @@ def version_of(integration_dir, repo_docker, in_integration_version=None):
             else:
                 remote = ""
             data = get_docker_compose_data_for_rev(integration_dir, rev)
-            repo_range.append(remote + data[repo_docker]['version'])
+            # If the repository didn't exist in that version, just return all
+            # commits in that case, IOW no lower end point range.
+            if data.get(repo_docker) is not None:
+                repo_range.append(remote + data[repo_docker]['version'])
         return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)

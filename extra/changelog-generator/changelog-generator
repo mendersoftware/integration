@@ -258,8 +258,11 @@ for repo in repos:
             service_header = "#### %s" % os.path.basename(repo)
         else:
             service_header = "#### %s" % os.path.basename(subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip())
-        if args.range.find("..") >= 0:
-            service_header += " (%s)" % range.split("..")[1]
+        if range.find("..") >= 0:
+            v_from, v_to = range.split("..", 1)
+            service_header += " (%s)\n\nNew changes in %s since %s:\n" % (v_to, os.path.basename(repo), v_from)
+        else:
+            service_header += " (%s)\n" % range
         print(service_header)
     for entry in entry_list:
         entry = "* " + entry

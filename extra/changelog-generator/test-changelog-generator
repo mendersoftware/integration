@@ -359,7 +359,8 @@ cat > expected.txt <<EOF
 
 _Released xx.xx.xxxx_
 
-#### test-changelog-generator.$$
+#### test-changelog-generator.$$ (HEAD)
+
 * As well as this. N34
 * Changelog commit with trailing dot. N53
 * Changelog title with trailing dot. N54

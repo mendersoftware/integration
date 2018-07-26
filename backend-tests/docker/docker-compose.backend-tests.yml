@@ -1,0 +1,10 @@
+version: '2'
+services:
+    mender-backend-tests-runner:
+        image: mender-backend-tests-runner
+        networks:
+            - mender
+        volumes:
+            - ${INTEGRATION_PATH}/backend-tests/tests:/tests
+        depends_on:
+            - mender-api-gateway

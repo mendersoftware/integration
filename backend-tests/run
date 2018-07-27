@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-INTEGRATION_PATH=$(readlink -f ../$(dirname $0))
+HERE=$(dirname $(readlink -f "$0"))
+INTEGRATION_PATH=$(dirname "$HERE")
+echo $INTEGRATION_PATH
 export INTEGRATION_PATH
 
 COMPOSE_CMD="docker-compose -p backend-tests \
@@ -9,7 +11,7 @@ COMPOSE_CMD="docker-compose -p backend-tests \
             -f $INTEGRATION_PATH/docker-compose.storage.minio.yml \
             -f $INTEGRATION_PATH/docker-compose.demo.yml \
             -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml"
-
+echo $COMPOSE_CMD
 usage() {
     echo "runner script for backend-specific integration tests"
     echo ""
@@ -36,7 +38,7 @@ parse_args(){
 }
 
 build_backend_tests_runner() {
-    docker build -t mender-backend-tests-runner -f ./docker/Dockerfile .
+    docker build -t mender-backend-tests-runner -f $INTEGRATION_PATH/backend-tests/docker/Dockerfile $INTEGRATION_PATH/backend-tests
 }
 
 run_tests() {

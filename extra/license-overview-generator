@@ -217,6 +217,9 @@ def add_file_to_licenses(component, license_file):
     add_to_licenses(component, content)
 
 def add_to_licenses(component, content):
+    # Get rid of '```' markers that mess up the doc rendering.
+    content = re.sub("^```", "``", content, flags=re.MULTILINE)
+
     existing = LICENSES.get(component)
     if existing is None:
         LICENSES[component] = [content]

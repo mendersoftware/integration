@@ -13,6 +13,7 @@ COMPOSE_CMD="docker-compose -p backend-tests \
 # by default just add minio, with COMPOSE_CMD_BASE this creates the standard onprem ST setup
 COMPOSE_FILES_DEFAULT=( "$INTEGRATION_PATH/docker-compose.storage.minio.yml" )
 COMPOSE_FILES=()
+PYTEST_ARGS=""
 
 usage() {
     echo "runner script for backend-specific integration tests"
@@ -22,6 +23,13 @@ usage() {
     echo -e "\t-c --skip-cleanup \tleave containers running after tests"
     echo -e "\t-f=<FILE>         \tspecify custom compose file(s); default files will not be used,"
     echo -e "\t                  \tmake sure to specify all files you need"
+    echo -e "\t other args will be passed to the testing container's py.test command"
+    echo ""
+    echo -e "examples:"
+    echo -e "run all tests, default ST setup:"
+    echo -e "\t./run"
+    echo -e "run tests matching expression 'multitenant'"
+    echo -e "\t./run -k multitenant"
 }
 
 parse_args(){
@@ -38,6 +46,9 @@ parse_args(){
             ;;
             -f)
             COMPOSE_FILES+=( $VALUE )
+            ;;
+            *)
+            PYTEST_ARGS+=" $1"
             ;;
         esac
         shift 1
@@ -63,7 +74,7 @@ build_backend_tests_runner() {
 }
 
 run_tests() {
-    $COMPOSE_CMD run mender-backend-tests-runner || failed=1
+    $COMPOSE_CMD run mender-backend-tests-runner $PYTEST_ARGS || failed=1
 }
 
 cleanup(){

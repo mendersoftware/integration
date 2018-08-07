@@ -16,3 +16,6 @@ import pytest
 
 def test_dummy():
     print('test_dummy executed')
+
+def test_dummy_multitenant():
+    print('test_dummy_multitenant executed')

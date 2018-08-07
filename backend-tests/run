@@ -3,7 +3,6 @@ set -e
 
 HERE=$(dirname $(readlink -f "$0"))
 INTEGRATION_PATH=$(dirname "$HERE")
-echo $INTEGRATION_PATH
 export INTEGRATION_PATH
 
 COMPOSE_CMD="docker-compose -p backend-tests \

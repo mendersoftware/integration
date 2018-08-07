@@ -81,6 +81,7 @@ REPOS = {
     "gui": RepoName("mender-gui", "gui", "gui", True),
     "inventory": RepoName("mender-inventory", "inventory", "inventory", True),
     "useradm": RepoName("mender-useradm", "useradm", "useradm", True),
+    "email-sender": RepoName("mender-email-sender", "email-sender", "mender-conductor/email-sender", True),
 
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.

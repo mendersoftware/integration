@@ -81,7 +81,6 @@ REPOS = {
     "gui": RepoName("mender-gui", "gui", "gui", True),
     "inventory": RepoName("mender-inventory", "inventory", "inventory", True),
     "useradm": RepoName("mender-useradm", "useradm", "useradm", True),
-    "email-sender": RepoName("mender-email-sender", "email-sender", "mender-conductor/email-sender", True),
 
     # These ones doesn't have a Docker name, but just use same as Git for
     # indexing purposes.
@@ -93,6 +92,7 @@ REPOS = {
 # These are optional repositories that aren't included when iterating over
 # repositories, but that are available for querying.
 OPTIONAL_REPOS = {
+    "email-sender": RepoName("mender-email-sender", "email-sender", "mender-conductor/email-sender", True),
     "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
 }
 

@@ -3,21 +3,33 @@ set -e
 
 HERE=$(dirname $(readlink -f "$0"))
 INTEGRATION_PATH=$(dirname "$HERE")
-echo $INTEGRATION_PATH
 export INTEGRATION_PATH
 
 COMPOSE_CMD="docker-compose -p backend-tests \
-            -f $INTEGRATION_PATH/docker-compose.yml \
-            -f $INTEGRATION_PATH/docker-compose.storage.minio.yml \
-            -f $INTEGRATION_PATH/docker-compose.demo.yml \
-            -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml"
-echo $COMPOSE_CMD
+             -f $INTEGRATION_PATH/docker-compose.yml \
+             -f $INTEGRATION_PATH/docker-compose.demo.yml \
+             -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml"
+
+# by default just add minio, with COMPOSE_CMD_BASE this creates the standard onprem ST setup
+COMPOSE_FILES_DEFAULT=( "$INTEGRATION_PATH/docker-compose.storage.minio.yml" )
+COMPOSE_FILES=()
+PYTEST_ARGS=""
+
 usage() {
     echo "runner script for backend-specific integration tests"
     echo ""
     echo "./backend-tests"
     echo -e "\t-h --help"
     echo -e "\t-c --skip-cleanup \tleave containers running after tests"
+    echo -e "\t-f=<FILE>         \tspecify custom compose file(s); default files will not be used,"
+    echo -e "\t                  \tmake sure to specify all files you need"
+    echo -e "\t other args will be passed to the testing container's py.test command"
+    echo ""
+    echo -e "examples:"
+    echo -e "run all tests, default ST setup:"
+    echo -e "\t./run"
+    echo -e "run tests matching expression 'multitenant'"
+    echo -e "\t./run -k multitenant"
 }
 
 parse_args(){
@@ -32,8 +44,28 @@ parse_args(){
             -c | --skip-cleanup)
             SKIP_CLEANUP=1
             ;;
+            -f)
+            COMPOSE_FILES+=( $VALUE )
+            ;;
+            *)
+            PYTEST_ARGS+=" $1"
+            ;;
         esac
         shift 1
+    done
+
+    make_compose_cmd
+}
+
+make_compose_cmd () {
+    if [ ${#COMPOSE_FILES[@]} -eq 0 ]
+    then
+        COMPOSE_FILES=$COMPOSE_FILES_DEFAULT
+    fi
+
+    for var in "${COMPOSE_FILES[@]}"
+    do
+        COMPOSE_CMD+=" -f ${var}"
     done
 }
 
@@ -42,7 +74,7 @@ build_backend_tests_runner() {
 }
 
 run_tests() {
-    $COMPOSE_CMD run mender-backend-tests-runner || failed=1
+    $COMPOSE_CMD run mender-backend-tests-runner $PYTEST_ARGS || failed=1
 }
 
 cleanup(){

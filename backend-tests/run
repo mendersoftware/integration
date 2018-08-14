@@ -13,7 +13,7 @@ COMPOSE_CMD="docker-compose -p backend-tests \
 # by default just add minio, with COMPOSE_CMD_BASE this creates the standard onprem ST setup
 COMPOSE_FILES_DEFAULT=( "$INTEGRATION_PATH/docker-compose.storage.minio.yml" )
 COMPOSE_FILES=()
-PYTEST_ARGS=""
+PYTEST_ARGS=()
 
 usage() {
     echo "runner script for backend-specific integration tests"
@@ -33,6 +33,8 @@ usage() {
 }
 
 parse_args(){
+    whitespace="[[:space:]]"
+
     while [ $# -gt 0 ]; do
         PARAM=`echo $1 | awk -F= '{print $1}'`
         VALUE=`echo $1 | awk -F= '{print $2}'`
@@ -48,7 +50,11 @@ parse_args(){
             COMPOSE_FILES+=( $VALUE )
             ;;
             *)
-            PYTEST_ARGS+=" $1"
+            if [[ "$1" =~ whitespace  ]]; then
+                PYTEST_ARGS+=( "\"$1\"" )
+            else
+                PYTEST_ARGS+=( "$1" )
+            fi
             ;;
         esac
         shift 1
@@ -74,14 +80,14 @@ build_backend_tests_runner() {
 }
 
 run_tests() {
-    $COMPOSE_CMD run mender-backend-tests-runner $PYTEST_ARGS || failed=1
+    $COMPOSE_CMD run mender-backend-tests-runner "${PYTEST_ARGS[@]}" || failed=1
 }
 
 cleanup(){
     [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
 }
 
-parse_args $*
+parse_args "$@"
 build_backend_tests_runner
 run_tests
 cleanup

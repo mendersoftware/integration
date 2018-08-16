@@ -16,7 +16,3 @@ import api.client
 URL_DEVICES = api.client.GATEWAY_URL + '/api/devices/v1/deployments'
 
 URL_NEXT = '/device/deployments/next'
-
-def req_next(devtype, artifactname):
-    return {'device_type': devtype,
-            'artifact_name': artifactname}

@@ -8,3 +8,4 @@ services:
             - ${INTEGRATION_PATH}/backend-tests/tests:/tests
         depends_on:
             - mender-api-gateway
+        command: ${PYTEST_ARGS}

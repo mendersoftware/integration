@@ -34,6 +34,7 @@ usage() {
 parse_args(){
     whitespace="[[:space:]]"
 
+    # FIXME args must be passed in the form -f=<path>; spaces don't workalthough they're standard...
     while [ $# -gt 0 ]; do
         PARAM=`echo $1 | awk -F= '{print $1}'`
         VALUE=`echo $1 | awk -F= '{print $2}'`

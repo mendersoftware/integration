@@ -46,13 +46,6 @@ services:
                 max-file: "10"
                 max-size: "50m"
 
-    mender-device-adm:
-        command: server --automigrate
-        logging:
-            options:
-                max-file: "10"
-                max-size: "50m"
-
     mender-api-gateway:
         ports:
             # list of ports API gateway is made available on

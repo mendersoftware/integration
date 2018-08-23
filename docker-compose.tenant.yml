@@ -17,7 +17,6 @@ services:
                 aliases:
                     - mongo-tenantadm
                     - mongo-deployments
-                    - mongo-device-adm
                     - mongo-device-auth
                     - mongo-inventory
                     - mongo-useradm

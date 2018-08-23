@@ -7,14 +7,12 @@ SERVICES="\
   mender-inventory \
   mender-useradm \
   mender-device-auth \
-  mender-device-adm \
   mender-deployments \
 "
 
 DB_SERVICES="\
   mender-mongo-useradm \
   mender-mongo-inventory \
-  mender-mongo-device-adm \
   mender-mongo-device-auth \
   mender-mongo-deployments \
 "
@@ -22,7 +20,6 @@ DB_SERVICES="\
 OLD_DB_VOLUMES="\
   mender-useradm-db \
   mender-inventory-db \
-  mender-deviceadm-db \
   mender-deviceauth-db \
   mender-deployments-db \
 "

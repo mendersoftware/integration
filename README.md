@@ -30,7 +30,6 @@ section in [the Mender documentation](https://docs.mender.io/).
 
 The integration environment brings together the following services:
 
-- [Mender Device Admission Service](https://github.com/mendersoftware/deviceadm)
 - [Mender Device Authentication Service](https://github.com/mendersoftware/deviceauth)
 - [Mender Deployment Service](https://github.com/mendersoftware/deployments)
 - [Mender Device Inventory Service](https://github.com/mendersoftware/inventory)
@@ -46,16 +45,12 @@ services:
 
 ```
         |
-        |                                            +-------------------------+
-        |                                            |                         |
-        |                                       +--->|  Device Authentication  |
-        |                                       |    |  (mender-device-auth)   |
-        |                                       |    +-------------------------+
-        |        +-----------------------+      |    |                         |
-   port |        |                       |      +--->|  Device Admission       |
-    443 | <----> |  API Gateway          |      |    |  (mender-device-adm)    |
-        |        |  (mender-api-gateway) |<-----+    +-------------------------+
-        |        +-----------------------+      |    |                         |
+        |
+        |        +-----------------------+           +-------------------------+
+   port |        |                       |           |                         |
+    443 | <----> |  API Gateway          |      +--->|  Device Authentication  |
+        |        |  (mender-api-gateway) |<-----|    |  (mender-device-auth)   |
+        |        +-----------------------+      |    +-------------------------+
         |                                       +--->|  Inventory              |
         |                                       |    |  (mender-inventory)     |
         |                                       |    +-------------------------+

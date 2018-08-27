@@ -126,6 +126,7 @@ EXTRA_BUILDPARAMS = {
     "BUILD_VEXPRESS_QEMU_FLASH": "on",
     "BUILD_VEXPRESS_QEMU_UBOOT_UEFI_GRUB": "on",
     "CLEAN_BUILD_CACHE": "",
+    "DEVICEADM_REV": "master",
     "MENDER_QA_REV": "master",
     "MENDER_STRESS_TEST_CLIENT_REV": "master",
     "META_MENDER_REV": "sumo",

@@ -7,7 +7,6 @@ SERVICES="\
   mender-inventory \
   mender-useradm \
   mender-device-auth \
-  mender-device-adm \
   mender-deployments \
 "
 DB_SERVICES="\

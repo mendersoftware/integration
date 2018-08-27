@@ -80,7 +80,8 @@ class TestInventory(MenderTesting):
                             ["mac_enp0s3", "mac_eth0"],
                             "mender_client_version",
                             "artifact_name",
-                            "kernel"
+                            "kernel",
+                            "os",
                         ]
                         for key in expected_keys:
                             if type(key) is list:

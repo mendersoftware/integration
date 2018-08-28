@@ -60,6 +60,14 @@ class TestInventory(MenderTesting):
                         assert(json.loads('{"name": "hostname", "value": "%s"}' % conftest.machine_name) in attrs)
                         assert(json.loads('{"name": "device_type", "value": "%s"}' % conftest.machine_name) in attrs)
 
+                        if conftest.machine_name == "qemux86-64":
+                            bootloader_integration = "uefi_grub"
+                        elif conftest.machine_name == "vexpress-qemu":
+                            bootloader_integration = "uboot"
+                        else:
+                            pytest.fail("Unknown machine_name. Please add an expected bootloader_integration for this machine_name")
+                        assert(json.loads('{"name": "mender_bootloader_integration", "value": "%s"}' % bootloader_integration) in attrs)
+
                         # Check that all known keys are present.
                         keys = [str(attr['name']) for attr in attrs]
                         expected_keys = [
@@ -72,7 +80,8 @@ class TestInventory(MenderTesting):
                             ["mac_enp0s3", "mac_eth0"],
                             "mender_client_version",
                             "artifact_name",
-                            "kernel"
+                            "kernel",
+                            "os",
                         ]
                         for key in expected_keys:
                             if type(key) is list:

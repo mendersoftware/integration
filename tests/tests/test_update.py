@@ -31,7 +31,6 @@ import re
 def setup_docker_volumes():
     docker_volumes = ["mender-artifacts",
                       "mender-deployments-db",
-                      "mender-deviceadm-db",
                       "mender-deviceauth-db",
                       "mender-redis-db",
                       "mender-elasticsearch-db",

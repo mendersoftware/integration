@@ -13,7 +13,6 @@ COMPOSE_CMD="docker-compose -p backend-tests \
 # by default just add minio, with COMPOSE_CMD_BASE this creates the standard onprem ST setup
 COMPOSE_FILES_DEFAULT=( "$INTEGRATION_PATH/docker-compose.storage.minio.yml" )
 COMPOSE_FILES=()
-PYTEST_ARGS=()
 
 usage() {
     echo "runner script for backend-specific integration tests"
@@ -35,6 +34,7 @@ usage() {
 parse_args(){
     whitespace="[[:space:]]"
 
+    # FIXME args must be passed in the form -f=<path>; spaces don't workalthough they're standard...
     while [ $# -gt 0 ]; do
         PARAM=`echo $1 | awk -F= '{print $1}'`
         VALUE=`echo $1 | awk -F= '{print $2}'`
@@ -50,12 +50,6 @@ parse_args(){
             COMPOSE_FILES+=( $VALUE )
             ;;
             *)
-            if [[ "$1" =~ whitespace  ]]; then
-                PYTEST_ARGS+=( "\"$1\"" )
-            else
-                PYTEST_ARGS+=( "$1" )
-            fi
-            ;;
         esac
         shift 1
     done
@@ -80,7 +74,32 @@ build_backend_tests_runner() {
 }
 
 run_tests() {
-    $COMPOSE_CMD run mender-backend-tests-runner "${PYTEST_ARGS[@]}" || failed=1
+    $COMPOSE_CMD up -d
+
+    declare retries=5
+    while [[ $retries -gt 0 && -z $cid ]]; do
+        cid=$(get_container_id mender-backend-tests-runner)
+        sleep 1
+        retries=$((retries-1))
+    done
+
+    if [[ -z $cid ]]; then
+        echo "failed to get container id"
+        return 1
+    fi
+
+    docker attach $cid || failed=1
+
+    get_container_exit_code $cid || true
+    [ $? == 0 ] || failed=1
+}
+
+get_container_id() {
+    echo "$(docker ps --filter label=com.docker.compose.service=$1 -q)"
+}
+
+get_container_exit_code() {
+    docker inspect --format '{{.State.ExitCode}}' $1
 }
 
 cleanup(){
@@ -90,6 +109,13 @@ cleanup(){
 parse_args "$@"
 build_backend_tests_runner
 run_tests
+
+if [ -n "$failed" ]; then
+    tmppath=$(mktemp /tmp/acceptance.XXXXXX)
+    echo "-- tests failed, dumping logs to $tmppath"
+    $COMPOSE_CMD logs > $tmppath
+fi
+
 cleanup
 
 exit $failed

@@ -47,7 +47,7 @@ setuphosts() {
 }
 
 rundocker() {
-    # sudo -E docker-compose scale mender-client=3
+    # sudo -E ./demo scale mender-client=3  # NB! Typically run this just once, will add 3 clients each time
     sudo -E ./demo up
 }
 

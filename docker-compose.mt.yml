@@ -1,0 +1,29 @@
+version: '2'
+services:
+
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
+
+    mender-useradm:
+        environment:
+            USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
+
+    mender-api-gateway:
+        environment:
+            HAVE_MULTITENANT: 1
+
+    mender-gui:
+        environment:
+            HAVE_MULTITENANT: 1
+
+    mender-email-sender:
+        environment:
+            DEMO: "true"
+
+    mender-tenantadm:
+        environment:
+            TENANTADM_CONDUCTOR_ADDR: http://mender-conductor:8080
+
+networks:
+    mender:

@@ -1548,15 +1548,15 @@ def do_integration_versions_including(args):
         print(match)
 
 def figure_out_checked_out_revision(state, repo_git):
-    """Finds out what is currently checked out, and returns a pair. The first
-    element is the name of what is checked out, the second is either "branch"
-    or "tag", referring to what is currently checked out. If neither a tag nor
-    branch is checked out, returns None."""
+    """Finds out what is currently checked out, and returns a list of pairs. The
+    first element is the name of what is checked out, the second is either
+    "branch" or "tag", referring to what is currently checked out. If neither a
+    tag nor branch is checked out, returns None."""
 
     try:
         ref = execute_git(None, repo_git, ["symbolic-ref", "--short", "HEAD"], capture=True, capture_stderr=True)
         # If the above didn't produce an exception, then we are on a branch.
-        return (ref, "branch")
+        return [(ref, "branch")]
     except subprocess.CalledProcessError:
         # Not a branch, fall through to below.
         pass
@@ -1578,19 +1578,18 @@ def figure_out_checked_out_revision(state, repo_git):
                 raise Exception("%s: SHA %s from %s does not match checked out SHA %s. This should not happen!"
                                 % (repo_git, ref_sha, ref, checked_out_sha))
 
-            return (ref, "branch")
+            return [(ref, "branch")]
         except subprocess.CalledProcessError:
             # Not a branch. Then fall through to part below.
             pass
 
     # Not a branch checked out as a SHA either. Try tag then.
-    try:
-        ref = execute_git(None, repo_git, ["describe", "--exact", "HEAD"], capture=True, capture_stderr=True)
-    except subprocess.CalledProcessError:
+    refs = execute_git(None, repo_git, ["tag", "--points-at", "HEAD"], capture=True).split()
+    if len(refs) == 0:
         # We are not on a tag either.
         return None
 
-    return (ref, "tag")
+    return [(ref, "tag") for ref in refs]
 
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
@@ -1619,14 +1618,12 @@ def do_verify_integration_references(args, optional_too):
                   % (repo.git, ", ".join(tried)))
             sys.exit(2)
 
-        rev = figure_out_checked_out_revision(None, path)
-        if rev is None:
+        revs = figure_out_checked_out_revision(None, path)
+        if revs is None:
             # Unrecognized checkout. Skip the check then.
             continue
 
-        ref, reftype = rev
-
-        if reftype == "branch" and not re.match(r"^([1-9][0-9]*\.[0-9]+\.([0-9]+|x)|master)$", ref):
+        if all([reftype == "branch" and not re.match(r"^([1-9][0-9]*\.[0-9]+\.([0-9]+|x)|master)$", ref) for ref, reftype in revs]):
             # Skip the check if the branch doesn't have a well known name,
             # either a version (with or without beta and build appendix) or
             # "master". If it does not have a well known name, then most likely
@@ -1636,9 +1633,13 @@ def do_verify_integration_references(args, optional_too):
 
         version = data[repo.docker]['version']
 
-        if ref != version:
-            print("%s: Checked out Git ref '%s' does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
-                  % (repo.git, ref, version, repo.docker))
+        if version not in [ref for ref, reftype in revs]:
+            if len(revs) > 1:
+                checked_out = "(one of '%s')" % "', '".join([ref for ref, reftype in revs])
+            else:
+                checked_out = "'%s'" % revs[0][0]
+            print("%s: Checked out Git ref %s does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
+                  % (repo.git, checked_out, version, repo.docker))
             problem = True
 
     if problem:

@@ -357,11 +357,26 @@ def do_list_repos(args, optional_too):
     for repo in sorted(repos, key=repo_sort_key):
         eval("print(repo.%s)" % args.list)
 
+def version_sort_key(version):
+    """Returns a key used to compare versions."""
+
+    components = version.split(".")
+    assert len(components) == 3, "Invalid version passed to version_sort_key"
+    major, minor = [int(components[0]), int(components[1])]
+    patch_and_beta = components[2].split("b")
+    assert len(patch_and_beta) in [1, 2], "Invalid patch/beta component"
+    patch = int(patch_and_beta[0])
+    if len(patch_and_beta) == 2:
+        beta = int(patch_and_beta[1])
+    else:
+        # Just for comparison purposes: rate high.
+        beta = 99
+    return "%02d%02d%02d%02d" % (major, minor, patch, beta)
+
 def sorted_final_version_list(git_dir):
     """Returns a sorted list of all final version tags."""
 
     tags = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
-                                       "--sort=-version:refname",
                                        # Two digits for each component ought to be enough...
                                        "refs/tags/[0-9].[0-9].[0-9]",
                                        "refs/tags/[0-9].[0-9].[0-9][0-9]",
@@ -370,9 +385,17 @@ def sorted_final_version_list(git_dir):
                                        "refs/tags/[0-9][0-9].[0-9].[0-9]",
                                        "refs/tags/[0-9][0-9].[0-9].[0-9][0-9]",
                                        "refs/tags/[0-9][0-9].[0-9][0-9].[0-9]",
-                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9][0-9]"],
+                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9][0-9]",
+                                       "refs/tags/[0-9].[0-9].[0-9]b[0-9]",
+                                       "refs/tags/[0-9].[0-9].[0-9][0-9]b[0-9]",
+                                       "refs/tags/[0-9].[0-9][0-9].[0-9]b[0-9]",
+                                       "refs/tags/[0-9].[0-9][0-9].[0-9][0-9]b[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9].[0-9]b[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9].[0-9][0-9]b[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9]b[0-9]",
+                                       "refs/tags/[0-9][0-9].[0-9][0-9].[0-9][0-9]b[0-9]"],
                        capture=True)
-    return tags.split()
+    return sorted(tags.split(), key=version_sort_key, reverse=True)
 
 def state_value(state, key_list):
     """Gets a value from the state variable stored in the RELEASE_TOOL_STATE yaml

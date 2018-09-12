@@ -23,7 +23,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor-enterprise:1.1.x
+        image: mendersoftware/mender-conductor-enterprise:1.1.0
 
     mender-org-welcome-email-preparer:
         image: mendersoftware/org-welcome-email-preparer:master

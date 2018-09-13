@@ -23,6 +23,7 @@ import api.deviceadm as deviceadm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
 from infra.cli import CliTenantadm, CliUseradm
+from util.crypto import compare_keys
 
 class Tenant:
     def __init__(self, name):
@@ -120,7 +121,7 @@ def tenants_users_devices(tenants_users, mongo):
             assert r.status_code == 200
 
             api_devs = r.json()
-            api_dev = [x for x in api_devs if x['key'] == d.pubkey][0]
+            api_dev = [x for x in api_devs if compare_keys(x['key'], d.pubkey)][0]
             d.authset_id = api_dev['id']
 
             t.devices.append(d)

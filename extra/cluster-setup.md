@@ -179,7 +179,6 @@ user@localhost# docker-compose up -d
 Creating network "integration_mender" with the default driver
 Creating integration_minio_1
 Creating integration_mender-mongo-inventory_1
-Creating integration_mender-mongo-device-adm_1
 Creating integration_mender-mongo-useradm_1
 Creating integration_mender-mongo-device-auth_1
 Creating integration_mender-client_1
@@ -187,7 +186,6 @@ Creating integration_mender-mongo-deployments_1
 Creating integration_mender-gui_1
 Creating integration_mender-etcd_1
 Creating integration_mender-inventory_1
-Creating integration_mender-device-adm_1
 Creating integration_mender-useradm_1
 Creating integration_mender-device-auth_1
 Creating integration_mender-deployments_1
@@ -207,7 +205,6 @@ CONTAINER ID        IMAGE                                      COMMAND          
 d930d6675162        mendersoftware/deployments:latest          "/usr/bin/deployments"   26 seconds ago      Up 7 seconds                                 integration_mender-deployments_1
 64ba78a3651e        mendersoftware/deviceauth:latest           "/usr/bin/deviceauth "   28 seconds ago      Up 7 seconds                                 integration_mender-device-auth_1
 452a0d063646        mendersoftware/useradm:latest              "/usr/bin/useradm -co"   35 seconds ago      Up 9 seconds                                 integration_mender-useradm_1
-66cd0b2627e3        mendersoftware/deviceadm:latest            "/usr/bin/deviceadm -"   36 seconds ago      Up 13 seconds                                integration_mender-device-adm_1
 91fea707e5a5        mendersoftware/inventory:latest            "/usr/bin/inventory -"   39 seconds ago      Up 15 seconds                                integration_mender-inventory_1
 49ea9afc78b4        microbox/etcd:latest                       "/bin/etcd -data-dir="   51 seconds ago      Up 16 seconds       4001/tcp, 7001/tcp       integration_mender-etcd_1
 6f435208ea54        mendersoftware/mender-client-qemu:latest   "./entrypoint.sh"        51 seconds ago      Up 23 seconds       8822/tcp                 integration_mender-client_1
@@ -215,7 +212,6 @@ d930d6675162        mendersoftware/deployments:latest          "/usr/bin/deploym
 1cb5465256c3        mongo:latest                               "/entrypoint.sh mongo"   51 seconds ago      Up 28 seconds       27017/tcp                integration_mender-mongo-deployments_1
 4c4a0dc6ce5c        mongo:latest                               "/entrypoint.sh mongo"   51 seconds ago      Up 32 seconds       27017/tcp                integration_mender-mongo-device-auth_1
 ed2af2f6653a        mongo:latest                               "/entrypoint.sh mongo"   51 seconds ago      Up 37 seconds       27017/tcp                integration_mender-mongo-useradm_1
-01883e627535        mongo:latest                               "/entrypoint.sh mongo"   51 seconds ago      Up 40 seconds       27017/tcp                integration_mender-mongo-device-adm_1
 b944374f62e0        mongo:latest                               "/entrypoint.sh mongo"   51 seconds ago      Up 41 seconds       27017/tcp                integration_mender-mongo-inventory_1
 21c9034a85e5        minio/minio:RELEASE.2016-10-07T01-16-39Z   "minio server /export"   51 seconds ago      Up 46 seconds       0.0.0.0:9000->9000/tcp   integration_minio_1
 ```
@@ -345,29 +341,6 @@ docker service create --with-registry-auth \
 mongo:latest
 ```
 
-* Device Admission service
-
-```
-docker service create --with-registry-auth \
- --name mender-device-adm \
- --restart-max-attempts 2 \
- --network cluster-mender \
- --replicas 1 \
- mendersoftware/deviceadm:latest
-```
-
-**NOTE**: device admission expects its mongo instance to be named
-`mongo-device-adm`.
-
-```
-docker service create --with-registry-auth \
- --name mongo-device-adm \
- --network cluster-mender \
- --restart-max-attempts 2 \
- --replicas 1 \
-mongo:latest
-```
-
 * Deployments service
 
 **NOTE**: we're directing deployments service to use `minio` instead of
@@ -431,9 +404,7 @@ ID            NAME                      REPLICAS  IMAGE                         
 2cwticyra10r  minio                     1/1       minio/minio:RELEASE.2016-10-07T01-16-39Z  
 3runedol5f16  mender-device-auth        1/1       mendersoftware/deviceauth:latest          
 4anhz8jcmdfi  mender-inventory          1/1       mendersoftware/inventory:latest           
-4r6biar5zzb3  mender-device-adm         1/1       mendersoftware/deviceadm:latest           
 4ugq2wpg9nnn  mender-mongo-inventory    1/1       mongo:latest                              
-5xkm42z8ms49  mongo-device-adm          1/1       mongo:latest                              
 7z1bpw95r02d  mender-deployments        1/1       mendersoftware/deployments:latest         
 8vamv85n4dcd  mender-gui                1/1       mendersoftware/gui:latest                 
 bp69jjb3itrh  mongo-deployments         1/1       mongo:latest
@@ -445,7 +416,6 @@ List containers running on respective nodes bu calling `docker node ps <node>`:
 user@localhost# docker node ps comp-006-thk                                                                               <<< 1 ↵
 ID                         NAME                    IMAGE                            NODE          DESIRED STATE  CURRENT STATE        ERROR
 7xwt7dd5dcgbglgobqyqh209k  mender-gui.1            mendersoftware/gui:latest        comp-006-thk  Running        Running 2 hours ago  
-b9kb8pxjzozchxdaaszvzkh0b  mender-device-adm.1     mendersoftware/deviceadm:latest  comp-006-thk  Running        Running 2 hours ago  
 2czeuorsbqbxjfzygtt9m59tv  mender-inventory.1      mendersoftware/inventory:latest  comp-006-thk  Running        Running 2 hours ago  
 5ii0b0c7laro4ohnm0oqap98i  mender-mongo-useradm.1  mongo:latest                     comp-006-thk  Running        Running 2 hours ago  
 user@localhost# docker node ps node0       
@@ -461,7 +431,6 @@ ID                         NAME                      IMAGE                      
 8p0gg5z3mgk4vbw3s5taw0yga  mender-api-gateway.1      mendersoftware/api-gateway:latest         node1  Shutdown       Failed 2 hours ago     "task: non-zero exit (1)"
 2hqa7iykxaagtamtofk01moi0   \_ mender-api-gateway.1  mendersoftware/api-gateway:latest         node1  Shutdown       Failed 2 hours ago     "task: non-zero exit (1)"
 3jhqfyb5vyqv67q0ngzz1xupa   \_ mender-api-gateway.1  mendersoftware/api-gateway:latest         node1  Shutdown       Failed 2 hours ago     "task: non-zero exit (1)"
-655d3jdbd8kx9ie4u37auhvgk  mongo-device-adm.1        mongo:latest                              node1  Running        Running 2 hours ago    
 7aco7k9buhgl06ewhdl7p8zhv  mender-mongo-inventory.1  mongo:latest                              node1  Running        Running 2 hours ago    
 67lb0nf2bsk4q9bkhjo8u22pb  minio.1                   minio/minio:RELEASE.2016-10-07T01-16-39Z  node1  Running        Running 2 hours ago 
 ```
@@ -488,24 +457,24 @@ Outstanding docker issues:
 
 #### Scaling
 
-Suppose we want to scale `mender-device-adm` service and have 2 instances
+Suppose we want to scale `mender-device-auth` service and have 2 instances
 instead of one. This can be achieved by running:
 
 ```
-user@localhost# docker service scale mender-device-adm=2
-mender-device-adm scaled to 2
+user@localhost# docker service scale mender-device-auth=2
+mender-device-auth scaled to 2
 ```
 
 This should be visible in `docker service ps` output:
 
 ```
-user@localhost: docker service ps mender-device-adm
+user@localhost: docker service ps mender-device-auth
 ID                         NAME                 IMAGE                            NODE          DESIRED STATE  CURRENT STATE          ERROR
-b9kb8pxjzozchxdaaszvzkh0b  mender-device-adm.1  mendersoftware/deviceadm:latest  localhost     Running        Running 2 hours ago
-4f9pjmkgs03fgomxe5z911a4u  mender-device-adm.2  mendersoftware/deviceadm:latest  node1         Running        Running 6 minutes ago
+b9kb8pxjzozchxdaaszvzkh0b  mender-device-auth.1  mendersoftware/deviceauth:latest  localhost     Running        Running 2 hours ago
+4f9pjmkgs03fgomxe5z911a4u  mender-device-auth.2  mendersoftware/deviceauth:latest  node1         Running        Running 6 minutes ago
 ```
 
-Second instance of `mender-device-adm` was scheduled to run on `localhost` node.
+Second instance of `mender-device-auth` was scheduled to run on `localhost` node.
 
 
 #### Troubleshooting
@@ -593,8 +562,6 @@ WARN[0000] [mender-device-auth] Service cannot be created because of missing por
 WARN[0000] [mender-gui] Service cannot be created because of missing port.
 WARN[0000] [mender-deployments] Service cannot be created because of missing port.
 WARN[0000] [mender-mongo-deployments] Service cannot be created because of missing port.
-WARN[0000] [mender-mongo-device-adm] Service cannot be created because of missing port.
-WARN[0000] [mender-device-adm] Service cannot be created because of missing port.
 WARN[0000] [mender-mongo-inventory] Service cannot be created because of missing port.
 WARN[0000] [mender-mongo-useradm] Service cannot be created because of missing port.
 WARN[0000] [mender-mongo-device-auth] Service cannot be created because of missing port.
@@ -610,8 +577,6 @@ INFO[0000] file "minio-deployment.yaml" created
 INFO[0000] file "mender-api-gateway-deployment.yaml" created
 INFO[0000] file "mender-deployments-deployment.yaml" created
 INFO[0000] file "mender-mongo-deployments-deployment.yaml" created
-INFO[0000] file "mender-mongo-device-adm-deployment.yaml" created
-INFO[0000] file "mender-device-adm-deployment.yaml" created
 INFO[0000] file "mender-mongo-inventory-deployment.yaml" created
 INFO[0000] file "mender-mongo-useradm-deployment.yaml" created
 INFO[0000] file "mender-mongo-device-auth-deployment.yaml" created
@@ -622,13 +587,11 @@ mender-api-gateway-deployment.yaml
 mender-api-gateway-service.yaml
 mender-client-deployment.yaml
 mender-deployments-deployment.yaml
-mender-device-adm-deployment.yaml
 mender-device-auth-deployment.yaml
 mender-etcd-deployment.yaml
 mender-gui-deployment.yaml
 mender-inventory-deployment.yaml
 mender-mongo-deployments-deployment.yaml
-mender-mongo-device-adm-deployment.yaml
 mender-mongo-device-auth-deployment.yaml
 mender-mongo-inventory-deployment.yaml
 mender-mongo-useradm-deployment.yaml
@@ -676,7 +639,7 @@ spec:
 Then run the following command:
 
 ```
-for service in mender-deployments mender-inventory mender-device-auth mender-device-adm mender-useradm; do \
+for service in mender-deployments mender-inventory mender-device-auth mender-useradm; do \
     SERVICE=$service PORT=8080 envsubst < templates/service.template.yml > $service-service.yaml; \
 done
 ```
@@ -691,7 +654,7 @@ Similarly, Mender services need to locate their database instances. We need to
 generate `Service` definitions for mongo:
 
 ```
-for service in mongo-deployments mongo-mender-inventory mongo-mender-device-auth mongo-device-adm mongo-mender-useradm; do \
+for service in mongo-deployments mongo-mender-inventory mongo-mender-device-auth mongo-mender-useradm; do \
     SERVICE=$service PORT=27017 envsubst < templates/service.template.yml > $service-service.yaml; \
 done
 ```
@@ -725,14 +688,12 @@ NAME                       CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
 kubernetes                 10.0.0.1     <none>        443/TCP     19m
 mender-api-gateway         10.0.0.171   <nodes>       8080/TCP    12m
 mender-deployments         10.0.0.110   <none>        8080/TCP    12m
-mender-device-adm          10.0.0.111   <none>        8080/TCP    12m
 mender-device-auth         10.0.0.46    <none>        8080/TCP    12m
 mender-gui                 10.0.0.74    <none>        80/TCP      12m
 mender-inventory           10.0.0.226   <none>        8080/TCP    12m
 mender-useradm             10.0.0.77    <none>        8080/TCP    12m
 minio                      10.0.0.161   <none>        9000/TCP    12m
 mongo-deployments          10.0.0.251   <none>        27017/TCP   12m
-mongo-device-adm           10.0.0.44    <none>        27017/TCP   12m
 mongo-mender-device-auth   10.0.0.16    <none>        27017/TCP   12m
 mongo-mender-inventory     10.0.0.248   <none>        27017/TCP   12m
 mongo-mender-useradm       10.0.0.120   <none>        27017/TCP   12m
@@ -747,13 +708,11 @@ user@localhost# for f in  mender*-deployment.yaml; do kubectl create -f $f; done
 deployment "mender-api-gateway" created
 deployment "mender-client" created
 deployment "mender-deployments" created
-deployment "mender-device-adm" created
 deployment "mender-device-auth" created
 deployment "mender-etcd" created
 deployment "mender-gui" created
 deployment "mender-inventory" created
 deployment "mender-mongo-deployments" created
-deployment "mender-mongo-device-adm" created
 deployment "mender-mongo-device-auth" created
 deployment "mender-mongo-inventory" created
 deployment "mender-mongo-useradm" created
@@ -769,13 +728,11 @@ NAME                       DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 mender-api-gateway         1         1         1            1           10m
 mender-client              1         1         1            1           10m
 mender-deployments         1         1         1            1           10m
-mender-device-adm          1         1         1            1           10m
 mender-device-auth         1         1         1            1           10m
 mender-etcd                1         1         1            1           10m
 mender-gui                 1         1         1            1           10m
 mender-inventory           1         1         1            1           10m
 mender-mongo-deployments   1         1         1            1           10m
-mender-mongo-device-adm    1         1         1            1           10m
 mender-mongo-device-auth   1         1         1            1           10m
 mender-mongo-inventory     1         1         1            1           10m
 mender-mongo-useradm       1         1         1            1           10m
@@ -791,13 +748,11 @@ NAME                                        READY     STATUS    RESTARTS   AGE
 mender-api-gateway-1307175598-33pcj         1/1       Running   0          10m
 mender-client-753708454-13jlq               1/1       Running   0          10m
 mender-deployments-3147238546-7hc3o         1/1       Running   3          10m
-mender-device-adm-1517661404-vkk36          1/1       Running   1          10m
 mender-device-auth-1830858332-4y4r3         1/1       Running   0          10m
 mender-etcd-2806034080-bx2zp                1/1       Running   0          10m
 mender-gui-1131980139-oyz5m                 1/1       Running   0          10m
 mender-inventory-1458285926-yjpvd           1/1       Running   0          10m
 mender-mongo-deployments-2272570281-u9k0y   1/1       Running   0          10m
-mender-mongo-device-adm-3231427039-ufvn0    1/1       Running   0          10m
 mender-mongo-device-auth-2107026143-2m173   1/1       Running   0          10m
 mender-mongo-inventory-1573235229-eiwsl     1/1       Running   0          10m
 mender-mongo-useradm-156543011-1m1hr        1/1       Running   0          10m
@@ -814,14 +769,12 @@ NAME                       ENDPOINTS             AGE
 kubernetes                 192.168.122.42:8443   25m
 mender-api-gateway         172.17.0.4:443        18m
 mender-deployments         172.17.0.6:8080       18m
-mender-device-adm          172.17.0.7:8080       18m
 mender-device-auth         172.17.0.8:8080       18m
 mender-gui                 172.17.0.10:80        18m
 mender-inventory           172.17.0.11:8080      18m
 mender-useradm             172.17.0.17:8080      18m
 minio                      172.17.0.18:9000      18m
 mongo-deployments          172.17.0.12:27017     18m
-mongo-device-adm           172.17.0.13:27017     18m
 mongo-mender-device-auth   172.17.0.14:27017     18m
 mongo-mender-inventory     172.17.0.16:27017     18m
 mongo-mender-useradm       172.17.0.15:27017     18m
@@ -871,8 +824,6 @@ All deployment and service definitions are found in `kubernetes` directory.
 - deployments service DB name is `mongo-deployments`, other services use
   `mender-mongo-<service-name>` pattern - needs verification
   
-- device admission serice DB name is `mongo-device-adm` (same issue as above)
-
 - API gateway fails to start if some service names cannot be resolved (though it
   continues to work if services go away after it has started) - explore using
   `upstream` config in `nginx.conf`
@@ -892,6 +843,6 @@ All deployment and service definitions are found in `kubernetes` directory.
   service may be exposed on a different port
 
 - services `mender-deployments`, `mender-useradm`, `mender-device-auth`,
-  `mender-device-adm`, `mender-inventory` make use of `iron/base`, that in
+  `mender-inventory` make use of `iron/base`, that in
   turned is based on Alpine Linux 3.3, this version is known to cause issues
   with Kubernets DNS name resolution

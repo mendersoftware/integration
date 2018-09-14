@@ -11,9 +11,6 @@ services:
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
 
-    mender-device-adm:
-        command: server --automigrate
-
     mender-inventory:
         command: server --automigrate
 

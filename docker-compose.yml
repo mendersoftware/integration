@@ -41,7 +41,6 @@ services:
         # these servers and exits with 'upstream server not found'
         depends_on:
             - mender-device-auth
-            - mender-device-adm
             - mender-deployments
             - mender-gui
             - mender-useradm
@@ -52,19 +51,6 @@ services:
     #
     mender-device-auth:
         image: mendersoftware/deviceauth:master
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-
-    #
-    # mender-device-adm
-    #
-    mender-device-adm:
-        image: mendersoftware/deviceadm:master
         extends:
             file: common.yml
             service: mender-base
@@ -108,7 +94,6 @@ services:
             mender:
                 aliases:
                     - mongo-deployments
-                    - mongo-device-adm
                     - mongo-device-auth
                     - mongo-inventory
                     - mongo-useradm

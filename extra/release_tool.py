@@ -701,11 +701,9 @@ def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
-    match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", version)
     (version_major, version_minor, version_patch, version_beta) = version_components(version)
 
     for tag in tag_list:
-        match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)", tag)
         (tag_major, tag_minor, tag_patch, tag_beta) = version_components(tag)
 
         if tag_major < version_major:
@@ -808,7 +806,6 @@ def generate_new_tags(state, tag_avail, final):
     # Create temporary directory to make changes in.
     tmpdir = setup_temp_git_checkout(state, "integration", state['integration']['following'])
     try:
-        data = get_docker_compose_data(tmpdir)
         prev_version = find_prev_version(sorted_final_version_list(tmpdir),
                                          next_tag_avail['integration']['build_tag'])
 

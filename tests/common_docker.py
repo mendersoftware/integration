@@ -103,7 +103,7 @@ def stop_docker_compose():
 
 def start_docker_compose(clients=1):
     docker_compose_cmd("up -d")
-    
+
     if clients > 1:
         docker_compose_cmd("scale mender-client=%d" % clients)
 
@@ -130,7 +130,8 @@ def docker_get_ip_of(service):
 
     output = subprocess.check_output(cmd + \
                                      "| xargs -r " \
-                                     "docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'",
+                                     "docker inspect --format='{{.NetworkSettings.Networks.%s_mender.IPAddress}}'" % \
+                                     conftest.docker_compose_instance,
                                      shell=True)
 
     # Return as list.
@@ -160,8 +161,8 @@ def get_mender_client_by_container_name(image_name):
     output = subprocess.check_output(cmd, shell=True)
     return output.strip() + ":8822"
 
-def get_mender_gateway():
-    gateway = docker_get_ip_of("mender-api-gateway")
+def get_mender_gateway(service="mender-api-gateway"):
+    gateway = docker_get_ip_of(service)
 
     if len(gateway) != 1:
         raise SystemExit("expected one instance of api-gateway running, but found: %d instance(s)" % len(gateway))

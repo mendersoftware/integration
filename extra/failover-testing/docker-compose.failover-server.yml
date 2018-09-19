@@ -1,0 +1,221 @@
+version: '2'
+services:
+
+    #
+    # mender-deployments
+    #
+    mender-deployments-2:
+        image: mendersoftware/deployments:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        depends_on:
+            - mender-mongo-2
+        command: server --automigrate
+        volumes:
+            - ./certs/storage-proxy/cert.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+        environment:
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
+            DEPLOYMENTS_AWS_AUTH_KEY: minio
+            DEPLOYMENTS_AWS_AUTH_SECRET: minio123
+            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000
+
+    #
+    # mender-gui
+    #
+    mender-gui-2:
+        image: mendersoftware/gui:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        environment:
+            - INTEGRATION_VERSION
+        environment:
+            # enable demo mode for UI
+            DEMO: "true"
+
+    #
+    # mender-api-gateway
+    #
+    mender-api-gateway-2:
+        # TODO: maybe there's a clenaer way of doing this?
+        build:
+            # paths are relative to parent docker-compose.yml file
+            context: extra/failover-testing/
+            dockerfile: ./build_api-gateway/Dockerfile
+        image: custom-mender-api-gateway
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        # critical - otherwise nginx may not detect
+        # these servers and exits with 'upstream server not found'
+        depends_on:
+            - mender-device-auth-2
+            - mender-device-adm-2
+            - mender-deployments-2
+            - mender-gui-2
+            - mender-useradm-2
+            - mender-inventory-2
+        networks:
+            mender-failover:
+                aliases:
+                    - docker.mender-failover.io
+        volumes:
+            - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
+            - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
+        environment:
+            ALLOWED_HOSTS: ~.
+
+    #
+    # mender-device-auth
+    #
+    mender-device-auth-2:
+        image: mendersoftware/deviceauth:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        depends_on:
+            - mender-mongo-2
+        command: server --automigrate
+        volumes:
+            - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+
+    #
+    # mender-device-adm
+    #
+    mender-device-adm-2:
+        image: mendersoftware/deviceadm:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        depends_on:
+            - mender-mongo-2
+        command: server --automigrate
+
+    #
+    # mender-inventory
+    #
+    mender-inventory-2:
+        image: mendersoftware/inventory:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        depends_on:
+            - mender-mongo-2
+        command: server --automigrate
+
+    #
+    # mender-useradm
+    #
+    mender-useradm-2:
+        image: mendersoftware/useradm:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        depends_on:
+            - mender-mongo-2
+        command: server --automigrate
+        volumes:
+            - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
+
+    mender-mongo-2:
+        image: mongo:3.4
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            mender-failover:
+                aliases:
+                    - mongo-deployments
+                    - mongo-device-adm
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
+
+    mender-conductor-2:
+        image: mendersoftware/mender-conductor:master
+        depends_on:
+            - mender-elasticsearch-2
+            - mender-redis-2
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        volumes:
+            - ./conductor/server/config:/app/config
+        environment:
+            - CONFIG_PROP=config.properties
+
+    mender-elasticsearch-2:
+        image: mendersoftware/elasticsearch:2.4
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+
+    mender-redis-2:
+        image: redis:3.2.11-alpine
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender-failover
+        volumes:
+            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
+            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
+            - /var/lib/redis
+        entrypoint: /redis/entrypoint.sh
+
+    
+
+    # Add client to failover network as well
+    mender-client:
+        networks:
+            - mender-failover
+
+    # Start a new minio and storage backend service on failover network
+    minio-2:
+        image: mendersoftware/minio:RELEASE.2016-12-13T17-19-42Z
+        networks:
+            mender-failover:
+                aliases:
+                    - minio.s3.docker.mender.io
+        command: server /export
+        environment:
+            MINIO_ACCESS_KEY: minio
+            MINIO_SECRET_KEY: minio123
+
+    storage-proxy-2:
+        image: mendersoftware/openresty:1.11.2.2-alpine
+
+        networks:
+            mender-failover:
+                aliases:
+                    - s3.docker.mender.io
+        depends_on:
+            - minio-2
+        volumes:
+            - ./extra/failover-testing/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+            - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
+            - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
+        environment:
+            MAX_CONNECTIONS: 100
+
+networks:
+    mender-failover:

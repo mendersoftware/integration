@@ -133,6 +133,30 @@ def standard_setup_with_short_lived_token():
     set_setup_type(ST_ShortLivedAuthToken)
 
 @pytest.fixture(scope="function")
+def setup_failover():
+    """
+    Setup with two servers and one client.
+    First server (A) behaves as usual, whereas the second server (B) should
+    not expect any clients. Client is initially set up against server A.
+    In docker all microservices for B has a suffix "-2"
+    """
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
+                        -f ../docker-compose.client-privileged.yml \
+                        -f ../docker-compose.storage.minio.yml  \
+                        -f ../docker-compose.testing.yml \
+                        -f ../extra/failover-testing/docker-compose.failover-server.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+    auth.reset_auth_token()
+    adm.accept_devices(1)
+    set_setup_type(ST_Failover)
+
+@pytest.fixture(scope="function")
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 

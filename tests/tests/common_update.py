@@ -32,6 +32,7 @@ def common_update_procedure(install_image,
                             signed=False,
                             devices=None,
                             scripts=[],
+                            pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None):
 
@@ -49,6 +50,7 @@ def common_update_procedure(install_image,
             created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed, scripts=scripts)
 
             if created_artifact:
+                pre_upload_callback()
                 deploy.upload_image(created_artifact)
                 if devices is None:
                     devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
@@ -72,6 +74,7 @@ def update_image_successful(install_image,
                             signed=False,
                             skip_reboot_verification=False,
                             expected_mender_clients=1,
+                            pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None):
     """

@@ -915,7 +915,7 @@ def trigger_jenkins_build(state, tag_avail):
                 params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
 
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-32s %-20s"
+        fmt_str = "%-50s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))

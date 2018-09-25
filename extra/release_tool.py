@@ -37,7 +37,7 @@ JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations
 
 # This is used to override the defaults that Jenkins provides for the meta
 # layers.
-DEFAULT_META_LAYER_BRANCH = "sumo"
+DEFAULT_META_LAYER_BRANCH = "master"
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"

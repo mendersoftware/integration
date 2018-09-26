@@ -35,6 +35,10 @@ JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations
 - JENKINS_USER / JENKINS_PASSWORD environment variables
 - 'pass' password management storage."""
 
+# This is used to override the defaults that Jenkins provides for the meta
+# layers.
+DEFAULT_META_LAYER_BRANCH = "master"
+
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
 
@@ -116,36 +120,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
 }
 
-# These will be saved along with the state if they are changed.
-EXTRA_BUILDPARAMS = {
-    "BUILD_BEAGLEBONEBLACK": "on",
-    "BUILD_QEMUX86_64_BIOS_GRUB": "on",
-    "BUILD_QEMUX86_64_UEFI_GRUB": "on",
-    "BUILD_RASPBERRYPI3": "on",
-    "BUILD_VEXPRESS_QEMU": "on",
-    "BUILD_VEXPRESS_QEMU_FLASH": "on",
-    "BUILD_VEXPRESS_QEMU_UBOOT_UEFI_GRUB": "on",
-    "CLEAN_BUILD_CACHE": "",
-    "DEVICEADM_REV": "master",
-    "MENDER_QA_REV": "master",
-    "MENDER_STRESS_TEST_CLIENT_REV": "master",
-    "META_MENDER_REV": "sumo",
-    "META_OPENEMBEDDED_REV": "sumo",
-    "META_RASPBERRYPI_REV": "sumo",
-    "POKY_REV": "sumo",
-    "PUBLISH_ARTIFACTS": "",
-    "RUN_INTEGRATION_TESTS": "on",
-    "STOP_SLAVE": "",
-    "TENANTADM_REV": "master",
-    "TEST_BEAGLEBONEBLACK": "",
-    "TEST_QEMUX86_64_BIOS_GRUB": "on",
-    "TEST_QEMUX86_64_UEFI_GRUB": "on",
-    "TEST_RASPBERRYPI3": "",
-    "TEST_VEXPRESS_QEMU": "on",
-    "TEST_VEXPRESS_QEMU_FLASH": "on",
-    "TEST_VEXPRESS_QEMU_UBOOT_UEFI_GRUB": "on",
-    "TESTS_IN_PARALLEL": "6",
-}
+EXTRA_BUILDPARAMS_CACHE = None
 
 def init_jenkins_creds():
     global JENKINS_USER
@@ -882,6 +857,59 @@ def generate_new_tags(state, tag_avail, final):
 
     return next_tag_avail
 
+def get_extra_buildparams_from_jenkins():
+    global EXTRA_BUILDPARAMS_CACHE
+    if EXTRA_BUILDPARAMS_CACHE is not None:
+        return EXTRA_BUILDPARAMS_CACHE
+
+    try:
+        import requests
+    except ImportError:
+        print("requests module missing, try running 'sudo pip3 install requests'.")
+        sys.exit(2)
+
+    init_jenkins_creds()
+    if not JENKINS_USER or not JENKINS_PASSWORD:
+        logging.warn(JENKINS_CREDS_MISSING_ERR)
+
+    # Fetch list of parameters from Jenkins.
+    reply = requests.get("%s/%s/api/json" % (JENKINS_SERVER, JENKINS_JOB),
+                         auth=(JENKINS_USER, JENKINS_PASSWORD), verify=False)
+    jobInfo = json.loads(reply.content.decode())
+    parameters = [prop["parameterDefinitions"] for prop in jobInfo["property"] if prop["_class"] == "hudson.model.ParametersDefinitionProperty"]
+    assert len(parameters) == 1, "Was expecting one hudson.model.ParametersDefinitionProperty, got %d" % len(parameters)
+    parameters = parameters[0]
+
+    def jenkinsParamToDefaultMap(param):
+        if param.get("defaultParameterValue") is None:
+            return (param["name"], "")
+        if param["type"] == "BooleanParameterDefinition":
+            return (param["name"], "on" if param["defaultParameterValue"]["value"] else "")
+        elif param["type"] == "StringParameterDefinition":
+            return (param["name"], param["defaultParameterValue"]["value"])
+        else:
+            raise Exception("Parameter has unknown type %s. Don't know how to handle that!" % param["type"])
+
+    # Add all fetched parameters that are not part of our versioned repositories
+    # as extra build parameters.
+    extra_buildparams = {}
+    in_versioned_repos = {}
+    for key in GIT_TO_BUILDPARAM_MAP.keys():
+        if REPOS.get(key) is not None:
+            in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
+
+    for key, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
+        # Skip keys that are in versioned repos.
+        if not in_versioned_repos.get(key):
+            if key == "POKY_REV" or (key.startswith("META_") and key.endswith("_REV")):
+                # Override default for meta layers.
+                extra_buildparams[key] = DEFAULT_META_LAYER_BRANCH
+            else:
+                extra_buildparams[key] = value
+
+    EXTRA_BUILDPARAMS_CACHE = extra_buildparams
+    return extra_buildparams
+
 def trigger_jenkins_build(state, tag_avail):
     try:
         import requests
@@ -893,9 +921,11 @@ def trigger_jenkins_build(state, tag_avail):
     if not JENKINS_USER or not JENKINS_PASSWORD:
         raise SystemExit(JENKINS_CREDS_MISSING_ERR)
 
-    for param in EXTRA_BUILDPARAMS.keys():
+    extra_buildparams = get_extra_buildparams_from_jenkins()
+
+    for param in extra_buildparams.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
-            update_state(state, ["extra_buildparams", param], EXTRA_BUILDPARAMS[param])
+            update_state(state, ["extra_buildparams", param], extra_buildparams[param])
 
     params = None
 
@@ -915,7 +945,7 @@ def trigger_jenkins_build(state, tag_avail):
                 params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
 
         print("--------------------------------------------------------------------------------")
-        fmt_str = "%-32s %-20s"
+        fmt_str = "%-50s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
@@ -954,7 +984,7 @@ def trigger_jenkins_build(state, tag_avail):
             continue
         params[name] = ask("Ok. New value? ")
 
-        if EXTRA_BUILDPARAMS.get(name) is not None:
+        if extra_buildparams.get(name) is not None:
             # Extra build parameters, that are not part of the build tags for
             # each repository, should be saved persistently in the state file so
             # that they can be repeated in subsequent builds.
@@ -1289,13 +1319,15 @@ def do_build(args):
         for repo in REPOS.values():
             tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
 
+    extra_buildparams = get_extra_buildparams_from_jenkins()
+
     for pr in args.pr or []:
         match = re.match("^([^/]+)/([0-9]+)$", pr)
         if match is None:
             raise Exception("%s is not a valid repo/pr pair!" % pr)
         repo = match.group(1)
         assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
-        if GIT_TO_BUILDPARAM_MAP[repo] in EXTRA_BUILDPARAMS:
+        if GIT_TO_BUILDPARAM_MAP[repo] in extra_buildparams:
             # For non-version repos
             update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], "pull/%s/head" % match.group(2))
         else:
@@ -1373,10 +1405,6 @@ def do_release():
 
     global RELEASE_TOOL_STATE
     RELEASE_TOOL_STATE = "release-state.yml"
-
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        logging.warn(JENKINS_CREDS_MISSING_ERR)
 
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:

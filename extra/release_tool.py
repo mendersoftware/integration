@@ -66,15 +66,14 @@ class RepoName:
         self.git = git
         self.has_container = has_container
 
-# All our repos, and also a map from docker-compose image name to all
+# All our repos, including repos that were part of our release before, and
+# aren't anymore. It's also a map from docker-compose image name to all
 # names. The key is container name, and thereafter the order is the order of the
 # RepoName constructor, just above.
 #
-# This is the main list of repos that will be used throughout the script. If you
-# add anything here, make sure to also update REPO_ALIASES (if there are
-# alternate names) and GIT_TO_BUILDPARAM_MAP (which tells the tool how to
-# trigger Jenkins jobs.
-REPOS = {
+# If you add anything here, make sure to also update GIT_TO_BUILDPARAM_MAP
+# (which tells the tool how to trigger Jenkins jobs.
+REPO_MAP = {
     "api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
     "mender-client-qemu": RepoName("mender-client", "mender-client-qemu", "mender", True),
     "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
@@ -92,6 +91,11 @@ REPOS = {
     "mender-cli": RepoName("mender-cli", "mender-cli", "mender-cli", False),
     "integration": RepoName("integration", "integration", "integration", False),
 }
+
+# This is the main list of repos that will be used throughout the script. This
+# will be filled by entries from REPO_MAP, depending on which ones are actually
+# available in the version we're querying.
+REPOS = None
 
 # These are optional repositories that aren't included when iterating over
 # repositories, but that are available for querying.
@@ -264,6 +268,22 @@ def get_docker_compose_data_for_rev(git_dir, rev):
         yamls.append(output)
 
     return get_docker_compose_data_from_json_list(yamls)
+
+def update_repo_list(in_version=None):
+    """Updates the REPOS map by starting with REPO_MAP, checking which repositories
+    are actually used in the given version, and then adding those to REPOS."""
+
+    git_dir = integration_dir()
+    if in_version:
+        data = get_docker_compose_data_for_rev(git_dir, in_version)
+    else:
+        data = get_docker_compose_data(git_dir)
+
+    global REPOS
+    REPOS = {}
+    for repo_docker in REPO_MAP.keys():
+        if repo_docker == "integration" or data.get(repo_docker) is not None:
+            REPOS[repo_docker] = REPO_MAP[repo_docker]
 
 def version_of(integration_dir, repo_docker, in_integration_version=None):
     if repo_docker == "integration":
@@ -1761,6 +1781,11 @@ def main():
     if args.dry_run:
         global DRY_RUN
         DRY_RUN = True
+
+    if args.in_integration_version:
+        update_repo_list(args.in_integration_version)
+    else:
+        update_repo_list()
 
     if args.version_of is not None:
         do_version_of(args)

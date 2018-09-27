@@ -895,8 +895,11 @@ def get_extra_buildparams_from_jenkins():
     extra_buildparams = {}
     in_versioned_repos = {}
     for key in GIT_TO_BUILDPARAM_MAP.keys():
-        if REPOS.get(key) is not None:
-            in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
+        for repo in REPOS.values():
+            if repo.git == key:
+                in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
+                # Break out of innermost loop.
+                break
 
     for key, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
         # Skip keys that are in versioned repos.

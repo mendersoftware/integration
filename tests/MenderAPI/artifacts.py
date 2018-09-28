@@ -14,6 +14,8 @@
 #    limitations under the License.
 
 from MenderAPI import *
+import os
+import shutil
 
 
 class Artifacts():
@@ -47,3 +49,46 @@ class Artifacts():
         subprocess.check_call(cmd, shell=True)
 
         return artifact_file_created.name
+
+    def get_mender_conf(self, image):
+        """
+        Get the /etc/mender/mender.conf from the artifact rootfs as a
+        python dictionary.
+        """
+        conf = {}
+        cmd = "debugfs -R 'cat /etc/mender/mender.conf' %s" % image
+
+        output = subprocess.check_output("debugfs -R 'cat /etc/mender/mender.conf' " + \
+                                             "core-image-full-cmdline-%s.ext4" % \
+                                             conftest.machine_name, shell=True)
+        import json
+        conf = json.loads(output)
+
+        return conf
+
+    def replace_mender_conf(self, image, conf):
+        """
+        Get the /etc/mender/mender.conf from the artifact rootfs as a
+        python dictionary.
+        """
+        tmp_conf_dir = os.path.join(os.path.curdir, "tmp_conf")
+        try:
+            os.mkdir(tmp_conf_dir)
+            tmp_conf_path = os.path.join(tmp_conf_dir, "mender.conf")
+            import json
+            with open(tmp_conf_path, "w") as f:
+                json.dump(conf, f, indent=2, sort_keys=True)
+            debugfs_cmd = "cd /etc/mender/\n" + \
+                          "rm mender.conf\n" + \
+                          "write %s mender.conf\n" % tmp_conf_path + \
+                          "close\n"
+
+            cmd = "cat << EOF | debugfs -w %s\n%sEOF\n" % \
+                  (image, debugfs_cmd)
+            retcode = subprocess.call(cmd, shell=True)
+            if retcode != 0:
+                logger.fatal("debugfs returned status code: %s." % retcode)
+        finally:
+            shutil.rmtree(tmp_conf_dir)
+        return conf
+

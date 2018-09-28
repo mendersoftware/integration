@@ -19,8 +19,9 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import update_image_successful, update_image_failed
-from MenderAPI import adm, deploy
+from MenderAPI import adm, deploy, image
 from mendertesting import MenderTesting
+import shutil
 
 class TestBasicIntegration(MenderTesting):
 
@@ -45,12 +46,46 @@ class TestBasicIntegration(MenderTesting):
         """Upload a device with two consecutive upgrade images"""
 
         if not env.host_string:
-            execute(self.test_double_update,
+            execute(self.test_update_jwt_expired,
                     hosts=get_mender_clients())
             return
 
         update_image_successful(install_image=conftest.get_valid_image())
 
+    @MenderTesting.fast
+    @pytest.mark.usefixtures("setup_failover")
+    def test_update_failover_server(self):
+        """
+        Client is initially set up against server A, and then receives an update
+        containing a multi-server configuration, with server B as primary and A
+        secondary. Server B does not, however, expect any clients and will trigger
+        "failover" to server A.
+        To create the necessary configuration I use a state script to modify the
+        /etc/mender/mender.conf
+        """
+        if not env.host_string:
+            execute(self.test_update_failover_server,
+                    hosts=get_mender_clients())
+            return
+
+        valid_image = conftest.get_valid_image()
+        tmp_image = valid_image.split(".")[0] + "-failover-image.ext4"
+        try:
+            logger.info("Creating failover sample image.")
+            shutil.copy(valid_image, tmp_image)
+            conf = image.get_mender_conf(tmp_image)
+
+            if conf == None:
+                raise SystemExit("Could not retrieve mender.conf")
+
+            conf["Servers"] = [{"ServerURL": "https://docker.mender-failover.io"}, \
+                               {"ServerURL": conf["ServerURL"]}]
+            conf.pop("ServerURL")
+            image.replace_mender_conf(tmp_image, conf)
+
+            update_image_successful(install_image=tmp_image)
+        finally:
+            os.remove(tmp_image)
 
     @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")

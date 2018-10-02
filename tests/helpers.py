@@ -119,7 +119,7 @@ class Helpers:
         try:
             with settings(hide('everything'), warn_only=True):
                 for h in hosts:
-                    gateway_ip = run("nslookup %s | tail -n 1  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'" % (h)).strip()
+                    gateway_ip = run("nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'" % (h)).strip()
 
                     if accessible:
                         logger.info("Allowing network communication to %s" % h)

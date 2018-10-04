@@ -2,10 +2,8 @@
 
 usage() {
     cat <<EOF
-$(basename $0) [--kvm] docker-options
+$(basename $0) [options] docker-options
 
---kvm
-	Enable KVM hardware acceleration of client VM.
 --no-client
 	Disable emulated client.
 
@@ -26,11 +24,7 @@ while [ -n "$1" ]; do
             continue
         fi
     elif [ "$1" = "--kvm" ]; then
-        if [ -z "$CLIENT" ]; then
-            echo "$1 cannot be used when there is no client!"
-            exit 1
-        fi
-        CLIENT="$CLIENT -f docker-compose.client-privileged.yml"
+        echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
     else
         if [ "$#" -eq 0 ]; then
             usage

@@ -10,3 +10,4 @@ services:
             - mender
         stdin_open: true
         tty: true
+        privileged: true

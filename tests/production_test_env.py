@@ -22,13 +22,16 @@ parser.add_argument('--kill', dest='kill', action='store_true',
 parser.add_argument('--test-deployment', dest='deploy', action='store_true',
                     help='start testing upgrade test procedure (used for upgrade testing)')
 
-conftest.docker_compose_instance = "testprod"
+parser.add_argument('--docker-compose-instance', required=True,
+                    help='The docker-compose instance to use (project name)')
 
 if len(sys.argv) == 1:
     parser.print_help()
     sys.exit(1)
 
 args = parser.parse_args()
+
+conftest.docker_compose_instance = args.docker_compose_instance
 
 def fill_production_template():
 
@@ -68,7 +71,7 @@ if args.start:
 
     # start docker-compose
     ret = subprocess.call(["docker-compose",
-                           "-p", "testprod",
+                           "-p", conftest.docker_compose_instance,
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
                            "-f", "./production-testing-env.yml",
@@ -101,4 +104,4 @@ if args.deploy:
     print("devices=%d" % len(devices))
 
 if args.kill:
-    subprocess.call(["docker-compose", "-p", "testprod", "down", "-v", "--remove-orphans"])
+    subprocess.call(["docker-compose", "-p", conftest.docker_compose_instance, "down", "-v", "--remove-orphans"])

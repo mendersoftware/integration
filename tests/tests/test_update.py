@@ -54,7 +54,8 @@ def setup_upgrade_source(upgrade_from):
                           cwd="upgrade-from/tests")
     assert ret == 0, "failed running 'run.sh --get-requirements' on upgrade source"
 
-    ret = subprocess.call(["python", "production_test_env.py", "--start"],
+    ret = subprocess.call(["python", "production_test_env.py", "--start",
+                           "--docker-compose-instance", conftest.docker_compose_instance],
                           cwd="upgrade-from/tests")
     assert ret == 0, "failed running 'production_test_env.py start' on upgrade source"
 
@@ -63,7 +64,8 @@ def perform_upgrade():
     ret = subprocess.call(["cp", "-r", "tests/upgrade-from/keys-generated", "."], cwd="..")
     assert ret == 0, "faled to copy keys from original environment"
 
-    subprocess.check_call(["./production_test_env.py", "--start"])
+    subprocess.check_call(["./production_test_env.py", "--start",
+                           "--docker-compose-instance", conftest.docker_compose_instance])
 
     # give time for all microservices to come online
     time.sleep(60 * 5)
@@ -81,7 +83,9 @@ def setup_fake_clients(device_count, fail_count):
 
 def provision_upgrade_server():
     # deploy update to 10 devices
-    ret = subprocess.Popen(["python", "production_test_env.py", "--test-deployment"], cwd="upgrade-from/tests", stdout=subprocess.PIPE)
+    ret = subprocess.Popen(["python", "production_test_env.py", "--test-deployment",
+                            "--docker-compose-instance", conftest.docker_compose_instance],
+                           cwd="upgrade-from/tests", stdout=subprocess.PIPE)
     time.sleep(120)
 
     # extract deployment_id and artifact_id from piped output
@@ -100,7 +104,6 @@ class BackendUpdating():
     provisioned_artifact_id = None
 
     def __init__(self, upgrade_from):
-        conftest.docker_compose_instance = "testprod"
         setup_docker_volumes()
         setup_upgrade_source(upgrade_from)
         self.fake_client_process = setup_fake_clients(10, 3)

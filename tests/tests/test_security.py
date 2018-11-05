@@ -39,33 +39,41 @@ class TestSecurity(MenderTesting):
         done = False
         sleep_time = 2
         # start production environment
-        subprocess.call(["./production_test_env.py", "--start"])
+        subprocess.call(["./production_test_env.py", "--start",
+                         "--docker-compose-instance", conftest.docker_compose_instance])
 
-        # get all exposed ports from docker
+        try:
 
-        for _ in range(3):
-            exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat" % ("testprod"), shell=True)
+            # get all exposed ports from docker
 
-            try:
-                for host in exposed_hosts.split():
-                    with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:
-                        logging.info("%s: connect to host with TLS" % host)
-                        host, port = host.split(":")
-                        sock.connect((host, int(port)))
-                        done = True
-            except:
-                sleep_time *= 2
-                time.sleep(sleep_time)
-                continue
+            for _ in range(3):
+                exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat"
+                                                        % conftest.docker_compose_instance,
+                                                        shell=True)
 
-            if done:
-                break
+                try:
+                    for host in exposed_hosts.split():
+                        with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:
+                            logging.info("%s: connect to host with TLS" % host)
+                            host, port = host.split(":")
+                            sock.connect((host, int(port)))
+                            done = True
+                except:
+                    sleep_time *= 2
+                    time.sleep(sleep_time)
+                    continue
 
-        # tear down production env
-        subprocess.call(["./production_test_env.py", "--kill"])
+                if done:
+                    break
 
-        if not done:
-            pytest.fail("failed to connect to production env. using SSL")
+            if not done:
+                pytest.fail("failed to connect to production env. using SSL")
+
+        finally:
+            # tear down production env
+            subprocess.call(["./production_test_env.py", "--kill",
+                             "--docker-compose-instance", conftest.docker_compose_instance])
+
 
     @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
     def test_token_token_expiration(self):

@@ -11,3 +11,11 @@ services:
         stdin_open: true
         tty: true
         privileged: true
+        depends_on:
+            # api-gateway is the last backend service to start
+            - mender-api-gateway
+        # delay device startup to give backend services extra time to start
+        entrypoint:
+            - /bin/sh
+            - -c
+            - sleep 15 && ./entrypoint.sh

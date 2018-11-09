@@ -1723,19 +1723,19 @@ def do_verify_integration_references(args, optional_too):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--version-of", dest="version_of", metavar="SERVICE",
-                        help="Determine version of given service")
-    parser.add_argument("--in-integration-version", dest="in_integration_version", metavar="VERSION",
+    parser.add_argument("-g", "--version-of", dest="version_of", metavar="SERVICE",
+                        help="Get version of given service")
+    parser.add_argument("-i", "--in-integration-version", dest="in_integration_version", metavar="VERSION",
                         help="Used together with the above argument to query for a version of a "
                         + "service which is in the given version of integration, instead of the "
                         + "currently checked out version of integration. If a range is given here "
                         + "it will return the range of the corresponding service.")
-    parser.add_argument("--set-version-of", dest="set_version_of", metavar="SERVICE",
+    parser.add_argument("-s", "--set-version-of", dest="set_version_of", metavar="SERVICE",
                         help="Write version of given service into docker-compose.yml")
-    parser.add_argument("--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",
+    parser.add_argument("-f", "--integration-versions-including", dest="integration_versions_including", metavar="SERVICE",
                         help="Find version(s) of integration repository that contain the given version of SERVICE, "
                         + " where version is given with --version. Returned as a newline separated list")
-    parser.add_argument("--version", dest="version",
+    parser.add_argument("-v", "--version", dest="version",
                         help="Version which is used in above two arguments")
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
@@ -1752,7 +1752,7 @@ def main():
                         help="When used with -l, list all repositories, including optional ones.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
-    parser.add_argument("-s", "--simulate-push", action="store_true",
+    parser.add_argument("--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")

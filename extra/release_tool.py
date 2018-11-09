@@ -335,42 +335,6 @@ class Component:
             comp.type = "yml"
         return comps
 
-    @staticmethod
-    def update_component_list(in_version=None):
-        """Updates the list of available components, by checking which components are
-        actually used in the given version, and removing those that are not
-        relevant from COMPONENT_MAPS."""
-
-        git_dir = integration_dir()
-        if in_version:
-            data = get_docker_compose_data_for_rev(git_dir, in_version)
-        else:
-            data = get_docker_compose_data(git_dir)
-
-        new_maps = copy.deepcopy(Component.COMPONENT_MAPS)
-        for repo in Component.COMPONENT_MAPS["git"]:
-            if repo == "integration":
-                continue
-            images = Component.COMPONENT_MAPS["git"][repo]["docker_image"]
-            if len(images) == 0:
-                # For the "fake" services that reside in other-components.yml.
-                images = [repo]
-            try:
-                for image in images:
-                    if data.get(image) is None:
-                        raise KeyError()
-            except KeyError:
-                # Component is not part of said release, remove it from our lists.
-                for container in Component.COMPONENT_MAPS["git"][repo]["docker_container"]:
-                    if new_maps["docker_container"].get(container) is not None:
-                        del new_maps["docker_container"][container]
-                for image in Component.COMPONENT_MAPS["git"][repo]["docker_image"]:
-                    if new_maps["docker_image"].get(image) is not None:
-                        del new_maps["docker_image"][image]
-                if new_maps["git"].get(repo) is not None:
-                    del new_maps["git"][repo]
-        Component.COMPONENT_MAPS = new_maps
-
 
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
@@ -2025,11 +1989,6 @@ def main():
     if args.dry_run:
         global DRY_RUN
         DRY_RUN = True
-
-    if args.in_integration_version:
-        Component.update_component_list(args.in_integration_version)
-    else:
-        Component.update_component_list()
 
     if args.version_of is not None:
         do_version_of(args)

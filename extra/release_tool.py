@@ -47,62 +47,330 @@ PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
 
-class RepoName:
-    """An object that contains a pair of links for the docker and git names of a
-    repository."""
+class Component:
+    # A map that lists all our git repositories, docker images, and docker
+    # container names, and how they are associated to one another. When you add
+    # something to this list, make sure to add it to all three sections: "git",
+    # "docker_image" and "docker_container". Binary tools that don't have Docker
+    # components, will only have the "git" part.
+    COMPONENT_MAPS = {
+        "git": {
+            "deployments": {
+                "docker_image": ["deployments"],
+                "docker_container": ["mender-deployments"],
+                "release_component": True,
+            },
+            "deviceadm": {
+                "docker_image": ["deviceadm"],
+                "docker_container": ["mender-device-adm"],
+                "release_component": False,
+            },
+            "deviceauth": {
+                "docker_image": ["deviceauth"],
+                "docker_container": ["mender-device-auth"],
+                "release_component": True,
+            },
+            "gui": {
+                "docker_image": ["gui"],
+                "docker_container": ["mender-gui"],
+                "release_component": True,
+            },
+            "integration": {
+                "docker_image": [],
+                "docker_container": [],
+                "release_component": True,
+            },
+            "inventory": {
+                "docker_image": ["inventory"],
+                "docker_container": ["mender-inventory"],
+                "release_component": True,
+            },
+            "mender": {
+                "docker_image": ["mender-client-qemu"],
+                "docker_container": ["mender-client"],
+                "release_component": True,
+            },
+            "mender-api-gateway-docker": {
+                "docker_image": ["api-gateway"],
+                "docker_container": ["mender-api-gateway"],
+                "release_component": True,
+            },
+            "mender-artifact": {
+                "docker_image": [],
+                "docker_container": [],
+                "release_component": True,
+            },
+            "mender-cli": {
+                "docker_image": [],
+                "docker_container": [],
+                "release_component": True,
+            },
+            "mender-conductor": {
+                "docker_image": ["mender-conductor", "email-sender"],
+                "docker_container": ["mender-conductor", "mender-email-sender"],
+                "release_component": True,
+            },
+            "mender-conductor-enterprise": {
+                "docker_image": ["mender-conductor-enterprise"],
+                "docker_container": ["mender-conductor"],
+                "release_component": True,
+            },
+            "tenantadm": {
+                "docker_image": ["tenantadm"],
+                "docker_container": ["mender-tenantadm"],
+                "release_component": False,
+            },
+            "useradm": {
+                "docker_image": ["useradm"],
+                "docker_container": ["mender-useradm"],
+                "release_component": True,
+            },
+        },
+        "docker_image": {
+            "deployments": {
+                "git": "deployments",
+                "docker_container": ["mender-deployments"],
+                "release_component": True,
+            },
+            "deviceadm": {
+                "git": ["deviceadm"],
+                "docker_container": ["mender-device-adm"],
+                "release_component": False,
+            },
+            "deviceauth": {
+                "git": ["deviceauth"],
+                "docker_container": ["mender-device-auth"],
+                "release_component": True,
+            },
+            "gui": {
+                "git": ["gui"],
+                "docker_container": ["mender-gui"],
+                "release_component": True,
+            },
+            "inventory": {
+                "git": ["inventory"],
+                "docker_container": ["mender-inventory"],
+                "release_component": True,
+            },
+            "mender-client-qemu": {
+                "git": ["mender"],
+                "docker_container": ["mender-client"],
+                "release_component": True,
+            },
+            "api-gateway": {
+                "git": ["mender-api-gateway-docker"],
+                "docker_container": ["mender-api-gateway"],
+                "release_component": True,
+            },
+            "mender-conductor": {
+                "git": ["mender-conductor"],
+                "docker_container": ["mender-conductor"],
+                "release_component": True,
+            },
+            "email-sender": {
+                "git": ["mender-conductor"],
+                "docker_container": ["mender-email-sender"],
+                "release_component": True,
+            },
+            "mender-conductor-enterprise": {
+                "git": ["mender-conductor-enterprise"],
+                "docker_container": ["mender-conductor"],
+                "release_component": True,
+            },
+            "tenantadm": {
+                "git": ["tenantadm"],
+                "docker_container": ["mender-tenantadm"],
+                "release_component": False,
+            },
+            "useradm": {
+                "git": ["useradm"],
+                "docker_container": ["mender-useradm"],
+                "release_component": True,
+            },
+        },
+        "docker_container": {
+            "mender-deployments": {
+                "git": "deployments",
+                "docker_image": ["deployments"],
+                "release_component": True,
+            },
+            "mender-device-auth": {
+                "git": ["deviceauth"],
+                "docker_image": ["deviceauth"],
+                "release_component": True,
+            },
+            "mender-device-adm": {
+                "git": ["deviceadm"],
+                "docker_image": ["deviceadm"],
+                "release_component": False,
+            },
+            "mender-gui": {
+                "git": ["gui"],
+                "docker_image": ["gui"],
+                "release_component": True,
+            },
+            "mender-inventory": {
+                "git": ["inventory"],
+                "docker_image": ["inventory"],
+                "release_component": True,
+            },
+            "mender-client": {
+                "git": ["mender"],
+                "docker_image": ["mender-client-qemu"],
+                "release_component": True,
+            },
+            "mender-api-gateway": {
+                "git": ["mender-api-gateway-docker"],
+                "docker_image": ["api-gateway"],
+                "release_component": True,
+            },
+            "mender-conductor": {
+                "git": ["mender-conductor", "mender-conductor-enterprise"],
+                "docker_image": ["mender-conductor", "mender-conductor-enterprise"],
+                "release_component": True,
+            },
+            "mender-email-sender": {
+                "git": ["mender-conductor"],
+                "docker_image": ["email-sender"],
+                "release_component": True,
+            },
+            "mender-tenantadm": {
+                "git": ["tenantadm"],
+                "docker_image": ["tenantadm"],
+                "release_component": False,
+            },
+            "mender-useradm": {
+                "git": ["useradm"],
+                "docker_image": ["useradm"],
+                "release_component": True,
+            },
+        },
+    }
 
-    # Name of container in docker-compose file.
-    container = None
-    # Name of image in docker hub
-    docker = None
-    # Name of repository in Git. (what we index by)
-    git = None
-    # Whether or not this repository has a Docker container.
-    has_container = None
+    name = None
+    type = None
+    def __init__(self, name, type):
+        self.name = name
+        self.type = type
 
-    def __init__(self, container, docker, git, has_container):
-        self.container = container
-        self.docker = docker
-        self.git = git
-        self.has_container = has_container
+    def git(self):
+        if self.type != "git":
+            raise Exception("Tried to get git name from non-git component")
+        return self.name
+    def docker_container(self):
+        if self.type != "docker_container":
+            raise Exception("Tried to get docker_container name from non-docker_container component")
+        return self.name
+    def docker_image(self):
+        if self.type != "docker_image":
+            raise Exception("Tried to get docker_image name from non-docker_image component")
+        return self.name
+    def yml(self):
+        if self.type != "yml":
+            raise Exception("Tried to get yml name from non-yml component")
+        return self.name
 
-# All our repos, including repos that were part of our release before, and
-# aren't anymore. It's also a map from docker-compose image name to all
-# names. The key is container name, and thereafter the order is the order of the
-# RepoName constructor, just above.
-#
-# If you add anything here, make sure to also update GIT_TO_BUILDPARAM_MAP
-# (which tells the tool how to trigger Jenkins jobs.
-REPO_MAP = {
-    "api-gateway": RepoName("mender-api-gateway", "api-gateway", "mender-api-gateway-docker", True),
-    "mender-client-qemu": RepoName("mender-client", "mender-client-qemu", "mender", True),
-    "mender-conductor": RepoName("mender-conductor", "mender-conductor", "mender-conductor", True),
-    "mender-conductor-enterprise": RepoName("mender-conductor", "mender-conductor-enterprise", "mender-conductor-enterprise", True),
-    "deployments": RepoName("mender-deployments", "deployments", "deployments", True),
-    "deviceadm": RepoName("mender-device-adm", "deviceadm", "deviceadm", True),
-    "deviceauth": RepoName("mender-device-auth", "deviceauth", "deviceauth", True),
-    "gui": RepoName("mender-gui", "gui", "gui", True),
-    "inventory": RepoName("mender-inventory", "inventory", "inventory", True),
-    "useradm": RepoName("mender-useradm", "useradm", "useradm", True),
+    @staticmethod
+    def get_component_of_type(type, name):
+        if Component.COMPONENT_MAPS[type].get(name) is None:
+            raise KeyError("Component '%s' of type %s not found" % (name, type))
+        return Component(name, type)
 
-    # These ones doesn't have a Docker name, but just use same as Git for
-    # indexing purposes.
-    "mender-artifact": RepoName("mender-artifact", "mender-artifact", "mender-artifact", False),
-    "mender-cli": RepoName("mender-cli", "mender-cli", "mender-cli", False),
-    "integration": RepoName("integration", "integration", "integration", False),
-}
+    @staticmethod
+    def get_component_of_any_type(name):
+        for type in ["git", "docker_image", "docker_container"]:
+            try:
+                return Component.get_component_of_type(type, name)
+            except KeyError:
+                continue
+        raise KeyError("Component '%s' not found" % name)
 
-# This is the main list of repos that will be used throughout the script. This
-# will be filled by entries from REPO_MAP, depending on which ones are actually
-# available in the version we're querying.
-REPOS = None
+    @staticmethod
+    def get_components_of_type(type, only_release=None, only_non_release=False):
+        if only_release is None:
+            if only_non_release:
+                only_release = False
+            else:
+                only_release = True
+        if only_release and only_non_release:
+            raise Exception("only_release and only_non_release can't both be true")
+        components = []
+        for comp in Component.COMPONENT_MAPS[type]:
+            if Component.COMPONENT_MAPS[type][comp]["release_component"]:
+                if only_non_release:
+                    continue
+            else:
+                if only_release:
+                    continue
+            components.append(Component(comp, type))
+        return components
 
-# These are optional repositories that aren't included when iterating over
-# repositories, but that are available for querying.
-OPTIONAL_REPOS = {
-    "email-sender": RepoName("mender-email-sender", "email-sender", "mender-conductor/email-sender", True),
-    "mender-tenantadm": RepoName("mender-tenantadm", "tenantadm", "tenantadm", True),
-}
+    def associated_components_of_type(self, type):
+        """Returns all components of type `type` that are associated with self."""
+
+        if type == self.type:
+            return [Component(self.name, self.type)]
+
+        try:
+            comps = []
+            for name in Component.COMPONENT_MAPS[self.type][self.name][type]:
+                comps.append(Component(name, type))
+            return comps
+        except KeyError:
+            raise KeyError("No such combination: Component '%s' of type %s doesn't have any associated components of type %s"
+                           % (self.name, self.type, type))
+
+    def yml_components(self):
+        """Returns the name of the service in our YML docker-compose files. This is
+        usually the same as the docker_image name, but for services that don't
+        have Docker images, it will be the git name, which is what is used in
+        the other-components.yml file."""
+
+        comps = self.associated_components_of_type("docker_image")
+        if len(comps) == 0:
+            # For the fake services that don't have Docker images, but reside in
+            # other-components.yml.
+            comps = self.associated_components_of_type("git")
+        for comp in comps:
+            comp.type = "yml"
+        return comps
+
+    @staticmethod
+    def update_component_list(in_version=None):
+        """Updates the list of available components, by checking which components are
+        actually used in the given version, and removing those that are not
+        relevant from COMPONENT_MAPS."""
+
+        git_dir = integration_dir()
+        if in_version:
+            data = get_docker_compose_data_for_rev(git_dir, in_version)
+        else:
+            data = get_docker_compose_data(git_dir)
+
+        new_maps = copy.deepcopy(Component.COMPONENT_MAPS)
+        for repo in Component.COMPONENT_MAPS["git"]:
+            if repo == "integration":
+                continue
+            images = Component.COMPONENT_MAPS["git"][repo]["docker_image"]
+            if len(images) == 0:
+                # For the "fake" services that reside in other-components.yml.
+                images = [repo]
+            try:
+                for image in images:
+                    if data.get(image) is None:
+                        raise KeyError()
+            except KeyError:
+                # Component is not part of said release, remove it from our lists.
+                for container in Component.COMPONENT_MAPS["git"][repo]["docker_container"]:
+                    if new_maps["docker_container"].get(container) is not None:
+                        del new_maps["docker_container"][container]
+                for image in Component.COMPONENT_MAPS["git"][repo]["docker_image"]:
+                    if new_maps["docker_image"].get(image) is not None:
+                        del new_maps["docker_image"][image]
+                if new_maps["git"].get(repo) is not None:
+                    del new_maps["git"][repo]
+        Component.COMPONENT_MAPS = new_maps
+
 
 # A map from git repo name to build parameter name in Jenkins.
 GIT_TO_BUILDPARAM_MAP = {
@@ -191,21 +459,6 @@ def ask(text):
     sys.stdout.write("\n")
     return reply
 
-def determine_repo(repoish):
-    """Based on a repository name, which can be any variant of Docker or Git
-    name, return the Repo object assosiated with it."""
-
-    for repos in [REPOS, OPTIONAL_REPOS]:
-        repo = repos.get(repoish)
-        if repo is not None:
-            return repo
-
-        for candidate in repos.values():
-            if repoish == candidate.container or repoish == candidate.docker or repoish == candidate.git:
-                return candidate
-
-    raise KeyError("Unrecognized repository: %s" % repoish)
-
 def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""
     list = []
@@ -269,24 +522,8 @@ def get_docker_compose_data_for_rev(git_dir, rev):
 
     return get_docker_compose_data_from_json_list(yamls)
 
-def update_repo_list(in_version=None):
-    """Updates the REPOS map by starting with REPO_MAP, checking which repositories
-    are actually used in the given version, and then adding those to REPOS."""
-
-    git_dir = integration_dir()
-    if in_version:
-        data = get_docker_compose_data_for_rev(git_dir, in_version)
-    else:
-        data = get_docker_compose_data(git_dir)
-
-    global REPOS
-    REPOS = {}
-    for repo_docker in REPO_MAP.keys():
-        if repo_docker == "integration" or data.get(repo_docker) is not None:
-            REPOS[repo_docker] = REPO_MAP[repo_docker]
-
-def version_of(integration_dir, repo_docker, in_integration_version=None):
-    if repo_docker == "integration":
+def version_of(integration_dir, yml_component, in_integration_version=None):
+    if yml_component.yml() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -323,34 +560,41 @@ def version_of(integration_dir, repo_docker, in_integration_version=None):
             data = get_docker_compose_data_for_rev(integration_dir, rev)
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
-            if data.get(repo_docker) is not None:
-                repo_range.append(remote + data[repo_docker]['version'])
+            if data.get(yml_component.yml()) is not None:
+                repo_range.append(remote + data[yml_component.yml()]['version'])
         return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)
-        return data[repo_docker]['version']
+        return data[yml_component.yml()]['version']
 
 def do_version_of(args):
     """Process --version-of argument."""
 
     try:
-        repo = determine_repo(args.version_of)
+        comp = Component.get_component_of_any_type(args.version_of)
     except KeyError:
         print("Unrecognized repository: %s" % args.version_of)
         sys.exit(1)
 
-    print(version_of(integration_dir(), repo.docker, args.in_integration_version))
+    yml_component = comp.yml_components()[0]
+
+    print(version_of(integration_dir(), yml_component, args.in_integration_version))
 
 def do_list_repos(args, optional_too):
-    """Lists the repos in REPOS, using the provided name type."""
+    """Lists the repos, using the provided type."""
 
-    assert args.list in ["container", "docker", "git"], "%s is not a valid name type!" % args.list
+    cli_types = {
+        "container": "docker_container",
+        "docker": "docker_image",
+        "git": "git",
+    }
+    assert args.list in cli_types, "%s is not a valid name type!" % args.list
+    type = cli_types[args.list]
 
-    repos = list(REPOS.values())
-    if optional_too:
-        repos += list(OPTIONAL_REPOS.values())
-    for repo in sorted(repos, key=repo_sort_key):
-        eval("print(repo.%s)" % args.list)
+    repos = [comp.name for comp in Component.get_components_of_type(type, only_release=(not optional_too))]
+
+    for repo in sorted(repos):
+        print(repo)
 
 def version_sort_key(version):
     """Returns a key used to compare versions."""
@@ -586,10 +830,10 @@ def refresh_repos(state):
 
     git_list = []
 
-    for repo in list(REPOS.values()) + list(OPTIONAL_REPOS.values()):
-        remote = find_upstream_remote(state, repo.git)
-        git_list.append((state, repo.git, ["fetch", "--tags", remote,
-                                           "+refs/heads/*:refs/remotes/%s/*" % remote]))
+    for repo in Component.get_components_of_type("git"):
+        remote = find_upstream_remote(state, repo.git())
+        git_list.append((state, repo.git(), ["fetch", "--tags", remote,
+                                             "+refs/heads/*:refs/remotes/%s/*" % remote]))
 
     query_execute_git_list(git_list)
 
@@ -606,44 +850,44 @@ def check_tag_availability(state):
     """
 
     tag_avail = {}
-    for repo in REPOS.values():
-        tag_avail[repo.git] = {}
+    for repo in Component.get_components_of_type("git"):
+        tag_avail[repo.git()] = {}
         try:
-            execute_git(state, repo.git, ["rev-parse", state[repo.git]['version']],
+            execute_git(state, repo.git(), ["rev-parse", state[repo.git()]['version']],
                         capture=True, capture_stderr=True)
             # No exception happened during above call: This is a final release
             # tag.
-            tag_avail[repo.git]['already_released'] = True
-            tag_avail[repo.git]['build_tag'] = state[repo.git]['version']
+            tag_avail[repo.git()]['already_released'] = True
+            tag_avail[repo.git()]['build_tag'] = state[repo.git()]['version']
         except subprocess.CalledProcessError:
             # Exception happened during Git call. This tag doesn't exist, and
             # we must look for and/or create build tags.
-            tag_avail[repo.git]['already_released'] = False
+            tag_avail[repo.git()]['already_released'] = False
 
             # Find highest <version>-buildX tag, where X is a number.
-            tags = execute_git(state, repo.git, ["tag"], capture=True)
+            tags = execute_git(state, repo.git(), ["tag"], capture=True)
             highest = -1
             for tag in tags.split('\n'):
-                match = re.match("^%s-build([0-9]+)$" % re.escape(state[repo.git]['version']), tag)
+                match = re.match("^%s-build([0-9]+)$" % re.escape(state[repo.git()]['version']), tag)
                 if match is not None and int(match.group(1)) > highest:
                     highest = int(match.group(1))
                     highest_tag = tag
             if highest >= 0:
                 # Assign highest tag so far.
-                tag_avail[repo.git]['build_tag'] = highest_tag
+                tag_avail[repo.git()]['build_tag'] = highest_tag
             # Else: Nothing. This repository doesn't have any build tags yet.
 
-        if tag_avail[repo.git].get('build_tag') is not None:
-            sha = execute_git(state, repo.git, ["rev-parse", "--short",
-                                                tag_avail[repo.git]['build_tag'] + "~0"],
+        if tag_avail[repo.git()].get('build_tag') is not None:
+            sha = execute_git(state, repo.git(), ["rev-parse", "--short",
+                                                tag_avail[repo.git()]['build_tag'] + "~0"],
                               capture=True)
-            tag_avail[repo.git]['sha'] = sha
+            tag_avail[repo.git()]['sha'] = sha
 
     return tag_avail
 
 def repo_sort_key(repo):
     """Used in sorted() calls to sort by Git name."""
-    return repo.git
+    return repo.name
 
 def report_release_state(state, tag_avail):
     """Reports the current state of the release, including current build
@@ -653,32 +897,32 @@ def report_release_state(state, tag_avail):
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        if tag_avail[repo.git]['already_released']:
-            tag = state[repo.git]['version']
+    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+        if tag_avail[repo.git()]['already_released']:
+            tag = state[repo.git()]['version']
             # Report released tags as following themselves, even though behind
             # the scenes we do keep track of a branch we follow. This is because
             # released repositories don't receive build tags.
-            following = state[repo.git]['version']
+            following = state[repo.git()]['version']
         else:
-            tag = tag_avail[repo.git].get('build_tag')
+            tag = tag_avail[repo.git()].get('build_tag')
             if tag is None:
                 tag = "<Needs a new build tag>"
             else:
-                tag = "%s (%s)" % (tag, tag_avail[repo.git]['sha'])
-            following = state[repo.git]['following']
+                tag = "%s (%s)" % (tag, tag_avail[repo.git()]['sha'])
+            following = state[repo.git()]['following']
 
-        print(fmt_str % (repo.git, state[repo.git]['version'],
+        print(fmt_str % (repo.git(), state[repo.git()]['version'],
                          following, tag))
 
 def annotation_version(repo, tag_avail):
     """Generates the string used in Git tag annotations."""
 
-    match = re.match("^(.*)-build([0-9]+)$", tag_avail[repo.git]['build_tag'])
+    match = re.match("^(.*)-build([0-9]+)$", tag_avail[repo.git()]['build_tag'])
     if match is None:
-        return "%s version %s." % (repo.git, tag_avail[repo.git]['build_tag'])
+        return "%s version %s." % (repo.git(), tag_avail[repo.git()]['build_tag'])
     else:
-        return "%s version %s Build %s." % (repo.git, match.group(1), match.group(2))
+        return "%s version %s Build %s." % (repo.git(), match.group(1), match.group(2))
 
 def version_components(version):
     """Returns a four-tuple containing the version componets major, minor, patch
@@ -746,48 +990,48 @@ def generate_new_tags(state, tag_avail, final):
 
     # Find highest of all build tags in all repos.
     highest = 0
-    for repo in REPOS.values():
-        if not tag_avail[repo.git]['already_released'] and tag_avail[repo.git].get('build_tag') is not None:
-            match = re.match(".*-build([0-9]+)$", tag_avail[repo.git]['build_tag'])
+    for repo in Component.get_components_of_type("git"):
+        if not tag_avail[repo.git()]['already_released'] and tag_avail[repo.git()].get('build_tag') is not None:
+            match = re.match(".*-build([0-9]+)$", tag_avail[repo.git()]['build_tag'])
             if match is not None and int(match.group(1)) > highest:
                 highest = int(match.group(1))
 
     # Assign new build tags to each repo based on our previous findings.
     next_tag_avail = copy.deepcopy(tag_avail)
-    for repo in REPOS.values():
-        if not tag_avail[repo.git]['already_released']:
+    for repo in Component.get_components_of_type("git"):
+        if not tag_avail[repo.git()]['already_released']:
             if final:
                 # For final tag, point to the previous build tag, not the
                 # version we follow.
                 # "~0" is used to avoid a tag pointing to another tag. It should
                 # point to the commit.
-                sha = execute_git(state, repo.git, ["rev-parse", "--short",
-                                                    tag_avail[repo.git]['build_tag'] + "~0"],
+                sha = execute_git(state, repo.git(), ["rev-parse", "--short",
+                                                    tag_avail[repo.git()]['build_tag'] + "~0"],
                                   capture=True)
                 # For final tag, use actual version.
-                next_tag_avail[repo.git]['build_tag'] = state[repo.git]['version']
+                next_tag_avail[repo.git()]['build_tag'] = state[repo.git()]['version']
             else:
                 # For build tag, point the next tag to the last version of the
                 # branch we follow.
                 # "~0" is used to avoid a tag pointing to another tag. It should
                 # point to the commit.
-                sha = execute_git(state, repo.git, ["rev-parse", "--short",
-                                                    state[repo.git]['following'] + "~0"],
+                sha = execute_git(state, repo.git(), ["rev-parse", "--short",
+                                                    state[repo.git()]['following'] + "~0"],
                                   capture=True)
                 # For non-final, use next build number.
-                next_tag_avail[repo.git]['build_tag'] = "%s-build%d" % (state[repo.git]['version'], highest + 1)
+                next_tag_avail[repo.git()]['build_tag'] = "%s-build%d" % (state[repo.git()]['version'], highest + 1)
 
-            next_tag_avail[repo.git]['sha'] = sha
+            next_tag_avail[repo.git()]['sha'] = sha
 
             print("-----------------------------------------------")
-            if tag_avail[repo.git].get('build_tag') is None:
+            if tag_avail[repo.git()].get('build_tag') is None:
                 # If there is no existing tag, just display latest commit.
-                print("The latest commit in %s will be:" % repo.git)
-                execute_git(state, repo.git, ["log", "-n1", sha])
+                print("The latest commit in %s will be:" % repo.git())
+                execute_git(state, repo.git(), ["log", "-n1", sha])
             else:
                 # If there is an existing tag, display range.
-                print("The new commits in %s will be:" % repo.git)
-                execute_git(state, repo.git, ["log", "%s..%s" % (tag_avail[repo.git]['build_tag'], sha)])
+                print("The new commits in %s will be:" % repo.git())
+                execute_git(state, repo.git(), ["log", "%s..%s" % (tag_avail[repo.git()]['build_tag'], sha)])
             print()
 
     if not final:
@@ -808,16 +1052,16 @@ def generate_new_tags(state, tag_avail, final):
         changelogs = []
 
         # Modify docker tags in docker-compose file.
-        for repo in sorted(REPOS.values(), key=repo_sort_key):
-            if repo.git == "integration":
+        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+            if repo.git() == "integration":
                 continue
 
-            set_docker_compose_version_to(tmpdir, repo.docker,
-                                          next_tag_avail[repo.git]['build_tag'])
+            set_docker_compose_version_to(tmpdir, repo,
+                                          next_tag_avail[repo.git()]['build_tag'])
             if prev_version:
                 try:
                     prev_repo_version = version_of(os.path.join(state['repo_dir'], "integration"),
-                                                   repo.docker, in_integration_version=prev_version)
+                                                   repo.yml_components()[0], in_integration_version=prev_version)
                 except KeyError:
                     # Means that this repo didn't exist in earlier integration
                     # versions.
@@ -825,12 +1069,12 @@ def generate_new_tags(state, tag_avail, final):
             else:
                 prev_repo_version = None
             if prev_repo_version:
-                if prev_repo_version != next_tag_avail[repo.git]['build_tag']:
+                if prev_repo_version != next_tag_avail[repo.git()]['build_tag']:
                     changelogs.append("Changelog: Upgrade %s to %s."
-                                      % (repo.git, next_tag_avail[repo.git]['build_tag']))
+                                      % (repo.git(), next_tag_avail[repo.git()]['build_tag']))
             else:
                 changelogs.append("Changelog: Add %s %s."
-                                  % (repo.git, next_tag_avail[repo.git]['build_tag']))
+                                  % (repo.git(), next_tag_avail[repo.git()]['build_tag']))
         if len(changelogs) == 0:
             changelogs.append("Changelog: None")
 
@@ -860,21 +1104,21 @@ def generate_new_tags(state, tag_avail, final):
 
     # Prepare Git tag and push commands.
     git_list = []
-    for repo in REPOS.values():
-        if not next_tag_avail[repo.git]['already_released']:
-            git_list.append((state, repo.git, ["tag", "-a", "-m", annotation_version(repo, next_tag_avail),
-                                               next_tag_avail[repo.git]['build_tag'],
-                                               next_tag_avail[repo.git]['sha']]))
-            remote = find_upstream_remote(state, repo.git)
-            git_list.append((state, repo.git, ["push", remote, next_tag_avail[repo.git]['build_tag']]))
+    for repo in Component.get_components_of_type("git"):
+        if not next_tag_avail[repo.git()]['already_released']:
+            git_list.append((state, repo.git(), ["tag", "-a", "-m", annotation_version(repo, next_tag_avail),
+                                               next_tag_avail[repo.git()]['build_tag'],
+                                               next_tag_avail[repo.git()]['sha']]))
+            remote = find_upstream_remote(state, repo.git())
+            git_list.append((state, repo.git(), ["push", remote, next_tag_avail[repo.git()]['build_tag']]))
 
     if not query_execute_git_list(git_list):
         return tag_avail
 
     # If this was the final tag, reflect that in our data.
-    for repo in REPOS.values():
-        if not next_tag_avail[repo.git]['already_released'] and final:
-            next_tag_avail[repo.git]['already_released'] = True
+    for repo in Component.get_components_of_type("git"):
+        if not next_tag_avail[repo.git()]['already_released'] and final:
+            next_tag_avail[repo.git()]['already_released'] = True
 
     return next_tag_avail
 
@@ -916,8 +1160,8 @@ def get_extra_buildparams_from_jenkins():
     extra_buildparams = {}
     in_versioned_repos = {}
     for key in GIT_TO_BUILDPARAM_MAP.keys():
-        for repo in REPOS.values():
-            if repo.git == key:
+        for repo in Component.get_components_of_type("git"):
+            if repo.git() == key:
                 in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
                 # Break out of innermost loop.
                 break
@@ -962,11 +1206,11 @@ def trigger_jenkins_build(state, tag_avail):
 
             # Populate parameters with build tags for each repository.
             postdata = []
-            for repo in sorted(REPOS.values(), key=repo_sort_key):
-                if tag_avail[repo.git].get('build_tag') is None:
-                    print("%s doesn't have a build tag yet!" % repo.git)
+            for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+                if tag_avail[repo.git()].get('build_tag') is None:
+                    print("%s doesn't have a build tag yet!" % repo.git())
                     return
-                params[GIT_TO_BUILDPARAM_MAP[repo.git]] = tag_avail[repo.git]['build_tag']
+                params[GIT_TO_BUILDPARAM_MAP[repo.git()]] = tag_avail[repo.git()]['build_tag']
 
         print("--------------------------------------------------------------------------------")
         fmt_str = "%-50s %-20s"
@@ -1060,10 +1304,10 @@ def do_license_generation(state, tag_avail):
     print("Setting up temporary Git workspace...")
 
     tmpdirs = []
-    for repo in REPOS.values():
-        tmpdirs.append(setup_temp_git_checkout(state, repo.git, tag_avail[repo.git]['build_tag']))
-    for repo in OPTIONAL_REPOS.values():
-        tmpdirs.append(setup_temp_git_checkout(state, repo.git, "origin/master"))
+    for repo in Component.get_components_of_type("git"):
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), tag_avail[repo.git()]['build_tag']))
+    for repo in Component.get_components_of_type("git", only_non_release=True):
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), "origin/master"))
 
     try:
         print("Output is captured in generated-license-text.txt.")
@@ -1078,22 +1322,23 @@ def do_license_generation(state, tag_avail):
         for tmpdir in tmpdirs:
             cleanup_temp_git_checkout(tmpdir)
 
-def set_docker_compose_version_to(dir, repo_docker, tag):
+def set_docker_compose_version_to(dir, repo, tag):
     """Modifies docker-compose files in the given directory so that repo_docker
     image points to the given tag."""
 
-    compose_files = docker_compose_files_list(dir)
-    for filename in compose_files:
-        old = open(filename)
-        new = open(filename + ".tmp", "w")
-        for line in old:
-            # Replace build tag with a new one.
-            line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(repo_docker),
-                          r"\g<1>%s\2" % tag, line)
-            new.write(line)
-        new.close()
-        old.close()
-        os.rename(filename + ".tmp", filename)
+    for yml in repo.yml_components():
+        compose_files = docker_compose_files_list(dir)
+        for filename in compose_files:
+            old = open(filename)
+            new = open(filename + ".tmp", "w")
+            for line in old:
+                # Replace build tag with a new one.
+                line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(yml.yml()),
+                              r"\g<1>%s\2" % tag, line)
+                new.write(line)
+            new.close()
+            old.close()
+            os.rename(filename + ".tmp", filename)
 
 def purge_build_tags(state, tag_avail):
     """Gets rid of all tags in all repositories that match the current version
@@ -1101,16 +1346,16 @@ def purge_build_tags(state, tag_avail):
     upstream as well."""
 
     git_list = []
-    for repo in REPOS.values():
-        remote = find_upstream_remote(state, repo.git)
-        tag_list = execute_git(state, repo.git, ["tag"], capture=True).split('\n')
+    for repo in Component.get_components_of_type("git"):
+        remote = find_upstream_remote(state, repo.git())
+        tag_list = execute_git(state, repo.git(), ["tag"], capture=True).split('\n')
         to_purge = []
         for tag in tag_list:
-            if re.match('^%s-build[0-9]+$' % re.escape(state[repo.git]['version']), tag):
+            if re.match('^%s-build[0-9]+$' % re.escape(state[repo.git()]['version']), tag):
                 to_purge.append(tag)
         if len(to_purge) > 0:
-            git_list.append((state, repo.git, ["tag", "-d"] + to_purge))
-            git_list.append((state, repo.git, ["push", remote] + [":%s" % tag for tag in to_purge]))
+            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
+            git_list.append((state, repo.git(), ["push", remote] + [":%s" % tag for tag in to_purge]))
 
     query_execute_git_list(git_list)
 
@@ -1119,27 +1364,27 @@ def switch_following_branch(state, tag_avail):
     between local and remote branch."""
 
     current = None
-    for repo in REPOS.values():
-        if not tag_avail[repo.git]['already_released']:
+    for repo in Component.get_components_of_type("git"):
+        if not tag_avail[repo.git()]['already_released']:
             if current is None:
                 # Pick first match as current state.
-                current = state[repo.git]['following']
+                current = state[repo.git()]['following']
             if current.find('/') < 0:
                 # Not a remote branch, switch to one.
                 assign_default_following_branch(state, repo)
             else:
                 # Remote branch, switch to the local one.
                 local = current[(current.index('/') + 1):]
-                update_state(state, [repo.git, 'following'], local)
+                update_state(state, [repo.git(), 'following'], local)
 
 def find_default_following_branch(state, repo, version):
-    remote = find_upstream_remote(state, repo.git)
+    remote = find_upstream_remote(state, repo.git())
     branch = re.sub(r"\.[^.]+$", ".x", version)
     return "%s/%s" % (remote, branch)
 
 def assign_default_following_branch(state, repo):
-    update_state(state, [repo.git, 'following'],
-                 find_default_following_branch(state, repo, state[repo.git]['version']))
+    update_state(state, [repo.git(), 'following'],
+                 find_default_following_branch(state, repo, state[repo.git()]['version']))
 
 def merge_release_tag(state, tag_avail, repo):
     """Merge tag into version branch, but only for Git history's sake, the 'ours'
@@ -1148,7 +1393,7 @@ def merge_release_tag(state, tag_avail, repo):
     fetch --tags", which is inconvenient for users.
     """
 
-    if not tag_avail[repo.git]['already_released']:
+    if not tag_avail[repo.git()]['already_released']:
         print("Repository must have a final release tag before the tag can be merged!")
         return
 
@@ -1156,7 +1401,7 @@ def merge_release_tag(state, tag_avail, repo):
     # followed branch, which may theoretically be later than the released tag.
     # This is because this needs to be pushed to the tip of the branch, not to
     # where the tag is.
-    tmpdir = setup_temp_git_checkout(state, repo.git, state[repo.git]['following'])
+    tmpdir = setup_temp_git_checkout(state, repo.git(), state[repo.git()]['following'])
     try:
         # Get a branch name for the currently checked out branch.
         branch = execute_git(state, tmpdir, ["symbolic-ref", "--short", "HEAD"],
@@ -1165,18 +1410,18 @@ def merge_release_tag(state, tag_avail, repo):
         # Merge the tag into it.
         git_list = [((state, tmpdir, ["merge", "-s", "ours", "-m",
                                       "Merge tag %s into %s using 'ours' merge strategy."
-                                      % (tag_avail[repo.git]['build_tag'], branch),
-                                      tag_avail[repo.git]['build_tag']]))]
+                                      % (tag_avail[repo.git()]['build_tag'], branch),
+                                      tag_avail[repo.git()]['build_tag']]))]
         if not query_execute_git_list(git_list):
             return
 
         # And then fetch that object back into the original repository, which
         # remains untouched.
-        execute_git(state, repo.git, ["fetch", tmpdir, branch])
+        execute_git(state, repo.git(), ["fetch", tmpdir, branch])
 
         # Push it to upstream.
-        upstream = find_upstream_remote(state, repo.git)
-        git_list = [((state, repo.git, ["push", upstream, "FETCH_HEAD:refs/heads/%s"
+        upstream = find_upstream_remote(state, repo.git())
+        git_list = [((state, repo.git(), ["push", upstream, "FETCH_HEAD:refs/heads/%s"
                                         % branch]))]
         if not query_execute_git_list(git_list):
             return
@@ -1186,8 +1431,8 @@ def merge_release_tag(state, tag_avail, repo):
 def push_latest_docker_tags(state, tag_avail):
     """Make all the Docker ":latest" tags point to the current release."""
 
-    for repo in REPOS.values():
-        if not tag_avail[repo.git]['already_released']:
+    for repo in Component.get_components_of_type("git"):
+        if not tag_avail[repo.git()]['already_released']:
             print('You cannot push the ":latest" Docker tags without making final release tags first!')
             return
 
@@ -1205,24 +1450,22 @@ def push_latest_docker_tags(state, tag_avail):
             continue
 
         exec_list = []
-        for repo in REPOS.values():
-            if not repo.has_container:
-                continue
-
+        for image in Component.get_components_of_type("docker_image"):
             # Even though the version is already in 'tip', this is for the
             # overall Mender version. We need the specific one for the
             # repository.
+            repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
                 minor_version = "latest"
             else:
-                minor_version = state[repo.git]['version'][0:state[repo.git]['version'].rindex('.')]
+                minor_version = state[repo.git()]['version'][0:state[repo.git()]['version'].rindex('.')]
 
             exec_list.append(["docker", "pull",
-                              "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag'])])
+                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag'])])
             exec_list.append(["docker", "tag",
-                              "mendersoftware/%s:%s" % (repo.docker, tag_avail[repo.git]['build_tag']),
-                              "mendersoftware/%s:%s" % (repo.docker, minor_version)])
-            exec_list.append(["docker", "push", "mendersoftware/%s:%s" % (repo.docker, minor_version)])
+                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag']),
+                              "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
+            exec_list.append(["docker", "push", "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
 
         query_execute_list(exec_list)
 
@@ -1231,14 +1474,14 @@ def create_release_branches(state, tag_avail):
 
     any_repo_needs_branch = False
 
-    for repo in REPOS.values():
-        if tag_avail[repo.git]['already_released']:
+    for repo in Component.get_components_of_type("git"):
+        if tag_avail[repo.git()]['already_released']:
             continue
 
-        remote = find_upstream_remote(state, repo.git)
+        remote = find_upstream_remote(state, repo.git())
 
         try:
-            execute_git(state, repo.git, ["rev-parse", state[repo.git]['following']],
+            execute_git(state, repo.git(), ["rev-parse", state[repo.git()]['following']],
                         capture=True, capture_stderr=True)
         except subprocess.CalledProcessError:
             any_repo_needs_branch = True
@@ -1246,14 +1489,14 @@ def create_release_branches(state, tag_avail):
             reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
                          + "and base it on latest '%s/master' (if you don't want to base "
                          + "it on '%s/master' you have to do it manually)? ")
-                        % (repo.git, state[repo.git]['following'], remote, remote))
+                        % (repo.git(), state[repo.git()]['following'], remote, remote))
             if not reply.startswith("Y") and not reply.startswith("y"):
                 continue
 
             cmd_list = []
-            cmd_list.append((state, repo.git, ["push", remote, "%s/master:refs/heads/%s"
+            cmd_list.append((state, repo.git(), ["push", remote, "%s/master:refs/heads/%s"
                                            # Slight abuse of basename() to get branch basename.
-                                           % (remote, os.path.basename(state[repo.git]['following']))]))
+                                           % (remote, os.path.basename(state[repo.git()]['following']))]))
             query_execute_git_list(cmd_list)
 
     if not any_repo_needs_branch:
@@ -1261,10 +1504,10 @@ def create_release_branches(state, tag_avail):
         print("No.")
 
 def do_beta_to_final_transition(state):
-    for repo in REPOS.values():
-        version = state[repo.git]['version']
+    for repo in Component.get_components_of_type("git"):
+        version = state[repo.git()]['version']
         version = re.sub("b[0-9]+$", "", version)
-        update_state(state, [repo.git, 'version'], version)
+        update_state(state, [repo.git(), 'version'], version)
 
     version = state['version']
     version = re.sub("b[0-9]+$", "", version)
@@ -1288,18 +1531,20 @@ def do_docker_compose_branches_from_follows(state):
     if not reply.upper().startswith("Y"):
         return
 
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
-        branch = state[repo.git]["following"]
+    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+        branch = state[repo.git()]["following"]
         slash = branch.rfind('/')
         if slash >= 0:
             bare_branch = branch[slash+1:]
         else:
             bare_branch = branch
 
-        reply = ask("Change %s to %s? " % (repo.docker, bare_branch))
+        for yml_comp in repo.yml_components():
+            print("Will need to change %s to %s." % (yml_comp.yml(), bare_branch))
+        reply = ask("Is this ok?")
         if reply.upper().startswith("Y"):
             set_docker_compose_version_to(os.path.join(state["repo_dir"], "integration"),
-                                          repo.docker, bare_branch)
+                                          repo, bare_branch)
 
     print("Alright, done! The committing you will have to do yourself.")
 
@@ -1333,15 +1578,15 @@ def do_build(args):
         tag_avail = check_tag_availability(state)
     else:
         update_state(state, ["version"], args.build)
-        for repo in REPOS.values():
-            if repo.git == "integration":
-                update_state(state, [repo.git, "version"], args.build)
+        for repo in Component.get_components_of_type("git"):
+            if repo.git() == "integration":
+                update_state(state, [repo.git(), "version"], args.build)
             else:
-                version = version_of(integration_dir(), repo.docker, args.build)
-                update_state(state, [repo.git, "version"], version)
+                version = version_of(integration_dir(), repo.yml_components()[0].yml(), args.build)
+                update_state(state, [repo.git(), "version"], version)
         tag_avail = check_tag_availability(state)
-        for repo in REPOS.values():
-            tag_avail[repo.git]['build_tag'] = state[repo.git]["version"]
+        for repo in Component.get_components_of_type("git"):
+            tag_avail[repo.git()]['build_tag'] = state[repo.git()]["version"]
 
     extra_buildparams = get_extra_buildparams_from_jenkins()
 
@@ -1361,7 +1606,7 @@ def do_build(args):
     trigger_jenkins_build(state, tag_avail)
 
 def determine_version_to_include_in_release(state, repo):
-    version = state_value(state, [repo.git, 'version'])
+    version = state_value(state, [repo.git(), 'version'])
 
     if version is not None:
         return version
@@ -1377,12 +1622,12 @@ def determine_version_to_include_in_release(state, repo):
     follow_branch = None
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
-        prev_of_repo = version_of(integration_dir(), repo.docker, in_integration_version=prev_of_integration)
+        prev_of_repo = version_of(integration_dir(), repo.yml_components()[0].yml(), in_integration_version=prev_of_integration)
         new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:
         # No series exists. Base on master.
-        version_list = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git))
+        version_list = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git()))
         if len(version_list) > 0:
             prev_of_repo = version_list[0]
             (major, minor, patch, beta) = version_components(prev_of_repo)
@@ -1393,33 +1638,33 @@ def determine_version_to_include_in_release(state, repo):
             new_repo_version = "1.0.0"
         if overall_beta:
             new_repo_version += "b%d" % overall_beta
-        follow_branch = "%s/master" % find_upstream_remote(state, repo.git)
+        follow_branch = "%s/master" % find_upstream_remote(state, repo.git())
 
     if prev_of_repo:
         cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
 
-        print("cd %s && git %s:" % (repo.git, " ".join(cmd)))
-        execute_git(state, repo.git, cmd)
+        print("cd %s && git %s:" % (repo.git(), " ".join(cmd)))
+        execute_git(state, repo.git(), cmd)
 
         print()
-        print("Above is the output of 'cd %s && git %s'" % (repo.git, " ".join(cmd)))
+        print("Above is the output of 'cd %s && git %s'" % (repo.git(), " ".join(cmd)))
         reply = ask("Based on this, is there a reason for a new release of %s? "
-                    % repo.git)
+                    % repo.git())
 
     if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask("Should the new release of %s be version %s? "
-                    % (repo.git, new_repo_version))
+                    % (repo.git(), new_repo_version))
         if reply.lower().startswith("y"):
-            update_state(state, [repo.git, 'version'], new_repo_version)
+            update_state(state, [repo.git(), 'version'], new_repo_version)
     else:
         reply = ask("Should the release of %s be left at the previous version %s? "
-                    % (repo.git, prev_of_repo))
+                    % (repo.git(), prev_of_repo))
         if reply.lower().startswith("y"):
-            update_state(state, [repo.git, 'version'], prev_of_repo)
+            update_state(state, [repo.git(), 'version'], prev_of_repo)
 
-    if state_value(state, [repo.git, 'version']) is None:
-        reply = ask("Ok. Please input the new version of %s manually: " % repo.git)
-        update_state(state, [repo.git, 'version'], reply)
+    if state_value(state, [repo.git(), 'version']) is None:
+        reply = ask("Ok. Please input the new version of %s manually: " % repo.git())
+        update_state(state, [repo.git(), 'version'], reply)
 
     print()
     print("--------------------------------------------------------------------------------")
@@ -1469,14 +1714,14 @@ def do_release():
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    for repo in sorted(REPOS.values(), key=repo_sort_key):
+    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
         determine_version_to_include_in_release(state, repo)
 
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)
 
-    for repo in REPOS.values():
-        if state_value(state, [repo.git, "following"]) is None:
+    for repo in Component.get_components_of_type("git"):
+        if state_value(state, [repo.git(), "following"]) is None:
             # Follow "1.0.x" style branches by default.
             assign_default_following_branch(state, repo)
 
@@ -1537,14 +1782,14 @@ def do_release():
                 purge_build_tags(state, tag_avail)
             reply = ask('Merge "integration" release tag into version branch (recommended)? ')
             if reply.lower() == "y":
-                merge_release_tag(state, tag_avail, determine_repo("integration"))
+                merge_release_tag(state, tag_avail, Component.get_component_of_type("git", "integration"))
         elif reply.lower() == "d":
             push_latest_docker_tags(state, tag_avail)
         elif reply.lower() == "p":
             git_list = []
-            for repo in REPOS.values():
-                remote = find_upstream_remote(state, repo.git)
-                git_list.append((state, repo.git, ["push", remote, tag_avail[repo.git]['build_tag']]))
+            for repo in Component.get_components_of_type("git"):
+                remote = find_upstream_remote(state, repo.git())
+                git_list.append((state, repo.git(), ["push", remote, tag_avail[repo.git()]['build_tag']]))
             query_execute_git_list(git_list)
         elif reply.lower() == "b":
             trigger_jenkins_build(state, tag_avail)
@@ -1555,7 +1800,7 @@ def do_release():
         elif reply.lower() == "s":
             switch_following_branch(state, tag_avail)
         elif reply.lower() == "m":
-            merge_release_tag(state, tag_avail, determine_repo("integration"))
+            merge_release_tag(state, tag_avail, Component.get_component_of_type("git", "integration"))
         elif reply.lower() == "c":
             create_release_branches(state, tag_avail)
         elif reply.lower() == "o":
@@ -1573,8 +1818,8 @@ def do_set_version_to(args):
         print("--set-version-of requires --version")
         sys.exit(1)
 
-    repo = determine_repo(args.set_version_of)
-    set_docker_compose_version_to(integration_dir(), repo.docker, args.version)
+    repo = Component.get_component_of_any_type(args.set_version_of)
+    set_docker_compose_version_to(integration_dir(), repo, args.version)
 
 def do_integration_versions_including(args):
     if not args.version:
@@ -1603,12 +1848,12 @@ def do_integration_versions_including(args):
     for candidate in candidates:
         data = get_docker_compose_data_for_rev(git_dir, candidate)
         try:
-            repo = determine_repo(args.integration_versions_including)
+            repo = Component.get_component_of_any_type(args.integration_versions_including)
         except KeyError:
             print("Unrecognized repository: %s" % args.integration_versions_including)
             sys.exit(1)
         try:
-            version = data[repo.docker]['version']
+            version = data[repo.yml_components()[0].yml()]['version']
         except KeyError:
             # If key doesn't exist it's because the version is from before
             # that component existed. So definitely not a match.
@@ -1671,26 +1916,24 @@ def do_verify_integration_references(args, optional_too):
     data = get_docker_compose_data(int_dir)
     problem = False
 
-    repos = list(REPOS.values())
-    if optional_too:
-        repos += list(OPTIONAL_REPOS.values())
+    repos = Component.get_components_of_type("git", only_release=(not optional_too))
 
     for repo in repos:
         # integration is not checked, since the current checkout records the
         # version of that one.
-        if repo.git == "integration":
+        if repo.git() == "integration":
             continue
 
         # Try some common locations.
         tried = []
         for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
-            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git))
+            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git()))
             tried.append(path)
             if os.path.isdir(path):
                 break
         else:
             print("%s not found. Tried: %s"
-                  % (repo.git, ", ".join(tried)))
+                  % (repo.git(), ", ".join(tried)))
             sys.exit(2)
 
         revs = figure_out_checked_out_revision(None, path)
@@ -1706,16 +1949,17 @@ def do_verify_integration_references(args, optional_too):
             # in the YAML files.
             continue
 
-        version = data[repo.docker]['version']
+        for yml in repo.yml_components():
+            version = data[yml.yml()]['version']
 
-        if version not in [ref for ref, reftype in revs]:
-            if len(revs) > 1:
-                checked_out = "(one of '%s')" % "', '".join([ref for ref, reftype in revs])
-            else:
-                checked_out = "'%s'" % revs[0][0]
-            print("%s: Checked out Git ref %s does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
-                  % (repo.git, checked_out, version, repo.docker))
-            problem = True
+            if version not in [ref for ref, reftype in revs]:
+                if len(revs) > 1:
+                    checked_out = "(one of '%s')" % "', '".join([ref for ref, reftype in revs])
+                else:
+                    checked_out = "'%s'" % revs[0][0]
+                print("%s: Checked out Git ref %s does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
+                      % (repo.git(), checked_out, version, yml.yml()))
+                problem = True
 
     if problem:
         print("\nMake sure all *.yml files contain the correct versions.")
@@ -1783,9 +2027,9 @@ def main():
         DRY_RUN = True
 
     if args.in_integration_version:
-        update_repo_list(args.in_integration_version)
+        Component.update_component_list(args.in_integration_version)
     else:
-        update_repo_list()
+        Component.update_component_list()
 
     if args.version_of is not None:
         do_version_of(args)

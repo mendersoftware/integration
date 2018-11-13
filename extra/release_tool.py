@@ -1445,7 +1445,11 @@ def create_release_branches(state, tag_avail):
                                            % (remote, os.path.basename(state[repo.git()]['following']))]))
             query_execute_git_list(cmd_list)
 
-    if not any_repo_needs_branch:
+    if any_repo_needs_branch:
+        reply = ask("Do you want to update all the docker-compose files to new branch values in integration? ")
+        if reply.upper().startswith("Y"):
+            do_docker_compose_branches_from_follows(state)
+    else:
         # Matches the beginning text above.
         print("No.")
 
@@ -1460,39 +1464,57 @@ def do_beta_to_final_transition(state):
     update_state(state, ['version'], version)
 
 def do_docker_compose_branches_from_follows(state):
+    remote = find_upstream_remote(state, "integration")
+    checkout = setup_temp_git_checkout(state, "integration", state['integration']['following'])
+
     try:
-        execute_git(state, "integration", ["diff", "-s", "--exit-code"])
-    except subprocess.CalledProcessError:
-        print("The integration work tree is not clean, cannot use this command!")
-        return
+        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+            branch = state[repo.git()]["following"]
+            slash = branch.rfind('/')
+            if slash >= 0:
+                bare_branch = branch[slash+1:]
+            else:
+                bare_branch = branch
 
-    print("Unlike most actions, this action works on your actual checked out repository.")
-    print("Make sure that you are on the right branch, and that the work tree is clean.")
+            set_docker_compose_version_to(checkout, repo, bare_branch)
+
+        print("This is the diff:")
+        execute_git(state, checkout, ["diff"])
+
+        bare_branch = re.sub(".*/", "", state['integration']['following'])
+        cmd = ["commit", "-asm",
+"""Update branch references for %s.
+
+Changelog: None"""
+               % bare_branch]
+        if not query_execute_git_list([(state, checkout, cmd)]):
+            return
+
+        if state['integration']['following'] == bare_branch:
+            print(
+"""Cannot push the update docker-compose files if integration is not following a
+remote branch. Stopping here so that you can push yourself if desired.
+The result commit has been put in %s,
+which will be removed after you press Enter. Please enter the push command there
+if you wish to push the new commit.
+"""
+                % checkout)
+            ask("Press Enter when finished...")
+            return
+
+        execute_git(state, "integration", ["fetch", checkout, bare_branch])
+
+        if not query_execute_git_list([(state, "integration", ["push", remote, "FETCH_HEAD:refs/heads/%s" % bare_branch])]):
+            return
+
+    finally:
+        cleanup_temp_git_checkout(checkout)
+
     print()
-    branch = execute_git(state, "integration", ["symbolic-ref", "--short", "HEAD"], capture=True).strip()
-    print("Currently checked out branch is: %s" % branch)
-    print()
-    reply = ask("Is this ok? ")
-
-    if not reply.upper().startswith("Y"):
-        return
-
-    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
-        branch = state[repo.git()]["following"]
-        slash = branch.rfind('/')
-        if slash >= 0:
-            bare_branch = branch[slash+1:]
-        else:
-            bare_branch = branch
-
-        for yml_comp in repo.yml_components():
-            print("Will need to change %s to %s." % (yml_comp.yml(), bare_branch))
-        reply = ask("Is this ok?")
-        if reply.upper().startswith("Y"):
-            set_docker_compose_version_to(os.path.join(state["repo_dir"], "integration"),
-                                          repo, bare_branch)
-
-    print("Alright, done! The committing you will have to do yourself.")
+    print("After this it is usually a good idea to re-fetch git repos,")
+    print("so will ask about that next.")
+    ask("Press Enter...")
+    refresh_repos(state)
 
 def do_build(args):
     """Handles building: triggering a build of the given Mender version. Saves

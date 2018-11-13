@@ -1323,24 +1323,6 @@ def purge_build_tags(state, tag_avail):
 
     query_execute_git_list(git_list)
 
-def switch_following_branch(state, tag_avail):
-    """Switches all followed branches in all repositories that aren't released,
-    between local and remote branch."""
-
-    current = None
-    for repo in Component.get_components_of_type("git"):
-        if not tag_avail[repo.git()]['already_released']:
-            if current is None:
-                # Pick first match as current state.
-                current = state[repo.git()]['following']
-            if current.find('/') < 0:
-                # Not a remote branch, switch to one.
-                assign_default_following_branch(state, repo)
-            else:
-                # Remote branch, switch to the local one.
-                local = current[(current.index('/') + 1):]
-                update_state(state, [repo.git(), 'following'], local)
-
 def find_default_following_branch(state, repo, version):
     remote = find_upstream_remote(state, repo.git())
     branch = re.sub(r"\.[^.]+$", ".x", version)
@@ -1721,8 +1703,6 @@ def do_release():
         print("  P) Push current build tags (not necessary unless -s was used before)")
         print("  U) Purge build tags from all repositories")
         print('  M) Merge "integration" release tag into release branch')
-        print("  S) Switch fetching branch between remote and local branch (affects next")
-        print("       tagging)")
         print("  C) Create new series branch (A.B.x style) for each repository that lacks one")
         print("  I) Put currently followed branch names into integration's docker-compose ")
         print("     files. Use this to update the integration repository to new branch names")
@@ -1761,8 +1741,6 @@ def do_release():
             do_license_generation(state, tag_avail)
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
-        elif reply.lower() == "s":
-            switch_following_branch(state, tag_avail)
         elif reply.lower() == "m":
             merge_release_tag(state, tag_avail, Component.get_component_of_type("git", "integration"))
         elif reply.lower() == "c":

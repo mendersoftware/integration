@@ -1528,7 +1528,7 @@ def do_build(args):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
-                version = version_of(integration_dir(), repo.yml_components()[0].yml(), args.build)
+                version = version_of(integration_dir(), repo.yml_components()[0], args.build)
                 update_state(state, [repo.git(), "version"], version)
         tag_avail = check_tag_availability(state)
         for repo in Component.get_components_of_type("git"):

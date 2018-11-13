@@ -402,7 +402,7 @@ def init_jenkins_creds():
             if key in ["login", "user", "username"]:
                 JENKINS_USER = value
 
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return
 
 def integration_dir():

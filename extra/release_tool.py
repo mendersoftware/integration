@@ -1323,24 +1323,6 @@ def purge_build_tags(state, tag_avail):
 
     query_execute_git_list(git_list)
 
-def switch_following_branch(state, tag_avail):
-    """Switches all followed branches in all repositories that aren't released,
-    between local and remote branch."""
-
-    current = None
-    for repo in Component.get_components_of_type("git"):
-        if not tag_avail[repo.git()]['already_released']:
-            if current is None:
-                # Pick first match as current state.
-                current = state[repo.git()]['following']
-            if current.find('/') < 0:
-                # Not a remote branch, switch to one.
-                assign_default_following_branch(state, repo)
-            else:
-                # Remote branch, switch to the local one.
-                local = current[(current.index('/') + 1):]
-                update_state(state, [repo.git(), 'following'], local)
-
 def find_default_following_branch(state, repo, version):
     remote = find_upstream_remote(state, repo.git())
     branch = re.sub(r"\.[^.]+$", ".x", version)
@@ -1463,7 +1445,11 @@ def create_release_branches(state, tag_avail):
                                            % (remote, os.path.basename(state[repo.git()]['following']))]))
             query_execute_git_list(cmd_list)
 
-    if not any_repo_needs_branch:
+    if any_repo_needs_branch:
+        reply = ask("Do you want to update all the docker-compose files to new branch values in integration? ")
+        if reply.upper().startswith("Y"):
+            do_docker_compose_branches_from_follows(state)
+    else:
         # Matches the beginning text above.
         print("No.")
 
@@ -1478,39 +1464,57 @@ def do_beta_to_final_transition(state):
     update_state(state, ['version'], version)
 
 def do_docker_compose_branches_from_follows(state):
+    remote = find_upstream_remote(state, "integration")
+    checkout = setup_temp_git_checkout(state, "integration", state['integration']['following'])
+
     try:
-        execute_git(state, "integration", ["diff", "-s", "--exit-code"])
-    except subprocess.CalledProcessError:
-        print("The integration work tree is not clean, cannot use this command!")
-        return
+        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
+            branch = state[repo.git()]["following"]
+            slash = branch.rfind('/')
+            if slash >= 0:
+                bare_branch = branch[slash+1:]
+            else:
+                bare_branch = branch
 
-    print("Unlike most actions, this action works on your actual checked out repository.")
-    print("Make sure that you are on the right branch, and that the work tree is clean.")
+            set_docker_compose_version_to(checkout, repo, bare_branch)
+
+        print("This is the diff:")
+        execute_git(state, checkout, ["diff"])
+
+        bare_branch = re.sub(".*/", "", state['integration']['following'])
+        cmd = ["commit", "-asm",
+"""Update branch references for %s.
+
+Changelog: None"""
+               % bare_branch]
+        if not query_execute_git_list([(state, checkout, cmd)]):
+            return
+
+        if state['integration']['following'] == bare_branch:
+            print(
+"""Cannot push the update docker-compose files if integration is not following a
+remote branch. Stopping here so that you can push yourself if desired.
+The result commit has been put in %s,
+which will be removed after you press Enter. Please enter the push command there
+if you wish to push the new commit.
+"""
+                % checkout)
+            ask("Press Enter when finished...")
+            return
+
+        execute_git(state, "integration", ["fetch", checkout, bare_branch])
+
+        if not query_execute_git_list([(state, "integration", ["push", remote, "FETCH_HEAD:refs/heads/%s" % bare_branch])]):
+            return
+
+    finally:
+        cleanup_temp_git_checkout(checkout)
+
     print()
-    branch = execute_git(state, "integration", ["symbolic-ref", "--short", "HEAD"], capture=True).strip()
-    print("Currently checked out branch is: %s" % branch)
-    print()
-    reply = ask("Is this ok? ")
-
-    if not reply.upper().startswith("Y"):
-        return
-
-    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
-        branch = state[repo.git()]["following"]
-        slash = branch.rfind('/')
-        if slash >= 0:
-            bare_branch = branch[slash+1:]
-        else:
-            bare_branch = branch
-
-        for yml_comp in repo.yml_components():
-            print("Will need to change %s to %s." % (yml_comp.yml(), bare_branch))
-        reply = ask("Is this ok?")
-        if reply.upper().startswith("Y"):
-            set_docker_compose_version_to(os.path.join(state["repo_dir"], "integration"),
-                                          repo, bare_branch)
-
-    print("Alright, done! The committing you will have to do yourself.")
+    print("After this it is usually a good idea to re-fetch git repos,")
+    print("so will ask about that next.")
+    ask("Press Enter...")
+    refresh_repos(state)
 
 def do_build(args):
     """Handles building: triggering a build of the given Mender version. Saves
@@ -1546,7 +1550,7 @@ def do_build(args):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
-                version = version_of(integration_dir(), repo.yml_components()[0].yml(), args.build)
+                version = version_of(integration_dir(), repo.yml_components()[0], args.build)
                 update_state(state, [repo.git(), "version"], version)
         tag_avail = check_tag_availability(state)
         for repo in Component.get_components_of_type("git"):
@@ -1721,8 +1725,6 @@ def do_release():
         print("  P) Push current build tags (not necessary unless -s was used before)")
         print("  U) Purge build tags from all repositories")
         print('  M) Merge "integration" release tag into release branch')
-        print("  S) Switch fetching branch between remote and local branch (affects next")
-        print("       tagging)")
         print("  C) Create new series branch (A.B.x style) for each repository that lacks one")
         print("  I) Put currently followed branch names into integration's docker-compose ")
         print("     files. Use this to update the integration repository to new branch names")
@@ -1761,8 +1763,6 @@ def do_release():
             do_license_generation(state, tag_avail)
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
-        elif reply.lower() == "s":
-            switch_following_branch(state, tag_avail)
         elif reply.lower() == "m":
             merge_release_tag(state, tag_avail, Component.get_component_of_type("git", "integration"))
         elif reply.lower() == "c":

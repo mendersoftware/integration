@@ -275,7 +275,11 @@ def process_node_module(modules_path, module):
         add_file_to_licenses("www.npmjs.com/package/%s" % module,
                              license_file)
     else:
-        data = json.load(open(os.path.join(modules_path, module, "package.json")))
+        if os.path.exists(os.path.join(modules_path, module, "runtime", "package.json")):
+            package_json = os.path.join(modules_path, module, "runtime", "package.json")
+        else:
+            package_json = os.path.join(modules_path, module, "package.json")
+        data = json.load(open(package_json))
         license_url = None
         # node modules are inconsistent in their specification of license, so
         # we need to check many locations.

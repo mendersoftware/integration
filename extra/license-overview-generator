@@ -308,7 +308,12 @@ def process_node_module(modules_path, module):
             if author is None:
                 author = data['_npmUser']['name']
         except KeyError:
-            raise Exception("No author data in package.json for %s" % module)
+            # After much discussion of legalese: We allow empty authors because
+            # some node modules make it really hard to figure out the author,
+            # and in most cases is *possible* to find it out manually, just not
+            # automatically. There is a section describing missing copyright
+            # holder in our docs.
+            author = ""
 
         if license_url is None:
             add_to_licenses("www.npmjs.com/package/%s" % module,

@@ -128,7 +128,7 @@ class Component:
         },
         "docker_image": {
             "deployments": {
-                "git": "deployments",
+                "git": ["deployments"],
                 "docker_container": ["mender-deployments"],
                 "release_component": True,
             },
@@ -190,7 +190,7 @@ class Component:
         },
         "docker_container": {
             "mender-deployments": {
-                "git": "deployments",
+                "git": ["deployments"],
                 "docker_image": ["deployments"],
                 "release_component": True,
             },

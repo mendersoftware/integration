@@ -19,6 +19,14 @@ from pymongo import MongoClient
 def mongo():
     return MongoClient('mender-mongo:27017')
 
+@pytest.yield_fixture(scope='function')
+def clean_mongo(mongo):
+    """Fixture setting up a clean (i.e. empty database). Yields
+    pymongo.MongoClient connected to the DB."""
+    mongo_cleanup(mongo)
+    yield mongo
+    mongo_cleanup(mongo)
+
 def mongo_cleanup(mongo):
     dbs = mongo.database_names()
     dbs = [d for d in dbs if d not in ['local', 'admin']]

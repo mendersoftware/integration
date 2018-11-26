@@ -162,8 +162,8 @@ def create_tenant_user(idx, tenant):
 
     return create_user(name, pwd, tenant.id)
 
-class TestPreauth:
-    def test_ok(self, user):
+class TestPreauthBase:
+    def do_test_ok(self, user, tenant_token=''):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
@@ -208,7 +208,8 @@ class TestPreauth:
         # actual device can obtain auth token
         body, sighdr = deviceauth_v1.auth_req(id_data,
                                               pub,
-                                              priv)
+                                              priv,
+                                              tenant_token)
 
         r = devauthd.call('POST',
                           deviceauth_v1.URL_AUTH_REQS,
@@ -217,7 +218,7 @@ class TestPreauth:
 
         assert r.status_code == 200
 
-    def test_fail_duplicate(self, user, devices):
+    def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
 
@@ -258,6 +259,14 @@ class TestPreauth:
         assert util.crypto.rsa_compare_keys(aset['pubkey'], devices[0].pubkey)
         assert aset['status'] == 'pending'
 
+
+class TestPreauth(TestPreauthBase):
+    def test_ok(self, user):
+        self.do_test_ok(user)
+
+    def test_fail_duplicate(self, user, devices):
+        self.do_test_fail_duplicate(user, devices)
+
     def test_fail_bad_request(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
@@ -290,3 +299,53 @@ class TestPreauth:
                                             deviceauth_v2.URL_DEVICES,
                                             body)
         assert r.status_code == 400
+
+class TestPreauthMultitenant(TestPreauthBase):
+    def test_ok(self, tenants_users):
+        user = tenants_users[0].users[0]
+
+        self.do_test_ok(user, tenants_users[0].tenant_token)
+
+        # check other tenant's devices unmodified
+        user1 = tenants_users[1].users[0]
+        devs1 = tenants_users[1].devices
+        self.verify_devices_unmodified(user1, devs1)
+
+    def test_fail_duplicate(self, tenants_users_devices):
+        user = tenants_users_devices[0].users[0]
+        devices = tenants_users_devices[0].devices
+
+        self.do_test_fail_duplicate(user, devices)
+
+        # check other tenant's devices unmodified
+        user1 = tenants_users_devices[1].users[0]
+        devs1 = tenants_users_devices[1].devices
+        self.verify_devices_unmodified(user1, devs1)
+
+    def verify_devices_unmodified(self, user, in_devices):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        useradmm = ApiClient(useradm.URL_MGMT)
+
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+
+        utoken = r.text
+
+        r = devauthm.with_auth(utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+
+        assert len(api_devs) == len(in_devices)
+        for ad in api_devs:
+            assert ad['status'] == 'pending'
+
+            orig_device = [d for d in in_devices if d.id_data == ad['identity_data']]
+            assert len(orig_device) == 1
+            orig_device = orig_device[0]
+
+            assert len(ad['auth_sets']) == 1
+            aset = ad['auth_sets'][0]
+            assert util.crypto.rsa_compare_keys(aset['pubkey'], orig_device.pubkey)

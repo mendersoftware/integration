@@ -23,7 +23,7 @@ import api.deviceadm as deviceadm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
 from infra.cli import CliTenantadm, CliUseradm
-from util.crypto import compare_keys
+import util.crypto
 
 class Tenant:
     def __init__(self, name):
@@ -92,7 +92,7 @@ def tenants_users_devices(tenants_users, mongo):
 
     for t in tenants_users:
         for _ in range(2):
-            priv, pub = deviceauth.get_keypair()
+            priv, pub = util.crypto.rsa_get_keypair()
             mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
             d = Device({'mac': mac}, pub, priv, t.tenant_token)
 
@@ -121,7 +121,7 @@ def tenants_users_devices(tenants_users, mongo):
             assert r.status_code == 200
 
             api_devs = r.json()
-            api_dev = [x for x in api_devs if compare_keys(x['key'], d.pubkey)][0]
+            api_dev = [x for x in api_devs if util.crypto.rsa_compare_keys(x['key'], d.pubkey)][0]
             d.authset_id = api_dev['id']
 
             t.devices.append(d)

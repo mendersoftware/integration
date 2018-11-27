@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import random
 
 from api.client import ApiClient
 from common import mongo, clean_mongo
@@ -22,29 +21,9 @@ import api.deviceauth_v2 as deviceauth_v2
 import api.useradm as useradm
 import api.tenantadm as tenantadm
 import util.crypto
-
-class User:
-    def __init__(self, id, name, pwd):
-        self.name=name
-        self.pwd=pwd
-        self.id=id
-
-
-class Device:
-    def __init__(self, id_data, pubkey, privkey, tenant_token=''):
-        self.id_data=id_data
-        self.pubkey=pubkey
-        self.privkey=privkey
-        self.tenant_token=tenant_token
-
-
-class Tenant:
-    def __init__(self, name, id, token):
-        self.name=name
-        self.users=[]
-        self.devices=[]
-        self.id=id
-        self.tenant_token=token
+from common import User, Device, Tenant, \
+        create_user, create_tenant, create_tenant_user, \
+        create_random_device
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -108,59 +87,6 @@ def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
             t.devices.append(dev)
 
     yield tenants_users
-
-def create_tenant(name):
-    """ Create a tenant via cli, record its id and token for further use.  """
-    cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL)
-
-    id = cli.create_tenant(name)
-
-    r = api.call('GET', tenantadm.URL_INTERNAL_TENANTS)
-    assert r.status_code == 200
-
-    api_tenants = r.json()
-
-    api_tenant = [at for at in api_tenants if at['id'] == id]
-    token=api_tenant[0]['tenant_token']
-
-    return Tenant(name, id, token)
-
-def create_random_device(tenant_token=''):
-    """ create_device with random id data and keypair"""
-    priv, pub = util.crypto.rsa_get_keypair()
-    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
-    id_data = {'mac': mac}
-
-    return create_device(id_data, pub, priv, tenant_token)
-
-def create_device(id_data, pubkey, privkey, tenant_token=''):
-    """ Simply submit an auth request for a device; it will result in a 'pending' device/authset."""
-    api = ApiClient(deviceauth_v1.URL_DEVICES)
-
-    body, sighdr = deviceauth_v1.auth_req(id_data, pubkey, privkey, tenant_token)
-
-    # submit auth req
-    r = api.call('POST',
-                 deviceauth_v1.URL_AUTH_REQS,
-                 body,
-                 headers=sighdr)
-    assert r.status_code == 401
-
-    return Device(id_data, pubkey, privkey, tenant_token)
-
-def create_user(name, pwd, tid=''):
-    cli = CliUseradm()
-
-    uid = cli.create_user(name, pwd, tid)
-
-    return User(uid, name, pwd)
-
-def create_tenant_user(idx, tenant):
-    name = 'user{}@{}.com'.format(idx, tenant.name)
-    pwd = 'correcthorse'
-
-    return create_user(name, pwd, tenant.id)
 
 class TestPreauthBase:
     def do_test_ok(self, user, tenant_token=''):

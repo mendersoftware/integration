@@ -144,6 +144,21 @@ class TestPreauthBase:
 
         assert r.status_code == 200
 
+        # device and authset changed status to 'accepted'
+        r = devauthm.with_auth(utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES,
+                                            path_params={'id': api_dev['id']})
+
+        api_devs = r.json()
+        assert len(api_devs) == 1
+
+        api_dev = api_devs[0]
+        assert api_dev['status'] == 'accepted'
+        assert len(api_dev['auth_sets']) == 1
+
+        aset = api_dev['auth_sets'][0]
+        assert aset['status'] == 'accepted'
+
     def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)

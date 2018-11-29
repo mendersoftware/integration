@@ -162,7 +162,7 @@ services:
             - CONFIG_PROP=config.properties
 
     mender-elasticsearch-2:
-        image: mendersoftware/elasticsearch:2.4
+        image: elasticsearch:2.2.2
         extends:
             file: common.yml
             service: mender-base
@@ -182,7 +182,7 @@ services:
             - /var/lib/redis
         entrypoint: /redis/entrypoint.sh
 
-    
+
 
     # Add client to failover network as well
     mender-client:

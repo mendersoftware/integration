@@ -110,7 +110,7 @@ services:
             - mender
 
     mender-elasticsearch:
-        image: mendersoftware/elasticsearch:2.4
+        image: elasticsearch:2.2.2
         extends:
             file: common.yml
             service: mender-base

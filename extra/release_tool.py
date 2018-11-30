@@ -350,6 +350,8 @@ def do_list_repos(args, optional_too):
     if optional_too:
         repos += list(OPTIONAL_REPOS.values())
     for repo in sorted(repos, key=repo_sort_key):
+        if not repo.has_container and args.list in ["container", "docker"]:
+            continue
         eval("print(repo.%s)" % args.list)
 
 def version_sort_key(version):

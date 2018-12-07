@@ -1,0 +1,78 @@
+#!/bin/bash
+
+set -e
+
+usage() {
+    cat <<EOF
+$0 --base-dir=<DIR_WITH_REPOS> <REV-RANGE> [addition git-log arguments]"
+
+-n	Instead of generating the statistics, look at the raw Git output that is
+	given to gitdm. You probably want to pipe this somewhere.
+EOF
+}
+
+if [ -z "$1" ]; then
+    usage
+    exit 1
+fi
+
+while [ -n "$1" ]; do
+    case "$1" in
+        --base-dir=*)
+            BASE_DIR="${1#--base-dir=}"
+            ;;
+        --base-dir)
+            shift
+            BASE_DIR="$1"
+            ;;
+        -n)
+            DRY_RUN=1
+            ;;
+        -h|--h*)
+            usage
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+    shift
+done
+
+if [ -z "$BASE_DIR" ]; then
+    echo "Need --base-dir parameter to give location of repositories."
+    exit 1
+fi
+
+collect_changes() {
+    RELEASE_TOOL="$(dirname "$0")/release_tool.py"
+    for repo in $("$RELEASE_TOOL" --list git); do
+        (
+            CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$1")"
+            shift
+            if [ -z "$1" ]; then
+                GIT_ARGS="-p -M -C -C"
+            else
+                GIT_ARGS=
+            fi
+            echo "Fetching changes for $repo, rev $CHANGES" 1>&2
+            cd "$BASE_DIR/$repo" && git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules'
+        )
+    done
+}
+
+ACTUAL_MAILMAP_MD5=$(md5sum "$(git config --get mailmap.file)" 2>/dev/null | sed -e 's/  .*//')
+DESIRED_MAILMAP_MD5=$(md5sum "$(dirname "$0")/gitdm/mailmap" | sed -e 's/  .*//')
+
+if [ "$ACTUAL_MAILMAP_MD5" != "$DESIRED_MAILMAP_MD5" ]; then
+    echo "Please execute this before running the command:"
+    echo "  git config --global mailmap.file" "$(realpath "$(dirname "$0")/gitdm/mailmap")"
+    exit 1
+fi
+
+if [ "$DRY_RUN" = 1 ]; then
+    collect_changes "$@"
+else
+    set -o pipefail
+    collect_changes "$@" | python "$(dirname "$0")"/gitdm/gitdm/gitdm -b "$(dirname "$0")"/gitdm -l 10
+fi

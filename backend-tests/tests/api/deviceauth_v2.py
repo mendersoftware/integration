@@ -22,6 +22,7 @@ import api.client
 URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
 
 URL_DEVICES = '/devices'
+URL_DEVICE = '/devices/{id}'
 
 def preauth_req(id_data, pubkey):
     return {

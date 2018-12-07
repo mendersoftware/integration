@@ -15,7 +15,7 @@ import pytest
 import random
 import time
 
-from common import mongo, mongo_cleanup
+from common import mongo, clean_mongo
 from api.client import ApiClient
 import api.useradm as useradm
 import api.deviceauth as deviceauth
@@ -23,111 +23,48 @@ import api.deviceadm as deviceadm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
 from infra.cli import CliTenantadm, CliUseradm
-from util.crypto import compare_keys
-
-class Tenant:
-    def __init__(self, name):
-        self.name=name
-        self.users=[]
-        self.devices=[]
-        self.id=''
-        self.tenant_token=''
-
-
-class User:
-    def __init__(self, id, name, pwd):
-        self.name=name
-        self.pwd=pwd
-        self.id=id
-
-
-class Device:
-    def __init__(self, id_data, pubkey, privkey, tenant_token):
-        self.id_data=id_data
-        self.pubkey=pubkey
-        self.privkey=privkey
-        self.tenant_token=tenant_token
-
-        self.token=''
-        self.authset_id=''
-
+import util.crypto
+from common import User, Device, Tenant, \
+        create_user, create_tenant, create_tenant_user, \
+        create_random_device
 
 @pytest.yield_fixture(scope="function")
-def tenants(mongo):
-    cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL)
+def tenants(clean_mongo):
+    tenants = []
 
-    tenants = [Tenant('tenant1'), Tenant('tenant2')]
-
-    for t in tenants:
-        t.id = cli.create_tenant(t.name)
-
-    r = api.call('GET', tenantadm.URL_INTERNAL_TENANTS)
-    api_tenants = r.json()
-
-    for t in tenants:
-        api_tenant = [at for at in api_tenants if at['id'] == t.id]
-        t.tenant_token=api_tenant[0]['tenant_token']
+    for n in ['tenant1', 'tenant2']:
+        tenants.append(create_tenant(n))
 
     yield tenants
-    mongo_cleanup(mongo)
 
 @pytest.yield_fixture(scope="function")
-def tenants_users(tenants, mongo):
-    cu = CliUseradm()
+def tenants_users(tenants, clean_mongo):
     for t in tenants:
         for i in range(2):
-            username = 'user{}@{}.com'.format(i, t.name)
-            pwd = 'correcthorse'
-            uid = cu.create_user(username, pwd, t.id)
-            t.users.append(User(uid, username, pwd))
+            user = create_tenant_user(i, t)
+            t.users.append(user)
 
     yield tenants
-    mongo_cleanup(mongo)
 
 @pytest.yield_fixture(scope="function")
 def tenants_users_devices(tenants_users, mongo):
-    devauthd = ApiClient(deviceauth.URL_DEVICES)
-    devadmm = ApiClient(deviceadm.URL_MGMT)
-
     for t in tenants_users:
         for _ in range(2):
-            priv, pub = deviceauth.get_keypair()
-            mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
-            d = Device({'mac': mac}, pub, priv, t.tenant_token)
-
-            body, sighdr = deviceauth.auth_req(d.id_data, d.pubkey, d.privkey, d.tenant_token)
-
-            # submit auth req
-            r = devauthd.call('POST',
-                          deviceauth.URL_AUTH_REQS,
-                          body,
-                          headers=sighdr)
-            assert r.status_code == 401
-
-
-            # get the authset id for future acceptance
-            useradmm = ApiClient(useradm.URL_MGMT)
-            r = useradmm.call('POST',
-                              useradm.URL_LOGIN,
-                              auth=(t.users[0].name, t.users[0].pwd))
-            assert r.status_code == 200
-
-            utoken = r.text
-
-            r = devadmm.with_auth(utoken).call('GET',
-                                                deviceadm.URL_AUTHSETS)
-
-            assert r.status_code == 200
-
-            api_devs = r.json()
-            api_dev = [x for x in api_devs if compare_keys(x['key'], d.pubkey)][0]
-            d.authset_id = api_dev['id']
-
-            t.devices.append(d)
+            dev = create_random_device(t.tenant_token)
+            t.devices.append(dev)
 
     yield tenants_users
-    mongo_cleanup(mongo)
+
+def get_authset_id(pubkey, utoken):
+    devadmm = ApiClient(deviceadm.URL_MGMT)
+    r = devadmm.with_auth(utoken).call('GET',
+                                        deviceadm.URL_AUTHSETS)
+
+    assert r.status_code == 200
+
+    api_devs = r.json()
+    api_dev = [x for x in api_devs if util.crypto.rsa_compare_keys(x['key'], pubkey)][0]
+    return api_dev['id']
 
 class TestAccountSuspensionMultitenant:
     def test_user_cannot_log_in(self, tenants_users):
@@ -225,7 +162,7 @@ class TestAccountSuspensionMultitenant:
         r = dac.with_auth(utoken).call('PUT',
                                        deviceadm.URL_AUTHSET_STATUS,
                                        deviceadm.req_status('accepted'),
-                                       path_params={'id': device.authset_id})
+                                       path_params={'id': get_authset_id(dev.pubkey, utoken)})
         assert r.status_code == 200
 
         # suspend
@@ -272,7 +209,7 @@ class TestAccountSuspensionMultitenant:
         r = dac.with_auth(utoken).call('PUT',
                                        deviceadm.URL_AUTHSET_STATUS,
                                        deviceadm.req_status('accepted'),
-                                       path_params={'id': device.authset_id})
+                                       path_params={'id': get_authset_id(dev.pubkey, utoken)})
         assert r.status_code == 200
 
         # request auth

@@ -11,22 +11,26 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
+from base64 import b64encode, urlsafe_b64decode, urlsafe_b64encode
 import json
 
 import api.client
-import util.crypto
 
-URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/devauth'
-URL_DEVICES = api.client.GATEWAY_URL + '/api/devices/v1/authentication'
+URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
+URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
 
-URL_LIST_DEVICES = '/devices'
-URL_AUTH_REQS = '/auth_requests'
+URL_DEVICES = '/devices'
+URL_DEVICE  = '/devices/{id}'
+URL_DEVICES_COUNT = '/devices/count'
 
-def auth_req(id_data, pubkey, privkey, tenant_token=''):
-    payload = {
-        "id_data": json.dumps(id_data),
-        "tenant_token": tenant_token,
-        "pubkey": pubkey,
+def preauth_req(id_data, pubkey):
+    return {
+        "identity_data": id_data,
+        "pubkey": pubkey
     }
-    signature = util.crypto.rsa_sign_data(json.dumps(payload), privkey)
-    return payload, {'X-MEN-Signature': signature}
+
+def req_status(status):
+    return {'status': status}

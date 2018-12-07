@@ -341,12 +341,9 @@ def change_authset_status(did, aid, status, utoken):
                                    path_params={'did': did, 'aid': aid })
     assert r.status_code == 204
 
-
-@pytest.yield_fixture(scope="function")
-def devs_authsets(user):
+def make_devs_with_authsets(user, tenant_token=''):
     """ create a good number of devices, some with >1 authsets, with different statuses.
         returns DevWithAuthsets objects."""
-
     useradmm = ApiClient(useradm.URL_MGMT)
 
     # log in user
@@ -361,27 +358,27 @@ def devs_authsets(user):
 
     # some vanilla 'pending' devices, single authset
     for _ in range(5):
-        dev = make_pending_device(utoken, 1)
+        dev = make_pending_device(utoken, 1, tenant_token=tenant_token)
         devices.append(dev)
 
     # some pending devices with > 1 authsets
     for i in range(2):
-        dev = make_pending_device(utoken, 3)
+        dev = make_pending_device(utoken, 3, tenant_token=tenant_token)
         devices.append(dev)
 
     # some 'accepted' devices, single authset
     for _ in range(3):
-        dev = make_accepted_device(utoken, 1)
+        dev = make_accepted_device(utoken, 1, tenant_token=tenant_token)
         devices.append(dev)
 
     # some 'accepted' devices with >1 authsets
     for _ in range(2):
-        dev = make_accepted_device(utoken, 3)
+        dev = make_accepted_device(utoken, 3, tenant_token=tenant_token)
         devices.append(dev)
 
     # some rejected devices
     for _ in range(2):
-        dev = make_rejected_device(utoken, 3)
+        dev = make_rejected_device(utoken, 3, tenant_token=tenant_token)
         devices.append(dev)
 
     # preauth'd devices
@@ -389,7 +386,19 @@ def devs_authsets(user):
         dev = make_preauthd_device(utoken)
         devices.append(dev)
 
-    yield devices
+    return devices
+
+@pytest.yield_fixture(scope="function")
+def devs_authsets(user):
+    yield make_devs_with_authsets(user)
+
+@pytest.yield_fixture(scope="function")
+def tenants_devs_authsets(tenants_users):
+    for t in tenants_users:
+        devs = make_devs_with_authsets(t.users[0], t.tenant_token)
+        t.devices = devs
+
+    yield tenants_users
 
 def rand_id_data():
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
@@ -397,7 +406,7 @@ def rand_id_data():
 
     return {'mac': mac, 'sn': sn}
 
-def make_pending_device(utoken, num_auth_sets=1):
+def make_pending_device(utoken, num_auth_sets=1, tenant_token=''):
     id_data = rand_id_data()
     keys = []
 
@@ -406,7 +415,7 @@ def make_pending_device(utoken, num_auth_sets=1):
         keys.append((priv, pub))
 
     for priv, pub in keys:
-        new_set = create_device(id_data, pub, priv)
+        new_set = create_device(id_data, pub, priv, tenant_token=tenant_token)
 
     api_dev = get_device_by_id_data(id_data, utoken)
     assert len(api_dev['auth_sets']) == num_auth_sets
@@ -424,8 +433,8 @@ def make_pending_device(utoken, num_auth_sets=1):
 
     return dev
 
-def make_accepted_device(utoken, num_auth_sets=1, num_accepted=1):
-    dev = make_pending_device(utoken, num_auth_sets)
+def make_accepted_device(utoken, num_auth_sets=1, num_accepted=1, tenant_token=''):
+    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
     api_dev = get_device_by_id_data(dev.id_data, utoken)
 
@@ -439,8 +448,8 @@ def make_accepted_device(utoken, num_auth_sets=1, num_accepted=1):
 
     return dev
 
-def make_rejected_device(utoken, num_auth_sets=1):
-    dev = make_pending_device(utoken, num_auth_sets)
+def make_rejected_device(utoken, num_auth_sets=1, tenant_token=''):
+    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
     api_dev = get_device_by_id_data(dev.id_data, utoken)
 
@@ -479,9 +488,8 @@ def make_preauthd_device(utoken):
 
     return dev
 
-
-class TestDeviceMgmt:
-    def test_ok_get_devices(self, devs_authsets, user):
+class TestDeviceMgmtBase:
+    def do_test_ok_get_devices(self, devs_authsets, user):
         da = ApiClient(deviceauth_v2.URL_MGMT)
         ua = ApiClient(useradm.URL_MGMT)
 
@@ -526,7 +534,7 @@ class TestDeviceMgmt:
 
             self._compare_devs(ref_devs, api_devs)
 
-    def test_get_device(self, devs_authsets, user):
+    def do_test_get_device(self, devs_authsets, user):
         da = ApiClient(deviceauth_v2.URL_MGMT)
         ua = ApiClient(useradm.URL_MGMT)
 
@@ -555,7 +563,7 @@ class TestDeviceMgmt:
                                       path_params={'id': id})
             assert r.status_code == 404
 
-    def test_delete_device_ok(self, devs_authsets, user):
+    def do_test_delete_device_ok(self, devs_authsets, user, tenant_token=''):
         devapim = ApiClient(deviceauth_v2.URL_MGMT)
         devapid = ApiClient(deviceauth_v1.URL_DEVICES)
         userapi = ApiClient(useradm.URL_MGMT)
@@ -587,7 +595,8 @@ class TestDeviceMgmt:
 
         body, sighdr = deviceauth_v1.auth_req(dev_acc.id_data,
                                         dev_acc.authsets[0].pubkey,
-                                        dev_acc.authsets[0].privkey)
+                                        dev_acc.authsets[0].privkey,
+                                        tenant_token)
 
         r = devapid.call('POST',
                          deviceauth_v1.URL_AUTH_REQS,
@@ -615,7 +624,7 @@ class TestDeviceMgmt:
                                    path_params={'id': dev_acc.id})
         assert r.status_code == 404
 
-    def test_delete_device_not_found(self, devs_authsets, user):
+    def do_test_delete_device_not_found(self, devs_authsets, user):
         ua = ApiClient(useradm.URL_MGMT)
         da = ApiClient(deviceauth_v2.URL_MGMT)
 
@@ -642,7 +651,7 @@ class TestDeviceMgmt:
 
         self._compare_devs(devs_authsets, api_devs)
 
-    def test_device_count(self, devs_authsets, user):
+    def do_test_device_count(self, devs_authsets, user):
         ua = ApiClient(useradm.URL_MGMT)
         da = ApiClient(deviceauth_v2.URL_MGMT)
 
@@ -721,3 +730,103 @@ class TestDeviceMgmt:
         hi = lo + per_page
 
         return devs[lo:hi]
+
+class TestDeviceMgmt(TestDeviceMgmtBase):
+    def test_ok_get_devices(self, devs_authsets, user):
+        self.do_test_ok_get_devices(devs_authsets, user)
+
+    def test_get_device(self, devs_authsets, user):
+        self.do_test_get_device(devs_authsets, user)
+
+    def test_delete_device_ok(self, devs_authsets, user):
+        self.do_test_delete_device_ok(devs_authsets, user)
+
+    def test_delete_device_not_found(self, devs_authsets, user):
+        self.do_test_delete_device_not_found(devs_authsets, user)
+
+    def test_device_count(self, devs_authsets, user):
+        self.do_test_device_count(devs_authsets, user)
+
+
+class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
+    def test_ok_get_devices(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_ok_get_devices(t.devices, t.users[0])
+
+    def test_get_device(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_get_device(t.devices, t.users[0])
+
+    def test_delete_device_ok(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_device_ok(t.devices, t.users[0], tenant_token=t.tenant_token)
+
+    def test_delete_device_not_found(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_device_not_found(t.devices, t.users[0])
+
+    def test_device_count(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_device_count(t.devices, t.users[0])
+
+    def test_limits_max_devices(self, tenants_devs_authsets):
+        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        useradmm = ApiClient(useradm.URL_MGMT)
+
+        for t in tenants_devs_authsets:
+            # get num currently accepted devices
+            num_acc = len(self._filter_and_page_devs(t.devices, status='accepted'))
+
+            # set limit to that
+            r = devauthi.call('PUT',
+                              deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+                              {'limit': num_acc},
+                              path_params={'tid': t.id})
+            assert r.status_code == 204
+
+            # get limit via internal api
+            r = devauthi.call('GET',
+                              deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+                              path_params={'tid': t.id})
+            assert r.status_code == 200
+
+            assert r.json()['limit'] == num_acc
+
+            # get limit via mgmt api
+            r = useradmm.call('POST',
+                              useradm.URL_LOGIN,
+                              auth=(t.users[0].name, t.users[0].pwd))
+            assert r.status_code == 200
+
+            utoken = r.text
+
+            r = devauthm.with_auth(utoken).call('GET',
+                                        deviceauth_v2.URL_LIMITS_MAX_DEVICES)
+            assert r.status_code == 200
+
+            assert r.json()['limit'] == num_acc
+
+            # try accept a device manually
+            pending = self._filter_and_page_devs(t.devices, status='pending')[0]
+
+            r = devauthm.with_auth(utoken).call('PUT',
+                                           deviceauth_v2.URL_AUTHSET_STATUS,
+                                           deviceauth_v2.req_status('accepted'),
+                                           path_params={'did': pending.id, 'aid': pending.authsets[0].id })
+            assert r.status_code == 422
+
+            # try exceed the limit via preauth'd device
+            preauthd = self._filter_and_page_devs(t.devices, status='preauthorized')[0]
+
+            body, sighdr = deviceauth_v1.auth_req(preauthd.id_data,
+                                                  preauthd.authsets[0].pubkey,
+                                                  preauthd.authsets[0].privkey,
+                                                  t.tenant_token)
+
+            r = devauthd.call('POST',
+                              deviceauth_v1.URL_AUTH_REQS,
+                              body,
+                              headers=sighdr)
+            assert r.status_code == 401

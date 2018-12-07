@@ -20,12 +20,14 @@ import json
 import api.client
 
 URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
+
 URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
 
 URL_DEVICES = '/devices'
 URL_DEVICE = '/devices/{id}'
 URL_DEVICE  = '/devices/{id}'
 URL_DEVICES_COUNT = '/devices/count'
+URL_LIMITS_MAX_DEVICES = '/limits/max_devices'
 
 def preauth_req(id_data, pubkey):
     return {

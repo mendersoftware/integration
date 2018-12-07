@@ -4,10 +4,12 @@ set -e
 
 usage() {
     cat <<EOF
-$0 --base-dir=<DIR_WITH_REPOS> <REV-RANGE> [addition git-log arguments]"
+$0 --base-dir=<DIR_WITH_REPOS> [options] <REV-RANGE> [addition git-log arguments]"
 
 -n	Instead of generating the statistics, look at the raw Git output that is
 	given to gitdm. You probably want to pipe this somewhere.
+--repo	Query only the repository we're in, not the default Mender release
+	repositories.
 EOF
 }
 
@@ -24,6 +26,9 @@ while [ -n "$1" ]; do
         --base-dir)
             shift
             BASE_DIR="$1"
+            ;;
+        --repo)
+            REPO_ONLY=1
             ;;
         -n)
             DRY_RUN=1
@@ -46,9 +51,18 @@ fi
 
 collect_changes() {
     RELEASE_TOOL="$(dirname "$0")/release_tool.py"
-    for repo in $("$RELEASE_TOOL" --list git); do
+    if [ "$REPO_ONLY" = 1 ]; then
+        REPO_LIST=.
+    else
+        REPO_LIST="$("$RELEASE_TOOL" --list git)"
+    fi
+    for repo in $REPO_LIST; do
         (
-            CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$1")"
+            if [ "$REPO_ONLY" = 1 ]; then
+                CHANGES="$1"
+            else
+                CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$1")"
+            fi
             shift
             if [ -z "$1" ]; then
                 GIT_ARGS="-p -M -C -C"
@@ -56,7 +70,10 @@ collect_changes() {
                 GIT_ARGS=
             fi
             echo "Fetching changes for $repo, rev $CHANGES" 1>&2
-            cd "$BASE_DIR/$repo" && git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules'
+            if [ "$REPO_ONLY" != 1 ]; then
+                cd "$BASE_DIR/$repo"
+            fi
+            git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules'
         )
     done
 }

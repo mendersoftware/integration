@@ -830,3 +830,33 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
                               body,
                               headers=sighdr)
             assert r.status_code == 401
+
+class TestAuthsetMgmt:
+    def test_get_authset_status(self, devs_authsets, user):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        useradmm = ApiClient(useradm.URL_MGMT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+
+        utoken = r.text
+
+        # try valid authsets
+        for d in devs_authsets:
+            for a in d.authsets:
+                r = devauthm.with_auth(utoken).call('GET',
+                                                    deviceauth_v2.URL_AUTHSET_STATUS,
+                                                    path_params={'did': d.id, 'aid': a.id })
+                assert r.status_code == 200
+                assert r.json()['status'] == a.status
+
+                                                                                                                                                        # invalid authset or device
+        for did, aid in [(devs_authsets[0].id, "foo"),
+                         ("foo", "bar")]:
+            r = devauthm.with_auth(utoken).call('GET',
+                                                deviceauth_v2.URL_AUTHSET_STATUS,
+                                                path_params={'did': did, 'aid': aid })
+            assert r.status_code == 404

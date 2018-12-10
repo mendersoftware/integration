@@ -530,7 +530,7 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             api_devs = r.json()
 
-            ref_devs = self._filter_and_page_devs(devs_authsets, page=page, per_page=per_page, status=status)
+            ref_devs = filter_and_page_devs(devs_authsets, page=page, per_page=per_page, status=status)
 
             self._compare_devs(ref_devs, api_devs)
 
@@ -578,7 +578,7 @@ class TestDeviceMgmtBase:
         utoken = r.text
 
         # decommission a pending device
-        dev_pending = self._filter_and_page_devs(devs_authsets, status='pending')[0]
+        dev_pending = filter_and_page_devs(devs_authsets, status='pending')[0]
         r = devapim.with_auth(utoken).call('DELETE',
                                   deviceauth_v2.URL_DEVICE,
                                   path_params={'id': dev_pending.id})
@@ -591,7 +591,7 @@ class TestDeviceMgmtBase:
         assert r.status_code == 404
 
         # log in an accepted device
-        dev_acc = self._filter_and_page_devs(devs_authsets, status='accepted')[0]
+        dev_acc = filter_and_page_devs(devs_authsets, status='accepted')[0]
 
         body, sighdr = deviceauth_v1.auth_req(dev_acc.id_data,
                                         dev_acc.authsets[0].pubkey,
@@ -679,7 +679,7 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             count = r.json()
 
-            ref_devs = self._filter_and_page_devs(devs_authsets, status=status)
+            ref_devs = filter_and_page_devs(devs_authsets, status=status)
 
             ref_count = len(ref_devs)
 
@@ -708,13 +708,7 @@ class TestDeviceMgmtBase:
                 aset = dev.authsets[i]
                 api_aset = api_dev['auth_sets'][i]
 
-                self._compare_aset(aset, api_aset)
-
-    def _compare_aset(self, authset, api_authset):
-            assert authset.id == api_authset['id']
-            assert authset.id_data == api_authset['identity_data']
-            assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
-            assert authset.status == api_authset['status']
+                compare_aset(aset, api_aset)
 
     def _filter_and_page_devs(self, devs, page=None, per_page=None, status=None):
         if status is not None:
@@ -777,7 +771,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
 
         for t in tenants_devs_authsets:
             # get num currently accepted devices
-            num_acc = len(self._filter_and_page_devs(t.devices, status='accepted'))
+            num_acc = len(filter_and_page_devs(t.devices, status='accepted'))
 
             # set limit to that
             r = devauthi.call('PUT',
@@ -809,7 +803,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
             assert r.json()['limit'] == num_acc
 
             # try accept a device manually
-            pending = self._filter_and_page_devs(t.devices, status='pending')[0]
+            pending = filter_and_page_devs(t.devices, status='pending')[0]
 
             r = devauthm.with_auth(utoken).call('PUT',
                                            deviceauth_v2.URL_AUTHSET_STATUS,
@@ -818,7 +812,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
             assert r.status_code == 422
 
             # try exceed the limit via preauth'd device
-            preauthd = self._filter_and_page_devs(t.devices, status='preauthorized')[0]
+            preauthd = filter_and_page_devs(t.devices, status='preauthorized')[0]
 
             body, sighdr = deviceauth_v1.auth_req(preauthd.id_data,
                                                   preauthd.authsets[0].pubkey,
@@ -860,3 +854,24 @@ class TestAuthsetMgmt:
                                                 deviceauth_v2.URL_AUTHSET_STATUS,
                                                 path_params={'did': did, 'aid': aid })
             assert r.status_code == 404
+
+def filter_and_page_devs(devs, page=None, per_page=None, status=None):
+        if status is not None:
+            devs = [d for d in devs if d.status==status]
+
+        if page is None:
+            page = 1
+
+        if per_page is None:
+            per_page = 20
+
+        lo = (page-1)*per_page
+        hi = lo + per_page
+
+        return devs[lo:hi]
+
+def compare_aset(authset, api_authset):
+       assert authset.id == api_authset['id']
+       assert authset.id_data == api_authset['identity_data']
+       assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
+       assert authset.status == api_authset['status']

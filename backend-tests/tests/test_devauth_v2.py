@@ -386,6 +386,11 @@ def make_devs_with_authsets(user, tenant_token=''):
         dev = make_preauthd_device(utoken)
         devices.append(dev)
 
+    # preauth'd devices with extra 'pending' sets
+    for i in range(2):
+        dev = make_preauthd_device_with_pending(utoken, num_pending=2, tenant_token=tenant_token)
+        devices.append(dev)
+
     return devices
 
 @pytest.yield_fixture(scope="function")
@@ -487,6 +492,35 @@ def make_preauthd_device(utoken):
     dev.status = 'preauthorized'
 
     return dev
+
+def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=''):
+    dev = make_preauthd_device(utoken)
+
+    keys = []
+
+    for i in range(num_pending):
+        priv, pub = util.crypto.rsa_get_keypair()
+        keys.append((priv, pub))
+
+    for priv, pub in keys:
+        create_device(dev.id_data, pub, priv, tenant_token=tenant_token)
+
+    api_dev = get_device_by_id_data(dev.id_data, utoken)
+    assert len(api_dev['auth_sets']) == num_pending + 1
+
+    # gotcha: authsets not guaranteed to be returned in the order of insertion
+    # rely on the order in the api when preparing reference data
+    for aset in api_dev['auth_sets']:
+        if aset['status'] == 'preauthorized':
+            continue
+        keypair = [k for k in keys if util.crypto.rsa_compare_keys(k[1], aset['pubkey'])]
+        assert len(keypair) == 1
+        keypair = keypair[0]
+
+        dev.authsets.append(Authset(aset['id'], dev.id_data, keypair[1], keypair[0], 'pending'))
+
+    return dev
+
 
 class TestDeviceMgmtBase:
     def do_test_ok_get_devices(self, devs_authsets, user):

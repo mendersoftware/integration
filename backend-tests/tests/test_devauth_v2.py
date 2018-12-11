@@ -302,7 +302,7 @@ class DevWithAuthsets:
         self.authsets = []
 
     def __repr__(self):
-        ret = 'ID {} ID_DATA {} AUTHSETS: \n'.format(self.id, self.id_data)
+        ret = 'ID {} STATUS {} ID_DATA {} AUTHSETS: \n'.format(self.id, self.status, self.id_data)
         for a in self.authsets:
             ret += '{}\n'.format(a)
 
@@ -318,7 +318,7 @@ class Authset:
         self.status = status
 
     def __repr__(self):
-        return 'ID {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.id_data, self.pubkey)
+        return 'ID {} STATUS {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.status, self.id_data, self.pubkey)
 
 
 def get_device_by_id_data(id_data, utoken):

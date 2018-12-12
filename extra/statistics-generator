@@ -4,12 +4,19 @@ set -e
 
 usage() {
     cat <<EOF
-$0 --base-dir=<DIR_WITH_REPOS> [options] <REV-RANGE> [addition git-log arguments]"
+$0 --base-dir=<DIR_WITH_REPOS> [options] <REV-RANGE> [addition git-log arguments]
+
+Main options:
+
+--base-dir=<DIR_WITH_REPOS>
+	Supplies the folder where all the Mender repositories live.
+--repo	Query only the repository we're in, not the default Mender release
+	repositories.
+
+Extra options:
 
 -n	Instead of generating the statistics, look at the raw Git output that is
 	given to gitdm. You probably want to pipe this somewhere.
---repo	Query only the repository we're in, not the default Mender release
-	repositories.
 EOF
 }
 

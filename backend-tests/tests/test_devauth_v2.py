@@ -13,6 +13,7 @@
 #    limitations under the License.
 import pytest
 import random
+import time
 
 from api.client import ApiClient
 from common import mongo, clean_mongo
@@ -22,6 +23,7 @@ import api.deviceauth_v2 as deviceauth_v2
 import api.useradm as useradm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
+import api.inventory as inventory
 import util.crypto
 from common import User, Device, Tenant, \
         create_user, create_tenant, create_tenant_user, \
@@ -963,6 +965,10 @@ class TestAuthsetMgmtBase:
                                                                    'artifact_name': 'bar'})
                 assert r.status_code == 401
 
+            # device should also be provisioned in inventory
+            time.sleep(1)
+            self.verify_dev_provisioned(dev, utoken)
+
     def do_test_put_status_reject(self, devs_authsets, user, tenant_token=''):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
@@ -1205,6 +1211,15 @@ class TestAuthsetMgmtBase:
         # either the dev is actually 'rejected', or has no auth sets
         return 'rejected'
 
+    def verify_dev_provisioned(self, dev, utoken):
+        invm = ApiClient(inventory.URL_MGMT)
+
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_DEVICE,
+                                        path_params={'id': dev.id})
+        assert r.status_code == 200
+
+        api_dev = r.json()
 
 class TestAuthsetMgmt(TestAuthsetMgmtBase):
     def test_get_authset_status(self, devs_authsets, user):

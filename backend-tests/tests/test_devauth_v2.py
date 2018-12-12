@@ -1222,6 +1222,32 @@ class TestAuthsetMgmt(TestAuthsetMgmtBase):
     def test_delete_status_failed(self, devs_authsets, user):
         self.do_test_delete_status_failed(devs_authsets, user)
 
+
+class TestAuthsetMgmtMultitenant(TestAuthsetMgmtBase):
+    def test_get_authset_status(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_get_authset_status(t.devices, t.users[0])
+
+    def test_put_status_accept(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_accept(t.devices, t.users[0], t.tenant_token)
+
+    def test_put_status_reject(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_reject(t.devices, t.users[0], t.tenant_token)
+
+    def test_put_status_failed(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_failed(t.devices, t.users[0])
+
+    def test_delete_status(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_status(t.devices, t.users[0], t.tenant_token)
+
+    def test_delete_status_failed(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_status_failed(t.devices, t.users[0])
+
 def filter_and_page_devs(devs, page=None, per_page=None, status=None):
         if status is not None:
             devs = [d for d in devs if d.status==status]

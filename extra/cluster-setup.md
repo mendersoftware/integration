@@ -618,7 +618,7 @@ Outstanding issues:
 #### Defining services
 
 Services in a Mender cluster need to be able to find each other by DNS names.
-Each service is started in a separate pod, hence we need to device `Service`
+Each service is started in a separate pod, hence we need to define `Service`
 objects that expose services to the whole cluster.
 
 Define the following service template in `templates/service.template.yaml`:

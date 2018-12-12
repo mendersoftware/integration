@@ -30,6 +30,15 @@ class CliUseradm:
         uid=docker.exec(self.cid, cmd)
         return uid
 
+    def migrate(self, tenant_id=None):
+        cmd = ['usr/bin/useradm',
+               'migrate']
+
+        if tenant_id is not None:
+            cmd.extend(['--tenant', tenant_id])
+
+        docker.exec(self.cid, cmd)
+
 
 class CliTenantadm:
     def __init__(self):
@@ -42,3 +51,22 @@ class CliTenantadm:
 
         tid = docker.exec(self.cid, cmd)
         return tid
+
+    def migrate(self):
+        cmd = ['usr/bin/tenantadm',
+               'migrate']
+
+        docker.exec(self.cid, cmd)
+
+class CliDeviceauth:
+    def __init__(self):
+        self.cid = docker.getid('mender-device-auth')
+
+    def migrate(self, tenant_id=None):
+        cmd = ['usr/bin/deviceauth',
+               'migrate']
+
+        if tenant_id is not None:
+            cmd.extend(['--tenant', tenant_id])
+
+        docker.exec(self.cid, cmd)

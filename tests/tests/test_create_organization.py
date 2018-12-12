@@ -29,6 +29,7 @@ import asyncore
 from MenderAPI import *
 
 class TestCreateOrganization(MenderTesting):
+    @pytest.mark.skip(reason="QA-45, QA-46")
     @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
     def test_success(self):
 

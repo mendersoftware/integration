@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# Copyright 2018 Mender Software AS
+# Copyright 2018 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,27 +12,28 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 from Crypto.PublicKey import RSA
-from Crypto.Hash import SHA256
 from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA256
 from base64 import b64encode, urlsafe_b64decode, urlsafe_b64encode
+import json
 
-def rsa_compare_keys(a,b):
-    ai = RSA.importKey(a)
-    bi = RSA.importKey(b)
+import api.client
 
-    return ai.exportKey().decode() == bi.exportKey().decode()
+URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
 
-def rsa_get_keypair():
-    private = RSA.generate(1024)
-    public = private.publickey()
-    return private.exportKey().decode(), public.exportKey().decode()
+URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
 
-def rsa_sign_data(data, privkey):
-    rsakey = RSA.importKey(privkey)
-    signer = PKCS1_v1_5.new(rsakey)
-    digest = SHA256.new()
-    if type(data) is str:
-        data = data.encode()
-    digest.update(data)
-    sign = signer.sign(digest)
-    return b64encode(sign)
+URL_DEVICES = '/devices'
+URL_DEVICE = '/devices/{id}'
+URL_DEVICE  = '/devices/{id}'
+URL_DEVICES_COUNT = '/devices/count'
+URL_LIMITS_MAX_DEVICES = '/limits/max_devices'
+
+def preauth_req(id_data, pubkey):
+    return {
+        "identity_data": id_data,
+        "pubkey": pubkey
+    }
+
+def req_status(status):
+    return {'status': status}

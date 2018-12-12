@@ -1,0 +1,131 @@
+#!/usr/bin/pypy
+# -*- python -*-
+#
+# Read through a set of patches and see how many of them are fixes
+# for prior patches.
+#
+#   git log master..stable | stablefixes
+#
+# As with most gitdm stuff, this has been developed to the point where it
+# solved the immediate task and no further.  I hope it's useful, but can
+# promise nothing.
+#
+# Copyright 2016 Eklektix, Inc.
+# Copyright 2016 Jonathan Corbet <corbet@lwn.net>
+#
+# Redistributable under GPLv2
+#
+import gitlog
+import sys, re, subprocess
+
+Ids = [ ]
+Fixes = [ ]
+FixMap = { }
+UpstreamMissing = [ ]
+UpstreamMap = { }
+Npatches = 0
+
+#
+# Patterns to snarf the info we're after.
+#
+p_fixes = re.compile(r'^\s+Fixes:\s+(commit\s+)?([0-9a-f]+).*$')
+p_revert = re.compile(r'This reverts commit ([0-9a-f]+)')
+p_upstream = re.compile(r'commit ([0-9a-f]+) upstream')
+p_upstream2 = re.compile(r'Upstream commit ([0-9a-f]+)')
+#
+# Snarf the references to other patches.
+#
+def FindRefs(patch):
+    for line in patch.taglines:
+        m = p_fixes.match(line)
+        if m:
+            Fixes.append(m.group(2))
+            FixMap[m.group(2)] = patch.commit
+    m = p_revert.search(patch.changelog)
+    if m:
+        Fixes.append(m.group(1))
+        FixMap[m.group(1)] = patch.commit
+    m = p_upstream.search(patch.changelog) or p_upstream2.search(patch.changelog)
+    if m:
+        Ids.append(m.group(1))
+        UpstreamMap[m.group(1)] = patch.commit
+    else:
+        UpstreamMissing.append(patch.commit)
+
+#
+# See if two commit IDs match.
+#
+def SameCommit(c1, c2):
+    l = min(len(c1), len(c2))
+    return c1[:l] == c2[:l]
+
+#
+# What's the URL of a patch in the stable tree?
+#
+SBase = 'https://git.kernel.org/cgit/linux/kernel/git/stable/' + \
+        'linux-stable.git/commit?id='
+def StableURL(id):
+    return SBase + id
+
+#
+# Get the version for a commit
+#
+repo = '/k/git/linux-2.6'
+def find_version(commit):
+    command = ['git', 'describe', '--contains', commit]
+    p = subprocess.Popen(command, cwd = repo, stdout = subprocess.PIPE,
+                         bufsize = 1)
+    desc = p.stdout.readline()
+    p.wait()
+    #
+    # The description line has the form:
+    #
+    #      tag~N^M~n...
+    #
+    tilde = desc.find('~')
+    if tilde < 0:
+        return desc
+    return desc[:tilde]
+
+def trim(commit):
+    return commit[:16]
+
+#
+# Go through the patch stream.
+#
+patch = gitlog.grabpatch(sys.stdin)
+while patch:
+    Npatches += 1
+    Ids.append(patch.commit)
+    FindRefs(patch)
+    patch = gitlog.grabpatch(sys.stdin)
+
+print 'Found %d patches, %d fixes' % (Npatches, len(Fixes))
+print '%d had no upstream reference' % (len(UpstreamMissing))
+
+#
+# Now see how many fixes have been seen before.
+#
+out = open('stable-fixes.html', 'w')
+out.write('<table class="OddEven">\n')
+nfound = 0
+
+Ids.reverse()
+for id in Ids:
+    for fix in Fixes:
+        if SameCommit(fix, id):
+            try:
+                id = UpstreamMap[id]
+            except KeyError:
+                pass
+            fixer = FixMap[fix]
+            out.write('<tr><td>%s</td>\n'
+                      '<td><a href="%s"><tt>%s</tt></a></td>\n'
+                      '<td>%s</td>\n'
+                      '<td><a href="%s"><tt>%s</tt></a></td></tr>\n'
+                      % (find_version(id), StableURL(id), trim(id),
+                         find_version(fixer), StableURL(fixer), trim(fixer)))
+            nfound += 1
+out.write('</table>')
+out.close()
+print 'Found %d refixes' % (nfound)

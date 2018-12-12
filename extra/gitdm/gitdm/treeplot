@@ -1,0 +1,391 @@
+#!/usr/bin/python
+#
+# git log --pretty="%H %P" | this program
+# See option descriptions at bottom
+#
+# This little program cranks through a series of patches, trying to determine
+# which trees each flowed through on its way to the mainline.  It does a
+# 'git describe' on each, so don't expect it to be fast for large numbers
+# of patches.
+#
+# One warning: it is easily confused by local branches, tags, etc.  For
+# best results, run it on a mainline tree with no added frobs.  Using
+# "git clone --reference" is a relatively easy way to come up with such
+# a tree without redownloading the whole mess.
+#
+import sys, subprocess, argparse, pickle
+import graphviz
+import patterns
+
+Mergepat = patterns.patterns['ExtMerge']
+IntMerge = patterns.patterns['IntMerge']
+IntMerge2 = patterns.patterns['IntMerge2']
+Mergelist = { }
+
+class Merge:
+    def __init__(self, id, tree = None):
+        self.id = id
+        self.commits = [ ]
+        self.merges = [ ]
+        self.tree = tree or '?'
+        self.internal = False
+        self.signed = False
+        if tree is None:
+            self.getdesc()
+        Mergelist[id] = self
+
+    def normalize_tree(self, tree):
+        colonslash = tree.find('://')
+        if colonslash > 0:
+            tree = tree[colonslash+3:]
+        if tree.find('git.kernel.org') >= 0:
+            stree = tree.split('/')
+            return '$KORG/%s/%s' % (stree[-2], stree[-1])
+        return tree
+
+    def getdesc(self):
+        command = ['git', 'log', '-1', '--show-signature', self.id]
+        p = subprocess.Popen(command, cwd = Repo, stdout = subprocess.PIPE,
+                             bufsize = 1)
+        #
+        # Sometimes we don't match a pattern; that means that the
+        # committer radically modified the merge message.  A certain
+        # Eric makes them look like ordinary commits...  Others use
+        # it to justify backmerges of the mainline.  Either way, the
+        # best response is to treat it like an internal merge.
+        #
+        self.internal = True
+        for line in p.stdout.readlines():
+            #
+            # Note if there's a GPG signature
+            #
+            if line.startswith('gpg:'):
+                self.signed = True
+                continue
+            #
+            # Maybe it's a merge of an external tree.
+            #
+            m = Mergepat.search(line)
+            if m:
+                self.tree = self.normalize_tree(m.group(3))
+                self.internal = False
+                break
+            #
+            # Or maybe it's an internal merge.
+            #
+            m = IntMerge.search(line) or IntMerge2.search(line)
+            if m:
+                self.internal = True
+                break
+        p.wait()
+            
+    def add_commit(self, id):
+        self.commits.append(id)
+
+    def add_merge(self, merge):
+        self.merges.append(merge)
+
+#
+# Read the list of commits from the input stream and find which
+# merge brought in each.
+#
+def ingest_commits(src):
+    count = 0
+    expected = 'nothing yet'
+    for line in src.readlines():
+        sline = line[:-1].split()
+        commit = sline[0]
+        is_merge = (len(sline) > 2)
+        if (commit == expected) and not is_merge:
+            mc = last_merge
+        else:
+            mc = Mergelist[find_merge(sline[0])]  # Needs try
+        if is_merge:
+            mc.add_merge(Merge(commit))
+        else:
+            mc.add_commit(commit)
+        count += 1
+        if (count % 50) == 0:
+            sys.stderr.write('\r%5d ' % (count))
+            sys.stderr.flush()
+        expected = sline[1]
+        last_merge = mc
+    print
+#
+# Figure out which merge brought in a commit.
+#
+MergeIDs = { }
+
+def find_merge(commit):
+    command = ['git', 'describe', '--contains', commit]
+    p = subprocess.Popen(command, cwd = Repo, stdout = subprocess.PIPE,
+                         bufsize = 1)
+    desc = p.stdout.readline().decode('utf8')
+    p.wait()
+    #
+    # The description line has the form:
+    #
+    #      tag~N^M~n...
+    #
+    # the portion up to the last ^ describes the merge we are after;
+    # in the absence of an ^, assume it's on the main branch.
+    #
+    uparrow = desc.rfind('^')
+    if uparrow < 0:
+        return 'mainline'
+    #
+    # OK, now get the real commit ID of the merge.  Maybe we have
+    # it stashed?
+    #
+    try:
+        return MergeIDs[desc[:uparrow]]
+    except KeyError:
+        pass
+    #
+    # Nope, we have to dig it out the hard way.
+    #
+    command = ['git', 'log', '--pretty=%H', '-1', desc[:uparrow]]
+    p = subprocess.Popen(command, cwd = Repo, stdout = subprocess.PIPE,
+                         bufsize = 1)
+    merge = p.stdout.readline().decode('utf8').strip()
+    #
+    # If we get back the same commit, we're looking at one of Linus's
+    # version number tags.
+    #
+    if merge == commit:
+        merge = 'mainline'
+    MergeIDs[desc[:uparrow]] = merge
+    p.wait()
+    return merge
+
+#
+# Internal merges aren't interesting from our point of view.  So go through,
+# find them all, and move any commits from such into the parent.
+#
+def zorch_internals(merge):
+    new_merges = [ ]
+    for m in merge.merges:
+        zorch_internals(m)
+        if m.internal:
+            merge.commits += m.commits
+            new_merges += m.merges
+        else:
+            new_merges.append(m)
+    merge.merges = new_merges
+
+#
+# Figure out how many commits flowed at each stage.
+#
+def count_commits(merge):
+    merge.ccount = len(merge.commits) + 1  # +1 to count the merge itself
+    for m in merge.merges:
+        merge.ccount += count_commits(m)
+    return merge.ccount
+
+#
+# ...and how many flowed between each pair of trees
+#
+Treecounts = { }
+SignedTrees = set()
+
+def tree_stats(merge):
+    try:
+        tcount = Treecounts[merge.tree]
+    except KeyError:
+        tcount = Treecounts[merge.tree] = { }
+    for m in merge.merges:
+        if m.signed:
+            SignedTrees.add(m.tree)
+        mcount = tcount.get(m.tree, 0)
+        tcount[m.tree] = mcount + m.ccount
+        tree_stats(m)
+
+#
+# Maybe we only want so many top-level trees
+#
+def trim_trees(limit):
+    srcs = Treecounts['mainline']
+    srcnames = srcs.keys()
+    srcnames.sort(lambda t1, t2: srcs[t2] - srcs[t1])
+    nextra = len(srcnames) - limit
+    zapped = 0
+    for extra in srcnames[limit:]:
+        zapped += srcs[extra]
+        del srcs[extra]
+    srcs['%d other trees' % (nextra)] = zapped
+#
+# Take our map of the commit structure and boil it down to how many commits
+# moved from one tree to the next.
+#
+
+def dumptree(start, indent = ''):
+    int = ''
+    if start.internal:
+        int = 'I: '
+    print '%s%s%s: %d/%d %s' % (indent, int, start.id[:10],
+                                len(start.merges), len(start.commits),
+                                start.tree)
+    for merge in start.merges:
+        dumptree(merge, indent + '  ')
+
+def dumpflow(tree, indent = '', seen = []):
+    try:
+        srcs = Treecounts[tree]
+    except KeyError:
+        return
+    srctrees = srcs.keys()
+    srctrees.sort(lambda t1, t2: srcs[t2] - srcs[t1])
+    for src in srctrees:
+        if src in seen:
+            print 'Skip', src, srcs[src], seen
+        else:
+            if src in SignedTrees:
+                print '%s%4d ** %s' % (indent, srcs[src], src)
+            else:
+                print '%s%4d %s' % (indent, srcs[src], src)
+            dumpflow(src, indent = indent + '  ', seen = seen + [tree])
+
+def SigStats(tree):
+    srcs = Treecounts[tree]
+    spulls = upulls = scommits = ucommits = 0
+    for src in srcs.keys():
+        if src in SignedTrees:
+            spulls += 1
+            scommits += srcs[src]
+        else:
+            upulls += 1
+            ucommits += srcs[src]
+    print '%d repos total, %d signed, %d unsigned' % (spulls + upulls,
+                                                      spulls, upulls)
+    print '   %d commits from signed, %d from unsigned' % (scommits, ucommits)
+
+#
+# Graphviz.
+#
+def GV_out(file):
+    graph = graphviz.Digraph('mainline', filename = file, format = 'svg')
+    graph.body.extend(['label="Patch flow into the mainline"',
+                       'concentrate=true',
+                       'rankdir=LR' ])
+    graph.attr('node', fontsize="20", color="blue", penwidth='4',
+               shape='ellipse')
+    graph.node('mainline')
+    graph.attr('node', fontsize="14", color="black", shape='polygon',
+               sides='4')
+    if DoSigned:
+        GV_out_node_signed(graph, 'mainline')
+    else:
+        GV_out_node(graph, 'mainline')
+    graph.view()
+
+def GV_fixname(name):
+    return name.replace(':', '/') # or Graphviz chokes
+
+def GV_color(count):
+    if count >= RedThresh:
+        return 'red'
+    if count >= YellowThresh:
+        return 'orange'
+    return 'black'
+
+#
+# Output nodes with traffic coloring
+#
+def GV_out_node(graph, node, seen = []):
+    try:
+        srcs = Treecounts[node]
+    except KeyError:  # "applied by linus"
+        return
+    srctrees = srcs.keys()
+    srctrees.sort(lambda t1, t2: srcs[t2] - srcs[t1])
+    for src in srctrees:
+        if src not in seen:
+            graph.edge(GV_fixname(src), GV_fixname(node),
+                       taillabel='%d' % srcs[src], labelfontsize="14",
+                       color = GV_color(srcs[src]), penwidth='2')
+            GV_out_node(graph, src, seen + [node])
+
+#
+# Output nodes showing signature status
+#
+def GV_out_node_signed(graph, node, seen = []):
+    try:
+        srcs = Treecounts[node]
+    except KeyError:  # "applied by linus"
+        return
+    srctrees = srcs.keys()
+    srctrees.sort(lambda t1, t2: srcs[t2] - srcs[t1])
+    for src in srctrees:
+        color = 'red'
+        if src in SignedTrees:
+            color = 'black'
+        if src not in seen:
+            graph.attr('node', color=color)
+            graph.edge(GV_fixname(src), GV_fixname(node),
+                       taillabel='%d' % srcs[src], labelfontsize="14",
+                       color = color, penwidth='2')
+            GV_out_node_signed(graph, src, seen + [node])
+#
+# argument parsing stuff.
+#
+def setup_args():
+    p = argparse.ArgumentParser()
+    p.add_argument('-d', '--dump', help = 'Dump merge list to file',
+                   required = False, default = '')
+    p.add_argument('-g', '--gvoutput', help = 'Graphviz output',
+                   required = False, default = '')
+    p.add_argument('-l', '--load', help = 'Load merge list from file',
+                   required = False, default = '')
+    p.add_argument('-o', '--output', help = 'Output file',
+                   required = False, default = '-')
+    p.add_argument('-r', '--repo', help = 'Repository location',
+                   required = False, default = '/home/corbet/kernel')
+    p.add_argument('-t', '--trim', help = 'Trim top level to this many trees',
+                   required = False, default = 0, type = int)
+    p.add_argument('-R', '--red', help = 'Red color threshold',
+                   required = False, default = 800, type = int)
+    p.add_argument('-Y', '--yellow', help = 'Yellow color threshold',
+                   required = False, default = 200, type = int)
+    p.add_argument('-s', '--signed', help = 'Display signed trees',
+                   action='store_true', default = False)
+    return p
+
+
+p = setup_args()
+args = p.parse_args()
+Repo = args.repo
+RedThresh = args.red
+YellowThresh = args.yellow
+DoSigned = args.signed
+#
+# Find our commits.
+#
+if args.load:
+    dumpfile = open(args.load, 'r')
+    Mergelist = pickle.loads(dumpfile.read())
+    dumpfile.close
+    Mainline = Mergelist['mainline']
+else:
+    Mainline = Merge('mainline', tree = 'mainline')
+    ingest_commits(sys.stdin)
+    if args.dump:
+        dumpfile = open(args.dump, 'w')
+        dumpfile.write(pickle.dumps(Mergelist))
+        dumpfile.close()
+#
+# Now generate the flow graph.
+#
+#dumptree(Mainline)
+zorch_internals(Mainline)
+#dumptree(Mainline)
+Treecounts['mainline'] = { 'Applied by Linus': len(Mainline.commits) }
+print 'total commits', count_commits(Mainline)
+tree_stats(Mainline)
+if args.trim:
+    trim_trees(args.trim)
+print 'Tree flow'
+dumpflow('mainline')
+if args.gvoutput:
+    GV_out(args.gvoutput)
+if DoSigned:
+    SigStats('mainline')

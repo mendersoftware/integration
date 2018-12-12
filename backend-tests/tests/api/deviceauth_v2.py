@@ -22,6 +22,7 @@ import api.client
 URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
 
 URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
+URL_AUTHSET = '/devices/{did}/auth/{aid}'
 
 URL_DEVICES = '/devices'
 URL_DEVICE = '/devices/{id}'

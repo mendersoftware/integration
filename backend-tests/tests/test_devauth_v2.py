@@ -738,9 +738,12 @@ class TestDeviceMgmtBase:
 
             assert len(api_dev['auth_sets']) == len(dev.authsets)
 
-            for i in range(len(api_dev['auth_sets'])):
-                aset = dev.authsets[i]
-                api_aset = api_dev['auth_sets'][i]
+            # GOTCHA: don't rely on indexing, authsets can get reshuffled
+            # depending on actual contents (we don't order them, so it's up to mongo)
+            for api_aset in api_dev['auth_sets']:
+                aset = [a for a in dev.authsets if util.crypto.rsa_compare_keys(a.pubkey, api_aset['pubkey'])]
+                assert len(aset) == 1
+                aset = aset[0]
 
                 compare_aset(aset, api_aset)
 

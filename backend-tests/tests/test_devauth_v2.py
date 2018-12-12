@@ -859,8 +859,8 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
                               headers=sighdr)
             assert r.status_code == 401
 
-class TestAuthsetMgmt:
-    def test_get_authset_status(self, devs_authsets, user):
+class TestAuthsetMgmtBase:
+    def do_test_get_authset_status(self, devs_authsets, user):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
 
@@ -881,7 +881,7 @@ class TestAuthsetMgmt:
                 assert r.status_code == 200
                 assert r.json()['status'] == a.status
 
-                                                                                                                                                        # invalid authset or device
+        # invalid authset or device
         for did, aid in [(devs_authsets[0].id, "foo"),
                          ("foo", "bar")]:
             r = devauthm.with_auth(utoken).call('GET',
@@ -889,7 +889,7 @@ class TestAuthsetMgmt:
                                                 path_params={'did': did, 'aid': aid })
             assert r.status_code == 404
 
-    def test_put_status_accept(self, devs_authsets, user):
+    def do_test_put_status_accept(self, devs_authsets, user, tenant_token=''):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -922,7 +922,8 @@ class TestAuthsetMgmt:
                 accepted = [a for a in dev.authsets if a.status == 'accepted'][0]
                 body, sighdr = deviceauth_v1.auth_req(accepted.id_data,
                                                       accepted.pubkey,
-                                                      accepted.privkey)
+                                                      accepted.privkey,
+                                                      tenant_token)
 
                 r = devauthd.call('POST',
                                   deviceauth_v1.URL_AUTH_REQS,
@@ -959,7 +960,7 @@ class TestAuthsetMgmt:
                                                                    'artifact_name': 'bar'})
                 assert r.status_code == 401
 
-    def test_put_status_reject(self, devs_authsets, user):
+    def do_test_put_status_reject(self, devs_authsets, user, tenant_token=''):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -996,7 +997,8 @@ class TestAuthsetMgmt:
             if dev.status == 'accepted':
                 body, sighdr = deviceauth_v1.auth_req(aset.id_data,
                                                       aset.pubkey,
-                                                      aset.privkey)
+                                                      aset.privkey,
+                                                      tenant_token)
 
                 r = devauthd.call('POST',
                                   deviceauth_v1.URL_AUTH_REQS,
@@ -1032,7 +1034,7 @@ class TestAuthsetMgmt:
                                                       'artifact_name': 'bar'})
                 assert r.status_code == 401
 
-    def test_put_status_failed(self, devs_authsets, user):
+    def do_test_put_status_failed(self, devs_authsets, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
 
@@ -1070,7 +1072,7 @@ class TestAuthsetMgmt:
                                        path_params={'did': devs_authsets[0].id, 'aid':  devs_authsets[0].authsets[0].id})
         assert r.status_code == 400
 
-    def test_delete_status(self, devs_authsets, user):
+    def do_test_delete_status(self, devs_authsets, user, tenant_token=''):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -1100,7 +1102,8 @@ class TestAuthsetMgmt:
             if dev.status == 'accepted':
                 body, sighdr = deviceauth_v1.auth_req(aset.id_data,
                                                       aset.pubkey,
-                                                      aset.privkey)
+                                                      aset.privkey,
+                                                      tenant_token)
 
                 r = devauthd.call('POST',
                                   deviceauth_v1.URL_AUTH_REQS,
@@ -1141,7 +1144,7 @@ class TestAuthsetMgmt:
                                                               'artifact_name': 'bar'})
                 assert r.status_code == 401
 
-    def test_delete_status_failed(self, devs_authsets, user):
+    def do_test_delete_status_failed(self, devs_authsets, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
 
@@ -1198,6 +1201,26 @@ class TestAuthsetMgmt:
 
         # either the dev is actually 'rejected', or has no auth sets
         return 'rejected'
+
+
+class TestAuthsetMgmt(TestAuthsetMgmtBase):
+    def test_get_authset_status(self, devs_authsets, user):
+        self.do_test_get_authset_status(devs_authsets, user)
+
+    def test_put_status_accept(self, devs_authsets, user):
+        self.do_test_put_status_accept(devs_authsets, user)
+
+    def test_put_status_reject(self, devs_authsets, user):
+        self.do_test_put_status_reject(devs_authsets, user)
+
+    def test_put_status_failed(self, devs_authsets, user):
+        self.do_test_put_status_failed(devs_authsets, user)
+
+    def test_delete_status(self, devs_authsets, user):
+        self.do_test_delete_status(devs_authsets, user)
+
+    def test_delete_status_failed(self, devs_authsets, user):
+        self.do_test_delete_status_failed(devs_authsets, user)
 
 def filter_and_page_devs(devs, page=None, per_page=None, status=None):
         if status is not None:

@@ -51,8 +51,8 @@ while [ -n "$1" ]; do
     shift
 done
 
-if [ -z "$BASE_DIR" ]; then
-    echo "Need --base-dir parameter to give location of repositories."
+if [ -z "$BASE_DIR" -a "$REPO_ONLY" != 1 ]; then
+    echo "Need either --base-dir or --repo parameter."
     exit 1
 fi
 

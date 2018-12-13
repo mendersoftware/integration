@@ -13,6 +13,7 @@
 #    limitations under the License.
 import pytest
 import random
+import time
 
 from api.client import ApiClient
 from common import mongo, clean_mongo
@@ -22,6 +23,7 @@ import api.deviceauth_v2 as deviceauth_v2
 import api.useradm as useradm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
+import api.inventory as inventory
 import util.crypto
 from common import User, Device, Tenant, \
         create_user, create_tenant, create_tenant_user, \
@@ -302,7 +304,7 @@ class DevWithAuthsets:
         self.authsets = []
 
     def __repr__(self):
-        ret = 'ID {} ID_DATA {} AUTHSETS: \n'.format(self.id, self.id_data)
+        ret = 'ID {} STATUS {} ID_DATA {} AUTHSETS: \n'.format(self.id, self.status, self.id_data)
         for a in self.authsets:
             ret += '{}\n'.format(a)
 
@@ -318,7 +320,7 @@ class Authset:
         self.status = status
 
     def __repr__(self):
-        return 'ID {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.id_data, self.pubkey)
+        return 'ID {} STATUS {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.status, self.id_data, self.pubkey)
 
 
 def get_device_by_id_data(id_data, utoken):
@@ -384,6 +386,11 @@ def make_devs_with_authsets(user, tenant_token=''):
     # preauth'd devices
     for i in range(2):
         dev = make_preauthd_device(utoken)
+        devices.append(dev)
+
+    # preauth'd devices with extra 'pending' sets
+    for i in range(2):
+        dev = make_preauthd_device_with_pending(utoken, num_pending=2, tenant_token=tenant_token)
         devices.append(dev)
 
     return devices
@@ -488,6 +495,35 @@ def make_preauthd_device(utoken):
 
     return dev
 
+def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=''):
+    dev = make_preauthd_device(utoken)
+
+    keys = []
+
+    for i in range(num_pending):
+        priv, pub = util.crypto.rsa_get_keypair()
+        keys.append((priv, pub))
+
+    for priv, pub in keys:
+        create_device(dev.id_data, pub, priv, tenant_token=tenant_token)
+
+    api_dev = get_device_by_id_data(dev.id_data, utoken)
+    assert len(api_dev['auth_sets']) == num_pending + 1
+
+    # gotcha: authsets not guaranteed to be returned in the order of insertion
+    # rely on the order in the api when preparing reference data
+    for aset in api_dev['auth_sets']:
+        if aset['status'] == 'preauthorized':
+            continue
+        keypair = [k for k in keys if util.crypto.rsa_compare_keys(k[1], aset['pubkey'])]
+        assert len(keypair) == 1
+        keypair = keypair[0]
+
+        dev.authsets.append(Authset(aset['id'], dev.id_data, keypair[1], keypair[0], 'pending'))
+
+    return dev
+
+
 class TestDeviceMgmtBase:
     def do_test_ok_get_devices(self, devs_authsets, user):
         da = ApiClient(deviceauth_v2.URL_MGMT)
@@ -530,7 +566,7 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             api_devs = r.json()
 
-            ref_devs = self._filter_and_page_devs(devs_authsets, page=page, per_page=per_page, status=status)
+            ref_devs = filter_and_page_devs(devs_authsets, page=page, per_page=per_page, status=status)
 
             self._compare_devs(ref_devs, api_devs)
 
@@ -578,7 +614,7 @@ class TestDeviceMgmtBase:
         utoken = r.text
 
         # decommission a pending device
-        dev_pending = self._filter_and_page_devs(devs_authsets, status='pending')[0]
+        dev_pending = filter_and_page_devs(devs_authsets, status='pending')[0]
         r = devapim.with_auth(utoken).call('DELETE',
                                   deviceauth_v2.URL_DEVICE,
                                   path_params={'id': dev_pending.id})
@@ -591,7 +627,7 @@ class TestDeviceMgmtBase:
         assert r.status_code == 404
 
         # log in an accepted device
-        dev_acc = self._filter_and_page_devs(devs_authsets, status='accepted')[0]
+        dev_acc = filter_and_page_devs(devs_authsets, status='accepted')[0]
 
         body, sighdr = deviceauth_v1.auth_req(dev_acc.id_data,
                                         dev_acc.authsets[0].pubkey,
@@ -679,7 +715,7 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             count = r.json()
 
-            ref_devs = self._filter_and_page_devs(devs_authsets, status=status)
+            ref_devs = filter_and_page_devs(devs_authsets, status=status)
 
             ref_count = len(ref_devs)
 
@@ -704,17 +740,14 @@ class TestDeviceMgmtBase:
 
             assert len(api_dev['auth_sets']) == len(dev.authsets)
 
-            for i in range(len(api_dev['auth_sets'])):
-                aset = dev.authsets[i]
-                api_aset = api_dev['auth_sets'][i]
+            # GOTCHA: don't rely on indexing, authsets can get reshuffled
+            # depending on actual contents (we don't order them, so it's up to mongo)
+            for api_aset in api_dev['auth_sets']:
+                aset = [a for a in dev.authsets if util.crypto.rsa_compare_keys(a.pubkey, api_aset['pubkey'])]
+                assert len(aset) == 1
+                aset = aset[0]
 
-                self._compare_aset(aset, api_aset)
-
-    def _compare_aset(self, authset, api_authset):
-            assert authset.id == api_authset['id']
-            assert authset.id_data == api_authset['identity_data']
-            assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
-            assert authset.status == api_authset['status']
+                compare_aset(aset, api_aset)
 
     def _filter_and_page_devs(self, devs, page=None, per_page=None, status=None):
         if status is not None:
@@ -777,7 +810,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
 
         for t in tenants_devs_authsets:
             # get num currently accepted devices
-            num_acc = len(self._filter_and_page_devs(t.devices, status='accepted'))
+            num_acc = len(filter_and_page_devs(t.devices, status='accepted'))
 
             # set limit to that
             r = devauthi.call('PUT',
@@ -809,7 +842,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
             assert r.json()['limit'] == num_acc
 
             # try accept a device manually
-            pending = self._filter_and_page_devs(t.devices, status='pending')[0]
+            pending = filter_and_page_devs(t.devices, status='pending')[0]
 
             r = devauthm.with_auth(utoken).call('PUT',
                                            deviceauth_v2.URL_AUTHSET_STATUS,
@@ -818,7 +851,7 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
             assert r.status_code == 422
 
             # try exceed the limit via preauth'd device
-            preauthd = self._filter_and_page_devs(t.devices, status='preauthorized')[0]
+            preauthd = filter_and_page_devs(t.devices, status='preauthorized')[0]
 
             body, sighdr = deviceauth_v1.auth_req(preauthd.id_data,
                                                   preauthd.authsets[0].pubkey,
@@ -830,3 +863,426 @@ class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
                               body,
                               headers=sighdr)
             assert r.status_code == 401
+
+class TestAuthsetMgmtBase:
+    def do_test_get_authset_status(self, devs_authsets, user):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        useradmm = ApiClient(useradm.URL_MGMT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+
+        utoken = r.text
+
+        # try valid authsets
+        for d in devs_authsets:
+            for a in d.authsets:
+                r = devauthm.with_auth(utoken).call('GET',
+                                                    deviceauth_v2.URL_AUTHSET_STATUS,
+                                                    path_params={'did': d.id, 'aid': a.id })
+                assert r.status_code == 200
+                assert r.json()['status'] == a.status
+
+        # invalid authset or device
+        for did, aid in [(devs_authsets[0].id, "foo"),
+                         ("foo", "bar")]:
+            r = devauthm.with_auth(utoken).call('GET',
+                                                deviceauth_v2.URL_AUTHSET_STATUS,
+                                                path_params={'did': did, 'aid': aid })
+            assert r.status_code == 404
+
+    def do_test_put_status_accept(self, devs_authsets, user, tenant_token=''):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        useradmm = ApiClient(useradm.URL_MGMT)
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        # select interesting devices - pending, rejected, or accepted/preauthd with extra authsets
+        devs = []
+        for status in ['pending',
+                       'rejected',
+                       'accepted',
+                       'preauthorized']:
+            found = filter_and_page_devs(devs_authsets, status=status)
+            if status == 'accepted' or status == 'preauthorized':
+                found = [d for d in found if len(d.authsets) > 1]
+
+            devs.extend(found)
+
+        # test acceptance for various kinds of devs
+        for dev in devs:
+            # for accepted devs - first actually get a device token
+            dtoken = None
+            if dev.status == 'accepted':
+                accepted = [a for a in dev.authsets if a.status == 'accepted'][0]
+                body, sighdr = deviceauth_v1.auth_req(accepted.id_data,
+                                                      accepted.pubkey,
+                                                      accepted.privkey,
+                                                      tenant_token)
+
+                r = devauthd.call('POST',
+                                  deviceauth_v1.URL_AUTH_REQS,
+                                  body,
+                                  headers=sighdr)
+
+                assert r.status_code == 200
+                dtoken = r.text
+
+            # find some pending or rejected authset
+            aset = [a for a in dev.authsets if a.status == 'pending' or a.status == 'rejected'][0]
+
+            # accept the authset
+            change_authset_status(dev.id, aset.id, 'accepted', utoken)
+
+            # in case of originally preauthd/accepted devs: the original authset must be rejected now
+            if dev.status in ['accepted', 'preauthorized']:
+                aset_to_reject = [a for a in dev.authsets if a.status == dev.status]
+                assert len(aset_to_reject) == 1
+                aset_to_reject[0].status = 'rejected'
+
+            # in all cases, device is now 'accepted', along with the just accepted authset
+            dev.status = 'accepted'
+            aset.status = 'accepted'
+
+            # verify device is correct in the api
+            self.verify_dev_after_status_update(dev, utoken)
+
+            # if the device used to be accepted - check it lost access
+            if dtoken is not None:
+                r = deploymentsd.with_auth(dtoken).call('GET',
+                                                        deployments.URL_NEXT,
+                                                        qs_params={'device_type': 'foo',
+                                                                   'artifact_name': 'bar'})
+                assert r.status_code == 401
+
+            # device should also be provisioned in inventory
+            time.sleep(1)
+            self.verify_dev_provisioned(dev, utoken)
+
+    def do_test_put_status_reject(self, devs_authsets, user, tenant_token=''):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        useradmm = ApiClient(useradm.URL_MGMT)
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        devs = []
+        for status in ['pending',
+                       'accepted',
+                       'preauthorized']:
+            found = filter_and_page_devs(devs_authsets, status=status)
+            devs.extend(found)
+
+        for dev in devs:
+            aset = None
+            dtoken = None
+
+            # for accepted or preauthd devs, reject the accepted/preauthd set
+            # otherwise just select something
+            if dev.status in ['accepted', 'preauthorized']:
+                aset = [a for a in dev.authsets if a.status == dev.status]
+                assert len(aset) == 1
+                aset = aset[0]
+            else:
+                aset = dev.authsets[0]
+
+            # for accepted devs, also have an active device and check it loses api access
+            if dev.status == 'accepted':
+                body, sighdr = deviceauth_v1.auth_req(aset.id_data,
+                                                      aset.pubkey,
+                                                      aset.privkey,
+                                                      tenant_token)
+
+                r = devauthd.call('POST',
+                                  deviceauth_v1.URL_AUTH_REQS,
+                                  body,
+                                  headers=sighdr)
+
+                assert r.status_code == 200
+                dtoken = r.text
+
+            # reject the authset
+            change_authset_status(dev.id, aset.id, 'rejected', utoken)
+
+            # the given authset always changes to 'rejected'
+            aset.status='rejected'
+
+            # if all other asets are also rejected, the device becomes too
+            # otherwise it's 'pending'
+            rej_asets = [a for a in dev.authsets if a.id != aset.id and a.status == 'rejected']
+
+            if len(rej_asets) == len(dev.authsets) - 1:
+                dev.status = 'rejected'
+            else:
+                dev.status = 'pending'
+
+            # check if the api device is consistent
+            self.verify_dev_after_status_update(dev, utoken)
+
+            # if we rejected an accepted, active device, check that it lost access
+            if dtoken is not None:
+                r = deploymentsd.with_auth(dtoken).call('GET',
+                                           deployments.URL_NEXT,
+                                           qs_params={'device_type': 'foo',
+                                                      'artifact_name': 'bar'})
+                assert r.status_code == 401
+
+    def do_test_put_status_failed(self, devs_authsets, user):
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        # not found: valid device, bogus authset
+        r = devauthm.with_auth(utoken).call('PUT',
+                                       deviceauth_v2.URL_AUTHSET_STATUS,
+                                       deviceauth_v2.req_status('accepted'),
+                                       path_params={'did': devs_authsets[0].id, 'aid': "foo" })
+        assert r.status_code == 404
+
+        # not found: bogus device
+        r = devauthm.with_auth(utoken).call('PUT',
+                                       deviceauth_v2.URL_AUTHSET_STATUS,
+                                       deviceauth_v2.req_status('accepted'),
+                                       path_params={'did': "foo", 'aid': "bar" })
+        assert r.status_code == 404
+
+        # bad request - invalid status
+        r = devauthm.with_auth(utoken).call('PUT',
+                                       deviceauth_v2.URL_AUTHSET_STATUS,
+                                       deviceauth_v2.req_status('invalid'),
+                                       path_params={'did': devs_authsets[0].id, 'aid':  devs_authsets[0].authsets[0].id})
+        assert r.status_code == 400
+
+        # bad request - invalid payload
+        r = devauthm.with_auth(utoken).call('PUT',
+                                       deviceauth_v2.URL_AUTHSET_STATUS,
+                                       '{"foo": "bar"}',
+                                       path_params={'did': devs_authsets[0].id, 'aid':  devs_authsets[0].authsets[0].id})
+        assert r.status_code == 400
+
+    def do_test_delete_status(self, devs_authsets, user, tenant_token=''):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        useradmm = ApiClient(useradm.URL_MGMT)
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        for dev in devs_authsets:
+            aset = None
+            dtoken = None
+
+            # for accepted or preauthd devs, reject the accepted/preauthd set
+            # otherwise just select something
+            if dev.status in ['accepted', 'preauthorized']:
+                aset = [a for a in dev.authsets if a.status == dev.status]
+                assert len(aset) == 1
+                aset = aset[0]
+            else:
+                aset = dev.authsets[0]
+
+            # for accepted devs, also have an active device and check it loses api access
+            if dev.status == 'accepted':
+                body, sighdr = deviceauth_v1.auth_req(aset.id_data,
+                                                      aset.pubkey,
+                                                      aset.privkey,
+                                                      tenant_token)
+
+                r = devauthd.call('POST',
+                                  deviceauth_v1.URL_AUTH_REQS,
+                                  body,
+                                  headers=sighdr)
+
+                assert r.status_code == 200
+                dtoken = r.text
+
+            # delete authset
+            r = devauthm.with_auth(utoken).call('DELETE',
+                                           deviceauth_v2.URL_AUTHSET,
+                                           path_params={'did': dev.id, 'aid': aset.id })
+            assert r.status_code == 204
+
+            # authset should be gone
+            dev.authsets.remove(aset)
+
+            # if it's the last authset of a preauth'd device - the device should be completely gone
+            if dev.status == 'preauthorized' and len(dev.authsets) == 0:
+                r = devauthm.with_auth(utoken).call('GET',
+                                          deviceauth_v2.URL_DEVICE,
+                                          path_params={'id': dev.id})
+                assert r.status_code == 404
+                return
+            else:
+                # in other cases the device remains
+                dev.status = self.compute_dev_status(dev.authsets)
+
+            # check api dev is consistent
+            self.verify_dev_after_status_update(dev, utoken)
+
+            # verify the device lost access, if we had one
+            if dtoken is not None:
+                r = deploymentsd.with_auth(dtoken).call('GET',
+                                                   deployments.URL_NEXT,
+                                                   qs_params={'device_type': 'foo',
+                                                              'artifact_name': 'bar'})
+                assert r.status_code == 401
+
+    def do_test_delete_status_failed(self, devs_authsets, user):
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        # not found: valid device, bogus authset
+        r = devauthm.with_auth(utoken).call('DELETE',
+                                       deviceauth_v2.URL_AUTHSET,
+                                       path_params={'did': devs_authsets[0].id, 'aid': "foo" })
+        assert r.status_code == 404
+
+        # not found: bogus device
+        r = devauthm.with_auth(utoken).call('DELETE',
+                                       deviceauth_v2.URL_AUTHSET,
+                                       path_params={'did': "foo", 'aid': "bar" })
+        assert r.status_code == 404
+
+    def verify_dev_after_status_update(self, dev, utoken):
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
+        r = devauthm.with_auth(utoken).call('GET',
+                                      deviceauth_v2.URL_DEVICE,
+                                      path_params={'id': dev.id})
+        assert r.status_code == 200
+        api_dev = r.json()
+
+        assert api_dev['status'] == dev.status
+        assert len(api_dev['auth_sets']) == len(dev.authsets)
+
+        for api_aset in api_dev['auth_sets']:
+            aset = [a for a in dev.authsets if a.id == api_aset['id']]
+            assert len(aset) == 1
+            aset = aset[0]
+
+            compare_aset(aset, api_aset)
+
+    def compute_dev_status(self, authsets):
+        accepted = [a for a in authsets if a.status == 'accepted']
+
+        if len(accepted) > 0:
+            return 'accepted'
+
+        preauthd = [a for a in authsets if a.status == 'preauthorized']
+        if len(preauthd) > 0:
+            return 'preauthorized'
+
+        pending =  [a for a in authsets if a.status == 'pending']
+        if len(pending) > 0:
+            return 'pending'
+
+        # either the dev is actually 'rejected', or has no auth sets
+        return 'rejected'
+
+    def verify_dev_provisioned(self, dev, utoken):
+        invm = ApiClient(inventory.URL_MGMT)
+
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_DEVICE,
+                                        path_params={'id': dev.id})
+        assert r.status_code == 200
+
+        api_dev = r.json()
+
+class TestAuthsetMgmt(TestAuthsetMgmtBase):
+    def test_get_authset_status(self, devs_authsets, user):
+        self.do_test_get_authset_status(devs_authsets, user)
+
+    def test_put_status_accept(self, devs_authsets, user):
+        self.do_test_put_status_accept(devs_authsets, user)
+
+    def test_put_status_reject(self, devs_authsets, user):
+        self.do_test_put_status_reject(devs_authsets, user)
+
+    def test_put_status_failed(self, devs_authsets, user):
+        self.do_test_put_status_failed(devs_authsets, user)
+
+    def test_delete_status(self, devs_authsets, user):
+        self.do_test_delete_status(devs_authsets, user)
+
+    def test_delete_status_failed(self, devs_authsets, user):
+        self.do_test_delete_status_failed(devs_authsets, user)
+
+
+class TestAuthsetMgmtMultitenant(TestAuthsetMgmtBase):
+    def test_get_authset_status(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_get_authset_status(t.devices, t.users[0])
+
+    def test_put_status_accept(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_accept(t.devices, t.users[0], t.tenant_token)
+
+    def test_put_status_reject(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_reject(t.devices, t.users[0], t.tenant_token)
+
+    def test_put_status_failed(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_put_status_failed(t.devices, t.users[0])
+
+    def test_delete_status(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_status(t.devices, t.users[0], t.tenant_token)
+
+    def test_delete_status_failed(self, tenants_devs_authsets):
+        for t in tenants_devs_authsets:
+            self.do_test_delete_status_failed(t.devices, t.users[0])
+
+def filter_and_page_devs(devs, page=None, per_page=None, status=None):
+        if status is not None:
+            devs = [d for d in devs if d.status==status]
+
+        if page is None:
+            page = 1
+
+        if per_page is None:
+            per_page = 20
+
+        lo = (page-1)*per_page
+        hi = lo + per_page
+
+        return devs[lo:hi]
+
+def compare_aset(authset, api_authset):
+       assert authset.id == api_authset['id']
+       assert authset.id_data == api_authset['identity_data']
+       assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
+       assert authset.status == api_authset['status']

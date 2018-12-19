@@ -79,6 +79,13 @@ services:
         ports:
             - "8080:8080"
 
+    mender-elasticsearch:
+        environment:
+            - ES_NETWORK_HOST=0.0.0.0
+            - ES_JAVA_OPTS=-Xms0m -Xmx100m
+        volumes:
+            - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+
     mender-redis:
         volumes:
             - ./conductor/redis/redis.conf:/etc/redis/redis.conf

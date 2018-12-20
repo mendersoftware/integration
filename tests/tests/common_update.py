@@ -34,7 +34,8 @@ def common_update_procedure(install_image,
                             scripts=[],
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
-                            deployment_triggered_callback=lambda: None):
+                            deployment_triggered_callback=lambda: None,
+                            compression_type="gzip"):
 
     with artifact_lock:
         if broken_image:
@@ -45,9 +46,11 @@ def common_update_procedure(install_image,
         else:
             artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
+        compression_arg = "--compression " + compression_type
+
         # create atrifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed, scripts=scripts)
+            created_artifact = image.make_artifact(install_image, device_type, artifact_id, artifact_file, signed=signed, scripts=scripts, global_flags=compression_arg)
 
             if created_artifact:
                 pre_upload_callback()
@@ -76,7 +79,8 @@ def update_image_successful(install_image,
                             expected_mender_clients=1,
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
-                            deployment_triggered_callback=lambda: None):
+                            deployment_triggered_callback=lambda: None,
+                            compression_type="gzip"):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
 
@@ -91,7 +95,8 @@ def update_image_successful(install_image,
                                                                    regenerate_image_id,
                                                                    signed=signed,
                                                                    pre_deployment_callback=pre_deployment_callback,
-                                                                   deployment_triggered_callback=deployment_triggered_callback)
+                                                                   deployment_triggered_callback=deployment_triggered_callback,
+                                                                   compression_type=compression_type)
         reboot.verify_reboot_performed()
 
     with Helpers.RebootDetector() as reboot:

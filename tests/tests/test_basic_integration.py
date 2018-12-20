@@ -111,6 +111,18 @@ class TestBasicIntegration(MenderTesting):
 
         update_image_successful(install_image=conftest.get_valid_image(), compression_type="none")
 
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
+    def test_update_lzma_compression(self):
+        """Uploads an uncompressed artifact, and runs the whole udpate process."""
+
+        if not env.host_string:
+            execute(self.test_update_lzma_compression,
+                    hosts=get_mender_clients())
+            return
+
+        update_image_successful(install_image=conftest.get_valid_image(), compression_type="lzma")
+
+
 
 
     @pytest.mark.timeout(1000)

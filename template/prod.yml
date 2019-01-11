@@ -130,6 +130,7 @@ services:
     mender-elasticsearch:
         volumes:
             - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
+            - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     mender-redis:
         volumes:
             - mender-redis-db:/var/lib/redis:rw

@@ -26,7 +26,7 @@ URL_AUTHSET = '/devices/{did}/auth/{aid}'
 
 URL_DEVICES = '/devices'
 URL_DEVICE = '/devices/{id}'
-URL_DEVICE  = '/devices/{id}'
+URL_AUTHSET_STATUS  = '/devices/{did}/auth/{aid}/status'
 URL_DEVICES_COUNT = '/devices/count'
 URL_LIMITS_MAX_DEVICES = '/limits/max_devices'
 

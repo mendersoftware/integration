@@ -323,26 +323,6 @@ class Authset:
         return 'ID {} STATUS {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.status, self.id_data, self.pubkey)
 
 
-def get_device_by_id_data(id_data, utoken):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    r = devauthm.with_auth(utoken).call('GET',
-                                        deviceauth_v2.URL_DEVICES)
-    assert r.status_code == 200
-    api_devs = r.json()
-
-    found = [d for d in api_devs if d['identity_data']==id_data]
-    assert len(found) == 1
-
-    return found[0]
-
-def change_authset_status(did, aid, status, utoken):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    r = devauthm.with_auth(utoken).call('PUT',
-                                   deviceauth_v2.URL_AUTHSET_STATUS,
-                                   deviceauth_v2.req_status(status),
-                                   path_params={'did': did, 'aid': aid })
-    assert r.status_code == 204
-
 def make_devs_with_authsets(user, tenant_token=''):
     """ create a good number of devices, some with >1 authsets, with different statuses.
         returns DevWithAuthsets objects."""

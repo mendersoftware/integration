@@ -19,6 +19,7 @@ from pymongo import MongoClient
 from api.client import ApiClient
 from infra.cli import CliUseradm, CliTenantadm
 import api.deviceauth as deviceauth_v1
+import api.deviceauth_v2 as deviceauth_v2
 import api.tenantadm as tenantadm
 import util.crypto
 
@@ -48,13 +49,23 @@ class User:
         self.id=id
 
 
+class Authset:
+    def __init__(self, id, did, id_data, pubkey, privkey, status):
+        self.id = id
+        self.did = did
+        self.id_data = id_data
+        self.pubkey = pubkey
+        self.privkey = privkey
+        self.status = status
+
+
 class Device:
-    def __init__(self, id_data, pubkey, privkey, tenant_token=''):
+    def __init__(self, id, id_data, pubkey, tenant_token=''):
+        self.id = id
         self.id_data=id_data
         self.pubkey=pubkey
-        self.privkey=privkey
         self.tenant_token=tenant_token
-
+        self.authsets = []
 
 class Tenant:
     def __init__(self, name, id, token):
@@ -82,16 +93,15 @@ def create_tenant(name):
 
     return Tenant(name, id, token)
 
-def create_random_device(tenant_token=''):
+def create_random_authset(utoken, tenant_token=''):
     """ create_device with random id data and keypair"""
     priv, pub = util.crypto.rsa_get_keypair()
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
     id_data = {'mac': mac}
 
-    return create_device(id_data, pub, priv, tenant_token)
+    return create_authset(id_data, pub, priv, utoken, tenant_token)
 
-def create_device(id_data, pubkey, privkey, tenant_token=''):
-    """ Simply submit an auth request for a device; it will result in a 'pending' device/authset."""
+def create_authset(id_data, pubkey, privkey, utoken, tenant_token=''):
     api = ApiClient(deviceauth_v1.URL_DEVICES)
 
     body, sighdr = deviceauth_v1.auth_req(id_data, pubkey, privkey, tenant_token)
@@ -103,7 +113,19 @@ def create_device(id_data, pubkey, privkey, tenant_token=''):
                  headers=sighdr)
     assert r.status_code == 401
 
-    return Device(id_data, pubkey, privkey, tenant_token)
+    # dev must exist and have *this* aset
+    api_dev = get_device_by_id_data(id_data, utoken)
+    assert api_dev is not None
+
+    aset = [a for a in api_dev['auth_sets'] if util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
+    assert len(aset) == 1
+
+    aset = aset[0]
+
+    assert aset['identity_data'] == id_data 
+    assert aset['status'] == 'pending' 
+
+    return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
 def create_user(name, pwd, tid=''):
     cli = CliUseradm()
@@ -117,3 +139,23 @@ def create_tenant_user(idx, tenant):
     pwd = 'correcthorse'
 
     return create_user(name, pwd, tenant.id)
+
+def get_device_by_id_data(id_data, utoken):
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    r = devauthm.with_auth(utoken).call('GET',
+                                        deviceauth_v2.URL_DEVICES)
+    assert r.status_code == 200
+    api_devs = r.json()
+
+    found = [d for d in api_devs if d['identity_data']==id_data]
+    assert len(found) == 1
+
+    return found[0]
+
+def change_authset_status(did, aid, status, utoken):
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    r = devauthm.with_auth(utoken).call('PUT',
+                                   deviceauth_v2.URL_AUTHSET_STATUS,
+                                   deviceauth_v2.req_status(status),
+                                   path_params={'did': did, 'aid': aid })
+    assert r.status_code == 204

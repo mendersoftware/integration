@@ -26,7 +26,7 @@ from infra.cli import CliTenantadm, CliUseradm
 import util.crypto
 from common import User, Device, Tenant, \
         create_user, create_tenant, create_tenant_user, \
-        create_random_device
+        create_random_authset, get_device_by_id_data, change_authset_status
 
 @pytest.yield_fixture(scope="function")
 def tenants(clean_mongo):
@@ -48,28 +48,22 @@ def tenants_users(tenants, clean_mongo):
 
 @pytest.yield_fixture(scope="function")
 def tenants_users_devices(tenants_users, mongo):
+    uc = ApiClient(useradm.URL_MGMT)
     for t in tenants_users:
+        user = t.users[0]
+        r = uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
         for _ in range(2):
-            dev = create_random_device(t.tenant_token)
+            aset = create_random_authset(utoken, t.tenant_token)
+            dev = Device(aset.did, aset.id_data, aset.pubkey, t.tenant_token)
+            dev.authsets.append(aset)
             t.devices.append(dev)
 
     yield tenants_users
-
-def get_authset_id(pubkey, utoken):
-    api = ApiClient(deviceauth_v2.URL_MGMT)
-    r = api.with_auth(utoken).call('GET',
-                                   deviceauth_v2.URL_DEVICES)
-
-    assert r.status_code == 200
-
-    api_devs = r.json()
-    api_dev = None
-    for ad in api_devs:
-        aset = [a for a in ad['authsets'] if util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
-        if len(aset) == 1:
-            return aset['id']
-
-    assert False, "authset not found, can't get id"
 
 class TestAccountSuspensionMultitenant:
     def test_user_cannot_log_in(self, tenants_users):
@@ -118,7 +112,7 @@ class TestAccountSuspensionMultitenant:
     def test_authenticated_user_is_rejected(self, tenants_users):
         tc = ApiClient(tenantadm.URL_INTERNAL)
         uc = ApiClient(useradm.URL_MGMT)
-        dc = ApiClient(deviceauth.URL_MGMT)
+        dc = ApiClient(deviceauth_v2.URL_MGMT)
 
         u = tenants_users[0].users[0]
 
@@ -131,7 +125,7 @@ class TestAccountSuspensionMultitenant:
         token = r.text
 
         # check can access an api
-        r = dc.with_auth(token).call('GET', deviceauth.URL_LIST_DEVICES)
+        r = dc.with_auth(token).call('GET', deviceauth_v2.URL_DEVICES)
         assert r.status_code == 200
 
         # suspend tenant
@@ -144,7 +138,7 @@ class TestAccountSuspensionMultitenant:
         time.sleep(10)
 
         # check token is rejected
-        r = dc.with_auth(token).call('GET', deviceauth.URL_LIST_DEVICES)
+        r = dc.with_auth(token).call('GET', deviceauth_v2.URL_DEVICES)
         assert r.status_code == 401
 
     def test_accepted_dev_cant_authenticate(self, tenants_users_devices):
@@ -162,14 +156,8 @@ class TestAccountSuspensionMultitenant:
         assert r.status_code == 200
         utoken = r.text
 
-        dev = tenants_users_devices[0].devices[0]
-        r = dacd.with_auth(utoken).call('PUT',
-                                        deviceauth_v2.URL_AUTHSET_STATUS,
-                                        deviceauth_v2.req_status('accepted'),
-                                        path_params={
-                                            'did': device.id,
-                                            'aid': get_authset_id(dev.pubkey, utoken)})
-        assert r.status_code == 200
+        aset = device.authsets[0]
+        change_authset_status(aset.did, aset.id, 'accepted', utoken)
 
         # suspend
         r = tc.call('PUT',
@@ -181,28 +169,26 @@ class TestAccountSuspensionMultitenant:
         time.sleep(10)
 
         # try requesting auth
-        body, sighdr = deviceauth.auth_req(device.id_data,
-                                           device.pubkey,
-                                           device.privkey,
-                                           device.tenant_token)
+        body, sighdr = deviceauth.auth_req(aset.id_data,
+                                           aset.pubkey,
+                                           aset.privkey,
+                                           tenants_users_devices[0].tenant_token)
 
-        r = devauth.call('POST',
-                         deviceauth.URL_AUTH_REQS,
-                         body,
-                         headers=sighdr)
+        r = dacd.call('POST',
+                      deviceauth.URL_AUTH_REQS,
+                      body,
+                      headers=sighdr)
 
         assert r.status_code == 401
         assert r.json()['error'] == 'Account suspended'
 
     def test_authenticated_dev_is_rejected(self, tenants_users_devices):
-        dacm = ApiClient(deviceadm.URL_MGMT)
         dacd = ApiClient(deviceauth.URL_DEVICES)
         uc = ApiClient(useradm.URL_MGMT)
         tc = ApiClient(tenantadm.URL_INTERNAL)
         dc = ApiClient(deployments.URL_DEVICES)
 
         # accept a dev
-        device = tenants_users_devices[0].devices[0]
         user = tenants_users_devices[0].users[0]
 
         r = uc.call('POST',
@@ -211,21 +197,14 @@ class TestAccountSuspensionMultitenant:
         assert r.status_code == 200
         utoken = r.text
 
-        dev = tenants_users_devices[0].devices[0]
-        r = dacm.with_auth(utoken).call('PUT',
-                                       deviceauth_v2.URL_AUTHSET_STATUS,
-                                       deviceauth_v2.req_status('accepted'),
-                                       path_params={
-                                           'did': device.id,
-                                           'aid': get_authset_id(dev.pubkey, utoken)
-                                           })
-        assert r.status_code == 200
+        aset = tenants_users_devices[0].devices[0].authsets[0]
+        change_authset_status(aset.did, aset.id, 'accepted', utoken)
 
         # request auth
-        body, sighdr = deviceauth.auth_req(device.id_data,
-                                           device.pubkey,
-                                           device.privkey,
-                                           device.tenant_token)
+        body, sighdr = deviceauth.auth_req(aset.id_data,
+                                           aset.pubkey,
+                                           aset.privkey,
+                                           tenants_users_devices[0].tenant_token)
 
         r = dacd.call('POST',
                       deviceauth.URL_AUTH_REQS,

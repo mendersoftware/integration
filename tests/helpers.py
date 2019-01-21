@@ -30,7 +30,7 @@ import conftest
 from common_docker import *
 from common import *
 
-from MenderAPI import adm
+from MenderAPI import auth_v2
 
 logger = logging.getLogger("root")
 
@@ -144,8 +144,8 @@ class Helpers:
 
     @staticmethod
     def ip_to_device_id_map(clients):
-        # Get admission data, which includes device identity.
-        adm_devices = adm.get_devices(expected_devices=len(clients))
+        # Get deviceauth data, which includes device identity.
+        devauth_devices = auth_v2.get_devices(expected_devices=len(clients))
 
         # Collect identity of each client.
         ret = execute(run, "/usr/share/mender/identity/mender-device-identity", hosts=clients)
@@ -157,8 +157,8 @@ class Helpers:
 
         # Match them.
         ip_to_device_id = {}
-        for device in adm_devices:
-            ip_to_device_id[identity_to_ip[device['device_identity']]] = device['device_id']
+        for device in devauth_devices:
+            ip_to_device_id[identity_to_ip[json.dumps(device['identity_data'], separators=(",", ":"))]] = device['id']
 
         return ip_to_device_id
 

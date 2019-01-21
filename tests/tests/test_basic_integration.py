@@ -19,7 +19,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import update_image_successful, update_image_failed
-from MenderAPI import adm, deploy, image
+from MenderAPI import deploy, image
 from mendertesting import MenderTesting
 import shutil
 

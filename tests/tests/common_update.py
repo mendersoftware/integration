@@ -16,7 +16,7 @@
 from common_docker import *
 from common import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, logger
+from MenderAPI import auth_v2, deploy, image, logger
 import random
 from fabric.api import *
 import tempfile
@@ -56,7 +56,7 @@ def common_update_procedure(install_image,
                 pre_upload_callback()
                 deploy.upload_image(created_artifact)
                 if devices is None:
-                    devices = list(set([device["device_id"] for device in adm.get_devices_status("accepted")]))
+                    devices = list(set([device["id"] for device in auth_v2.get_devices_status("accepted")]))
                 pre_deployment_callback()
                 deployment_id = deploy.trigger_deployment(name="New valid update",
                                                           artifact_name=artifact_id,
@@ -104,16 +104,16 @@ def update_image_successful(install_image,
             assert Helpers.get_active_partition() == previous_inactive_part
         except AssertionError:
             logs = []
-            for d in adm.get_devices():
-                logs.append(deploy.get_logs(d["device_id"], deployment_id))
+            for d in auth_v2.get_devices():
+                logs.append(deploy.get_logs(d["id"], deployment_id))
 
             pytest.fail("device did not flip partitions during update, here are the device logs:\n\n %s" % (logs))
 
 
         deploy.check_expected_statistics(deployment_id, "success", expected_mender_clients)
 
-        for d in adm.get_devices():
-            deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
+        for d in auth_v2.get_devices():
+            deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
         if not skip_reboot_verification:
             reboot.verify_reboot_not_performed()
@@ -150,8 +150,8 @@ def update_image_failed(install_image="broken_update.ext4", expected_mender_clie
 
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
-        for d in adm.get_devices():
-            assert "got invalid entrypoint into the state machine" in deploy.get_logs(d["device_id"], deployment_id)
+        for d in auth_v2.get_devices():
+            assert "got invalid entrypoint into the state machine" in deploy.get_logs(d["id"], deployment_id)
 
         assert Helpers.yocto_id_installed_on_machine() == original_image_id
         reboot.verify_reboot_not_performed()

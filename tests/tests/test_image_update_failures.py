@@ -19,7 +19,7 @@ import time
 from common import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, logger
+from MenderAPI import auth_v2, deploy, image, logger
 from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
@@ -40,7 +40,7 @@ class TestFailures(MenderTesting):
             deployment_id, expected_image_id = common_update_procedure(install_image, True)
             reboot.verify_reboot_performed()
 
-        devices_accepted_id = [device["device_id"] for device in adm.get_devices_status("accepted")]
+        devices_accepted_id = [device["id"] for device in auth_v2.get_devices_status("accepted")]
         deployment_id = deploy.trigger_deployment(name="New valid update",
                                                        artifact_name=expected_image_id,
                                                        devices=devices_accepted_id)

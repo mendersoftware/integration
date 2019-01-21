@@ -19,7 +19,7 @@ from common import *
 from common_docker import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import auth, adm, deploy, image, logger
+from MenderAPI import auth, deploy, image, logger
 from common_update import common_update_procedure
 from mendertesting import MenderTesting
 import subprocess

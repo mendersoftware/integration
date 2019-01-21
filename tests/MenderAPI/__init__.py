@@ -22,11 +22,13 @@ import deployments
 import artifacts
 import inventory
 import device_authentication
+import auth_v2
 
 logger = logging.getLogger('root')
 
 auth = authentication.Authentication()
 adm = admission.Admission(auth)
+auth_v2 = auth_v2.DeviceAuthV2(auth)
 deploy = deployments.Deployments(auth, adm)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)
@@ -36,6 +38,7 @@ deviceauth = device_authentication.DeviceAuthentication(auth)
 
 def reset_mender_api():
     auth.reset()
+    auth_v2.reset()
     adm.reset()
     deploy.reset()
     image.reset()

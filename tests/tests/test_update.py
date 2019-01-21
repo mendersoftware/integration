@@ -20,7 +20,7 @@ from common_setup import *
 from common_docker import *
 from mendertesting import MenderTesting
 from common_update import common_update_procedure
-from MenderAPI import auth, adm, deploy, inv, deviceauth
+from MenderAPI import auth, auth_v2, deploy, inv, deviceauth
 import subprocess
 import time
 import conftest
@@ -118,12 +118,11 @@ class BackendUpdating():
         auth.get_auth_token()
 
         # wait for 10 devices to be available
-        devices = adm.get_devices_status("accepted", 10)
+        devices = auth_v2.get_devices_status("accepted", 10)
         provisioned_devices = eval(self.provisioned_devices)
 
         # check that devices and provisioned_devices are the same
         assert len(devices) == provisioned_devices
-        # not sure what else I can do here, the device admission changed from 1.0 to master
 
         assert deploy.get_statistics(self.provisioned_deployment_id)["success"] == 7
         assert deploy.get_statistics(self.provisioned_deployment_id)["failure"] == 3
@@ -159,10 +158,10 @@ class BackendUpdating():
                     assert inventory_pair["value"] == "test"
 
     def test_deployments_post_upgrade(self):
-        adm.get_devices_status("accepted", 10)
+        auth_v2.get_devices_status("accepted", 10)
 
         # perform upgrade
-        devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
+        devices_to_update = list(set([device["id"] for device in auth_v2.get_devices_status("accepted", expected_devices=10)]))
         deployment_id, artifact_id = common_update_procedure("core-image-full-cmdline-%s.ext4" % conftest.machine_name,
                                                              device_type="test",
                                                              devices=devices_to_update)
@@ -174,7 +173,7 @@ class BackendUpdating():
         deploy.get_status("finished")
 
     def test_artifacts_persisted(self):
-        devices_to_update = list(set([device["device_id"] for device in adm.get_devices_status("accepted", expected_devices=10)]))
+        devices_to_update = list(set([device["id"] for device in auth_v2.get_devices_status("accepted", expected_devices=10)]))
         deployment_id = deploy.trigger_deployment(name="artifact survived backed upgrade",
                                                   artifact_name=self.provisioned_artifact_id,
                                                   devices=devices_to_update)
@@ -182,8 +181,8 @@ class BackendUpdating():
 
     def test_decommissioning_post_upgrade(self):
         # assertion error occurs here on decommissioning fail
-        for device in adm.get_devices(10):
-            deviceauth.decommission(device["device_id"])
+        for device in auth_v2.get_devices(10):
+            deviceauth.decommission(device["id"])
 
 
 @MenderTesting.upgrade_from

@@ -25,9 +25,10 @@ import api.tenantadm as tenantadm
 import api.deployments as deployments
 import api.inventory as inventory
 import util.crypto
-from common import User, Device, Tenant, \
+from common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
-        create_random_device, create_device
+        create_random_authset, create_authset, \
+        get_device_by_id_data, change_authset_status
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -54,14 +55,21 @@ def user(clean_migrated_mongo):
     yield create_user('user-foo@acme.com', 'correcthorse')
 
 @pytest.yield_fixture(scope="function")
-def devices(clean_migrated_mongo):
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+def devices(clean_migrated_mongo, user):
+    uc = ApiClient(useradm.URL_MGMT)
+
+    r = uc.call('POST',
+                useradm.URL_LOGIN,
+                auth=(user.name, user.pwd))
+    assert r.status_code == 200
+    utoken = r.text
 
     devices = []
 
     for _ in range(5):
-        d = create_random_device()
-        devices.append(d)
+        aset = create_random_authset(utoken)
+        dev = Device(aset.did, aset.id_data, aset.pubkey)
+        devices.append(dev)
 
     yield devices
 
@@ -85,9 +93,19 @@ def tenants_users(clean_migrated_mongo_mt):
 
 @pytest.yield_fixture(scope="function")
 def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
+    uc = ApiClient(useradm.URL_MGMT)
+
     for t in tenants_users:
+        user = t.users[0]
+        r = uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
         for _ in range(5):
-            dev = create_random_device(t.tenant_token)
+            aset = create_random_authset(utoken, t.tenant_token)
+            dev = Device(aset.did, aset.id_data, aset.pubkey, t.tenant_token)
             t.devices.append(dev)
 
     yield tenants_users
@@ -295,34 +313,6 @@ class TestPreauthMultitenant(TestPreauthBase):
             aset = ad['auth_sets'][0]
             assert util.crypto.rsa_compare_keys(aset['pubkey'], orig_device.pubkey)
 
-
-class DevWithAuthsets:
-    def __init__(self, id_data, id, status):
-        self.id = id
-        self.id_data = id_data
-        self.status = status
-        self.authsets = []
-
-    def __repr__(self):
-        ret = 'ID {} STATUS {} ID_DATA {} AUTHSETS: \n'.format(self.id, self.status, self.id_data)
-        for a in self.authsets:
-            ret += '{}\n'.format(a)
-
-        return ret
-
-
-class Authset:
-    def __init__(self, id, id_data, pubkey, privkey, status):
-        self.id = id
-        self.id_data = id_data
-        self.pubkey = pubkey
-        self.privkey = privkey
-        self.status = status
-
-    def __repr__(self):
-        return 'ID {} STATUS {} ID_DATA {} PUBKEY {}\n'.format(self.id, self.status, self.id_data, self.pubkey)
-
-
 def make_devs_with_authsets(user, tenant_token=''):
     """ create a good number of devices, some with >1 authsets, with different statuses.
         returns DevWithAuthsets objects."""
@@ -395,39 +385,27 @@ def rand_id_data():
 
 def make_pending_device(utoken, num_auth_sets=1, tenant_token=''):
     id_data = rand_id_data()
-    keys = []
 
+    dev = None
     for i in range(num_auth_sets):
         priv, pub = util.crypto.rsa_get_keypair()
-        keys.append((priv, pub))
+        new_set = create_authset(id_data, pub, priv, utoken, tenant_token=tenant_token)
 
-    for priv, pub in keys:
-        new_set = create_device(id_data, pub, priv, tenant_token=tenant_token)
+        if dev is None:
+            dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
 
-    api_dev = get_device_by_id_data(id_data, utoken)
-    assert len(api_dev['auth_sets']) == num_auth_sets
+        dev.authsets.append(new_set)
 
-    dev = DevWithAuthsets(id_data, api_dev['id'], 'pending')
-
-    # gotcha: authsets not guaranteed to be returned in the order of insertion
-    # rely on the order in the api when preparing reference data
-    for aset in api_dev['auth_sets']:
-        keypair = [k for k in keys if util.crypto.rsa_compare_keys(k[1], aset['pubkey'])]
-        assert len(keypair) == 1
-        keypair = keypair[0]
-
-        dev.authsets.append(Authset(aset['id'], id_data, keypair[1], keypair[0], 'pending'))
+    dev.status = 'pending'
 
     return dev
 
 def make_accepted_device(utoken, num_auth_sets=1, num_accepted=1, tenant_token=''):
     dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
-    api_dev = get_device_by_id_data(dev.id_data, utoken)
-
     for i in range(num_accepted):
-        aset_id = api_dev['auth_sets'][i]['id']
-        change_authset_status(api_dev['id'], aset_id, 'accepted', utoken)
+        aset_id = dev.authsets[i].id
+        change_authset_status(dev.id, aset_id, 'accepted', utoken)
 
         dev.authsets[i].status = 'accepted'
 
@@ -438,11 +416,9 @@ def make_accepted_device(utoken, num_auth_sets=1, num_accepted=1, tenant_token='
 def make_rejected_device(utoken, num_auth_sets=1, tenant_token=''):
     dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
-    api_dev = get_device_by_id_data(dev.id_data, utoken)
-
     for i in range(num_auth_sets):
-        aset_id = api_dev['auth_sets'][i]['id']
-        change_authset_status(api_dev['id'], aset_id, 'rejected', utoken)
+        aset_id = dev.authsets[i].id
+        change_authset_status(dev.id, aset_id, 'rejected', utoken)
 
         dev.authsets[i].status = 'rejected'
 
@@ -468,8 +444,8 @@ def make_preauthd_device(utoken):
     assert len(api_dev['auth_sets']) == 1
     aset = api_dev['auth_sets'][0]
 
-    dev = DevWithAuthsets(id_data, api_dev['id'], 'preauthorized')
-    dev.authsets.append(Authset(aset['id'], id_data, pub, priv, 'preauthorized'))
+    dev = Device(api_dev['id'], id_data, pub)
+    dev.authsets.append(Authset(aset['id'], dev.id, id_data, pub, priv, 'preauthorized'))
 
     dev.status = 'preauthorized'
 
@@ -478,28 +454,10 @@ def make_preauthd_device(utoken):
 def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=''):
     dev = make_preauthd_device(utoken)
 
-    keys = []
-
     for i in range(num_pending):
         priv, pub = util.crypto.rsa_get_keypair()
-        keys.append((priv, pub))
-
-    for priv, pub in keys:
-        create_device(dev.id_data, pub, priv, tenant_token=tenant_token)
-
-    api_dev = get_device_by_id_data(dev.id_data, utoken)
-    assert len(api_dev['auth_sets']) == num_pending + 1
-
-    # gotcha: authsets not guaranteed to be returned in the order of insertion
-    # rely on the order in the api when preparing reference data
-    for aset in api_dev['auth_sets']:
-        if aset['status'] == 'preauthorized':
-            continue
-        keypair = [k for k in keys if util.crypto.rsa_compare_keys(k[1], aset['pubkey'])]
-        assert len(keypair) == 1
-        keypair = keypair[0]
-
-        dev.authsets.append(Authset(aset['id'], dev.id_data, keypair[1], keypair[0], 'pending'))
+        aset = create_authset(dev.id_data, pub, priv, utoken, tenant_token=tenant_token)
+        dev.authsets.append(Authset(aset.id, aset.did, dev.id_data, pub, priv, 'pending'))
 
     return dev
 

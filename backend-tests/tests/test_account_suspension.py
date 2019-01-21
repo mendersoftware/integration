@@ -19,7 +19,7 @@ from common import mongo, clean_mongo
 from api.client import ApiClient
 import api.useradm as useradm
 import api.deviceauth as deviceauth
-import api.deviceadm as deviceadm
+import api.deviceauth_v2 as deviceauth_v2
 import api.tenantadm as tenantadm
 import api.deployments as deployments
 from infra.cli import CliTenantadm, CliUseradm
@@ -56,15 +56,20 @@ def tenants_users_devices(tenants_users, mongo):
     yield tenants_users
 
 def get_authset_id(pubkey, utoken):
-    devadmm = ApiClient(deviceadm.URL_MGMT)
-    r = devadmm.with_auth(utoken).call('GET',
-                                        deviceadm.URL_AUTHSETS)
+    api = ApiClient(deviceauth_v2.URL_MGMT)
+    r = api.with_auth(utoken).call('GET',
+                                   deviceauth_v2.URL_DEVICES)
 
     assert r.status_code == 200
 
     api_devs = r.json()
-    api_dev = [x for x in api_devs if util.crypto.rsa_compare_keys(x['key'], pubkey)][0]
-    return api_dev['id']
+    api_dev = None
+    for ad in api_devs:
+        aset = [a for a in ad['authsets'] if util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
+        if len(aset) == 1:
+            return aset['id']
+
+    assert False, "authset not found, can't get id"
 
 class TestAccountSuspensionMultitenant:
     def test_user_cannot_log_in(self, tenants_users):
@@ -143,9 +148,8 @@ class TestAccountSuspensionMultitenant:
         assert r.status_code == 401
 
     def test_accepted_dev_cant_authenticate(self, tenants_users_devices):
-        dac = ApiClient(deviceadm.URL_MGMT)
+        dacd = ApiClient(deviceauth.URL_DEVICES)
         uc = ApiClient(useradm.URL_MGMT)
-        devauth = ApiClient(deviceauth.URL_DEVICES)
         tc = ApiClient(tenantadm.URL_INTERNAL)
 
         # accept a dev
@@ -159,10 +163,12 @@ class TestAccountSuspensionMultitenant:
         utoken = r.text
 
         dev = tenants_users_devices[0].devices[0]
-        r = dac.with_auth(utoken).call('PUT',
-                                       deviceadm.URL_AUTHSET_STATUS,
-                                       deviceadm.req_status('accepted'),
-                                       path_params={'id': get_authset_id(dev.pubkey, utoken)})
+        r = dacd.with_auth(utoken).call('PUT',
+                                        deviceauth_v2.URL_AUTHSET_STATUS,
+                                        deviceauth_v2.req_status('accepted'),
+                                        path_params={
+                                            'did': device.id,
+                                            'aid': get_authset_id(dev.pubkey, utoken)})
         assert r.status_code == 200
 
         # suspend
@@ -189,9 +195,9 @@ class TestAccountSuspensionMultitenant:
         assert r.json()['error'] == 'Account suspended'
 
     def test_authenticated_dev_is_rejected(self, tenants_users_devices):
-        dac = ApiClient(deviceadm.URL_MGMT)
+        dacm = ApiClient(deviceadm.URL_MGMT)
+        dacd = ApiClient(deviceauth.URL_DEVICES)
         uc = ApiClient(useradm.URL_MGMT)
-        devauth = ApiClient(deviceauth.URL_DEVICES)
         tc = ApiClient(tenantadm.URL_INTERNAL)
         dc = ApiClient(deployments.URL_DEVICES)
 
@@ -206,10 +212,13 @@ class TestAccountSuspensionMultitenant:
         utoken = r.text
 
         dev = tenants_users_devices[0].devices[0]
-        r = dac.with_auth(utoken).call('PUT',
-                                       deviceadm.URL_AUTHSET_STATUS,
-                                       deviceadm.req_status('accepted'),
-                                       path_params={'id': get_authset_id(dev.pubkey, utoken)})
+        r = dacm.with_auth(utoken).call('PUT',
+                                       deviceauth_v2.URL_AUTHSET_STATUS,
+                                       deviceauth_v2.req_status('accepted'),
+                                       path_params={
+                                           'did': device.id,
+                                           'aid': get_authset_id(dev.pubkey, utoken)
+                                           })
         assert r.status_code == 200
 
         # request auth
@@ -218,10 +227,10 @@ class TestAccountSuspensionMultitenant:
                                            device.privkey,
                                            device.tenant_token)
 
-        r = devauth.call('POST',
-                         deviceauth.URL_AUTH_REQS,
-                         body,
-                         headers=sighdr)
+        r = dacd.call('POST',
+                      deviceauth.URL_AUTH_REQS,
+                      body,
+                      headers=sighdr)
         assert r.status_code == 200
         dtoken = r.text
 

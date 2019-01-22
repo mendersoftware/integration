@@ -17,7 +17,6 @@ import json
 import pytest
 import os
 import authentication
-import admission
 import deployments
 import artifacts
 import inventory
@@ -27,9 +26,8 @@ import auth_v2
 logger = logging.getLogger('root')
 
 auth = authentication.Authentication()
-adm = admission.Admission(auth)
 auth_v2 = auth_v2.DeviceAuthV2(auth)
-deploy = deployments.Deployments(auth, adm)
+deploy = deployments.Deployments(auth, auth_v2)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)
 deviceauth = device_authentication.DeviceAuthentication(auth)
@@ -39,7 +37,6 @@ deviceauth = device_authentication.DeviceAuthentication(auth)
 def reset_mender_api():
     auth.reset()
     auth_v2.reset()
-    adm.reset()
     deploy.reset()
     image.reset()
     inv.reset()

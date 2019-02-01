@@ -76,6 +76,7 @@ services:
             - ./conductor/server/config:/app/config
         environment:
             - CONFIG_PROP=config.properties
+            - CONDUCTOR_JAVA_OPTS=-Xms128m -Xmx128m
         ports:
             - "8080:8080"
 

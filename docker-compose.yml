@@ -58,6 +58,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - mender-conductor
 
     #
     # mender-inventory

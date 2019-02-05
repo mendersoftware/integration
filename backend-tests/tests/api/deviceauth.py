@@ -16,11 +16,9 @@ import json
 import api.client
 import util.crypto
 
-URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/devauth'
 URL_DEVICES = api.client.GATEWAY_URL + '/api/devices/v1/authentication'
 URL_INTERNAL = 'http://mender-device-auth:8080/api/internal/v1/devauth'
 
-URL_LIST_DEVICES = '/devices'
 URL_AUTH_REQS = '/auth_requests'
 URL_LIMITS_MAX_DEVICES = '/tenant/{tid}/limits/max_devices'
 

@@ -13,7 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-from MenderAPI import auth, adm, reset_mender_api
+from MenderAPI import auth, auth_v2, reset_mender_api
 from common import *
 from common_docker import *
 import conftest
@@ -44,7 +44,7 @@ def setup_set_client_number_bootstrapped(clients):
     ssh_is_opened()
 
     auth.reset_auth_token()
-    adm.accept_devices(clients)
+    auth_v2.accept_devices(clients)
 
     set_setup_type(None)
 
@@ -53,7 +53,7 @@ def setup_set_client_number_bootstrapped(clients):
 def standard_setup_one_client_bootstrapped():
     restart_docker_compose()
     reset_mender_api()
-    adm.accept_devices(1)
+    auth_v2.accept_devices(1)
 
     set_setup_type(ST_OneClientBootstrapped)
 
@@ -62,7 +62,7 @@ def standard_setup_one_client_bootstrapped():
 def standard_setup_two_clients_bootstrapped():
     restart_docker_compose(2)
     reset_mender_api()
-    adm.accept_devices(2)
+    auth_v2.accept_devices(2)
 
     set_setup_type(ST_TwoClientsBootstrapped)
 
@@ -82,7 +82,7 @@ def standard_setup_one_client_bootstrapped_with_s3():
     ssh_is_opened()
 
     auth.reset_auth_token()
-    adm.accept_devices(1)
+    auth_v2.accept_devices(1)
 
     set_setup_type(ST_OneClientsBootstrapped_AWS_S3)
 
@@ -109,7 +109,7 @@ def standard_setup_with_signed_artifact_client(request):
 
     ssh_is_opened()
     auth.reset_auth_token()
-    adm.accept_devices(1)
+    auth_v2.accept_devices(1)
     set_setup_type(ST_SignedClient)
 
 
@@ -127,7 +127,7 @@ def standard_setup_with_short_lived_token():
 
     ssh_is_opened()
     auth.reset_auth_token()
-    adm.accept_devices(1)
+    auth_v2.accept_devices(1)
     set_setup_type(ST_ShortLivedAuthToken)
 
 @pytest.fixture(scope="function")
@@ -150,7 +150,7 @@ def setup_failover():
 
     ssh_is_opened()
     auth.reset_auth_token()
-    adm.accept_devices(1)
+    auth_v2.accept_devices(1)
     set_setup_type(ST_Failover)
 
 @pytest.fixture(scope="function")

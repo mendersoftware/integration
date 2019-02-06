@@ -19,12 +19,12 @@ class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
     auth = None
-    adm = None
+    auth_v2 = None
 
-    def __init__(self, auth, adm):
+    def __init__(self, auth, auth_v2):
         self.reset()
         self.auth = auth
-        self.adm = adm
+        self.auth_v2 = auth_v2
 
     def reset(self):
         # Reset all temporary values.
@@ -137,9 +137,9 @@ class Deployments(object):
 
             if int(data["failure"]) > 0 and expected_status != "failure":
                 all_failed_logs = ""
-                for device in self.adm.get_devices():
+                for device in self.auth_v2.get_devices():
                     try:
-                        all_failed_logs += self.get_logs(device["device_id"], deployment_id) + "\n" * 5
+                        all_failed_logs += self.get_logs(device["id"], deployment_id) + "\n" * 5
                     except Exception, e:
                         logger.warn("failed to get logs.")
 

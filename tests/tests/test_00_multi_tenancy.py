@@ -19,7 +19,7 @@ from common import *
 from common_docker import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import auth, adm, deploy, image, logger, inv, deviceauth
+from MenderAPI import auth, auth_v2, deploy, image, logger, inv, deviceauth
 from common_update import update_image_successful, update_image_failed, \
                           common_update_procedure
 from mendertesting import MenderTesting
@@ -92,13 +92,13 @@ class TestMultiTenancy(MenderTesting):
         if wait_until_bootstrap_attempt():
             for _ in range(5):
                 time.sleep(5)
-                adm.get_devices(expected_devices=0)  # make sure device not seen
+                auth_v2.get_devices(expected_devices=0)  # make sure device not seen
         else:
             pytest.fail("failed to bootstrap device")
 
         # setting the correct token makes the client visible to the backend
         set_correct_tenant_token(token)
-        adm.get_devices(expected_devices=1)
+        auth_v2.get_devices(expected_devices=1)
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_artifacts_exclusive_to_user(self):
@@ -152,12 +152,12 @@ class TestMultiTenancy(MenderTesting):
 
             t = auth.current_tenant["tenant_token"]
             new_tenant_client(user["container"], t)
-            adm.accept_devices(1)
+            auth_v2.accept_devices(1)
 
             # get the new devices client_id and setting it to the our test parameter
             assert len(inv.get_devices()) == 1
             user["client_id"] = inv.get_devices()[0]["id"]
-            user["device_id"] = adm.get_devices()[0]["device_id"]
+            user["device_id"] = auth_v2.get_devices()[0]["id"]
 
         for user in users:
             # make sure that the correct number of clients appear for the given tenant
@@ -172,8 +172,8 @@ class TestMultiTenancy(MenderTesting):
             timeout = time.time() + (60 * 5)
             device_id = user["device_id"]
             while time.time() < timeout:
-                    newAdmissions = adm.get_devices()[0]
-                    if device_id != newAdmissions["device_id"] \
+                    newAdmissions = auth_v2.get_devices()[0]
+                    if device_id != newAdmissions["id"] \
                        and user["client_id"] != newAdmissions["id"]:
                         logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
                         break
@@ -181,7 +181,7 @@ class TestMultiTenancy(MenderTesting):
                         logger.info("device [%s] found in inventory..." % (device_id))
                     time.sleep(.5)
             else:
-                assert False, "decommissioned device still available in admissions"
+                assert False, "decommissioned device still available in inventory"
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client")
     def test_multi_tenancy_deployment(self):
@@ -211,7 +211,7 @@ class TestMultiTenancy(MenderTesting):
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             new_tenant_client(user["container"], t)
-            adm.accept_devices(1)
+            auth_v2.accept_devices(1)
 
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
@@ -241,7 +241,7 @@ class TestMultiTenancy(MenderTesting):
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             new_tenant_client(user["container"], t)
-            adm.accept_devices(1)
+            auth_v2.accept_devices(1)
 
         for user in users:
             deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
@@ -304,6 +304,6 @@ class TestMultiTenancy(MenderTesting):
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             new_tenant_client(user["container"], t)
-            adm.accept_devices(1)
+            auth_v2.accept_devices(1)
             self.perform_update(mender_client_container=user["container"])
             verify_object_id_and_tagging()

@@ -20,7 +20,7 @@ from common import *
 from common_docker import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import auth, adm, deploy, image, logger
+from MenderAPI import auth, auth_v2, deploy, image, logger
 from common_update import common_update_procedure
 from mendertesting import MenderTesting
 
@@ -39,21 +39,21 @@ class TestBootstrapping(MenderTesting):
 
 
     def accept_devices(self):
-        adm.check_expected_status("pending", len(get_mender_clients()))
+        auth_v2.check_expected_status("pending", len(get_mender_clients()))
 
         # iterate over devices and accept them
-        for d in adm.get_devices():
-            adm.set_device_status(d["id"], "accepted")
+        for d in auth_v2.get_devices():
+            auth_v2.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
             logging.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
-        adm.check_expected_status("accepted", len(get_mender_clients()))
+        auth_v2.check_expected_status("accepted", len(get_mender_clients()))
 
         # make sure mender-store contains authtoken
         have_token()
 
         # print all device ids
-        for device in adm.get_devices_status("accepted"):
+        for device in auth_v2.get_devices_status("accepted"):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
@@ -65,11 +65,11 @@ class TestBootstrapping(MenderTesting):
             return
 
         # iterate over devices and reject them
-        for device in adm.get_devices():
-            adm.set_device_status(device["id"], "rejected")
+        for device in auth_v2.get_devices():
+            auth_v2.set_device_auth_set_status(device["id"], device["auth_sets"][0]["id"], "rejected")
             logging.info("Rejecting DeviceID: %s" % device["id"])
 
-        adm.check_expected_status("rejected", len(get_mender_clients()))
+        auth_v2.check_expected_status("rejected", len(get_mender_clients()))
 
         with Helpers.RebootDetector() as reboot:
             try:
@@ -95,7 +95,7 @@ class TestBootstrapping(MenderTesting):
                     finished = True
                     break
 
-        adm.accept_devices(1)
+        auth_v2.accept_devices(1)
 
         if not finished:
             pytest.fail("failed to remove authtoken from mender-store file")

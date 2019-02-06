@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2019 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 from MenderAPI import *
 
-class Admission():
+class DeviceAuthV2():
     auth = None
 
     def __init__(self, auth):
@@ -27,15 +27,15 @@ class Admission():
         # Reset all temporary values.
         pass
 
-    def get_admission_base_path(self):
-        return "https://%s/api/management/%s/admission/" % (get_mender_gateway(), api_version)
+    def get_auth_v2_base_path(self):
+        return "https://%s/api/management/v2/devauth/" % (get_mender_gateway())
 
     def get_devices(self, expected_devices=1):
         return self.get_devices_status(expected_devices=expected_devices)
 
     # return devices with the specified status
     def get_devices_status(self, status=None, expected_devices=1):
-        device_status_path = self.get_admission_base_path() + "devices"
+        device_status_path = self.get_auth_v2_base_path() + "devices"
         devices = None
         max_wait = 60*60
         starttime = time.time()
@@ -73,15 +73,15 @@ class Admission():
                 matching.append(d)
         return matching
 
-    def set_device_status(self, device_id, status):
+    def set_device_auth_set_status(self, device_id, auth_set_id, status):
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        r = requests.put(self.get_admission_base_path() + "devices/%s/status" % device_id,
+        r = requests.put(self.get_auth_v2_base_path() + "devices/%s/auth/%s/status" % (device_id, auth_set_id),
                          verify=False,
                          headers=headers,
                          data=json.dumps({"status": status}))
-        assert r.status_code == requests.status_codes.codes.ok
+        assert r.status_code == requests.status_codes.codes.no_content
 
     def check_expected_status(self, status, expected_value, max_wait=60*60, polling_frequency=1):
         timeout = time.time() + max_wait
@@ -112,7 +112,7 @@ class Admission():
 
         # iterate over devices and accept them
         for d in self.get_devices(expected_devices=expected_devices):
-            self.set_device_status(d["id"], "accepted")
+            self.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
 
         # block until devices are actually accepted
         timeout = time.time() + 30
@@ -120,22 +120,22 @@ class Admission():
             time.sleep(1)
             if len(self.get_devices_status(status="accepted", expected_devices=expected_devices)) == expected_devices:
                 break
-           
+
         if time.time() > timeout:
             pytest.fail("wasn't able to accept device after 30 seconds")
 
         logger.info("Successfully bootstrap all clients")
 
     def preauth(self, device_identity, pubkey):
-        path = "https://%s/api/management/%s/admission/devices" % (get_mender_gateway(), api_version)
-        req = {'device_identity': device_identity, 'key': pubkey}
+        path = "https://%s/api/management/v2/devauth/devices" % (get_mender_gateway())
+        req = {'identity_data': device_identity, 'pubkey': pubkey}
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
         return requests.post(path, data=json.dumps(req), headers=headers, verify=False)
 
-    def delete_auth_set(self, aid):
-        path = "https://%s/api/management/%s/admission/devices/%s" % (get_mender_gateway(), api_version, aid)
+    def delete_auth_set(self, did, aid):
+        path = "https://%s/api/management/v2/devauth/devices/%s/auth/%s" % (get_mender_gateway(), did, aid)
 
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())

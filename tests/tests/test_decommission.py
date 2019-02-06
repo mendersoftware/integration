@@ -21,7 +21,7 @@ from common_setup import *
 import common_docker
 from helpers import Helpers
 from common_update import common_update_procedure
-from MenderAPI import inv, adm, deviceauth
+from MenderAPI import inv, auth_v2, deviceauth
 from mendertesting import MenderTesting
 from conductor import Conductor
 
@@ -39,13 +39,6 @@ class TestDeviceDecommissioning(MenderTesting):
         r = deviceauth.get_device(device_id)
         assert r.status_code == 404, "device [%s] not removed from deviceauth" % (device_id,)
 
-    def check_gone_from_deviceadm(self, adm_id, device_id):
-        admissions = adm.get_devices()[0]
-        if device_id != admissions["device_id"] and adm_id != admissions["id"]:
-            logger.info("device [%s] successfully removed from admission: [%s]" % (device_id, str(admissions)))
-        else:
-            assert False, "device [%s] not removed from admission: [%s]" % (device_id, str(admissions))
-
     @MenderTesting.fast
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_device_decommissioning(self):
@@ -55,11 +48,11 @@ class TestDeviceDecommissioning(MenderTesting):
             execute(self.test_device_decommissioning, hosts=get_mender_clients())
             return
 
-        adm.check_expected_status("pending", len(get_mender_clients()))
-        adm_id = adm.get_devices()[0]["id"]
-        device_id = adm.get_devices()[0]["device_id"]
+        auth_v2.check_expected_status("pending", len(get_mender_clients()))
+        device = auth_v2.get_devices()[0]
+        device_id = device["id"]
 
-        adm.set_device_status(adm_id, "accepted")
+        auth_v2.set_device_auth_set_status(device_id, device["auth_sets"][0]["id"], "accepted")
 
         # wait until inventory is populated
         timeout = time.time() + (60 * 5)
@@ -101,6 +94,3 @@ class TestDeviceDecommissioning(MenderTesting):
 
         # check device gone from deviceauth
         self.check_gone_from_deviceauth(device_id)
-
-        # now check that the device no longer exists in admission
-        self.check_gone_from_deviceadm(adm_id, device_id)

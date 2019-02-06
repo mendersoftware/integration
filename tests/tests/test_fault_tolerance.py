@@ -20,7 +20,7 @@ import time
 from common import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, logger
+from MenderAPI import deploy, image, logger
 from common_update import common_update_procedure
 from mendertesting import MenderTesting
 

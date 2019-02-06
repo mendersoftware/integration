@@ -19,7 +19,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import common_update_procedure
-from MenderAPI import adm, deploy, image
+from MenderAPI import auth_v2, deploy, image
 from mendertesting import MenderTesting
 import time
 
@@ -54,8 +54,8 @@ class TestDeploymentAborting(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "aborted", len(get_mender_clients()))
 
             # no deployment logs are sent by the client, is this expected?
-            for d in adm.get_devices():
-                deploy.get_logs(d["device_id"], deployment_id, expected_status=404)
+            for d in auth_v2.get_devices():
+                deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
             if mender_performs_reboot:
                 # If Mender performs reboot, we need to wait for it to reboot

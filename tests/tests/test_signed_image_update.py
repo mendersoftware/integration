@@ -19,7 +19,7 @@ import time
 from common import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, logger
+from MenderAPI import auth_v2, deploy, image, logger
 from common_update import update_image_successful, update_image_failed, common_update_procedure
 from mendertesting import MenderTesting
 
@@ -56,6 +56,6 @@ class TestSignedUpdates(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-        for d in adm.get_devices():
+        for d in auth_v2.get_devices():
             assert "expecting signed artifact, but no signature file found" in \
-                deploy.get_logs(d["device_id"], deployment_id)
+                deploy.get_logs(d["id"], deployment_id)

@@ -21,7 +21,7 @@ import time
 from fabric.api import *
 import pytest
 from helpers import Helpers
-from MenderAPI import adm, deploy
+from MenderAPI import deploy
 from mendertesting import MenderTesting
 from common_docker import *
 from common_setup import *

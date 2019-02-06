@@ -20,7 +20,7 @@ import time
 from common import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import adm, deploy, image, inv
+from MenderAPI import auth_v2, deploy, image, inv
 from mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
@@ -36,16 +36,16 @@ class TestInventory(MenderTesting):
             attempts = attempts - 1
             try:
                 inv_json = inv.get_devices()
-                adm_json = adm.get_devices()
+                auth_json = auth_v2.get_devices()
 
-                adm_ids = [device['device_id'] for device in adm_json]
+                auth_ids = [device['id'] for device in auth_json]
 
                 assert(len(inv_json) > 0)
 
                 for device in inv_json:
                     try:
-                        # Check that admission and inventory agree.
-                        assert(device['id'] in adm_ids)
+                        # Check that authentication and inventory agree.
+                        assert(device['id'] in auth_ids)
 
                         attrs = device['attributes']
 

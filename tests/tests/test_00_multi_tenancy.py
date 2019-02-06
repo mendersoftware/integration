@@ -19,7 +19,7 @@ from common import *
 from common_docker import *
 from common_setup import *
 from helpers import Helpers
-from MenderAPI import auth, auth_v2, deploy, image, logger, inv, deviceauth
+from MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from common_update import update_image_successful, update_image_failed, \
                           common_update_procedure
 from mendertesting import MenderTesting
@@ -168,7 +168,7 @@ class TestMultiTenancy(MenderTesting):
         for user in users:
             # wait until inventory is populated
             auth.set_tenant(user["username"], user["email"], user["password"])
-            deviceauth.decommission(user["client_id"])
+            auth_v2.decommission(user["client_id"])
             timeout = time.time() + (60 * 5)
             device_id = user["device_id"]
             while time.time() < timeout:

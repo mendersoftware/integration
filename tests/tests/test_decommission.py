@@ -21,7 +21,7 @@ from common_setup import *
 import common_docker
 from helpers import Helpers
 from common_update import common_update_procedure
-from MenderAPI import inv, auth_v2, deviceauth
+from MenderAPI import inv, auth_v2
 from mendertesting import MenderTesting
 from conductor import Conductor
 
@@ -36,7 +36,7 @@ class TestDeviceDecommissioning(MenderTesting):
         assert r.status_code == 404, "device [%s] not removed from inventory" % (device_id,)
 
     def check_gone_from_deviceauth(self, device_id):
-        r = deviceauth.get_device(device_id)
+        r = auth_v2.get_device(device_id)
         assert r.status_code == 404, "device [%s] not removed from deviceauth" % (device_id,)
 
     @MenderTesting.fast
@@ -75,7 +75,7 @@ class TestDeviceDecommissioning(MenderTesting):
         initial_wfs = c.get_decommission_device_wfs(device_id)
 
         # decommission actual device
-        deviceauth.decommission(device_id)
+        auth_v2.decommission(device_id)
 
         # check that the workflow completed successfully
         timeout = time.time() + (60 * 5)

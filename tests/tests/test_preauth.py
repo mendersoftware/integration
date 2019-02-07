@@ -14,7 +14,7 @@
 #    limitations under the License.
 from mendertesting import MenderTesting
 from common_setup import *
-from MenderAPI import auth_v2, deviceauth, inv
+from MenderAPI import auth_v2, inv
 import pytest
 import json
 import logging
@@ -122,7 +122,7 @@ UwIDAQAB
         assert len(dev_removed) == 0
 
         # verify removed from deviceauth
-        r = deviceauth.get_device(dev_preauth['id'])
+        r = auth_v2.get_device(dev_preauth['id'])
         assert r.status_code == 404
 
         # verify removed from inventory

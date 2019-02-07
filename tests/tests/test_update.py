@@ -20,7 +20,7 @@ from common_setup import *
 from common_docker import *
 from mendertesting import MenderTesting
 from common_update import common_update_procedure
-from MenderAPI import auth, auth_v2, deploy, inv, deviceauth
+from MenderAPI import auth, auth_v2, deploy, inv
 import subprocess
 import time
 import conftest
@@ -182,7 +182,7 @@ class BackendUpdating():
     def test_decommissioning_post_upgrade(self):
         # assertion error occurs here on decommissioning fail
         for device in auth_v2.get_devices(10):
-            deviceauth.decommission(device["id"])
+            auth_v2.decommission(device["id"])
 
 
 @MenderTesting.upgrade_from

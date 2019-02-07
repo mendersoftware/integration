@@ -30,6 +30,10 @@ class DeviceAuthV2():
     def get_auth_v2_base_path(self):
         return "https://%s/api/management/v2/devauth/" % (get_mender_gateway())
 
+    def get_device(self, device_id):
+        url = self.get_auth_v2_base_path() + device_id
+        return requests.get(url, verify=False, headers=self.auth.get_auth_token())
+
     def get_devices(self, expected_devices=1):
         return self.get_devices_status(expected_devices=expected_devices)
 
@@ -141,3 +145,11 @@ class DeviceAuthV2():
         headers.update(self.auth.get_auth_token())
 
         return requests.delete(path, headers=headers, verify=False)
+
+    def decommission(self, deviceID, expected_http_code=204):
+        decommission_path_url = self.get_auth_v2_base_path() + "devices/" + str(deviceID)
+        r = requests.delete(decommission_path_url,
+                            verify=False,
+                            headers=self.auth.get_auth_token())
+        assert r.status_code == expected_http_code
+        logger.info("device [%s] is decommissioned" % (deviceID))

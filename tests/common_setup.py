@@ -99,6 +99,21 @@ def standard_setup_without_client():
 
     set_setup_type(ST_NoClient)
 
+@pytest.fixture(scope="function")
+def setup_with_legacy_client():
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
+                        -f ../legacy-client.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.testing.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+    auth_v2.accept_devices(1)
+    set_setup_type(ST_NoClient)
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):

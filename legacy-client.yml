@@ -1,0 +1,10 @@
+version: '2'
+services:
+
+    #
+    # mender-legacy-client 
+    #
+    mender-client:
+            image: mendersoftware/mender-client-qemu:1.7.0
+            
+

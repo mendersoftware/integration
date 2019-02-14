@@ -35,6 +35,8 @@ ST_MultiTenancyNoClient = 8
 ST_OneClientsBootstrapped_AWS_S3_MT = 9
 ST_MultiTenancyNoClientWithSmtp = 10
 ST_Failover = 11
+ST_LegacyClient = 12
+
 
 HAVE_TOKEN_TIMEOUT = 60 * 5
 MENDER_STORE = '/data/mender/mender-store'

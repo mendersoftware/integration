@@ -105,6 +105,7 @@ def setup_with_legacy_client():
     reset_mender_api()
 
     docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
                         -f ../legacy-client.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml up -d",

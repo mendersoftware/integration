@@ -42,7 +42,7 @@ class TestDBMigration(MenderTesting):
             return
 
         dirpath = tempfile.mkdtemp()
-        script_content = '#!/bin/sh halt -p'
+        script_content = '#!/bin/sh halt -r'
         with open(os.path.join(dirpath, "ArtifactCommit_Enter_01"), "w") as fd:
             fd.write(script_content)
 

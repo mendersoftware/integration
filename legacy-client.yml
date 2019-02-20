@@ -6,9 +6,5 @@ services:
     #
     mender-client:
             image: mendersoftware/mender-client-qemu:1.7.0
-            networks:
-                - mender
-            stdin_open: true
-            tty: true
-            privileged: true
+            
 

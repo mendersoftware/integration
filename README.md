@@ -17,7 +17,7 @@ Requirements:
 * docker-compose 1.7
 
 
-![Mender logo](https://mender.io/user/pages/04.resources/_logos/logoS.png)
+![Mender logo](mender_logo.png)
 
 
 ## Getting started

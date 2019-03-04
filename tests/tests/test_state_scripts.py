@@ -62,8 +62,6 @@ TEST_SETS = [
                 "ArtifactCommit_Enter_05",
                 "ArtifactCommit_Leave_01_extra_string",
                 "ArtifactCommit_Leave_91",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -98,8 +96,6 @@ TEST_SETS = [
                 "ArtifactCommit_Enter_05",
                 "ArtifactCommit_Leave_01_extra_string",
                 "ArtifactCommit_Leave_91",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -134,8 +130,6 @@ TEST_SETS = [
                 "ArtifactCommit_Enter_05",
                 "ArtifactCommit_Leave_01_extra_string",
                 "ArtifactCommit_Leave_91",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -152,8 +146,6 @@ TEST_SETS = [
                 "Sync_Enter_02",
                 "Sync_Error_15",
                 "Sync_Error_16",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -173,8 +165,6 @@ TEST_SETS = [
                 "Sync_Leave_15",
                 "Sync_Error_15",
                 "Sync_Error_16",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -194,8 +184,6 @@ TEST_SETS = [
                 "Sync_Leave_15",
                 "Download_Enter_12",
                 "Download_Error_25",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -217,8 +205,6 @@ TEST_SETS = [
                 "Download_Enter_13",
                 "Download_Leave_14",
                 "Download_Error_25",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -248,8 +234,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -285,8 +269,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -324,8 +306,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -369,8 +349,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -416,8 +394,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -452,8 +428,6 @@ TEST_SETS = [
                 "ArtifactCommit_Enter_05",
                 "ArtifactCommit_Leave_01_extra_string", # Error in this script should not have any effect.
                 "ArtifactCommit_Leave_91",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -500,8 +474,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -534,8 +506,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -566,8 +536,6 @@ TEST_SETS = [
                 "ArtifactReboot_Enter_11",
                 # since version is corrupted from now on, no more scripts
                 # will be executed, but rollback will be performed
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -614,8 +582,6 @@ TEST_SETS = [
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
                 "ArtifactFailure_Leave_55",
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
             ],
         },
     ),
@@ -1156,16 +1122,23 @@ class TestStateScripts(MenderTesting):
         log_pos = 0
         # Position in script list from test_set.
         expected_pos = 0
-        # Position of the most recent first Idle script.
-        idle_pos = 0
+        # Iterations around the full expected_order list
+        num_iterations = 0
         try:
-            while expected_pos < len(expected_order):
+            while log_pos < len(log):
+
                 if len(log[log_pos]) > 0:
                     # Make sure we are at right script.
                     assert expected_order[expected_pos] == log[log_pos]
 
                 log_pos = log_pos + 1
                 expected_pos = expected_pos + 1
+
+                if expected_pos == len(expected_order):
+                    # We completed the expected sequence, we count as one full iteration
+                    # and restart the index for the next iteration
+                    num_iterations = num_iterations + 1
+                    expected_pos = 0
 
                 if (log_pos < len(log)
                     and log[log_pos - 1].startswith("Sync_")
@@ -1174,13 +1147,16 @@ class TestStateScripts(MenderTesting):
                     # The Idle/Sync sequence is allowed to "wrap around" and start
                     # over, because it may take a few rounds of checking before the
                     # deployment is ready for the client.
-                    expected_pos = idle_pos
+                    expected_pos = 0
 
-                if (expected_pos < len(expected_order)
-                    and not expected_order[expected_pos - 1].startswith("Idle_")
-                    and expected_order[expected_pos].startswith("Idle_")):
-                    # New Idle sequence entered.
-                    idle_pos = expected_pos
+            # Test cases with an expectation of success/failure shall do only 1 iteration
+            # Test cases with None expectation will loop through the error sequence in a loop, but still
+            # we want to make sure that it is reasonable (i.e. looping with the correct time intervals).
+            # For these cases we set a max. of 20 iterations to accomodate for slow running of the framework
+            if test_set['ExpectedStatus'] is not None:
+                assert num_iterations == 1
+            else:
+                assert num_iterations < 20
 
         except:
             print("Exception in verify_script_log_correct: log of scripts = '%s'"

@@ -25,7 +25,7 @@ class Artifacts():
         # Reset all temporary values.
         pass
 
-    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[], global_flags="", version=None):
+    def make_rootfs_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[], global_flags="", version=None):
         signed_arg = ""
 
         if artifact_name.startswith("artifact_name="):

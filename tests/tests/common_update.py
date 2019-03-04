@@ -42,7 +42,7 @@ def common_update_procedure(install_image,
         if broken_image:
             artifact_id = "broken_image_" + str(random.randint(0, 999999))
         elif regenerate_image_id:
-            artifact_id = Helpers.artifact_id_randomize(install_image)
+            artifact_id = "mender-%s" % str(random.randint(0, 99999999))
             logger.debug("randomized image id: " + artifact_id)
         else:
             artifact_id = Helpers.yocto_id_from_ext4(install_image)
@@ -51,14 +51,14 @@ def common_update_procedure(install_image,
 
         # create atrifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_artifact(install_image,
-                                                   device_type,
-                                                   artifact_id,
-                                                   artifact_file,
-                                                   signed=signed,
-                                                   scripts=scripts,
-                                                   global_flags=compression_arg,
-                                                   version=version)
+            created_artifact = image.make_rootfs_artifact(install_image,
+                                                          device_type,
+                                                          artifact_id,
+                                                          artifact_file,
+                                                          signed=signed,
+                                                          scripts=scripts,
+                                                          global_flags=compression_arg,
+                                                          version=version)
 
             if created_artifact:
                 pre_upload_callback()

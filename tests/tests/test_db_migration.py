@@ -29,8 +29,8 @@ class TestDBMigration(MenderTesting):
             Start a legacy client (1.7.0) first and update it to the new one.
 
             The test starts a setup with the 1.7.0 client and then updates it to
-            the current version. The update is failing first (due to reboot
-            command inside the artifact commit enter state script).
+            the current version. The update is failing first (due to failure
+            returned inside the artifact commit enter state script).
             After the failed first update we are updating cient (1.7.0) again,
             and this time the update should succeed.
         """
@@ -42,7 +42,7 @@ class TestDBMigration(MenderTesting):
             return
 
         dirpath = tempfile.mkdtemp()
-        script_content = '#!/bin/sh halt -r'
+        script_content = '#!/bin/sh\nexit 1\n'
         with open(os.path.join(dirpath, "ArtifactCommit_Enter_01"), "w") as fd:
             fd.write(script_content)
 

@@ -24,7 +24,7 @@ from mendertesting import MenderTesting
 class TestDBMigration(MenderTesting):
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_failure(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_failure(self, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -36,7 +36,7 @@ class TestDBMigration(MenderTesting):
         """
 
         if not env.host_string:
-            execute(self.test_migrate_from_legacy_failure,
+            execute(self.test_migrate_from_legacy_mender_v1_failure,
                     hosts=get_mender_clients(),
                     install_image=install_image)
             return
@@ -64,7 +64,7 @@ class TestDBMigration(MenderTesting):
                 install_image=install_image)
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_success(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_success(self, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -74,7 +74,7 @@ class TestDBMigration(MenderTesting):
         """
 
         if not env.host_string:
-            execute(self.test_migrate_from_legacy_success,
+            execute(self.test_migrate_from_legacy_mender_v1_success,
                     hosts=get_mender_clients(),
                     install_image=install_image)
             return

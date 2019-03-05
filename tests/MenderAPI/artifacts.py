@@ -25,7 +25,7 @@ class Artifacts():
         # Reset all temporary values.
         pass
 
-    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[], global_flags=""):
+    def make_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[], global_flags="", version=None):
         signed_arg = ""
 
         if artifact_name.startswith("artifact_name="):
@@ -36,13 +36,17 @@ class Artifacts():
             assert os.path.exists(private_key), "private key for testing doesn't exist"
             signed_arg = "-k %s" % (private_key)
 
-        cmd = "%s %s  write rootfs-image -u %s -t %s -n %s -o %s %s" % (self.artifacts_tool_path,
-                                                                    global_flags,
-                                                                    image,
-                                                                    device_type,
-                                                                    artifact_name,
-                                                                    artifact_file_created.name,
-                                                                    signed_arg)
+        cmd = ("%s %s  write rootfs-image -f %s -t %s -n %s -o %s %s %s"
+               % (self.artifacts_tool_path,
+                  global_flags,
+                  image,
+                  device_type,
+                  artifact_name,
+                  artifact_file_created.name,
+                  signed_arg,
+                  ("-v %d" % version) if version else ""
+               )
+        )
         for script in scripts:
             cmd += " -s %s" % script
 

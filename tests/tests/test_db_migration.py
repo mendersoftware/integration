@@ -51,7 +51,8 @@ class TestDBMigration(MenderTesting):
         # first start with the failed update
         with Helpers.RebootDetector() as reboot:
             deployment_id, _ = common_update_procedure(install_image,
-                                                       scripts=[os.path.join(dirpath, "ArtifactCommit_Enter_01")])
+                                                       scripts=[os.path.join(dirpath, "ArtifactCommit_Enter_01")],
+                                                       version=2)
 
             logging.info("waiting for system to reboot twice")
             reboot.verify_reboot_performed(number_of_reboots=2)
@@ -61,7 +62,8 @@ class TestDBMigration(MenderTesting):
 
         # do the next update, this time succesfull
         execute(update_image_successful,
-                install_image=install_image)
+                install_image=install_image,
+                version=2)
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
     def test_migrate_from_legacy_mender_v1_success(self, install_image=conftest.get_valid_image()):
@@ -81,6 +83,8 @@ class TestDBMigration(MenderTesting):
 
         # do the succesfull update twice
         execute(update_image_successful,
-                install_image=install_image)
+                install_image=install_image,
+                version=2)
         execute(update_image_successful,
-                install_image=install_image)
+                install_image=install_image,
+                version=2)

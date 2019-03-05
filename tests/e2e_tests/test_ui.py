@@ -326,7 +326,7 @@ class TestUI(object):
 
     def create_artifacts(self):
         Helpers.artifact_id_randomize("core-image-full-cmdline-qemux86-64.ext4", specific_image_id="release1")
-        subprocess.call("mender-artifact write rootfs-image -u core-image-full-cmdline-qemux86-64.ext4 -t qemux86-64 -n release1 -o qemux86-64_release_1.mender", shell=True)
+        subprocess.call("mender-artifact write rootfs-image -f core-image-full-cmdline-qemux86-64.ext4 -t qemux86-64 -n release1 -o qemux86-64_release_1.mender", shell=True)
         logging.debug("done creating arifacts")
 
 def get_args():

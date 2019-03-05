@@ -106,7 +106,7 @@ def setup_with_legacy_client():
 
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.client.yml \
-                        -f legacy-client.yml \
+                        -f legacy-v1-client.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml up -d",
                         use_common_files=False)

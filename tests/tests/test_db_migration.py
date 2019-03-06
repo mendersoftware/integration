@@ -20,6 +20,7 @@ from helpers import Helpers
 from MenderAPI import deploy
 from common_update import update_image_successful, common_update_procedure
 from mendertesting import MenderTesting
+import shutil
 
 class TestDBMigration(MenderTesting):
 
@@ -82,10 +83,30 @@ class TestDBMigration(MenderTesting):
                     install_image=install_image)
             return
 
-        # do the succesfull update twice
-        execute(update_image_successful,
-                install_image=install_image,
-                version=2)
-        execute(update_image_successful,
-                install_image=install_image,
-                version=2)
+        tmpdir = tempfile.mkdtemp()
+        test_log = "/var/lib/mender/migration_state_scripts.log"
+        try:
+            # Test that state scripts are also executed correctly.
+            scripts = ["ArtifactInstall_Enter_00", "ArtifactCommit_Enter_00"]
+            scripts_paths = []
+            for script in scripts:
+                script_path = os.path.join(tmpdir, script)
+                scripts_paths += [script_path]
+                with open(script_path, "w") as fd:
+                    fd.write('#!/bin/sh\necho $(basename $0) >> %s\n' % test_log)
+
+            # do the succesfull update twice
+            execute(update_image_successful,
+                    install_image=install_image,
+                    scripts=scripts_paths,
+                    version=2)
+            assert run("cat %s" % test_log).strip() == "\n".join(scripts)
+
+            execute(update_image_successful,
+                    install_image=install_image,
+                    scripts=scripts_paths,
+                    version=2)
+            assert run("cat %s" % test_log).strip() == "\n".join(scripts) + "\n" + "\n".join(scripts)
+
+        finally:
+            shutil.rmtree(tmpdir)

@@ -72,7 +72,8 @@ class TestDBMigration(MenderTesting):
 
             The test starts a setup with the 1.7.0 client and then updates it to
             the current version. After the first successful update, we are updating 
-            the client for the second time.
+            the client for the second time, to make sure the DB migration has not left
+            any traces in the database that are causing issues.
         """
 
         if not env.host_string:

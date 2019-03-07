@@ -952,7 +952,7 @@ class TestStateScripts(MenderTesting):
         work_dir = "test_state_scripts.%s" % client
         deployment_id = None
         try:
-            script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
+            script_content = '#!/bin/sh\n\necho "echo `date --rfc-3339=seconds | sed -e e/\n//` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
             old_active = Helpers.get_active_partition()
@@ -1114,6 +1114,9 @@ class TestStateScripts(MenderTesting):
 
     def verify_script_log_correct(self, test_set, log):
         expected_order = test_set['ScriptOrder']
+
+        # First remove timestamps from the log
+        log = [l.split(" ")[-1] for l in log]
 
         # Iterate down the list of expected scripts, and make sure that the log
         # follows the same list.

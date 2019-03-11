@@ -24,7 +24,7 @@ from tests import artifact_lock
 import pytest
 
 
-def common_update_procedure(install_image,
+def common_update_procedure(install_image=None,
                             regenerate_image_id=True,
                             device_type=conftest.machine_name,
                             broken_image=False,
@@ -35,6 +35,7 @@ def common_update_procedure(install_image,
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None,
+                            make_artifact=lambda: None,
                             compression_type="gzip",
                             version=None):
 
@@ -47,18 +48,20 @@ def common_update_procedure(install_image,
         else:
             artifact_id = Helpers.yocto_id_from_ext4(install_image)
 
-        compression_arg = "--compression " + compression_type
-
-        # create atrifact
+        # create artifact
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_rootfs_artifact(install_image,
-                                                          device_type,
-                                                          artifact_id,
-                                                          artifact_file,
-                                                          signed=signed,
-                                                          scripts=scripts,
-                                                          global_flags=compression_arg,
-                                                          version=version)
+            if make_artifact:
+                created_artifact = make_artifact(artifact_file.name, artifact_id)
+            else:
+                compression_arg = "--compression " + compression_type
+                created_artifact = image.make_rootfs_artifact(install_image,
+                                                              device_type,
+                                                              artifact_id,
+                                                              artifact_file,
+                                                              signed=signed,
+                                                              scripts=scripts,
+                                                              global_flags=compression_arg,
+                                                              version=version)
 
             if created_artifact:
                 pre_upload_callback()
@@ -80,7 +83,7 @@ def common_update_procedure(install_image,
 
     return deployment_id, artifact_id
 
-def update_image_successful(install_image,
+def update_image_successful(install_image=None,
                             regenerate_image_id=True,
                             signed=False,
                             skip_reboot_verification=False,
@@ -89,6 +92,7 @@ def update_image_successful(install_image,
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None,
+                            make_artifact=lambda: None,
                             compression_type="gzip",
                             version=None):
     """
@@ -107,6 +111,7 @@ def update_image_successful(install_image,
                                                                    scripts=scripts,
                                                                    pre_deployment_callback=pre_deployment_callback,
                                                                    deployment_triggered_callback=deployment_triggered_callback,
+                                                                   make_artifact=make_artifact,
                                                                    compression_type=compression_type,
                                                                    version=version)
         reboot.verify_reboot_performed()
@@ -142,7 +147,9 @@ def update_image_successful(install_image,
     return deployment_id
 
 
-def update_image_failed(install_image="broken_update.ext4", expected_mender_clients=1):
+def update_image_failed(install_image="broken_update.ext4",
+                        make_artifact=lambda: None,
+                        expected_mender_clients=1):
     """
         Perform a upgrade using a broken image (random data)
         The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
@@ -154,7 +161,9 @@ def update_image_failed(install_image="broken_update.ext4", expected_mender_clie
 
     previous_active_part = Helpers.get_active_partition()
     with Helpers.RebootDetector() as reboot:
-        deployment_id, _ = common_update_procedure(install_image, broken_image=True)
+        deployment_id, _ = common_update_procedure(install_image,
+                                                   make_artifact=make_artifact,
+                                                   broken_image=True)
         reboot.verify_reboot_performed()
 
     with Helpers.RebootDetector() as reboot:

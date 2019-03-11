@@ -59,6 +59,24 @@ def standard_setup_one_client_bootstrapped():
 
 
 @pytest.fixture(scope="function")
+def standard_setup_one_docker_client_bootstrapped():
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.docker-client.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.storage.minio.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+
+    auth.reset_auth_token()
+    auth_v2.accept_devices(1)
+
+    set_setup_type(ST_OneDockerClientBootstrapped)
+
+@pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped():
     restart_docker_compose(2)
     reset_mender_api()

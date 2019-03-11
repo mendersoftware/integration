@@ -35,7 +35,7 @@ def common_update_procedure(install_image=None,
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None,
-                            make_artifact=lambda: None,
+                            make_artifact=None,
                             compression_type="gzip",
                             version=None):
 
@@ -92,7 +92,7 @@ def update_image_successful(install_image=None,
                             pre_upload_callback=lambda: None,
                             pre_deployment_callback=lambda: None,
                             deployment_triggered_callback=lambda: None,
-                            make_artifact=lambda: None,
+                            make_artifact=None,
                             compression_type="gzip",
                             version=None):
     """
@@ -148,7 +148,7 @@ def update_image_successful(install_image=None,
 
 
 def update_image_failed(install_image="broken_update.ext4",
-                        make_artifact=lambda: None,
+                        make_artifact=None,
                         expected_mender_clients=1):
     """
         Perform a upgrade using a broken image (random data)

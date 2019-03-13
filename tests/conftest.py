@@ -26,6 +26,7 @@ import re
 import pytest
 import distutils.spawn
 import log
+from tests.mendertesting import MenderTesting
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -122,6 +123,8 @@ def pytest_configure(config):
         # Don't run tenant tests for release branches.
         global run_tenant_tests
         run_tenant_tests = False
+
+    MenderTesting.set_test_conditions(config)
 
 
 def pytest_runtest_setup(item):

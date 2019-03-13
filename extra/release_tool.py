@@ -816,6 +816,7 @@ def check_tag_availability(state):
     tag_avail = {}
     for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
+        missing_repos = False
         try:
             execute_git(state, repo.git(), ["rev-parse", state[repo.git()]['version']],
                         capture=True, capture_stderr=True)
@@ -823,6 +824,9 @@ def check_tag_availability(state):
             # tag.
             tag_avail[repo.git()]['already_released'] = True
             tag_avail[repo.git()]['build_tag'] = state[repo.git()]['version']
+        except FileNotFoundError as err:
+            print(err)
+            missing_repos = True
         except subprocess.CalledProcessError:
             # Exception happened during Git call. This tag doesn't exist, and
             # we must look for and/or create build tags.
@@ -846,6 +850,10 @@ def check_tag_availability(state):
                                                 tag_avail[repo.git()]['build_tag'] + "~0"],
                               capture=True)
             tag_avail[repo.git()]['sha'] = sha
+
+    if missing_repos:
+        print("Error: missing repos directories.")
+        sys.exit(2)
 
     return tag_avail
 
@@ -1182,7 +1190,7 @@ def trigger_jenkins_build(state, tag_avail):
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
 
-        reply = ask("Will trigger a build with these values, ok? ")
+        reply = ask("Will trigger a build with these values, ok? (yes) ")
         if reply.startswith("Y") or reply.startswith("y"):
             break
 

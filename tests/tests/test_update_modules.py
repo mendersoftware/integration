@@ -16,7 +16,7 @@
 from fabric.api import *
 import pytest
 from helpers import Helpers
-from common_update import common_update_procedure, update_image_successful
+from common_update import *
 from MenderAPI import deploy, image
 from mendertesting import MenderTesting
 from common_setup import *
@@ -77,6 +77,43 @@ class TestUpdateModules(MenderTesting):
 
             output = run("mender -show-artifact").strip()
             assert output == artifact_name[0]
+
+        finally:
+            shutil.rmtree(file_tree)
+
+    @MenderTesting.fast
+    @pytest.mark.usefixtures("standard_setup_one_docker_client_bootstrapped")
+    def test_rootfs_image_rejected(self):
+        """Test that a rootfs-image update is rejected when such a setup isn't
+        present."""
+
+        if not env.host_string:
+            execute(self.test_rootfs_image_rejected,
+                    hosts=get_mender_clients())
+            return
+
+        file_tree = tempfile.mkdtemp()
+        try:
+            file1 = os.path.join(file_tree, "file1")
+            with open(file1, "w") as fd:
+                fd.write("dummy")
+
+            def make_artifact(artifact_file, artifact_id):
+                cmd = ("mender-artifact write rootfs-image -o %s -n %s -t docker-client -f %s"
+                       % (artifact_file, artifact_id, file1))
+                logger.info("Executing: " + cmd)
+                subprocess.check_call(cmd, shell=True)
+                return artifact_file
+
+            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact)
+            deploy.check_expected_status("finished", deployment_id)
+            deploy.check_expected_statistics(deployment_id, "failure", 1)
+
+            output = run("mender -show-artifact").strip()
+            assert output == "original"
+
+            output = docker_compose_cmd("logs mender-client")
+            assert "Cannot load handler for unknown Payload type 'rootfs-image'" in output
 
         finally:
             shutil.rmtree(file_tree)

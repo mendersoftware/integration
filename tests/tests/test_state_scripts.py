@@ -1165,11 +1165,11 @@ class TestStateScripts(MenderTesting):
             # Test cases with an expectation of success/failure shall do only 1 iteration
             # Test cases with None expectation will loop through the error sequence in a loop, but still
             # we want to make sure that it is reasonable (i.e. looping with the correct time intervals).
-            # For these cases we set a max. of 20 iterations to accomodate for slow running of the framework
+            # For these cases we set a max. of 50 iterations to accomodate for slow running of the framework
             if test_set['ExpectedStatus'] is not None:
                 assert num_iterations == 1
             else:
-                assert num_iterations < 20
+                assert num_iterations < 50
 
         except:
             print("Exception in verify_script_log_correct: log of scripts = '%s'"

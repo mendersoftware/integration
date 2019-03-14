@@ -164,7 +164,15 @@ def update_image_failed(install_image="broken_update.ext4",
         deployment_id, _ = common_update_procedure(install_image,
                                                    make_artifact=make_artifact,
                                                    broken_image=True)
-        reboot.verify_reboot_performed()
+        # It will reboot twice. Once into the failed update, which the
+        # bootloader will roll back, and therefore we will end up on the
+        # original partition. Then once more because of the
+        # ArtifactRollbackReboot step. Previously this rebooted only once,
+        # because we only supported rootfs images, and could make assumptions
+        # about where we would end up. However, with update modules we prefer to
+        # be conservative, and reboot one more time after the rollback to make
+        # *sure* we are in the correct partition.
+        reboot.verify_reboot_performed(number_of_reboots=2)
 
     with Helpers.RebootDetector() as reboot:
         assert Helpers.get_active_partition() == previous_active_part
@@ -172,7 +180,7 @@ def update_image_failed(install_image="broken_update.ext4",
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
         for d in auth_v2.get_devices():
-            assert "got invalid entrypoint into the state machine" in deploy.get_logs(d["id"], deployment_id)
+            assert "Reboot to new update failed" in deploy.get_logs(d["id"], deployment_id)
 
         assert Helpers.yocto_id_installed_on_machine() == original_image_id
         reboot.verify_reboot_not_performed()

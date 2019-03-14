@@ -952,7 +952,7 @@ class TestStateScripts(MenderTesting):
         work_dir = "test_state_scripts.%s" % client
         deployment_id = None
         try:
-            script_content = '#!/bin/sh\n\necho "echo `date --rfc-3339=seconds | sed -e e/\n//` $(basename $0)" >> /data/test_state_scripts.log\n'
+            script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds | sed -e e/\n//` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
             old_active = Helpers.get_active_partition()
@@ -1112,11 +1112,11 @@ class TestStateScripts(MenderTesting):
                 + "rm -rf /data/mender/scripts && "
                 + "systemctl start mender")
 
-    def verify_script_log_correct(self, test_set, log):
+    def verify_script_log_correct(self, test_set, log_orig):
         expected_order = test_set['ScriptOrder']
 
         # First remove timestamps from the log
-        log = [l.split(" ")[-1] for l in log]
+        log = [l.split(" ")[-1] for l in log_orig]
 
         # Iterate down the list of expected scripts, and make sure that the log
         # follows the same list.
@@ -1162,8 +1162,8 @@ class TestStateScripts(MenderTesting):
                 assert num_iterations < 50
 
         except:
-            print("Exception in verify_script_log_correct: log of scripts = '%s'"
-                  % "\n".join(log))
-            print("scripts we expected = '%s'"
+            logger.error("Exception in verify_script_log_correct: log of scripts = '%s'"
+                  % "\n".join(log_orig))
+            logger.error("scripts we expected = '%s'"
                   % "\n".join(expected_order))
             raise

@@ -27,7 +27,6 @@ import pytest
 def common_update_procedure(install_image=None,
                             regenerate_image_id=True,
                             device_type=conftest.machine_name,
-                            broken_image=False,
                             verify_status=True,
                             signed=False,
                             devices=None,
@@ -40,9 +39,7 @@ def common_update_procedure(install_image=None,
                             version=None):
 
     with artifact_lock:
-        if broken_image:
-            artifact_id = "broken_image_" + str(random.randint(0, 999999))
-        elif regenerate_image_id:
+        if regenerate_image_id:
             artifact_id = "mender-%s" % str(random.randint(0, 99999999))
             logger.debug("randomized image id: " + artifact_id)
         else:
@@ -162,8 +159,7 @@ def update_image_failed(install_image="broken_update.ext4",
     previous_active_part = Helpers.get_active_partition()
     with Helpers.RebootDetector() as reboot:
         deployment_id, _ = common_update_procedure(install_image,
-                                                   make_artifact=make_artifact,
-                                                   broken_image=True)
+                                                   make_artifact=make_artifact)
         # It will reboot twice. Once into the failed update, which the
         # bootloader will roll back, and therefore we will end up on the
         # original partition. Then once more because of the

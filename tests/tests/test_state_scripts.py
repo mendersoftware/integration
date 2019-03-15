@@ -432,52 +432,6 @@ TEST_SETS = [
         },
     ),
     (
-        "Wrong_artifact_ID_on_filesystem",
-        {
-            "FailureScript": [],
-            "ExpectedStatus": "failure",
-            "BrokenArtifactId": True,
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Leave_03",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Enter_11",
-                "ArtifactReboot_Leave_01",
-                "ArtifactReboot_Leave_89",
-                "ArtifactReboot_Leave_99",
-                "ArtifactCommit_Enter_01",
-                "ArtifactCommit_Enter_05",
-                "ArtifactCommit_Error_91",
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollback_Enter_01",
-                "ArtifactRollback_Leave_00",
-                "ArtifactRollback_Leave_01",
-                "ArtifactRollbackReboot_Enter_00",
-                "ArtifactRollbackReboot_Enter_99",
-                "ArtifactRollbackReboot_Leave_01",
-                "ArtifactRollbackReboot_Leave_99",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
-            ],
-        },
-    ),
-    (
         "Simulated_boot_failure_in_ArtifactReboot_Enter",
         {
             "FailureScript": [],
@@ -846,7 +800,6 @@ class TestStateScripts(MenderTesting):
         echo "$(basename $0)" >> /data/test_state_scripts.log
         exit 0''')
         script_error_content = script_content + "exit 1"
-        broken_image = test_set.get("Rollback", False)
 
         # Put artifact-scripts in the artifact.
         artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -887,7 +840,6 @@ class TestStateScripts(MenderTesting):
 
             deployment_id = common_update_procedure(
                 install_image=new_rootfs,
-                broken_image=broken_image,
                 verify_status=True,
                 devices=[device_id],
                 scripts=[artifact_script_dir])[0]
@@ -1033,11 +985,7 @@ class TestStateScripts(MenderTesting):
 
             # Now create the artifact, and make the deployment.
             device_id = Helpers.ip_to_device_id_map([client])[client]
-            broken_artifact_id = test_set.get('BrokenArtifactId')
-            if broken_artifact_id is None:
-                broken_artifact_id = False
             deployment_id = common_update_procedure(install_image=new_rootfs,
-                                                    broken_image=broken_artifact_id,
                                                     verify_status=False,
                                                     devices=[device_id],
                                                     scripts=[artifact_script_dir])[0]

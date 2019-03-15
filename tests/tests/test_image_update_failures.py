@@ -56,7 +56,7 @@ class TestFailures(MenderTesting):
             return
 
         with Helpers.RebootDetector() as reboot:
-            deployment_id, _ = common_update_procedure(install_image="large_image.dat", regenerate_image_id=False, broken_image=True)
+            deployment_id, _ = common_update_procedure(install_image="large_image.dat")
             deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
             reboot.verify_reboot_not_performed()
             deploy.check_expected_status("finished", deployment_id)

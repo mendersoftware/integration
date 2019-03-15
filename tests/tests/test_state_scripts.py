@@ -642,6 +642,11 @@ class TestStateScripts(MenderTesting):
 
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
+            except:
+                output = run("cat /data/mender/deployment*.log")
+                logger.info(output)
+                raise
+
             finally:
                 run("systemctl stop mender && "
                                 + "rm -f /data/test_state_scripts.log && "
@@ -807,6 +812,11 @@ class TestStateScripts(MenderTesting):
                 assert old_active != new_active, "Device did not switch partition as expected!"
             else:
                 assert old_active == new_active, "Device switched partition which was not expected!"
+
+        except:
+            output = run("cat /data/mender/deployment*.log")
+            logger.info(output)
+            raise
 
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)

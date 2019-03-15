@@ -230,121 +230,10 @@ TEST_SETS = [
                 "ArtifactInstall_Error_01",
                 "ArtifactInstall_Error_02",
                 "ArtifactInstall_Error_99",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
-            ],
-        },
-    ),
-    (
-        "Failure_in_ArtifactInstall_Leave_script",
-        {
-            "FailureScript": ["ArtifactInstall_Leave_01"],
-            "ExpectedStatus": "failure",
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Error_01",
-                "ArtifactInstall_Error_02",
-                "ArtifactInstall_Error_99",
                 "ArtifactRollback_Enter_00",
                 "ArtifactRollback_Enter_01",
                 "ArtifactRollback_Leave_00",
                 "ArtifactRollback_Leave_01",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
-            ],
-        },
-    ),
-    (
-        "Failure_in_ArtifactReboot_Enter_script",
-        {
-            "FailureScript": ["ArtifactReboot_Enter_11"],
-            "ExpectedStatus": "failure",
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Leave_03",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Enter_11",
-                "ArtifactReboot_Error_97",
-                "ArtifactReboot_Error_98",
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollback_Enter_01",
-                "ArtifactRollback_Leave_00",
-                "ArtifactRollback_Leave_01",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
-            ],
-        },
-    ),
-    (
-        "Failure_in_ArtifactReboot_Leave_script",
-        {
-            "FailureScript": ["ArtifactReboot_Leave_89"],
-            "ExpectedStatus": "failure",
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Leave_03",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Enter_11",
-                "ArtifactReboot_Leave_01",
-                "ArtifactReboot_Leave_89",
-                "ArtifactReboot_Error_97",
-                "ArtifactReboot_Error_98",
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollback_Enter_01",
-                "ArtifactRollback_Leave_00",
-                "ArtifactRollback_Leave_01",
-                "ArtifactRollbackReboot_Enter_00",
-                "ArtifactRollbackReboot_Enter_99",
-                "ArtifactRollbackReboot_Leave_01",
-                "ArtifactRollbackReboot_Leave_99",
                 "ArtifactFailure_Enter_22",
                 "ArtifactFailure_Enter_33",
                 "ArtifactFailure_Leave_44",
@@ -401,7 +290,8 @@ TEST_SETS = [
         "Failure_in_ArtifactCommit_Leave_script",
         {
             "FailureScript": ["ArtifactCommit_Leave_01_extra_string"],
-            "ExpectedStatus": "success",
+            "ExpectedStatus": "failure",
+            "SwapPartitionExpectation": True,
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
@@ -427,39 +317,7 @@ TEST_SETS = [
                 "ArtifactCommit_Enter_01",
                 "ArtifactCommit_Enter_05",
                 "ArtifactCommit_Leave_01_extra_string", # Error in this script should not have any effect.
-                "ArtifactCommit_Leave_91",
-            ],
-        },
-    ),
-    (
-        "Simulated_boot_failure_in_ArtifactReboot_Enter",
-        {
-            "FailureScript": [],
-            "ExpectedStatus": "failure",
-            "SimulateBootFailureIn": "ArtifactReboot_Enter_11",
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Leave_03",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Enter_11",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
+                "ArtifactCommit_Error_91",
             ],
         },
     ),
@@ -543,120 +401,28 @@ TEST_SETS = [
 
 
 REBOOT_TEST_SET = [
-    # test-set0
     (
         "simulate_powerloss_artifact_install_enter",
         {
-        "RebootScripts": [
-            "ArtifactInstall_Enter_01",
-        ],
-        "ExpectedFinalPartition": ["OriginalPartition"],
-        "ScriptOrder": [
-            "ArtifactInstall_Enter_01",
-            "ArtifactInstall_Leave_01",
-            "ArtifactReboot_Enter_01",
-            "ArtifactReboot_Leave_01",
-            "ArtifactFailure_Enter_01",
-            "ArtifactFailure_Leave_89",
-        ],
-        "ExpectedScriptFlow": [
-            "ArtifactInstall_Enter_01",  # kill!
-            "ArtifactFailure_Enter_01",  # run failure scripts
-            "ArtifactFailure_Leave_89"
-        ],
-    },
-    ),
-    # test-set1
-    (
-        "simulate_powerloss_in_artifact_install_leave",
-        {
-            "RebootScripts": ["ArtifactInstall_Leave_02"],
+            "RebootScripts": [
+                "ArtifactInstall_Enter_01",
+            ],
             "ExpectedFinalPartition": ["OriginalPartition"],
-            "DoubleReboot": [True],
-            "ScriptOrder": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_02",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Leave_01",
-                "ArtifactFailure_Enter_01",
-                "ArtifactFailure_Leave_89"
-            ],
-            "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_02",  # reboot_detector
-                "ArtifactFailure_Enter_01",  # rerun failure scripts
-                "ArtifactFailure_Leave_89"
-            ],
-        },
-    ),
-    # test-set2
-    (
-        "simulate_powerloss_in_artifact_install_error_original_partition",
-        {
-            "ErrorScripts": ["ArtifactInstall_Enter_01"],
-            "RebootScripts": ["ArtifactInstall_Error_01"],
-            "ExpectedFinalPartition": ["OriginalPartition"],
-            "ScriptOrder": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Error_01",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Leave_44",
-            ],
-            "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Error_01",  # kill!
-                "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
-                "ArtifactFailure_Leave_44",
-            ],
-        },
-    ),
-    # test-set3
-    (
-        "simulate_powerloss_in_artifact_install_error_after_install",
-        {
-            "ErrorScripts": ["ArtifactInstall_Leave_01"],
-            "DoubleReboot": [True], # As the new image has already been installed, expect a double reboot
-            "RebootScripts": ["ArtifactInstall_Error_01"],
-            "ExpectedFinalPartition": ["OriginalPartition"],
-            "ScriptOrder": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Error_01",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Leave_44",
-            ],
-            "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Error_01",  # kill!
-                "ArtifactFailure_Enter_22",  # run failure scripts on the committed (old) partition
-                "ArtifactFailure_Leave_44",
-            ],
-        },
-    ),
-    # test-set4
-    (
-        "simulate_powerloss_in_reboot_enter",
-        {
-            "RebootScripts": ["ArtifactReboot_Enter_01"],
-            "ExpectedFinalPartition": ["OtherPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
                 "ArtifactInstall_Leave_01",
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",
-                "ArtifactFailure_Enter_02",
-                "ArtifactFailure_Leave_09",
+                "ArtifactFailure_Enter_01",
+                "ArtifactFailure_Leave_89",
             ],
             "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactReboot_Enter_01",  # kill!
-                "ArtifactReboot_Leave_01",  # Continue execution on the new partition.
+                "ArtifactInstall_Enter_01",  # kill!
+                "ArtifactFailure_Enter_01",  # run failure scripts
+                "ArtifactFailure_Leave_89"
             ],
         },
     ),
-    # test-set5
     (
         "simulate_powerloss_in_commit_enter",
         {
@@ -669,7 +435,8 @@ REBOOT_TEST_SET = [
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",
                 "ArtifactCommit_Enter_89",
-                "ArtifactRollbackReboot_Enter_89", # Should never be run
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollbackReboot_Enter_89",
                 "ArtifactFailure_Enter_89",
                 "ArtifactFailure_Leave_09",
             ],
@@ -679,12 +446,13 @@ REBOOT_TEST_SET = [
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",  # on second partition, stop mender client
                 "ArtifactCommit_Enter_89",  # sync and kill!
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollbackReboot_Enter_89",
                 "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
                 "ArtifactFailure_Leave_09",
             ],
         },
     ),
-    # test-set6
     (
         "simulate_powerloss_in_artifact_commit_leave",
         {
@@ -828,8 +596,6 @@ class TestStateScripts(MenderTesting):
                     fd.write(script_failure_content)
                 if script in test_set.get("RebootOnceScripts", []):
                     fd.write(script_reboot_once)
-                elif script in test_set.get("ErrorScripts", []):
-                    fd.write(script_error_content)
                 else:
                     fd.write(script_content)
 
@@ -976,10 +742,6 @@ class TestStateScripts(MenderTesting):
                         fd.write(script_failure_content)
                     else:
                         fd.write(script_content)
-                    if test_set.get("SimulateBootFailureIn") == script:
-                        # Simulate that boot failed by immediately forcing a
-                        # rollback with U-Boot.
-                        fd.write("fw_setenv bootcount 1\n")
                     if test_set.get("CorruptDataScriptVersionIn") == script:
                         fd.write("printf '1000' > /data/mender/scripts/version\n")
 
@@ -1038,8 +800,7 @@ class TestStateScripts(MenderTesting):
             new_active = Helpers.get_active_partition()
             should_switch_partition = (test_set['ExpectedStatus'] == "success")
 
-            # TODO
-            if test_set.get('SwapPartitionExpectation') is not None:
+            if test_set.get('SwapPartitionExpectation'):
                 should_switch_partition = not should_switch_partition
 
             if should_switch_partition:

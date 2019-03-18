@@ -43,23 +43,24 @@ class TestUpdateModules(MenderTesting):
                 with open(os.path.join(file_tree, file_and_content), "w") as fd:
                     fd.write(file_and_content)
 
-            # Use list as a trick to assign to this variable from inside the sub
-            # function (lists are references).
-            artifact_name = [None]
             def make_artifact(artifact_file, artifact_id):
                 cmd = ("file-install-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module %s"
                        % (artifact_file, artifact_id, file_tree))
                 logger.info("Executing: " + cmd)
                 subprocess.check_call(cmd, shell=True)
-                artifact_name[0] = artifact_id
                 return artifact_file
 
             # Block the path with a file first
             run("touch /tmp/test_file_update_module")
 
-            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact)
-            deploy.check_expected_status("finished", deployment_id)
+            # We use verify_status=False, because update module updates are so
+            # quick that it sometimes races past the 'inprogress' status without
+            # the test framework having time to register it. That's not really
+            # the part we're interested in though, so just skip it.
+            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact,
+                                                                       verify_status=False)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
+            deploy.check_expected_status("finished", deployment_id)
 
             output = run("mender -show-artifact").strip()
             assert output == "original"
@@ -67,16 +68,17 @@ class TestUpdateModules(MenderTesting):
             # Remove path block.
             run("rm -f /tmp/test_file_update_module")
 
-            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact)
-            deploy.check_expected_status("finished", deployment_id)
+            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact,
+                                                                       verify_status=False)
             deploy.check_expected_statistics(deployment_id, "success", 1)
+            deploy.check_expected_status("finished", deployment_id)
 
             for file_and_content in files_and_content:
                 output = run("cat /tmp/test_file_update_module/%s" % file_and_content).strip()
                 assert output == file_and_content
 
             output = run("mender -show-artifact").strip()
-            assert output == artifact_name[0]
+            assert output == expected_image_id
 
         finally:
             shutil.rmtree(file_tree)

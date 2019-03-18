@@ -16,7 +16,7 @@
 from fabric.api import *
 import logging
 import requests
-from common_docker import stop_docker_compose, log_files
+from common_docker import *
 import random
 import filelock
 import uuid
@@ -138,6 +138,13 @@ def pytest_exception_interact(node, call, report):
             with open(log) as f:
                 for line in f.readlines():
                     logger.info("%s: %s" % (log, line))
+        try:
+            logger.info("Printing client deployment log, if possible:")
+            output = execute(run, "cat /data/mender/deployment*.log || true", hosts=get_mender_clients())
+            logger.info(output)
+        except:
+            logger.info("Not able to print client deployment log")
+
 
 
 @pytest.mark.hookwrapper

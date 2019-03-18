@@ -199,6 +199,8 @@ class TestFaultTolerance(MenderTesting):
             Helpers.gateway_connectivity(True, hosts=["s3.docker.mender.io"])  # re-enable connectivity
 
             reboot.verify_reboot_performed()
+            deploy.check_expected_status("finished", deployment_id)
+
             assert Helpers.get_active_partition() == inactive_part
             assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()

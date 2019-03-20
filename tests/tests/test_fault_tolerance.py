@@ -14,15 +14,19 @@
 #    limitations under the License.
 
 from fabric.api import *
+import json
 import pytest
 import re
+import shutil
+import subprocess
+import tempfile
 import time
-from common import *
 from common_setup import *
 from helpers import Helpers
 from MenderAPI import deploy, image, logger
-from common_update import common_update_procedure
+from common_update import *
 from mendertesting import MenderTesting
+from common import *
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
     {
@@ -230,3 +234,46 @@ class TestFaultTolerance(MenderTesting):
             assert Helpers.get_active_partition() == inactive_part
             assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
+
+
+    def test_rootfs_conf_missing_from_new_update(self):
+        """Test that the client is able to reboot to roll back if module or rootfs
+        config is missing from the new partition. This only works for cases where a
+        reboot restores the state."""
+
+        if not env.host_string:
+            execute(self.test_rootfs_conf_missing_from_new_update,
+                    hosts=get_mender_clients())
+            return
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            orig_image = conftest.get_valid_image()
+            image_name = os.path.join(tmpdir, os.path.basename(orig_image))
+            shutil.copyfile(orig_image, image_name)
+
+            # With the persistent mender.conf in /data, and the transient
+            # mender.conf in /etc, we can simply delete the former (rootfs
+            # config) to break the config, and add it back into the transient
+            # one to keep the config valid for the existing artifact (but not
+            # the new one).
+            output = run("cat /data/mender/mender.conf")
+            persistent_conf = json.loads(output)
+            run("rm /data/mender/mender.conf")
+
+            output = run("cat /etc/mender/mender.conf")
+            conf = json.loads(output)
+
+            conf["RootfsPartA"] = persistent_conf["RootfsPartA"]
+            conf["RootfsPartB"] = persistent_conf["RootfsPartB"]
+
+            mender_conf = os.path.join(tmpdir, "mender.conf")
+            with open(mender_conf, "w") as fd:
+                json.dump(conf, fd)
+            put(os.path.basename(mender_conf), local_path=os.path.dirname(mender_conf), remote_path="/etc/mender")
+
+            update_image_failed(install_image=image_name,
+                                expected_log_message="Unable to roll back with a stub module, but will try to reboot to restore state")
+
+        finally:
+            shutil.rmtree(tmpdir)

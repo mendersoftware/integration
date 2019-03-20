@@ -146,7 +146,8 @@ def update_image_successful(install_image=None,
 
 def update_image_failed(install_image="broken_update.ext4",
                         make_artifact=None,
-                        expected_mender_clients=1):
+                        expected_mender_clients=1,
+                        expected_log_message="Reboot to new update failed"):
     """
         Perform a upgrade using a broken image (random data)
         The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
@@ -176,7 +177,7 @@ def update_image_failed(install_image="broken_update.ext4",
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
         for d in auth_v2.get_devices():
-            assert "Reboot to new update failed" in deploy.get_logs(d["id"], deployment_id)
+            assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
 
         assert Helpers.yocto_id_installed_on_machine() == original_image_id
         reboot.verify_reboot_not_performed()

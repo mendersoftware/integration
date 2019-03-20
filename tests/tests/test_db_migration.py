@@ -24,6 +24,27 @@ import shutil
 
 class TestDBMigration(MenderTesting):
 
+    def ensure_persistent_conf_script(self, dir):
+        # Because older versions of Yocto branches did not split mender.conf
+        # into /etc/mender/mender.conf and /data/mender/mender.conf, we need to
+        # provide the content of the second file ourselves.
+        name = os.path.join(dir, "ArtifactInstall_Enter_00_ensure_persistent_conf")
+        with open(name, "w") as fd:
+            fd.write("""#!/bin/sh
+
+set -e
+
+if ! [ -f /data/mender/mender.conf ]; then
+    (
+         echo '{'
+         grep RootfsPart /etc/mender/mender.conf |sed -e '${s/,$//}'
+         echo '}'
+    ) > /data/mender/mender.conf
+fi
+exit 0
+""")
+        return name
+
     @pytest.mark.usefixtures("setup_with_legacy_client")
     def test_migrate_from_legacy_mender_v1_failure(self, install_image=conftest.get_valid_image()):
         """
@@ -49,10 +70,13 @@ class TestDBMigration(MenderTesting):
 
         active_part = Helpers.get_active_partition()
 
+        ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
+
         # first start with the failed update
         with Helpers.RebootDetector() as reboot:
             deployment_id, _ = common_update_procedure(install_image,
-                                                       scripts=[os.path.join(dirpath, "ArtifactCommit_Enter_01")],
+                                                       scripts=[ensure_persistent_conf,
+                                                                os.path.join(dirpath, "ArtifactCommit_Enter_01")],
                                                        version=2)
 
             logging.info("waiting for system to reboot twice")
@@ -63,6 +87,7 @@ class TestDBMigration(MenderTesting):
 
         # do the next update, this time succesfull
         execute(update_image_successful,
+                scripts=[ensure_persistent_conf],
                 install_image=install_image,
                 version=2)
 
@@ -86,6 +111,8 @@ class TestDBMigration(MenderTesting):
         tmpdir = tempfile.mkdtemp()
         test_log = "/var/lib/mender/migration_state_scripts.log"
         try:
+            ensure_persistent_conf = self.ensure_persistent_conf_script(tmpdir)
+
             # Test that state scripts are also executed correctly.
             scripts = ["ArtifactInstall_Enter_00", "ArtifactCommit_Enter_00"]
             scripts_paths = []
@@ -98,13 +125,13 @@ class TestDBMigration(MenderTesting):
             # do the succesfull update twice
             execute(update_image_successful,
                     install_image=install_image,
-                    scripts=scripts_paths,
+                    scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)
             assert run("cat %s" % test_log).strip() == "\n".join(scripts)
 
             execute(update_image_successful,
                     install_image=install_image,
-                    scripts=scripts_paths,
+                    scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)
             assert run("cat %s" % test_log).strip() == "\n".join(scripts) + "\n" + "\n".join(scripts)
 

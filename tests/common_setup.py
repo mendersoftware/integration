@@ -119,6 +119,12 @@ def standard_setup_without_client():
 
 @pytest.fixture(scope="function")
 def setup_with_legacy_client():
+    # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
+    # it when running other platforms.
+    if conftest.machine_name != "qemux86-64":
+        pytest.skip("Test only works with qemux86-64, and this is %s"
+                    % conftest.machine_name)
+
     stop_docker_compose()
     reset_mender_api()
 

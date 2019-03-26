@@ -364,6 +364,9 @@ GIT_TO_BUILDPARAM_MAP = {
 
 EXTRA_BUILDPARAMS_CACHE = None
 
+def print_line():
+    print("--------------------------------------------------------------------------------")
+
 def init_jenkins_creds():
     global JENKINS_USER
     global JENKINS_PASSWORD
@@ -694,7 +697,7 @@ def query_execute_git_list(execute_git_list):
     a list of triplets with the first three arguments of execute_git. Both
     capture flags will be false during this call."""
 
-    print("--------------------------------------------------------------------------------")
+    print_line()
     for cmd in execute_git_list:
         # Provide quotes around arguments with spaces in them.
         print("cd %s && git %s" % (cmd[1], " ".join(['"%s"' % str if str.find(" ") >= 0 else str for str in cmd[2]])))
@@ -715,7 +718,7 @@ def query_execute_list(execute_list):
     effects and applies push simulation and dry run if those are enabled.
     """
 
-    print("--------------------------------------------------------------------------------")
+    print_line()
     for cmd in execute_list:
         # Provide quotes around arguments with spaces in them.
         print(" ".join(['"%s"' % str if str.find(" ") >= 0 else str for str in cmd]))
@@ -1000,7 +1003,7 @@ def generate_new_tags(state, tag_avail, final):
 
             next_tag_avail[repo.git()]['sha'] = sha
 
-            print("-----------------------------------------------")
+            print_line()
             if tag_avail[repo.git()].get('build_tag') is None:
                 # If there is no existing tag, just display latest commit.
                 print("The latest commit in %s will be:" % repo.git())
@@ -1055,7 +1058,7 @@ def generate_new_tags(state, tag_avail, final):
         if len(changelogs) == 0:
             changelogs.append("Changelog: None")
 
-        print("-----------------------------------------------")
+        print_line()
         print("Changes to commit:")
         print()
         execute_git(state, tmpdir, ["diff"])
@@ -1189,7 +1192,7 @@ def trigger_jenkins_build(state, tag_avail):
                     return
                 params[GIT_TO_BUILDPARAM_MAP[repo.git()]] = tag_avail[repo.git()]['build_tag']
 
-        print("--------------------------------------------------------------------------------")
+        print_line()
         fmt_str = "%-50s %-20s"
         print(fmt_str % ("Build parameter", "Value"))
         for param in sorted(params.keys()):
@@ -1287,7 +1290,6 @@ def do_license_generation(state, tag_avail):
         tmpdirs.append(setup_temp_git_checkout(state, repo.git(), "origin/master"))
 
     try:
-        print("Output is captured in generated-license-text.txt.")
         with open("generated-license-text.txt", "w") as fd:
             subprocess.check_call([os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "license-overview-generator")),
                                    "--called-from-release-tool", "--dir", os.path.dirname(tmpdirs[0])],
@@ -1295,9 +1297,30 @@ def do_license_generation(state, tag_avail):
     except subprocess.CalledProcessError:
         print()
         print("Command failed with the above error.")
+        return
     finally:
         for tmpdir in tmpdirs:
             cleanup_temp_git_checkout(tmpdir)
+
+    print("Will need to fetch the GUI licences from its container.")
+    gui_tag = "mendersoftware/gui:%s" % tag_avail["gui"]["build_tag"]
+    query_execute_list([["docker", "pull", gui_tag]])
+
+    executed = query_execute_list([
+        ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag],
+        ["docker", "cp", "release_tool_gui_licenses:/var/www/mender-gui/dist/disclaimer.txt", "gui-licenses.txt"],
+        ["docker", "rm", "-f", "release_tool_gui_licenses"],
+    ])
+    if not executed:
+        return
+
+    with open("generated-license-text.txt", "a") as fd, open("gui-licenses.txt") as gui_licenses:
+        fd.write("--------------------------------------------------------------------------------\n")
+        fd.write(gui_licenses.read())
+    os.remove("gui-licenses.txt")
+
+    print_line()
+    print("Output is captured in generated-license-text.txt.")
 
 def set_docker_compose_version_to(dir, repo, tag):
     """Modifies docker-compose files in the given directory so that repo_docker
@@ -1444,7 +1467,7 @@ def create_release_branches(state, tag_avail):
                         capture=True, capture_stderr=True)
         except subprocess.CalledProcessError:
             any_repo_needs_branch = True
-            print("--------------------------------------------------------------------------------")
+            print_line()
             reply = ask(("%s does not have a branch '%s'. Would you like to create it, "
                          + "and base it on latest '%s/master' (if you don't want to base "
                          + "it on '%s/master' you have to do it manually)? ")
@@ -1648,7 +1671,7 @@ def determine_version_to_include_in_release(state, repo):
         update_state(state, [repo.git(), 'version'], reply)
 
     print()
-    print("--------------------------------------------------------------------------------")
+    print_line()
 
 def do_release():
     """Handles the interactive menu for doing a release."""
@@ -1716,7 +1739,7 @@ def do_release():
             # Provide a break to see output from what was just done.
             ask("Press Enter... ")
 
-        print("--------------------------------------------------------------------------------")
+        print_line()
         print("Current state of release:")
         report_release_state(state, tag_avail)
 

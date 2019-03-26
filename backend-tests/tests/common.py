@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2016 Mender Software AS
+# Copyright 2019 Mender Software AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -83,13 +83,27 @@ def create_tenant(name):
 
     id = cli.create_tenant(name)
 
-    r = api.call('GET', tenantadm.URL_INTERNAL_TENANTS)
-    assert r.status_code == 200
+    page = 0
+    per_page = 20
+    qs_params = {}
+    found = None
+    while True:
+        page = page + 1
+        qs_params['page'] = page
+        qs_params['per_page'] = per_page
+        r = api.call('GET', tenantadm.URL_INTERNAL_TENANTS, qs_params=qs_params)
+        assert r.status_code == 200
+        api_tenants = r.json()
 
-    api_tenants = r.json()
+        found = [at for at in api_tenants if at['id'] == id]
+        if len(found) > 0:
+            break
 
-    api_tenant = [at for at in api_tenants if at['id'] == id]
-    token=api_tenant[0]['tenant_token']
+        if len(api_tenants) == 0:
+            break
+
+    assert len(found) == 1
+    token = found[0]['tenant_token']
 
     return Tenant(name, id, token)
 
@@ -142,12 +156,26 @@ def create_tenant_user(idx, tenant):
 
 def get_device_by_id_data(id_data, utoken):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    r = devauthm.with_auth(utoken).call('GET',
-                                        deviceauth_v2.URL_DEVICES)
-    assert r.status_code == 200
-    api_devs = r.json()
+    page = 0
+    per_page = 20
+    qs_params = {}
+    found = None
+    while True:
+        page = page + 1
+        qs_params['page'] = page
+        qs_params['per_page'] = per_page
+        r = devauthm.with_auth(utoken).call('GET',
+                deviceauth_v2.URL_DEVICES, qs_params=qs_params)
+        assert r.status_code == 200
+        api_devs = r.json()
 
-    found = [d for d in api_devs if d['identity_data']==id_data]
+        found = [d for d in api_devs if d['identity_data']==id_data]
+        if len(found) > 0:
+            break
+
+        if len(api_devs) == 0:
+            break
+
     assert len(found) == 1
 
     return found[0]

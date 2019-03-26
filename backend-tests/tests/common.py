@@ -66,6 +66,7 @@ class Device:
         self.pubkey=pubkey
         self.tenant_token=tenant_token
         self.authsets = []
+        self.token = None
 
 class Tenant:
     def __init__(self, name, id, token):

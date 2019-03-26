@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2019 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,5 +14,9 @@
 import api.client
 
 URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/inventory'
+URL_DEV = api.client.GATEWAY_URL + '/api/devices/v1/inventory'
 
 URL_DEVICE = '/devices/{id}'
+URL_DEVICES = '/devices'
+
+URL_DEVICE_ATTRIBUTES = '/device/attributes'

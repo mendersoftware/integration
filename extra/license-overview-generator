@@ -2,7 +2,6 @@
 
 import argparse
 import datetime
-import hashlib
 import json
 import os
 import re
@@ -438,67 +437,6 @@ def process_chksum_file(file):
 
         add_file_to_licenses(component, os.path.join(os.path.dirname(file), license_file))
 
-def process_node_module(modules_path, module):
-    license_file = None
-
-    for candidate in LICENSE_CANDIDATES:
-        full_path = os.path.join(modules_path, module, candidate)
-        if os.path.exists(full_path):
-            license_file = full_path
-            break
-
-    if license_file is not None:
-        add_file_to_licenses("www.npmjs.com/package/%s" % module,
-                             license_file)
-    else:
-        if os.path.exists(os.path.join(modules_path, module, "runtime", "package.json")):
-            package_json = os.path.join(modules_path, module, "runtime", "package.json")
-        else:
-            package_json = os.path.join(modules_path, module, "package.json")
-        data = json.load(open(package_json))
-        license_url = None
-        # node modules are inconsistent in their specification of license, so
-        # we need to check many locations.
-        if type(data.get('license')) is str:
-            license_type = data['license']
-        elif type(data.get('license')) is dict:
-            license_type = data['license']['type']
-            license_url = data['license'].get('url')
-        elif type(data.get('license')) is list:
-            license_type = data['license'][0]['type']
-            license_url = data['license'][0].get('url')
-
-        elif type(data.get('licenses')) is str:
-            license_type = data['licenses']
-        elif type(data.get('licenses')) is dict:
-            license_type = data['licenses']['type']
-            license_url = data['licenses'].get('url')
-        elif type(data.get('licenses')) is list:
-            license_type = data['licenses'][0]['type']
-            license_url = data['licenses'][0].get('url')
-
-        else:
-            raise Exception("No license key inside package.json for %s" % module)
-
-        try:
-            author = data.get('author')
-            if type(author) is dict:
-                author = author['name']
-
-            if author is None:
-                author = data['_npmUser']['name']
-        except KeyError:
-            # After much discussion of legalese: We allow empty authors because
-            # some node modules make it really hard to figure out the author,
-            # and in most cases is *possible* to find it out manually, just not
-            # automatically. There is a section describing missing copyright
-            # holder in our docs.
-            author = ""
-
-        if license_url is None:
-            add_to_licenses("www.npmjs.com/package/%s" % module,
-                            select_license_text(license_type, author))
-
 # Go style licenses.
 def do_go_repo(repopath):
     lic_chksums = os.path.join(repopath, "LIC_FILES_CHKSUM.sha256")
@@ -506,48 +444,6 @@ def do_go_repo(repopath):
         raise Exception("No license checksums found at %s" % lic_chksums)
 
     process_chksum_file(lic_chksums)
-
-    verify_no_license_leftovers(repopath)
-
-# Licenses for GUI repos.
-def do_gui_repo(repopath):
-    # Our own license is covered.
-    LICENSE_FILES_COVERED[os.path.join(repopath, "LICENSE")] = True
-
-    modules_path = os.path.join(repopath, "node_modules")
-    modules = os.listdir(modules_path)
-    for module in modules:
-        if module in ['.bin']:
-            continue
-
-        if module == "indexof":
-            # Exception: This one doesn't come with a valid license, but it
-            # is MIT according to web page.
-            add_to_licenses("www.npmjs.com/package/%s" % module,
-                            select_license_text("MIT", "indexof"))
-            continue
-        elif module == "string-hash":
-            # Exception: This one has the license listed inside the
-            # README.md file, together with other stuff.
-            h = hashlib.md5()
-            h.update(open(os.path.join(modules_path, module, "README.md"), "rb").read())
-            assert(h.hexdigest() == "b0bd7b52b5b02d7465184cfe66e66d32")
-            add_to_licenses("www.npmjs.com/package/%s" % module,
-                            select_license_text("Public Domain", "string-hash"))
-            continue
-
-        process_node_module(modules_path, module)
-
-    # Node modules that are sub modules we don't care about, they are
-    # covered by their top license.
-    for path, dirs, files in os.walk(repopath):
-        for file in files:
-            if file not in LICENSE_CANDIDATES:
-                continue
-
-            full_path = os.path.join(path, file)
-            if re.search("node_modules/.*/node_modules/", full_path):
-                LICENSE_FILES_COVERED[full_path] = True
 
     verify_no_license_leftovers(repopath)
 
@@ -586,8 +482,12 @@ def do_repos():
             if any([file.endswith(".go") for file in files]):
                 do_go_repo(repopath)
                 break
-            elif "node_modules" in dirs:
-                do_gui_repo(repopath)
+            elif "gulpfile.js" in files:
+                if not CALLED_FROM_RELEASE_TOOL:
+                    sys.stderr.write("""GUI must be fetched manually when not using release tool:
+  docker cp GUI_CONTAINER:/var/www/mender-gui/dist/disclaimer.txt .
+""")
+                # Ignore GUI, since it will be fetched from the above file.
                 break
             elif repo in OTHER_REPOS:
                 # The check above is enough.

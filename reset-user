@@ -8,7 +8,7 @@ while true; do
     echo
     case $yn in
         [y]* )
-            exec sudo docker-compose \
+            exec docker-compose \
                 exec \
                 mender-mongo-useradm \
                 mongo useradm --eval "db.users.remove({})"

@@ -41,14 +41,14 @@ setuphosts() {
 
     if [ -s "$tmpfile" ] ; then
        log "adding the following entries to /etc/hosts:"
-       sudo tee -a /etc/hosts < "$tmpfile"
+       cat "$tmpfile"
+       sudo tee -a /etc/hosts < "$tmpfile" > /dev/null
     fi
     rm -f "$tmpfile"
 }
 
 rundocker() {
-    # sudo -E ./demo scale mender-client=3  # NB! Typically run this just once, will add 3 clients each time
-    sudo -E ./demo up
+    ./demo up
 }
 
 showhelp() {

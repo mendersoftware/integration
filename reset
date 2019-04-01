@@ -8,11 +8,11 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-sudo docker-compose ps | grep -q Up
+docker-compose ps | grep -q Up
 
 if [ $? -eq 0 ]; then
   echo "Please stop the server before resetting."
   exit 1
 fi
 
-sudo ./demo rm -v
+./demo rm -v

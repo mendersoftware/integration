@@ -4,4 +4,4 @@ set -e -o pipefail
 
 ./verify-docker-versions
 
-sudo ./demo stop
+./demo stop

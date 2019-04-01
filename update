@@ -2,11 +2,11 @@
 # Updates to latest upstream docker compose and images.
 # Mostly for demo purposes, be careful in production!
 
-sudo ./demo ps | grep -q Up
+./demo ps | grep -q Up
 
 if [ $? -eq 0 ]; then
   echo "Please stop the server before updating."
   exit 1
 fi
 
-sudo ./demo pull
+./demo pull

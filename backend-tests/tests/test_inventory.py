@@ -241,3 +241,94 @@ class TestGetDevicesMultitenant(TestGetDevicesBase):
     def test_filter_devices_ok(self, tenants_users):
         for t in tenants_users:
             self.do_test_filter_devices_ok(t.users[0], tenant_token=t.tenant_token)
+
+class TestDevicePatchAttributes:
+    def test_ok(self, user):
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory.URL_DEV)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        # prepare accepted devices
+        devs = make_accepted_devices(utoken, devauthd, 3)
+
+        # wait for devices to be provisioned
+        time.sleep(3)
+
+        for i, d in enumerate(devs):
+            payload = [
+                    {
+                        "name": "mac",
+                        "value": "mac-new-" + str(d.id)
+                    },
+                    {
+                        #empty value for existing
+                        "name": "sn",
+                        "value": "",
+                    },
+                    {
+                        #empty value for new
+                        "name": "new-empty",
+                        "value": "",
+                    }
+            ]
+            r = invd.with_auth(d.token).call('PATCH',
+                                        inventory.URL_DEVICE_ATTRIBUTES,
+                                        payload)
+            assert r.status_code == 200
+
+        for d in devs:
+            r = invm.with_auth(utoken).call('GET',
+                                            inventory.URL_DEVICE,
+                                            path_params={'id': d.id})
+            assert r.status_code == 200
+
+            api_dev = r.json()
+            assert len(api_dev['attributes']) == 3
+
+            for a in api_dev['attributes']:
+                if a['name'] == 'mac':
+                    assert a['value'] == 'mac-new-' + str(api_dev['id'])
+                elif a['name'] == 'sn':
+                    assert a['value'] == ''
+                elif a['name'] == 'new-empty':
+                    assert a['value'] == ''
+                else:
+                    assert False, 'unexpected attribute ' + a['name']
+
+    def test_fail_no_attr_value(self, user):
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory.URL_DEV)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        # prepare accepted devices
+        devs = make_accepted_devices(utoken, devauthd, 1)
+
+        # wait for devices to be provisioned
+        time.sleep(3)
+
+        for i, d in enumerate(devs):
+            payload = [
+                    {
+                        "name": "mac",
+                    }
+            ]
+            r = invd.with_auth(d.token).call('PATCH',
+                                        inventory.URL_DEVICE_ATTRIBUTES,
+                                        payload)
+            assert r.status_code == 400

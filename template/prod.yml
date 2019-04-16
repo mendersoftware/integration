@@ -86,6 +86,7 @@ services:
         volumes:
             - ./template/keys-generated/certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
             - ./template/keys-generated/certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key:ro
+            - ./storage-proxy/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
 
     mender-deployments:
         command: server --automigrate

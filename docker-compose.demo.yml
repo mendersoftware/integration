@@ -26,6 +26,7 @@ services:
             - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
         environment:
             ALLOWED_HOSTS: localhost docker.mender.io
+            HSTS_MAX_AGE: 0
 
     storage-proxy:
         ports:

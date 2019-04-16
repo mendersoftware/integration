@@ -24,5 +24,3 @@ services:
                     - s3.docker.mender.io
         depends_on:
             - minio
-        volumes:
-            - ./storage-proxy/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf

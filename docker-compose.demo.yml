@@ -26,6 +26,7 @@ services:
             - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
         environment:
             ALLOWED_HOSTS: localhost docker.mender.io
+            HSTS_MAX_AGE: 0
 
     storage-proxy:
         ports:
@@ -46,6 +47,7 @@ services:
         volumes:
             - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
             - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
+            - ./storage-proxy/nginx.conf.demo:/usr/local/openresty/nginx/conf/nginx.conf
 
     mender-deployments:
         command: server --automigrate

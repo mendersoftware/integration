@@ -24,10 +24,21 @@ compare_versions() {
   return 0
 }
 
+# test that user has rights to use docker
+
+DOCKER_ENGINE_INFO_STDERR=$(docker info 2>&1 >/dev/null)
+DOCKER_ENGINE_INFO_RETVAL=$?
+if [[ $DOCKER_ENGINE_INFO_RETVAL -ne 0 ]]; then
+  >&2 echo "Local user has insufficient permissions to connect to the docker daemon."
+  >&2 echo "Please add user to 'docker' group to be able to access it or check the documentation for your host OS."
+  >&2 echo "Be aware that if you were just added to the group, you need to log out and in again."
+  >&2 echo $DOCKER_ENGINE_INFO_STDERR
+  exit 1
+fi
 
 # test Docker Engine version
 
-DOCKER_ENGINE_VERSION_STRING=$(sudo docker info 2>/dev/null | grep "Server Version")
+DOCKER_ENGINE_VERSION_STRING=$(docker info 2>/dev/null | grep "Server Version")
 
 DOCKER_ENGINE_VERSION_NEW_SCHEME_REGEX="Server Version: ([0-9]{2,})|([2-9]+)\.[0-9]+\.[0-9]+"
 

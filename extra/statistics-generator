@@ -85,6 +85,27 @@ collect_changes() {
     done
 }
 
+post_process() {
+    sed -nre '
+/^$/{
+  p
+  n
+  s/^(.*)$/| \1 | |/
+  p
+  c |---|---|
+  p
+  n
+}
+/%/{
+  s/^(.+)/| \1/
+  s/(.+)$/\1 |/
+  s/ {2,}/ | /
+}
+p
+
+'
+}
+
 ACTUAL_MAILMAP_MD5=$(md5sum "$(git config --get mailmap.file)" 2>/dev/null | sed -e 's/  .*//')
 DESIRED_MAILMAP_MD5=$(md5sum "$(dirname "$0")/gitdm/mailmap" | sed -e 's/  .*//')
 
@@ -98,5 +119,5 @@ if [ "$DRY_RUN" = 1 ]; then
     collect_changes "$@"
 else
     set -o pipefail
-    collect_changes "$@" | python "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10
+    collect_changes "$@" | python "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
 fi

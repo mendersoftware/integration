@@ -57,46 +57,9 @@ class Helpers:
 
     @classmethod
     def yocto_id_installed_on_machine(self):
-        cmd = "cat %s | sed -n 's/^%s=//p'" % (self.artifact_info_file, self.artifact_prefix)
+        cmd = "mender -show-artifact"
         output = run(cmd).strip()
         return output
-
-    @classmethod
-    def artifact_id_randomize(self, install_image, device_type=conftest.machine_name, specific_image_id=None):
-
-        if specific_image_id:
-            imageid = specific_image_id
-        else:
-            imageid = "mender-%s" % str(random.randint(0, 99999999))
-
-        config_file = r"""%s=%s""" % (self.artifact_prefix, imageid)
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(config_file)
-        tfile.close()
-
-        try:
-            cmd = "debugfs -w -R 'rm %s' %s" % (self.artifact_info_file, install_image)
-            logger.info("Running: " + cmd)
-            output = subprocess.check_output(cmd, shell=True).strip()
-            logger.info("Returned: " + output)
-
-            cmd = ("printf 'cd %s\nwrite %s %s\n' | debugfs -w %s"
-                   % (os.path.dirname(self.artifact_info_file),
-                      tfile.name, os.path.basename(self.artifact_info_file), install_image))
-            logger.info("Running: " + cmd)
-            output = subprocess.check_output(cmd, shell=True).strip()
-            logger.info("Returned: " + output)
-
-        except subprocess.CalledProcessError:
-            pytest.fail("Trying to modify ext4 image failed, probably because it's not a valid image.")
-
-        except Exception, e:
-            pytest.fail("Unexpted error trying to modify ext4 image: %s, error: %s" % (install_image, str(e)))
-
-        finally:
-            os.remove(tfile.name)
-
-        return imageid
 
     @staticmethod
     def get_active_partition():

@@ -86,7 +86,7 @@ class Component:
                 "release_component": True,
             },
             "mender": {
-                "docker_image": ["mender-client-qemu"],
+                "docker_image": ["mender-client-qemu", "mender-client-docker"],
                 "docker_container": ["mender-client"],
                 "release_component": True,
             },
@@ -150,6 +150,11 @@ class Component:
             "inventory": {
                 "git": ["inventory"],
                 "docker_container": ["mender-inventory"],
+                "release_component": True,
+            },
+            "mender-client-docker": {
+                "git": ["mender"],
+                "docker_container": ["mender-client"],
                 "release_component": True,
             },
             "mender-client-qemu": {
@@ -216,7 +221,7 @@ class Component:
             },
             "mender-client": {
                 "git": ["mender"],
-                "docker_image": ["mender-client-qemu"],
+                "docker_image": ["mender-client-qemu", "mender-client-docker"],
                 "release_component": True,
             },
             "mender-api-gateway": {

@@ -111,10 +111,10 @@ class TestMultiTenancy(MenderTesting):
             auth.set_tenant(user["username"], user["email"], user["password"])
             with artifact_lock:
                 with tempfile.NamedTemporaryFile() as artifact_file:
-                    artifact = image.make_artifact(conftest.get_valid_image(),
-                                                   conftest.machine_name,
-                                                   user["email"],
-                                                   artifact_file)
+                    artifact = image.make_rootfs_artifact(conftest.get_valid_image(),
+                                                          conftest.machine_name,
+                                                          user["email"],
+                                                          artifact_file)
 
                     deploy.upload_image(artifact)
 

@@ -59,6 +59,24 @@ def standard_setup_one_client_bootstrapped():
 
 
 @pytest.fixture(scope="function")
+def standard_setup_one_docker_client_bootstrapped():
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.docker-client.yml \
+                        -f ../docker-compose.testing.yml \
+                        -f ../docker-compose.storage.minio.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+
+    auth.reset_auth_token()
+    auth_v2.accept_devices(1)
+
+    set_setup_type(ST_OneDockerClientBootstrapped)
+
+@pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped():
     restart_docker_compose(2)
     reset_mender_api()
@@ -99,6 +117,27 @@ def standard_setup_without_client():
 
     set_setup_type(ST_NoClient)
 
+@pytest.fixture(scope="function")
+def setup_with_legacy_client():
+    # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
+    # it when running other platforms.
+    if conftest.machine_name != "qemux86-64":
+        pytest.skip("Test only works with qemux86-64, and this is %s"
+                    % conftest.machine_name)
+
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.yml \
+                        -f ../docker-compose.client.yml \
+                        -f legacy-v1-client.yml \
+                        -f ../docker-compose.storage.minio.yml \
+                        -f ../docker-compose.testing.yml up -d",
+                        use_common_files=False)
+
+    ssh_is_opened()
+    auth_v2.accept_devices(1)
+    set_setup_type(ST_NoClient)
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):

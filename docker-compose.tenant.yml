@@ -22,7 +22,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor-enterprise:1.3.x
+        image: mendersoftware/mender-conductor-enterprise:master
 
     mender-org-welcome-email-preparer:
         image: mendersoftware/org-welcome-email-preparer:master
@@ -37,7 +37,7 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
 
     mender-email-sender:
-        image: mendersoftware/email-sender:1.3.x
+        image: mendersoftware/email-sender:master
         extends:
             file: common.yml
             service: mender-base

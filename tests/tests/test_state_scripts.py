@@ -925,8 +925,9 @@ class TestStateScripts(MenderTesting):
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
             except:
-                output = run("cat /data/mender/deployment*.log")
-                logger.info(output)
+                with settings(warn_only=True):
+                    output = run("cat /data/mender/deployment*.log")
+                    logger.info(output)
                 raise
 
             finally:
@@ -1105,8 +1106,9 @@ class TestStateScripts(MenderTesting):
                 assert old_active == new_active, "Device switched partition which was not expected!"
 
         except:
-            output = run("cat /data/mender/deployment*.log")
-            logger.info(output)
+            with settings(warn_only=True):
+                output = run("cat /data/mender/deployment*.log")
+                logger.info(output)
             raise
 
         finally:

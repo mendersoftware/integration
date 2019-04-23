@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:artifact-mender-v3
+        image: mendersoftware/deployments:1.7.x
         extends:
             file: common.yml
             service: mender-base

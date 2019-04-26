@@ -44,7 +44,7 @@ class TestUpdateModules(MenderTesting):
                     fd.write(file_and_content)
 
             def make_artifact(artifact_file, artifact_id):
-                cmd = ("file-tree-install-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module %s"
+                cmd = ("directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module %s"
                        % (artifact_file, artifact_id, file_tree))
                 logger.info("Executing: " + cmd)
                 subprocess.check_call(cmd, shell=True)

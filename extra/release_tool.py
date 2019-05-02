@@ -35,10 +35,6 @@ JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations
 - JENKINS_USER / JENKINS_PASSWORD environment variables
 - 'pass' password management storage."""
 
-# This is used to override the defaults that Jenkins provides for the meta
-# layers.
-DEFAULT_META_LAYER_BRANCH = "master"
-
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
 
@@ -1149,11 +1145,7 @@ def get_extra_buildparams_from_jenkins():
     for key, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
         # Skip keys that are in versioned repos.
         if not in_versioned_repos.get(key):
-            if key == "POKY_REV" or (key.startswith("META_") and key.endswith("_REV")):
-                # Override default for meta layers.
-                extra_buildparams[key] = DEFAULT_META_LAYER_BRANCH
-            else:
-                extra_buildparams[key] = value
+            extra_buildparams[key] = value
 
     EXTRA_BUILDPARAMS_CACHE = extra_buildparams
     return extra_buildparams

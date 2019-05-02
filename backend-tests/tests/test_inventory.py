@@ -193,28 +193,6 @@ class TestGetDevicesBase:
                                         payload)
             assert r.status_code == 200
 
-        # filter devices
-        qs_params={}
-        qs_params['per_page'] = 100
-        qs_params['mac'] = 'regex:06:2'
-        r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICES,
-                                        qs_params=qs_params)
-        assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 11
-
-        # filter devices
-        qs_params={}
-        qs_params['per_page'] = 100
-        qs_params['mac'] = '~39'
-        r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICES,
-                                        qs_params=qs_params)
-        assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 1
-
         # get device with exact mac value
         qs_params={}
         qs_params['per_page'] = 100

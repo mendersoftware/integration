@@ -246,6 +246,11 @@ class TestFaultTolerance(MenderTesting):
                     hosts=get_mender_clients())
             return
 
+        with settings(warn_only=True):
+            output = run("test -e /data/mender/mender.conf")
+            if output.return_code != 0:
+                pytest.skip("Needs split mender.conf configuration to run this test")
+
         tmpdir = tempfile.mkdtemp()
         try:
             orig_image = conftest.get_valid_image()

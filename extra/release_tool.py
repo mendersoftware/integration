@@ -35,10 +35,6 @@ JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations
 - JENKINS_USER / JENKINS_PASSWORD environment variables
 - 'pass' password management storage."""
 
-# This is used to override the defaults that Jenkins provides for the meta
-# layers.
-DEFAULT_META_LAYER_BRANCH = "master"
-
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
 
@@ -361,6 +357,14 @@ GIT_TO_BUILDPARAM_MAP = {
 
     "mender-qa": "MENDER_QA_REV",
 }
+
+class JenkinsParam:
+    type = None
+    value = None
+
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value
 
 EXTRA_BUILDPARAMS_CACHE = None
 
@@ -1126,14 +1130,18 @@ def get_extra_buildparams_from_jenkins():
     parameters = parameters[0]
 
     def jenkinsParamToDefaultMap(param):
-        if param.get("defaultParameterValue") is None:
-            return (param["name"], "")
         if param["type"] == "BooleanParameterDefinition":
-            return (param["name"], "on" if param["defaultParameterValue"]["value"] else "")
+            type = "bool"
+            value = "on" if param["defaultParameterValue"]["value"] else ""
         elif param["type"] == "StringParameterDefinition":
-            return (param["name"], param["defaultParameterValue"]["value"])
+            type = "string"
+            if param.get("defaultParameterValue") is None:
+                value = ""
+            else:
+                value = param["defaultParameterValue"]["value"]
         else:
             raise Exception("Parameter has unknown type %s. Don't know how to handle that!" % param["type"])
+        return (param["name"], type, value)
 
     # Add all fetched parameters that are not part of our versioned repositories
     # as extra build parameters.
@@ -1146,14 +1154,10 @@ def get_extra_buildparams_from_jenkins():
                 # Break out of innermost loop.
                 break
 
-    for key, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
+    for key, type, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
         # Skip keys that are in versioned repos.
         if not in_versioned_repos.get(key):
-            if key == "POKY_REV" or (key.startswith("META_") and key.endswith("_REV")):
-                # Override default for meta layers.
-                extra_buildparams[key] = DEFAULT_META_LAYER_BRANCH
-            else:
-                extra_buildparams[key] = value
+            extra_buildparams[key] = JenkinsParam(type, value)
 
     EXTRA_BUILDPARAMS_CACHE = extra_buildparams
     return extra_buildparams
@@ -1173,7 +1177,7 @@ def trigger_jenkins_build(state, tag_avail):
 
     for param in extra_buildparams.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
-            update_state(state, ["extra_buildparams", param], extra_buildparams[param])
+            update_state(state, ["extra_buildparams", param], extra_buildparams[param].value)
 
     params = None
 
@@ -1249,10 +1253,11 @@ def trigger_jenkins_build(state, tag_avail):
         if param[1] != "":
             postdata.append(("value", param[1]))
 
-        if param[1] == "on":
-            jdata['parameter'].append({"name": param[0], "value": True})
-        elif param[1] == "":
-            jdata['parameter'].append({"name": param[0], "value": False})
+        if extra_buildparams.get(param[0]) is not None and extra_buildparams[param[0]].type == "bool":
+            if param[1] == "on":
+                jdata['parameter'].append({"name": param[0], "value": True})
+            elif param[1] == "":
+                jdata['parameter'].append({"name": param[0], "value": False})
         else:
             jdata['parameter'].append({"name": param[0], "value": param[1]})
 

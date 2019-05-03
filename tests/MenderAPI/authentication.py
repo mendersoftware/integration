@@ -25,7 +25,7 @@ class Authentication:
     multitenancy = False
     current_tenant = {}
 
-    def __init__(self, username=username, email=password, password=password):
+    def __init__(self, username=username, email=email, password=password):
         self.reset()
         self.username = username
         self.email = email

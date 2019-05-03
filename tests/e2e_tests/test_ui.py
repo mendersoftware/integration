@@ -356,7 +356,7 @@ if __name__ == '__main__':
     test.test_click_header_buttons()
     # TODO adjust to match correct ui elements
     # test.test_artifact_upload()
-    test.test_authorize_all()
+    # test.test_authorize_all()
     # TODO adjust to match correct ui elements
     # test.test_basic_inventory()
     # test.test_deploy()

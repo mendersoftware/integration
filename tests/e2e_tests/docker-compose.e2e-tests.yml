@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  mender-gui-tests-runner:
+    build:
+      dockerfile: tests/e2e_tests/Dockerfile.gui
+      context: .
+    networks:
+      - mender
+    depends_on:
+      - mender-api-gateway
+      - mender-gui
+  mender-gui:
+    build:
+      dockerfile: ${GUI_REPOSITORY}/Dockerfile
+      context: ${GUI_REPOSITORY}

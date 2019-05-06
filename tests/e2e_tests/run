@@ -13,16 +13,15 @@ COMPOSE_FILES=()
 usage() {
     echo "runner script for gui-specific integration tests"
     echo ""
-    echo "./gui-tests"
+    echo "$0"
     echo -e "\t-h --help"
     echo -e "\t-c --skip-cleanup \tleave containers running after tests"
     echo -e "\t-f=<FILE>         \tspecify custom compose file(s); default files will not be used,"
     echo -e "\t                  \tmake sure to specify all files you need"
-    echo -e "\t other args will be passed to the testing container's py.test command"
     echo ""
     echo -e "examples:"
-    echo -e "run all tests, default ST setup:"
-    echo -e "\t./run"
+    echo -e "run all GUI tests, from root of this repo, with default ST setup:"
+    echo -e "GUI_REPOSITORY='<path-to-local-gui-repo>' INTEGRATION_PATH=. $0"
 }
 
 parse_args(){

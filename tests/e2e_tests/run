@@ -1,0 +1,109 @@
+#!/bin/bash
+set -e
+
+COMPOSE_CMD="docker-compose -p gui-tests \
+             -f ${INTEGRATION_PATH}/docker-compose.yml \
+             -f ${INTEGRATION_PATH}/docker-compose.demo.yml \
+             -f tests/e2e_tests/docker-compose.e2e-tests.yml"
+
+# by default just add minio, with COMPOSE_CMD_BASE this creates the standard onprem ST setup
+COMPOSE_FILES_DEFAULT=( "${INTEGRATION_PATH}/docker-compose.storage.minio.yml" )
+COMPOSE_FILES=()
+
+usage() {
+    echo "runner script for gui-specific integration tests"
+    echo ""
+    echo "$0"
+    echo -e "\t-h --help"
+    echo -e "\t-c --skip-cleanup \tleave containers running after tests"
+    echo -e "\t-f=<FILE>         \tspecify custom compose file(s); default files will not be used,"
+    echo -e "\t                  \tmake sure to specify all files you need"
+    echo ""
+    echo -e "examples:"
+    echo -e "run all GUI tests, from root of this repo, with default ST setup:"
+    echo -e "GUI_REPOSITORY='<path-to-local-gui-repo>' INTEGRATION_PATH=. $0"
+}
+
+parse_args(){
+    whitespace="[[:space:]]"
+
+    # FIXME args must be passed in the form -f=<path>; spaces don't workalthough they're standard...
+    while [ $# -gt 0 ]; do
+        PARAM=`echo $1 | awk -F= '{print $1}'`
+        VALUE=`echo $1 | awk -F= '{print $2}'`
+        case $PARAM in
+            -h | --help)
+            usage
+            exit
+            ;;
+            -c | --skip-cleanup)
+            SKIP_CLEANUP=1
+            ;;
+            -f)
+            COMPOSE_FILES+=( $VALUE )
+            ;;
+            *)
+        esac
+        shift 1
+    done
+
+    make_compose_cmd
+}
+
+make_compose_cmd () {
+    if [ ${#COMPOSE_FILES[@]} -eq 0 ]
+    then
+        COMPOSE_FILES=$COMPOSE_FILES_DEFAULT
+    fi
+
+    for var in "${COMPOSE_FILES[@]}"
+    do
+        COMPOSE_CMD+=" -f ${var}"
+    done
+}
+
+run_tests() {
+    $COMPOSE_CMD build && $COMPOSE_CMD up -d
+
+    declare retries=5
+    while [[ $retries -gt 0 && -z $cid ]]; do
+        cid=$(get_container_id mender-gui-tests-runner)
+        sleep 1
+        retries=$((retries-1))
+    done
+
+    if [[ -z $cid ]]; then
+        echo "failed to get container id"
+        return 1
+    fi
+
+    docker attach $cid || failed=1
+
+    get_container_exit_code $cid || true
+    [ $? == 0 ] || failed=1
+}
+
+get_container_id() {
+    echo "$(docker ps --filter label=com.docker.compose.service=$1 -q)"
+}
+
+get_container_exit_code() {
+    docker inspect --format '{{.State.ExitCode}}' $1
+}
+
+cleanup(){
+    [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
+}
+
+parse_args "$@"
+run_tests
+
+if [ -n "$failed" ]; then
+    tmppath=$(mktemp /tmp/gui_e2e_tests.XXXXXX)
+    echo "-- tests failed, dumping logs to $tmppath"
+    $COMPOSE_CMD logs > $tmppath
+fi
+
+cleanup
+
+exit $failed

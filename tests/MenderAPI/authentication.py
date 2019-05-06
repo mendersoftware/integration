@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2019 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ class Authentication:
     multitenancy = False
     current_tenant = {}
 
-    def __init__(self, username=username, email=password, password=password):
+    def __init__(self, username=username, email=email, password=password):
         self.reset()
         self.username = username
         self.email = email

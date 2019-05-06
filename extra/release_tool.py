@@ -1272,9 +1272,15 @@ def trigger_jenkins_build(state, tag_avail):
 def do_license_generation(state, tag_avail):
     print("Setting up temporary Git workspace...")
 
+    def tag_or_followed_branch(repo_git):
+        if tag_avail[repo_git].get('build_tag') is None:
+            return state[repo_git]['following']
+        else:
+            return tag_avail[repo_git]['build_tag']
+
     tmpdirs = []
-    for repo in Component.get_components_of_type("git"):
-        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), tag_avail[repo.git()]['build_tag']))
+    for repo in Component.get_components_of_type("git", only_release=True):
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), tag_or_followed_branch(repo.git())))
     for repo in Component.get_components_of_type("git", only_non_release=True):
         tmpdirs.append(setup_temp_git_checkout(state, repo.git(), "origin/master"))
 

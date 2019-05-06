@@ -26,13 +26,11 @@ import sys
 # strings
 import argparse
 
-
 # network
 import selenium
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver import ActionChains
-
 from selenium.webdriver.support import expected_conditions as EC
 
 from web_funcs import *
@@ -44,7 +42,6 @@ import logging
 selenium_logger = logging.getLogger('selenium.webdriver.remote.remote_connection')
 selenium_logger.setLevel(logging.INFO)
 
-
 __authors__ = ["Ole Herman Schumacher Elgesem", "Gregorio Di Stefano"]
 auth = authentication.Authentication()
 
@@ -52,20 +49,16 @@ def function_name():
     """Returns the function name of the calling function (stack[1])"""
     return inspect.stack()[1][3]
 
-
 def ui_test_banner():
     print("=== UI-TEST: {}() ===".format(inspect.stack()[1][3]))
 
-
 def ui_test_success():
     print("=== SUCCESS: {}() ===".format(inspect.stack()[1][3]))
-
 
 def tag_contents_xpath(tag, content):
     """Constructs an xpath matching element with tag containing content"""
     content = content.lower()
     return '//{}[contains(translate(*,"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"),"{}")]'.format(tag, content)
-
 
 class TestUI(object):
     def init_driver(self, url="https://docker.mender.io"):
@@ -197,6 +190,7 @@ class TestUI(object):
         element = self.wait_for_element(driver, By.XPATH, xp)
         assert element
 
+    @pytest.mark.skip
     def test_login_create_user(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -206,6 +200,7 @@ class TestUI(object):
         finally:
             self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_click_header_buttons(self):
         ui_test_banner()
         try:
@@ -219,6 +214,7 @@ class TestUI(object):
         finally:
             self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_artifact_upload(self):
         self.create_artifacts()
         ui_test_banner()
@@ -232,6 +228,7 @@ class TestUI(object):
         finally:
             self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_authorize_all(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -256,6 +253,7 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_basic_inventory(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -277,7 +275,7 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
-
+    @pytest.mark.skip
     def test_deploy(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -313,6 +311,7 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_deployment_in_progress(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -331,6 +330,7 @@ class TestUI(object):
         ui_test_success()
         self.destroy_driver(driver)
 
+    @pytest.mark.skip
     def test_deployment_successful(self):
         ui_test_banner()
         driver = self.init_driver()
@@ -359,7 +359,6 @@ def get_args():
     args = argparser.parse_args()
     return args
 
-
 # For running without pytest:
 if __name__ == '__main__':
     args = get_args()
@@ -367,10 +366,9 @@ if __name__ == '__main__':
     test.create_artifacts()
     test.test_login_create_user()
     test.test_click_header_buttons()
-    # TODO adjust to match correct ui elements
+    # TODO adjust all below to match correct ui elements:
     # test.test_artifact_upload()
     # test.test_authorize_all()
-    # TODO adjust to match correct ui elements
     # test.test_basic_inventory()
     # test.test_deploy()
     # test.test_deployment_in_progress()

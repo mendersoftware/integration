@@ -1595,7 +1595,7 @@ def determine_version_to_include_in_release(state, repo):
     follow_branch = None
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
-        prev_of_repo = version_of(integration_dir(), repo.yml_components()[0].yml(), in_integration_version=prev_of_integration)
+        prev_of_repo = version_of(integration_dir(), repo.yml_components()[0], in_integration_version=prev_of_integration)
         new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:

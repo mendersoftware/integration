@@ -1299,6 +1299,35 @@ def do_license_generation(state, tag_avail):
             subprocess.check_call([os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "license-overview-generator")),
                                    "--called-from-release-tool", "--dir", os.path.dirname(tmpdirs[0])],
                                   stdout=fd)
+
+        print_line()
+        print("Will need to fetch the GUI licences from its container. Do you want to:")
+        print("1) Build container manually")
+        print("   Use this when you have not built anything in Jenkins yet")
+        print("2) Fetch container from dockerhub")
+        print("   Use this when you have built in Jenkins")
+        reply = ask("? ")
+
+        if reply == "1":
+            gui_tag = "mendersoftware/gui:tmp"
+            for tmpdir in tmpdirs:
+                if os.path.basename(tmpdir) == "gui":
+                    query_execute_list([["docker", "build", "-t", gui_tag, tmpdir]])
+                    break
+        elif reply == "2":
+            gui_tag = "mendersoftware/gui:%s" % tag_avail["gui"]["build_tag"]
+            query_execute_list([["docker", "pull", gui_tag]])
+        else:
+            return
+
+        executed = query_execute_list([
+            ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag],
+            ["docker", "cp", "release_tool_gui_licenses:/var/www/mender-gui/dist/disclaimer.txt", "gui-licenses.txt"],
+            ["docker", "rm", "-f", "release_tool_gui_licenses"],
+        ])
+        if not executed:
+            return
+
     except subprocess.CalledProcessError:
         print()
         print("Command failed with the above error.")
@@ -1307,24 +1336,13 @@ def do_license_generation(state, tag_avail):
         for tmpdir in tmpdirs:
             cleanup_temp_git_checkout(tmpdir)
 
-    print("Will need to fetch the GUI licences from its container.")
-    gui_tag = "mendersoftware/gui:%s" % tag_avail["gui"]["build_tag"]
-    query_execute_list([["docker", "pull", gui_tag]])
-
-    executed = query_execute_list([
-        ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag],
-        ["docker", "cp", "release_tool_gui_licenses:/var/www/mender-gui/dist/disclaimer.txt", "gui-licenses.txt"],
-        ["docker", "rm", "-f", "release_tool_gui_licenses"],
-    ])
-    if not executed:
-        return
-
     with open("generated-license-text.txt", "a") as fd, open("gui-licenses.txt") as gui_licenses:
         fd.write("--------------------------------------------------------------------------------\n")
         fd.write(gui_licenses.read())
     os.remove("gui-licenses.txt")
 
     print_line()
+    print("License overview successfully generated!")
     print("Output is captured in generated-license-text.txt.")
 
 def set_docker_compose_version_to(dir, repo, tag):

@@ -924,6 +924,12 @@ class TestStateScripts(MenderTesting):
 
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
+            except:
+                with settings(warn_only=True):
+                    output = run("cat /data/mender/deployment*.log")
+                    logger.info(output)
+                raise
+
             finally:
                 run("systemctl stop mender && "
                                 + "rm -f /data/test_state_scripts.log && "
@@ -952,7 +958,7 @@ class TestStateScripts(MenderTesting):
         work_dir = "test_state_scripts.%s" % client
         deployment_id = None
         try:
-            script_content = '#!/bin/sh\n\necho "echo `date --rfc-3339=seconds | sed -e e/\n//` $(basename $0)" >> /data/test_state_scripts.log\n'
+            script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
             old_active = Helpers.get_active_partition()
@@ -1099,6 +1105,12 @@ class TestStateScripts(MenderTesting):
             else:
                 assert old_active == new_active, "Device switched partition which was not expected!"
 
+        except:
+            with settings(warn_only=True):
+                output = run("cat /data/mender/deployment*.log")
+                logger.info(output)
+            raise
+
         finally:
             shutil.rmtree(work_dir, ignore_errors=True)
             if deployment_id:
@@ -1112,11 +1124,11 @@ class TestStateScripts(MenderTesting):
                 + "rm -rf /data/mender/scripts && "
                 + "systemctl start mender")
 
-    def verify_script_log_correct(self, test_set, log):
+    def verify_script_log_correct(self, test_set, log_orig):
         expected_order = test_set['ScriptOrder']
 
         # First remove timestamps from the log
-        log = [l.split(" ")[-1] for l in log]
+        log = [l.split(" ")[-1] for l in log_orig]
 
         # Iterate down the list of expected scripts, and make sure that the log
         # follows the same list.
@@ -1155,15 +1167,15 @@ class TestStateScripts(MenderTesting):
             # Test cases with an expectation of success/failure shall do only 1 iteration
             # Test cases with None expectation will loop through the error sequence in a loop, but still
             # we want to make sure that it is reasonable (i.e. looping with the correct time intervals).
-            # For these cases we set a max. of 20 iterations to accomodate for slow running of the framework
+            # For these cases we set a max. of 50 iterations to accomodate for slow running of the framework
             if test_set['ExpectedStatus'] is not None:
                 assert num_iterations == 1
             else:
-                assert num_iterations < 20
+                assert num_iterations < 50
 
         except:
-            print("Exception in verify_script_log_correct: log of scripts = '%s'"
-                  % "\n".join(log))
-            print("scripts we expected = '%s'"
+            logger.error("Exception in verify_script_log_correct: log of scripts = '%s'"
+                  % "\n".join(log_orig))
+            logger.error("scripts we expected = '%s'"
                   % "\n".join(expected_order))
             raise

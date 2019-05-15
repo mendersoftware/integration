@@ -82,45 +82,6 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
             deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
 
-    @MenderTesting.fast
-    def test_update_image_recovery(self, install_image=conftest.get_valid_image()):
-        """
-            Install an update, and reboot the system when we detect it's being copied over to the inactive parition.
-
-            The test should result in a failure.
-        """
-        if not env.host_string:
-            execute(self.test_update_image_recovery,
-                    hosts=get_mender_clients(),
-                    install_image=install_image)
-            return
-
-        installed_yocto_id = Helpers.yocto_id_installed_on_machine()
-
-        inactive_part = Helpers.get_passive_partition()
-        with Helpers.RebootDetector() as reboot:
-            deployment_id, _ = common_update_procedure(install_image)
-            active_part = Helpers.get_active_partition()
-
-            for i in range(60):
-                time.sleep(0.5)
-                with quiet():
-                    # make sure we are writing to the inactive partition
-                    output = run("fuser -mv %s" % (inactive_part))
-                if output.return_code == 0:
-                    run("killall -s 9 mender")
-                    with settings(warn_only=True):
-                        run("( sleep 3 ; reboot ) 2>/dev/null >/dev/null &")
-                    break
-
-            logging.info("Waiting for system to finish reboot")
-            reboot.verify_reboot_performed()
-            assert Helpers.get_active_partition() == active_part
-            deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
-            reboot.verify_reboot_not_performed()
-
-        assert Helpers.yocto_id_installed_on_machine() == installed_yocto_id
-
     @MenderTesting.slow
     def test_deployed_during_network_outage(self, install_image=conftest.get_valid_image()):
         """

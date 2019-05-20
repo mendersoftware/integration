@@ -19,7 +19,7 @@ from common import *
 from common_setup import *
 from helpers import Helpers
 from common_update import update_image_successful, update_image_failed
-from MenderAPI import deploy, image
+from MenderAPI import deploy, image, inv
 from mendertesting import MenderTesting
 import shutil
 
@@ -161,3 +161,55 @@ class TestBasicIntegration(MenderTesting):
 
         update_image_successful(install_image=conftest.get_valid_image(), pre_deployment_callback=deployment_callback,
                                 deployment_triggered_callback=deployment_triggered_callback)
+
+    @pytest.mark.timeout(1000)
+    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
+    def test_forced_inventory_update_from_client(self):
+        """Forces an inventory update from an idling client."""
+        if not env.host_string:
+            execute(self.test_forced_inventory_update_from_client,
+                    hosts=get_mender_clients())
+            return
+
+        # Give the image a really large wait interval.
+        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % ("\(.*PollInter.*:\)\( *[0-9]*\)", "\\1 1800")
+        out = run(sedcmd)
+        run("systemctl restart mender")
+
+        logger.info("Running pre deployment callback function")
+        wait_count = 0
+        # Match the log template six times to make sure the client is truly sleeping.
+        catcmd = "journalctl -u mender --output=cat"
+        template = run(catcmd)
+        while True:
+            logger.info("sleeping...")
+            logger.info("wait_count: %d" % wait_count)
+            time.sleep(10)
+            out = run(catcmd)
+            if out == template:
+                wait_count += 1
+                # Only return if the client has been idling in check-wait for a minute.
+                if wait_count == 6:
+                    break
+                continue
+            # Update the matching template.
+            template = run(catcmd)
+            wait_count = 0
+
+        # Create some new inventory data from an inventory script.
+        output = run("cd /usr/share/mender/inventory && echo '#!/bin/sh\necho host=foobar' > mender-inventory-test && chmod +x mender-inventory-test")
+
+        # Now that the client has settled into the wait-state, run the command, and check if it does indeed exit the wait state,
+        # and send inventory.
+        output = run("mender -send-inventory")
+        logger.info("mender client has forced an inventory update")
+
+        # Give the client some time to send the inventory.
+        time.sleep(5)
+
+        # Check that the updated inventory value is now present.
+        invJSON = inv.get_devices()
+        for element in invJSON[0]["attributes"]:
+            if element["name"] == "host" and element["value"] == "foobar":
+                return
+        pytest.fail("The inventory was not updated")

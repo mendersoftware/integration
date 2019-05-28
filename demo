@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 usage() {
     cat <<EOF
@@ -42,6 +43,13 @@ while [ -n "$1" ]; do
     shift
 done
 
+# Check if the demo-artifact has been downloaded,
+# or if there exists a newer one in the s3-storage.
+DEMO_ARTIFACT_NAME="core-image-full-cmdline-qemux86-64.mender"
+# wget -q --timestamping file://home/olepor/yocto/qemu-setup/build/tmp/deploy/images/qemux86-64/core-image-full-cmdline-qemux86-64.mender
+
+ARTIFACT_SIZE_BYTES=$(ls -l ${DEMO_ARTIFACT_NAME} | awk '{print $5}')
+
 # speed up first start by pulling containers in parallel
 docker images | grep -q 'mendersoftware/deployments'
 
@@ -74,4 +82,56 @@ exec docker-compose \
      -f docker-compose.storage.minio.yml \
      -f docker-compose.demo.yml \
      $CLIENT \
-     "$@"
+     "$@" &
+
+DC_PID=$!
+
+MENDER_SERVER_USER='myusername@example.com:mysecretpassword'
+MENDER_SERVER_URI='https://localhost'
+# Block until the useradm service returns an HTTP response.
+echo "Blocking until the useradm service is up!"
+curl -k -X POST -u $MENDER_SERVER_USER\
+     --retry-connrefused\
+     --retry 60\
+     --retry-delay 10\
+     --retry-max-time 120\
+     $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
+
+echo
+echo "Creating a new user."
+# Create a new user.
+docker exec integration_mender-useradm_1 /usr/bin/useradm create-user --username=myusername@example.com --password=mysecretpassword
+
+echo "New user created!"
+
+echo "Getting JWT Token"
+
+JWT=$(curl -k -X POST -u $MENDER_SERVER_USER\
+           --retry-connrefused\
+           --retry 60\
+           --retry-delay 10\
+           --retry-max-time 120\
+           $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
+
+# CURL_JWT_PID=$!
+
+echo "Received a JWT token from the server: Token: " ${JWT}
+
+
+curl -k --request POST\
+     --retry-connrefused\
+     --retry-delay 10\
+     --retry 60 \
+     --retry-max-time 120\
+     --header "Authorization: Bearer ${JWT}"\
+     --form "size=${ARTIFACT_SIZE_BYTES}"\
+     --form "artifact=@${DEMO_ARTIFACT_NAME}"\
+     "${MENDER_SERVER_URI}/api/management/v1/deployments/artifacts"
+
+echo "Demo Artifact was successfully uploaded to the server"
+
+# CURL_PID=$!
+
+# wait ${CURL_PID}
+# wait ${CURL_JWT_PID}
+wait ${DC_PID}

@@ -4,3 +4,4 @@ Fabric>=1.13.0, <2
 filelock>=2.0
 psutil
 selenium
+pytest-timeout

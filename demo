@@ -14,17 +14,22 @@ docker-compose, if you want to run the demo, run:
 EOF
 }
 
-CLIENT="-f docker-compose.client.yml"
+CLIENT=
+CLIENT_ARGS="-f docker-compose.client.yml"
 while [ -n "$1" ]; do
-    if [ -n "${NO_CLIENT}" -o "$1" = "--no-client" ]; then
-        unset CLIENT
-        echo "-- disabling client containers"
-        if [ -n "$NO_CLIENT" ]; then
-            unset NO_CLIENT
-            continue
-        fi
+    if [ "$1" = "--no-client" ]; then
+        echo "--no-client argument is deprecated. Client is now disabled by default and can be enabled with --client"
+    elif [ "$1" = "--client" ]; then
+        CLIENT="$CLIENT_ARGS"
+        echo "-- enabling client container"
     elif [ "$1" = "--kvm" ]; then
         echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
+    elif [ "$1" = "down" ] || [ "$1" = "rm" ]; then
+        # If the argument is either "down" or "rm", enable the client so that it
+        # gets cleaned up, no matter if `--client` is passed or not.
+        CLIENT="$CLIENT_ARGS"
+        # Not a flag, so we should break out of the loop.
+        break
     else
         if [ "$#" -eq 0 ]; then
             usage

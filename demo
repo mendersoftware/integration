@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 usage() {
     cat <<EOF
@@ -44,11 +43,17 @@ while [ -n "$1" ]; do
 done
 
 # Check if the demo-artifact has been downloaded,
-# or if there exists a newer one in the s3-storage.
-DEMO_ARTIFACT_NAME="core-image-full-cmdline-qemux86-64.mender"
-# wget -q --timestamping file://home/olepor/yocto/qemu-setup/build/tmp/deploy/images/qemux86-64/core-image-full-cmdline-qemux86-64.mender
+# or if there exists a newer one in storage.
+DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
+wget -q --timestamping https://dgsbl4vditpls.cloudfront.net/mender-demo-artifact.mender
 
-ARTIFACT_SIZE_BYTES=$(ls -l ${DEMO_ARTIFACT_NAME} | awk '{print $5}')
+retval=$?
+if [ $retval -ne 0 ]; then
+    echo "Failed to download the demo artifact"
+    exit $retval
+fi
+
+ARTIFACT_SIZE_BYTES=$(stat -c %s ${DEMO_ARTIFACT_NAME})
 
 # speed up first start by pulling containers in parallel
 docker images | grep -q 'mendersoftware/deployments'
@@ -70,68 +75,118 @@ if [[ "$?" -eq 1 ]]; then
     docker-compose pull ${compose_args}
 fi
 
-if [[ "$1" == "up" ]]; then
-    echo "Starting Mender demo environment.."
-fi
-
 # Pass this value on to the GUI container as an env variable
 export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
 
-exec docker-compose \
-     -f docker-compose.yml \
-     -f docker-compose.storage.minio.yml \
-     -f docker-compose.demo.yml \
-     $CLIENT \
-     "$@" &
+if [[ "$1" != "up" ]]; then
+    exec docker-compose \
+         -f docker-compose.yml \
+         -f docker-compose.storage.minio.yml \
+         -f docker-compose.demo.yml \
+         $client \
+         "$@"
+fi
 
-DC_PID=$!
+# ------------------------------------------------------------------------------
+#
+#       The following code will only be run in the case ./demo up [args]
+#
+# ------------------------------------------------------------------------------
 
-MENDER_SERVER_USER='myusername@example.com:mysecretpassword'
+echo "Starting the Mender demo environment..."
+
+docker-compose \
+    -f docker-compose.yml \
+    -f docker-compose.storage.minio.yml \
+    -f docker-compose.demo.yml \
+    $client \
+    "$@" -d
+
+# DC_PID=$!
+
+USER='myusername@example.com'; PASSWORD='mysecretpassword'
+MENDER_SERVER_USER="${USER}:${PASSWORD}"
 MENDER_SERVER_URI='https://localhost'
+
 # Block until the useradm service returns an HTTP response.
-echo "Blocking until the useradm service is up!"
-curl -k -X POST -u $MENDER_SERVER_USER\
+echo "Waiting for the useradm service to start up"
+curl --silent -k -X POST -u $MENDER_SERVER_USER\
+     --fail\
      --retry-connrefused\
      --retry 60\
      --retry-delay 10\
      --retry-max-time 120\
-     $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
+     $MENDER_SERVER_URI/api/management/v1/useradm/auth/login > /dev/null
 
-echo
-echo "Creating a new user."
+retval=$?
+case $retval in
+    22) ;; # Server 400 error, ie, server is up - continue.
+    0)  ;; # User exists - continue.
+    *)
+       echo "Failed to access the mender-useradm service within the allotted two minutes."
+       echo "Please check the docker-compose setup."
+       echo "exit code" $retval
+       exit $retval
+       ;;
+esac
+
+echo "Creating a new user..."
+
 # Create a new user.
-docker exec integration_mender-useradm_1 /usr/bin/useradm create-user --username=myusername@example.com --password=mysecretpassword
+docker exec integration_mender-useradm_1 /usr/bin/useradm create-user --username=${USER} --password=${PASSWORD}
 
-echo "New user created!"
+retval=$?
+case $retval in
+     0) echo "New user created." ;;
+     5) ;; # User already exists.
+     *) exit $retval ;;
+esac
 
 echo "Getting JWT Token"
 
-JWT=$(curl -k -X POST -u $MENDER_SERVER_USER\
+JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
+           --fail\
            --retry-connrefused\
            --retry 60\
            --retry-delay 10\
            --retry-max-time 120\
            $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
 
-# CURL_JWT_PID=$!
+retval=$?
+if [ $retval -ne 0 ]; then
+    echo "Failed to get the 'JWT' token from the useradm service."
+    echo "This is needed in order to use the demo Artifact."
+    exit $retval
+fi
 
-echo "Received a JWT token from the server: Token: " ${JWT}
+echo "Uploading the artifact to the server..."
+errout=$(curl -k --request POST\
+              --silent\
+              --show-error\
+              --retry-connrefused\
+              --retry-delay 10\
+              --retry 60 \
+              --retry-max-time 120\
+              --header "Authorization: Bearer ${JWT}"\
+              --form "size=${ARTIFACT_SIZE_BYTES}"\
+              --form "artifact=@${DEMO_ARTIFACT_NAME}"\
+              "${MENDER_SERVER_URI}/api/management/v1/deployments/artifacts" | jq .error)
 
+retval=$?
 
-curl -k --request POST\
-     --retry-connrefused\
-     --retry-delay 10\
-     --retry 60 \
-     --retry-max-time 120\
-     --header "Authorization: Bearer ${JWT}"\
-     --form "size=${ARTIFACT_SIZE_BYTES}"\
-     --form "artifact=@${DEMO_ARTIFACT_NAME}"\
-     "${MENDER_SERVER_URI}/api/management/v1/deployments/artifacts"
+case "$errout" in
+   " Artifact not unique"*) echo "Artifact already exists on the server" ;; # Artifact is already on the server.
+    "") echo "Artifact uploaded to the demo server" ;;
+    *) echo "Uploading the demo artifact failed with error: " $errout
+       exit $retval ;;
+esac
 
-echo "Demo Artifact was successfully uploaded to the server"
+trap "docker-compose \
+    -f docker-compose.yml \
+    -f docker-compose.storage.minio.yml \
+    -f docker-compose.demo.yml \
+    down" SIGINT
 
-# CURL_PID=$!
+sleep 2
 
-# wait ${CURL_PID}
-# wait ${CURL_JWT_PID}
-wait ${DC_PID}
+docker-compose logs --follow

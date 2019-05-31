@@ -22,6 +22,11 @@ fi
 
 CLIENT=
 CLIENT_ARGS="-f docker-compose.client.yml"
+# The demo environment has some external dependencies upon: wget, curl, jq
+hash wget 2>/dev/null || { echo >&2 "The demo script requires the `wget` tool to be available. Aborting."; exit 1; }
+hash curl 2>/dev/null || { echo >&2 "The demo script requires the `curl` tool to be available. Aborting."; exit 1; }
+hash jq 2>/dev/null || { echo >&2 "The demo script requires the `jq` tool to be available. Aborting."; exit 1; }
+
 while [ -n "$1" ]; do
     if [ "$1" = "--no-client" ]; then
         echo "--no-client argument is deprecated. Client is now disabled by default and can be enabled with --client"
@@ -97,12 +102,17 @@ fi
 # ------------------------------------------------------------------------------
 
 # Make sure that the demo environment is brought down on SIGINT
-trap "docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.storage.minio.yml \
-    -f docker-compose.demo.yml \
-    $CLIENT \
-    down" SIGINT
+exitfunc() {
+    retval=$(docker-compose \
+         -f docker-compose.yml \
+         -f docker-compose.storage.minio.yml \
+         -f docker-compose.demo.yml \
+         $CLIENT \
+         down)
+    exit $retval
+}
+
+trap exitfunc SIGINT
 
 
 echo "Starting the Mender demo environment..."
@@ -127,7 +137,7 @@ curl --silent -k -X POST -u $MENDER_SERVER_USER\
      --fail\
      --retry-connrefused\
      --retry 60\
-     --retry-delay 10\
+     --retry-delay 2\
      --retry-max-time 120\
      $MENDER_SERVER_URI/api/management/v1/useradm/auth/login > /dev/null
 
@@ -150,7 +160,7 @@ docker exec integration_mender-useradm_1 /usr/bin/useradm create-user --username
 retval=$?
 case $retval in
      0) echo "New user created." ;;
-     5) echo "The user already exists"; exit 0;; # No need to continue if a demo user exists
+     5) echo "The user already exists"; exit 1;; # No need to continue if a demo user exists
      *) exit $retval ;;
 esac
 
@@ -160,7 +170,7 @@ JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
            --fail\
            --retry-connrefused\
            --retry 60\
-           --retry-delay 10\
+           --retry-delay 2\
            --retry-max-time 120\
            $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
 
@@ -176,7 +186,7 @@ errout=$(curl -k --request POST\
               --silent\
               --show-error\
               --retry-connrefused\
-              --retry-delay 10\
+              --retry-delay 2\
               --retry 60 \
               --retry-max-time 120\
               --header "Authorization: Bearer ${JWT}"\

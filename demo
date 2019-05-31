@@ -45,7 +45,7 @@ done
 # Check if the demo-artifact has been downloaded,
 # or if there exists a newer one in storage.
 DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
-wget -q --timestamping https://dgsbl4vditpls.cloudfront.net/mender-demo-artifact.mender
+wget -q --timestamping https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
 
 retval=$?
 if [ $retval -ne 0 ]; then
@@ -79,12 +79,15 @@ fi
 export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
 
 if [[ "$1" != "up" ]]; then
+    # exec steals the shell, so unless docker-compose is not found,
+    # exit 1 will never happen.
     exec docker-compose \
          -f docker-compose.yml \
          -f docker-compose.storage.minio.yml \
          -f docker-compose.demo.yml \
-         $client \
+         $CLIENT \
          "$@"
+    exit 1
 fi
 
 # ------------------------------------------------------------------------------
@@ -93,22 +96,32 @@ fi
 #
 # ------------------------------------------------------------------------------
 
+# Make sure that the demo environment is brought down on SIGINT
+trap "docker-compose \
+    -f docker-compose.yml \
+    -f docker-compose.storage.minio.yml \
+    -f docker-compose.demo.yml \
+    $CLIENT \
+    down" SIGINT
+
+
 echo "Starting the Mender demo environment..."
 
 docker-compose \
     -f docker-compose.yml \
     -f docker-compose.storage.minio.yml \
     -f docker-compose.demo.yml \
-    $client \
+    $CLIENT \
     "$@" -d
 
-# DC_PID=$!
+USER='mender-demo@example.com'
+PASSWORD=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12)
 
-USER='myusername@example.com'; PASSWORD='mysecretpassword'
 MENDER_SERVER_USER="${USER}:${PASSWORD}"
 MENDER_SERVER_URI='https://localhost'
 
 # Block until the useradm service returns an HTTP response.
+# Which means that it is up.
 echo "Waiting for the useradm service to start up"
 curl --silent -k -X POST -u $MENDER_SERVER_USER\
      --fail\
@@ -120,12 +133,11 @@ curl --silent -k -X POST -u $MENDER_SERVER_USER\
 
 retval=$?
 case $retval in
-    22) ;; # Server 400 error, ie, server is up - continue.
     0)  ;; # User exists - continue.
-    *)
-       echo "Failed to access the mender-useradm service within the allotted two minutes."
+    22) ;; # Server 400 error, ie, server is up - continue.
+    *) echo "Failed to access the mender-useradm service"
        echo "Please check the docker-compose setup."
-       echo "exit code" $retval
+       echo "curl exit code" $retval
        exit $retval
        ;;
 esac
@@ -138,11 +150,11 @@ docker exec integration_mender-useradm_1 /usr/bin/useradm create-user --username
 retval=$?
 case $retval in
      0) echo "New user created." ;;
-     5) ;; # User already exists.
+     5) echo "The user already exists"; exit 0;; # No need to continue if a demo user exists
      *) exit $retval ;;
 esac
 
-echo "Getting JWT Token"
+echo "Getting JWT Token..."
 
 JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
            --fail\
@@ -175,18 +187,19 @@ errout=$(curl -k --request POST\
 retval=$?
 
 case "$errout" in
-   " Artifact not unique"*) echo "Artifact already exists on the server" ;; # Artifact is already on the server.
+   " Artifact not unique"*) echo "Artifact already exists on the server" ;;
     "") echo "Artifact uploaded to the demo server" ;;
     *) echo "Uploading the demo artifact failed with error: " $errout
        exit $retval ;;
 esac
 
-trap "docker-compose \
-    -f docker-compose.yml \
-    -f docker-compose.storage.minio.yml \
-    -f docker-compose.demo.yml \
-    down" SIGINT
-
-sleep 2
+echo "****************************************"
+echo
+echo "Login password: " $PASSWORD
+echo
+echo "****************************************"
+echo "Please keep the password available, it will not be cached by the login script."
+echo "Backend ready. Press Enter to show logs or Ctrl-C to quit."
+read -se
 
 docker-compose logs --follow

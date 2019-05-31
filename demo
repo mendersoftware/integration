@@ -15,6 +15,11 @@ docker-compose, if you want to run the demo, run:
 EOF
 }
 
+if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    usage
+    exit 1
+fi
+
 CLIENT=
 CLIENT_ARGS="-f docker-compose.client.yml"
 while [ -n "$1" ]; do
@@ -32,10 +37,6 @@ while [ -n "$1" ]; do
         # Not a flag, so we should break out of the loop.
         break
     else
-        if [ "$#" -eq 0 ]; then
-            usage
-            exit 1
-        fi
         break
     fi
     shift

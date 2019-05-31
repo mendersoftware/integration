@@ -125,7 +125,7 @@ docker-compose \
     "$@" -d
 
 USER='mender-demo@example.com'
-PASSWORD=$(< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c12)
+PASSWORD=$(< /dev/urandom tr -dc A-Za-z0-9 | head -c12)
 
 MENDER_SERVER_USER="${USER}:${PASSWORD}"
 MENDER_SERVER_URI='https://localhost'
@@ -205,7 +205,7 @@ esac
 
 echo "****************************************"
 echo
-echo "Login password: " $PASSWORD
+echo "Login password: ${PASSWORD}"
 echo
 echo "****************************************"
 echo "Please keep the password available, it will not be cached by the login script."

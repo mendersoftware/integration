@@ -4,8 +4,9 @@ usage() {
     cat <<EOF
 $(basename $0) [options] docker-options
 
---no-client
-	Disable emulated client.
+--client
+	Enable emulated client. To enable more than one client, you can use:
+	  $(basename $0) --client scale mender-client=2
 
 All other arguments passed to this command are passed directly to
 docker-compose, if you want to run the demo, run:
@@ -13,6 +14,11 @@ docker-compose, if you want to run the demo, run:
 '$(basename $0) up'
 EOF
 }
+
+if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    usage
+    exit 1
+fi
 
 CLIENT=
 CLIENT_ARGS="-f docker-compose.client.yml"
@@ -31,10 +37,6 @@ while [ -n "$1" ]; do
         # Not a flag, so we should break out of the loop.
         break
     else
-        if [ "$#" -eq 0 ]; then
-            usage
-            exit 1
-        fi
         break
     fi
     shift

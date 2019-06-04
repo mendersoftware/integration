@@ -68,6 +68,7 @@ fi
 
 # Pass this value on to the GUI container as an env variable
 export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
+export MENDER_ARTIFACT_VERSION=$(extra/release_tool.py -g mender-artifact)
 
 exec docker-compose \
      -f docker-compose.yml \

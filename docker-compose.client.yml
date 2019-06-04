@@ -11,3 +11,5 @@ services:
         stdin_open: true
         tty: true
         privileged: true
+        ports:
+            - "3000:80"

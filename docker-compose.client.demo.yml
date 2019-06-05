@@ -1,0 +1,9 @@
+version: '2'
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        ports:
+            - "3000:80"

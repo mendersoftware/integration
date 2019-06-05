@@ -21,7 +21,7 @@ if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 fi
 
 CLIENT=
-CLIENT_ARGS="-f docker-compose.client.yml"
+CLIENT_ARGS="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
 while [ -n "$1" ]; do
     if [ "$1" = "--no-client" ]; then
         echo "--no-client argument is deprecated. Client is now disabled by default and can be enabled with --client"

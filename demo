@@ -30,7 +30,7 @@ while [ -n "$1" ]; do
         echo "-- enabling client container"
     elif [ "$1" = "--kvm" ]; then
         echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
-    elif [ "$1" = "down" ] || [ "$1" = "rm" ]; then
+    elif [ "$1" = "down" ] || [ "$1" = "rm" ] || [ "$1" = "stop" ]; then
         # If the argument is either "down" or "rm", enable the client so that it
         # gets cleaned up, no matter if `--client` is passed or not.
         CLIENT="$CLIENT_ARGS"

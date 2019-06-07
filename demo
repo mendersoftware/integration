@@ -1,5 +1,7 @@
 #!/bin/bash
 
+./verify-docker-versions
+
 usage() {
     cat <<EOF
 $(basename $0) [options] docker-options

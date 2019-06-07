@@ -1,7 +1,0 @@
-#!/bin/bash
-# Stops the server, while preserving state.
-set -e -o pipefail
-
-./verify-docker-versions
-
-./demo stop

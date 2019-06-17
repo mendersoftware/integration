@@ -58,7 +58,7 @@ if [[ "$?" -eq 1 ]]; then
     # This behavior was changed in version docker-compose 1.21.0
     echo "$docker_compose_output" | grep -q -- '--no-parallel'
     if [[ "$?" -eq 1 ]]; then
-        compose_args = "--parallel"
+        compose_args="--parallel"
     fi
 
     docker-compose pull ${compose_args}

@@ -3,6 +3,7 @@ set -x -e
 
 DEFAULT_TESTS=tests/
 MACHINE_NAME=qemux86-64
+DOWNLOAD_REQUIREMENTS="true"
 
 check_tests_arguments() {
     while [ -n "$1" ]; do
@@ -14,6 +15,9 @@ check_tests_arguments() {
                 shift
                 MACHINE_NAME="$1"
                 ;;
+            --no-download)
+                DOWNLOAD_REQUIREMENTS=""
+                ;;
             tests/*)
                 # Allow test files to be named on command line by removing ours.
                 DEFAULT_TESTS=
@@ -24,6 +28,9 @@ check_tests_arguments() {
 }
 
 check_tests_arguments "$@"
+
+# Remove optional argument --no-download from the passthrough to py.test
+pass_args=$(echo $@ | sed -e "s/--no-download//")
 
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
@@ -94,7 +101,6 @@ function get_requirements() {
 
     export PATH=$PWD/downloaded-tools:$PATH
 
-    modify_services_for_testing
     inject_pre_generated_ssh_keys
 }
 
@@ -122,12 +128,12 @@ if [[ -n "$BUILDDIR" ]]; then
     # mender-stress-test-client is here
     export PATH=$PATH:~/go/bin/
 
-    modify_services_for_testing
-else
+elif [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements
 fi
 
 
+modify_services_for_testing
 
 cp -f core-image-full-cmdline-$MACHINE_NAME.ext4 core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
 debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
@@ -180,4 +186,4 @@ if [ $# -eq 0 ]; then
     exit $?
 fi
 
-py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT "$@" $DEFAULT_TESTS
+py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT $pass_args $DEFAULT_TESTS

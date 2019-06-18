@@ -20,12 +20,12 @@ import authentication
 import deployments
 import artifacts
 import inventory
-import auth_v2
+import auth_v2 as auth_v2_mod
 
 logger = logging.getLogger('root')
 
 auth = authentication.Authentication()
-auth_v2 = auth_v2.DeviceAuthV2(auth)
+auth_v2 = auth_v2_mod.DeviceAuthV2(auth)
 deploy = deployments.Deployments(auth, auth_v2)
 image = artifacts.Artifacts()
 inv = inventory.Inventory(auth)

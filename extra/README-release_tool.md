@@ -77,13 +77,13 @@ In this tutorial we go through the typical work flow when doing a release.
 #### Preparing for a release
 
 1. The first thing you need to do is to verify that the script has knowledge of
-   all the repositories it needs to for a given release. Check the `REPOS`
+   all the repositories it needs to for a given release. Check `COMPONENT_MAPS`
    variable inside the script, and add or remove repositories as needed. Make
    sure you read the comments above it, since some changes may require
    additional sections to be changed.
 
 2. Before you can use the release mode of the tool, one prerequisite is
-   required: All repositories mentioned in the `REPOS` variable inside the
+   required: All repositories mentioned in `COMPONENT_MAPS` variable inside the
    script source must be available inside a single directory (having them as
    symlinks pointing somewhere else is ok). The script will ask about the
    location of this directory before starting.

@@ -1298,7 +1298,8 @@ def do_license_generation(state, tag_avail):
     for repo in Component.get_components_of_type("git", only_release=True):
         tmpdirs.append(setup_temp_git_checkout(state, repo.git(), tag_or_followed_branch(repo.git())))
     for repo in Component.get_components_of_type("git", only_non_release=True):
-        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), "origin/master"))
+        remote = find_upstream_remote(state, repo.git())
+        tmpdirs.append(setup_temp_git_checkout(state, repo.git(), remote + "/master"))
 
     try:
         with open("generated-license-text.txt", "w") as fd:

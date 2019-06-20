@@ -103,7 +103,11 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
         arts = deploy.get_artifacts()
-        assert len(arts) == 1
+        try:
+            assert len(arts) == 1
+        except:
+            logging.error(str(arts))
+            raise
         assert "mender-demo-artifact" in arts[0]['name']
         # Emulate ctrl-c exit
         proc.send_signal(signal.SIGINT)

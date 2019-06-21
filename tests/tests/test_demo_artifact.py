@@ -79,6 +79,8 @@ class TestDemoArtifact(MenderTesting):
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
 
+        stop_docker_compose()
+
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_upload")
         logging.info("--------------------------------------------------")

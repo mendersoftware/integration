@@ -23,33 +23,9 @@ import time
 # environment if we don't have to.
 SETUP_TYPE = None
 
-ST_NoClient = 0
-ST_OneClient = 1
-ST_OneClientBootstrapped = 2
-ST_TwoClientsBootstrapped = 3
-ST_OneClientsBootstrapped_AWS_S3 = 4
-ST_SignedClient = 5
-ST_ShortLivedAuthToken = 6
-ST_CustomSetup = 7
-ST_MultiTenancyNoClient = 8
-ST_OneClientsBootstrapped_AWS_S3_MT = 9
-ST_MultiTenancyNoClientWithSmtp = 10
-ST_Failover = 11
-ST_LegacyClient = 12
-ST_OneDockerClientBootstrapped = 13
-
-
 HAVE_TOKEN_TIMEOUT = 60 * 5
 MENDER_STORE = '/data/mender/mender-store'
 
-
-def setup_type():
-    return SETUP_TYPE
-
-
-def set_setup_type(type):
-    global SETUP_TYPE
-    SETUP_TYPE = type
 
 def put(file, local_path=".", remote_path="."):
     (scp, host, port) = scp_prep_args()

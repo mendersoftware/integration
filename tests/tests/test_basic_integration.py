@@ -113,7 +113,6 @@ class TestBasicIntegration(MenderTesting):
 
 
 
-    @pytest.mark.timeout(1000)
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     def test_forced_update_check_from_client(self):
         """Upload a device with a broken image, followed by a valid image"""

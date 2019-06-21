@@ -36,8 +36,6 @@ def standard_setup_one_client(request):
     restart_docker_compose()
     reset_mender_api()
 
-    set_setup_type(ST_OneClient)
-
 
 def setup_set_client_number_bootstrapped(clients):
     docker_compose_cmd("scale mender-client=%d" % clients)
@@ -46,16 +44,12 @@ def setup_set_client_number_bootstrapped(clients):
     auth.reset_auth_token()
     auth_v2.accept_devices(clients)
 
-    set_setup_type(None)
-
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped():
     restart_docker_compose()
     reset_mender_api()
     auth_v2.accept_devices(1)
-
-    set_setup_type(ST_OneClientBootstrapped)
 
 
 @pytest.fixture(scope="function")
@@ -74,15 +68,11 @@ def standard_setup_one_docker_client_bootstrapped():
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
 
-    set_setup_type(ST_OneDockerClientBootstrapped)
-
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped():
     restart_docker_compose(2)
     reset_mender_api()
     auth_v2.accept_devices(2)
-
-    set_setup_type(ST_TwoClientsBootstrapped)
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped_with_s3():
@@ -102,8 +92,6 @@ def standard_setup_one_client_bootstrapped_with_s3():
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
 
-    set_setup_type(ST_OneClientsBootstrapped_AWS_S3)
-
 
 @pytest.fixture(scope="function")
 def standard_setup_without_client():
@@ -114,8 +102,6 @@ def standard_setup_without_client():
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml up -d",
                         use_common_files=False)
-
-    set_setup_type(ST_NoClient)
 
 @pytest.fixture(scope="function")
 def setup_with_legacy_client():
@@ -137,7 +123,6 @@ def setup_with_legacy_client():
 
     ssh_is_opened()
     auth_v2.accept_devices(1)
-    set_setup_type(ST_NoClient)
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):
@@ -149,7 +134,6 @@ def standard_setup_with_signed_artifact_client(request):
     ssh_is_opened()
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
-    set_setup_type(ST_SignedClient)
 
 
 @pytest.fixture(scope="function")
@@ -167,7 +151,6 @@ def standard_setup_with_short_lived_token():
     ssh_is_opened()
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
-    set_setup_type(ST_ShortLivedAuthToken)
 
 @pytest.fixture(scope="function")
 def setup_failover():
@@ -190,7 +173,6 @@ def setup_failover():
     ssh_is_opened()
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
-    set_setup_type(ST_Failover)
 
 @pytest.fixture(scope="function")
 def running_custom_production_setup(request):
@@ -204,8 +186,6 @@ def running_custom_production_setup(request):
         stop_docker_compose()
 
     request.addfinalizer(fin)
-
-    set_setup_type(ST_CustomSetup)
 
 
 @pytest.fixture(scope="function")
@@ -232,7 +212,6 @@ def multitenancy_setup_without_client(request):
         stop_docker_compose()
 
     request.addfinalizer(fin)
-    set_setup_type(ST_MultiTenancyNoClient)
 
 
 @pytest.fixture(scope="function")
@@ -262,7 +241,6 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
         stop_docker_compose()
 
     request.addfinalizer(fin)
-    set_setup_type(ST_OneClientsBootstrapped_AWS_S3_MT)
 
 @pytest.fixture(scope="function")
 def multitenancy_setup_without_client_with_smtp(request):
@@ -293,7 +271,6 @@ def multitenancy_setup_without_client_with_smtp(request):
         stop_docker_compose()
 
     request.addfinalizer(fin)
-    set_setup_type(ST_MultiTenancyNoClientWithSmtp)
 
 
 def get_host_ip():

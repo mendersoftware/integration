@@ -97,8 +97,6 @@ def stop_docker_compose():
         logger.info("running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
 
-    common.set_setup_type(None)
-
 
 def start_docker_compose(clients=1):
     docker_compose_cmd("up -d")
@@ -108,8 +106,6 @@ def start_docker_compose(clients=1):
 
 
     ssh_is_opened()
-
-    common.set_setup_type(common.ST_OneClient)
 
 
 def restart_docker_compose(clients=1):

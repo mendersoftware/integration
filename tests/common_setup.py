@@ -53,6 +53,19 @@ def standard_setup_one_client_bootstrapped():
 
 
 @pytest.fixture(scope="function")
+def standard_setup_one_rofs_client_bootstrapped():
+    stop_docker_compose()
+    reset_mender_api()
+
+    docker_compose_cmd("-f ../docker-compose.client.rofs.yml up -d")
+
+    ssh_is_opened()
+
+    auth.reset_auth_token()
+    auth_v2.accept_devices(1)
+
+
+@pytest.fixture(scope="function")
 def standard_setup_one_docker_client_bootstrapped():
     stop_docker_compose()
     reset_mender_api()

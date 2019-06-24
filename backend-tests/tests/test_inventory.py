@@ -20,7 +20,7 @@ from common import mongo, clean_mongo
 from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import api.deviceauth as deviceauth_v1
 import api.useradm as useradm
-import api.inventory as inventory
+import api.inventory as inventory_v1
 import api.tenantadm as tenantadm
 import util.crypto
 from common import User, Device, Authset, Tenant, \
@@ -127,12 +127,12 @@ def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=''):
 
     return devices
 
-class TestGetDevicesBase:
+class TestGetDevicesV1Base:
     def do_test_get_devices_ok(self, user, tenant_token=''):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory.URL_DEV)
+        invm = ApiClient(inventory_v1.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
 
         # log in user
         r = useradmm.call('POST',
@@ -148,7 +148,7 @@ class TestGetDevicesBase:
         time.sleep(3)
 
         r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICES,
+                                        inventory_v1.URL_DEVICES,
                                         qs_params={'per_page':100})
         assert r.status_code == 200
         api_devs = r.json()
@@ -157,8 +157,8 @@ class TestGetDevicesBase:
     def do_test_filter_devices_ok(self, user, tenant_token=''):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory.URL_DEV)
+        invm = ApiClient(inventory_v1.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
 
         # log in user
         r = useradmm.call('POST',
@@ -174,7 +174,7 @@ class TestGetDevicesBase:
         time.sleep(3)
 
         r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICES,
+                                        inventory_v1.URL_DEVICES,
                                         qs_params={'per_page':100})
         assert r.status_code == 200
         api_devs = r.json()
@@ -189,7 +189,7 @@ class TestGetDevicesBase:
                     }
             ]
             r = invd.with_auth(d.token).call('PATCH',
-                                        inventory.URL_DEVICE_ATTRIBUTES,
+                                        inventory_v1.URL_DEVICE_ATTRIBUTES,
                                         payload)
             assert r.status_code == 200
 
@@ -198,20 +198,20 @@ class TestGetDevicesBase:
         qs_params['per_page'] = 100
         qs_params['mac'] = 'de:ad:be:ef:06:7'
         r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICES,
+                                        inventory_v1.URL_DEVICES,
                                         qs_params=qs_params)
         assert r.status_code == 200
         api_devs = r.json()
         assert len(api_devs) == 1
 
-class TestGetDevices(TestGetDevicesBase):
+class TestGetDevicesV1(TestGetDevicesV1Base):
     def test_get_devices_ok(self, user):
         self.do_test_get_devices_ok(user)
 
     def test_filter_devices_ok(self, user):
         self.do_test_filter_devices_ok(user)
 
-class TestGetDevicesMultitenant(TestGetDevicesBase):
+class TestGetDevicesV1Multitenant(TestGetDevicesV1Base):
     def test_get_devices_ok(self, tenants_users):
         for t in tenants_users:
             self.do_test_get_devices_ok(t.users[0], tenant_token=t.tenant_token)
@@ -220,12 +220,12 @@ class TestGetDevicesMultitenant(TestGetDevicesBase):
         for t in tenants_users:
             self.do_test_filter_devices_ok(t.users[0], tenant_token=t.tenant_token)
 
-class TestDevicePatchAttributes:
+class TestDevicePatchAttributesV1:
     def test_ok(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory.URL_DEV)
+        invm = ApiClient(inventory_v1.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
 
         # log in user
         r = useradmm.call('POST',
@@ -258,13 +258,13 @@ class TestDevicePatchAttributes:
                     }
             ]
             r = invd.with_auth(d.token).call('PATCH',
-                                        inventory.URL_DEVICE_ATTRIBUTES,
+                                        inventory_v1.URL_DEVICE_ATTRIBUTES,
                                         payload)
             assert r.status_code == 200
 
         for d in devs:
             r = invm.with_auth(utoken).call('GET',
-                                            inventory.URL_DEVICE,
+                                            inventory_v1.URL_DEVICE,
                                             path_params={'id': d.id})
             assert r.status_code == 200
 
@@ -284,8 +284,8 @@ class TestDevicePatchAttributes:
     def test_fail_no_attr_value(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory.URL_DEV)
+        invm = ApiClient(inventory_v1.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
 
         # log in user
         r = useradmm.call('POST',
@@ -307,6 +307,6 @@ class TestDevicePatchAttributes:
                     }
             ]
             r = invd.with_auth(d.token).call('PATCH',
-                                        inventory.URL_DEVICE_ATTRIBUTES,
+                                        inventory_v1.URL_DEVICE_ATTRIBUTES,
                                         payload)
             assert r.status_code == 400

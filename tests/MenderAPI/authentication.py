@@ -51,30 +51,33 @@ class Authentication:
         self.password = password
         self.get_auth_token()
 
-    def get_auth_token(self):
+    def get_auth_token(self, create_new_user=True):
         if self.auth_header is not None:
             return self.auth_header
 
         # try login - the user might be in a shared db already (if not running xdist)
         r = self._do_login(self.email, self.password)
 
-        # ...if not, create user
-        if r.status_code is not 200:
-            if self.multitenancy:
-                tenant_id = self._create_tenant(self.username)
-                tenant_id = tenant_id.strip()
+        logging.info("Getting authentication token for user")
+        logging.info(self.username)
 
-                self._create_user(self.email, self.password, tenant_id)
+        if create_new_user:
+            if r.status_code is not 200:
+                if self.multitenancy:
+                    tenant_id = self._create_tenant(self.username)
+                    tenant_id = tenant_id.strip()
 
-                tenant_data = self._get_tenant_data(tenant_id)
-                tenant_data_json = json.loads(tenant_data)
+                    self._create_user(self.email, self.password, tenant_id)
 
-                self.current_tenant = {"tenant_id": tenant_id,
-                                       "tenant_token": tenant_data_json["tenant_token"],
-                                       "name": tenant_data_json["name"]}
+                    tenant_data = self._get_tenant_data(tenant_id)
+                    tenant_data_json = json.loads(tenant_data)
 
-            else:
-                self._create_user(self.email, self.password)
+                    self.current_tenant = {"tenant_id": tenant_id,
+                                        "tenant_token": tenant_data_json["tenant_token"],
+                                        "name": tenant_data_json["name"]}
+
+                else:
+                    self._create_user(self.email, self.password)
 
             r = self._do_login(self.email, self.password)
             assert r.status_code == 200

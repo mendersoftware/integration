@@ -79,10 +79,6 @@ function get_requirements() {
 
     chmod +x downloaded-tools/mender-artifact
 
-    curl --fail "https://mender.s3-accelerate.amazonaws.com/temp_${MENDER_BRANCH}/core-image-full-cmdline-$MACHINE_NAME.ext4" \
-         -o core-image-full-cmdline-$MACHINE_NAME.ext4 \
-         -z core-image-full-cmdline-$MACHINE_NAME.ext4
-
     if [ $? -ne 0 ]; then
         echo "failed to download ext4 image" 
         exit 1
@@ -104,6 +100,18 @@ function get_requirements() {
     inject_pre_generated_ssh_keys
 }
 
+# Old ways of getting the image, now deprecated, but still needed for images
+# built with thud or older.
+get_ext4_image_deprecated() {
+    if [[ -n "$BUILDDIR" ]]; then
+        cp -f "$BUILDDIR/tmp/deploy/images/$MACHINE_NAME/core-image-full-cmdline-$MACHINE_NAME.ext4" .
+    elif [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+        curl --fail "https://mender.s3-accelerate.amazonaws.com/temp_${MENDER_BRANCH}/core-image-full-cmdline-$MACHINE_NAME.ext4" \
+             -o core-image-full-cmdline-$MACHINE_NAME.ext4 \
+             -z core-image-full-cmdline-$MACHINE_NAME.ext4
+    fi
+}
+
 if [[ $1 == "--get-requirements" ]]; then
     get_requirements
     exit 0
@@ -111,27 +119,27 @@ fi
 
 dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
 
-if [[ -n "$BUILDDIR" ]]; then
-    # Get the necessary path directly from the build.
+# mender-stress-test-client is here
+export PATH=$PATH:~/go/bin/
 
-    # On branches without recipe specific sysroots, the next step will fail
-    # because the prepare_recipe_sysroot task doesn't exist. Use that failure
-    # to fall back to the old generic sysroot path.
-    if ( cd "$BUILDDIR" && bitbake -c prepare_recipe_sysroot mender-test-dependencies ); then
-        eval "$(cd "$BUILDDIR" && bitbake -e mender-test-dependencies | grep '^export PATH=')":"$PATH"
-    else
-        eval "$(cd "$BUILDDIR" && bitbake -e core-image-minimal | grep '^export PATH=')":"$PATH"
-    fi
-
-    cp -f "$BUILDDIR/tmp/deploy/images/$MACHINE_NAME/core-image-full-cmdline-$MACHINE_NAME.ext4" .
-
-    # mender-stress-test-client is here
-    export PATH=$PATH:~/go/bin/
-
-elif [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements
 fi
 
+mkdir -p output
+ret=0
+docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py -g mender-client-qemu) || ret=$?
+if [ $ret -eq 0 ]; then
+    # There is `extract_fs` support. Get the R/O image too.
+    docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+           mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py -g mender-client-qemu-rofs)
+    mv output/* .
+else
+    # Old style ext4 fetching.
+    get_ext4_image_deprecated
+fi
+rmdir output
 
 modify_services_for_testing
 

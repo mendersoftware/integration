@@ -66,7 +66,7 @@ class TestDemoArtifact(MenderTesting):
                     password = line[-13:-1]
                     logging.info('The login password:')
                     logging.info(password)
-                    auth.password = password
+                    self.auth.password = password
                     assert len(password) == 12
                     break
             return proc
@@ -86,25 +86,25 @@ class TestDemoArtifact(MenderTesting):
         logging.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script)
         stop_docker_compose()
-        auth.reset_auth_token()
+        self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_installation")
         logging.info("--------------------------------------------------")
         self.demo_artifact_installation(run_demo_script)
         stop_docker_compose()
-        auth.reset_auth_token()
+        self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_up_down_up")
         logging.info("--------------------------------------------------")
         self.demo_up_down_up(run_demo_script)
         stop_docker_compose()
-        auth.reset_auth_token()
+        self.auth.reset_auth_token()
 
     def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
-        arts = deploy.get_artifacts()
+        arts = self.deploy.get_artifacts()
         try:
             assert len(arts) == 1
         except:
@@ -119,32 +119,32 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
-        artifacts = deploy.get_artifacts()
+        artifacts = self.deploy.get_artifacts(auth_create_new_user=False) # User should be created by the demo script.
         assert len(artifacts) == 1
         artifact_name = artifacts[0]['name']
 
         # Trigger the deployment
-        devices = auth_v2.get_devices()
+        devices = self.authv2.get_devices()
         assert len(devices) == 1
 
         # Accept the device to be updated
-        auth_v2.accept_devices(1)
+        self.authv2.accept_devices(1)
         devices = list(
             set([
                 device["id"]
-                for device in auth_v2.get_devices_status("accepted")
+                for device in self.authv2.get_devices_status("accepted")
             ]))
         assert len(devices) == 1
 
         # Run the deployment.
-        deployment_id = deploy.trigger_deployment(
+        deployment_id = self.deploy.trigger_deployment(
             name="Demo artifact deployment",
             artifact_name=artifacts[0]['name'],
             devices=devices)
-        deploy.check_expected_status("inprogress", deployment_id)
+        self.deploy.check_expected_status("inprogress", deployment_id)
 
         # Verify the deployment
-        deploy.check_expected_status("finished", deployment_id)
+        self.deploy.check_expected_status("finished", deployment_id)
 
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""

@@ -14,6 +14,7 @@
 import pytest
 import random
 import time
+from datetime import datetime
 
 from api.client import ApiClient
 from common import mongo, clean_mongo
@@ -417,3 +418,334 @@ def submit_id_internal_api(dev, invi, tenant_id=''):
                   path_params={'id': dev.id}, \
                   qs_params={'tenant_id': tenant_id})
     assert r.status_code == 200
+
+class TestGetDevices:
+    def test_ok_all(self, user):
+        """ All devices """
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
+        invi = ApiClient(inventory.URL_INT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_MGMT_DEVICES,
+                                        qs_params={'per_page':100})
+        assert r.status_code == 200
+
+        assert int(r.headers['X-Total-Count']) == 20
+
+        api_devs = r.json()
+        assert len(api_devs) == len(devs)
+
+    def test_ok_paging(self, user):
+        """ A couple paging scenarios """
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
+        invi = ApiClient(inventory.URL_INT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+
+        # default paging (20)
+        cases = [
+                { 
+                    'name': 'default, pg 1',
+                    'page': None, 
+                    'per_page': None,
+
+                    'expected_devs': filter_page_sort_devs(devs, page=1, per_page=20),
+                    'expected_total': 20,
+                },
+                {
+                    'name': 'default, pg 2',
+                    'page': 2, 
+                    'per_page': None,
+
+                    'expected_devs': [],
+                    'expected_total': 20,
+                },
+                {
+                    'name': 'custom, per pg 5',
+                    'page': None, 
+                    'per_page': 5,
+
+                    'expected_devs': filter_page_sort_devs(devs, page=1, per_page=5),
+                    'expected_total': 20,
+                },
+                {
+                    'name': 'custom, pg 2, per pg 5',
+                    'page': 2, 
+                    'per_page': 5,
+
+                    'expected_devs': filter_page_sort_devs(devs, page=2, per_page=5),
+                    'expected_total': 20,
+                },
+                {
+                    'name': 'custom, past bounds',
+                    'page': 5, 
+                    'per_page': 5,
+
+                    'expected_devs': [],
+                    'expected_total': 20,
+                }
+        ]
+
+        for case in cases:
+            print('case {}'.format(case['name']))
+            qs = {}
+
+            if case['page'] is not None:
+                qs['page'] = case ['page']
+
+            if case['per_page'] is not None:
+                qs['per_page'] = case ['per_page']
+
+            r = invm.with_auth(utoken).call('GET',
+                                            inventory.URL_MGMT_DEVICES,
+                                            qs_params=qs)
+
+            assert r.status_code == 200, 'case {}'.format(case['name'])
+
+            api_devs = r.json()
+
+            assert int(r.headers['X-Total-Count']) == case['expected_total'], 'case {}'.format(case['name'])
+
+            compare_devs(case['expected_devs'], api_devs)
+
+    def test_ok_filter(self, user):
+        """ Just filtering scenarios """
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
+        invi = ApiClient(inventory.URL_INT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+
+        cases = [
+            {
+                'name': 'single filter 1, multiple res',
+                'filters': [{'attr': 'identity:batch', 'val': 'batch1'}],
+                'expected_total': 10,
+                'expected_devs': filter_page_sort_devs(devs, filters=[{'scope': 'identity', 'name':'batch', 'val': 'batch1'}])
+            },
+            {
+                'name': 'single filter 2, multiple res',
+                'filters': [{'attr': 'identity:batch', 'val': 'batch2'}],
+                'expected_total': 10,
+                'expected_devs': filter_page_sort_devs(devs, filters=[{'scope': 'identity', 'name':'batch', 'val': 'batch2'}])
+            },
+            {
+                'name': 'single filter 3, no res',
+                'filters': [{'attr': 'identity:batch', 'val': 'batch3'}],
+                'expected_total': 0,
+                'expected_devs': []
+            },
+            {
+                'name': '2 filters, multiple res',
+                'filters': [{'attr': 'identity:batch', 'val': 'batch1'},
+                    {'attr': 'identity:common', 'val': 'eq:common'}],
+                'expected_total': 5,
+                'expected_devs': filter_page_sort_devs(devs, filters=[
+                            {'scope': 'identity', 'name':'common', 'val': 'common'},
+                            {'scope': 'identity', 'name':'batch', 'val': 'batch1'}
+                            ])
+            },
+            {
+                'name': '2 filters 2, multiple res',
+                'filters': [{'attr': 'identity:batch', 'val': 'batch2'},
+                    {'attr': 'identity:common', 'val': 'eq:common'}],
+                'expected_total': 5,
+                'expected_devs': filter_page_sort_devs(devs, filters=[
+                            {'scope': 'identity', 'name':'common', 'val': 'common'},
+                            {'scope': 'identity', 'name':'batch', 'val': 'batch2'}
+                            ])
+            },
+            {
+                'name': '1 filter, single res',
+                'filters': [{'attr': 'identity:mac', 'val': devs[10].id_data['mac']}],
+                'expected_total': 1,
+                'expected_devs': [devs[10]]
+            }
+        ]
+
+        for case in cases:
+            print('case {}'.format(case['name']))
+            qs = {}
+
+            for f in case['filters']:
+                qs[f['attr']] = f['val']
+
+            r = invm.with_auth(utoken).call('GET',
+                                            inventory.URL_MGMT_DEVICES,
+                                            qs_params=qs)
+
+            assert r.status_code == 200, 'case {}'.format(case['name'])
+
+            api_devs = r.json()
+            compare_devs(case['expected_devs'], api_devs)
+
+            assert int(r.headers['X-Total-Count']) == case['expected_total'], 'case {}'.format(case['name'])
+ 
+    def test_ok_sort(self, user):
+        """ Just sorting scenarios """
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
+        invi = ApiClient(inventory.URL_INT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+
+        cases = [
+            {
+                'name': 'default(desc)',
+                'sort': 'identity:sn',
+                'expected_total': 20,
+                'expected_devs': filter_page_sort_devs(devs, sort={'scope': 'identity', 'name': 'sn'})
+            },
+            {
+                'name': 'desc',
+                'sort': 'identity:sn:desc',
+                'expected_total': 20,
+                'expected_devs': filter_page_sort_devs(devs, sort={'scope': 'identity', 'name': 'sn'})
+            },
+            {
+                'name': 'asc',
+                'sort': 'identity:sn:asc',
+                'expected_total': 20,
+                'expected_devs': filter_page_sort_devs(devs, sort={'scope': 'identity', 'name': 'sn', 'asc': True})
+            },
+        ]
+
+        for case in cases:
+            print('case {}'.format(case['name']))
+            r = invm.with_auth(utoken).call('GET',
+                                            inventory.URL_MGMT_DEVICES,
+                                            qs_params={'sort': case['sort']})
+
+            assert r.status_code == 200, 'case {}'.format(case['name'])
+
+            api_devs = r.json()
+
+            compare_devs(case['expected_devs'], api_devs)
+
+            assert int(r.headers['X-Total-Count']) == case['expected_total'], 'case {}'.format(case['name'])
+
+    def test_ok_filter_sort_page(self, user):
+        """
+            Full blown 'mixed' case, extend into test pairs as an improvement (on bug report?).
+        """
+        useradmm = ApiClient(useradm.URL_MGMT)
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        invm = ApiClient(inventory.URL_MGMT)
+        invd = ApiClient(inventory_v1.URL_DEV)
+        invi = ApiClient(inventory.URL_INT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_MGMT_DEVICES,
+                                        qs_params={
+                                            'identity:batch': 'batch1',
+                                            'identity:common': 'common',
+                                            'sort': 'identity:sn:asc',
+                                            'per_page': 2,
+                                            'page': 2})
+
+        assert r.status_code == 200
+
+        api_devs = r.json()
+
+        expected_devs = filter_page_sort_devs(devs, 
+                page=2, 
+                per_page=2, 
+                filters=[
+                    {'scope': 'identity', 'name': 'batch', 'val': 'batch1'}, 
+                    {'scope': 'identity', 'name': 'common', 'val': 'common'}],
+                sort={'scope': 'identity', 'name': 'sn', 'asc': True})
+
+        compare_devs(expected_devs, api_devs)
+
+        assert int(r.headers['X-Total-Count']) == 5 
+
+def filter_page_sort_devs(devs, page=None, per_page=None, filters=None, sort=None):
+        """
+            filters = [ {'scope': , 'name': , 'val': }, ]
+            sort =    {'scope': , 'name': , 'asc': True/False }
+        """
+
+        if filters is not None:
+            for f in filters:
+                n = f['name']
+                v = f['val']
+                scope = f['scope']
+
+                if scope == 'inventory':
+                    devs = [d for d in devs if d.inventory[n] == v]
+                elif scope == 'identity':
+                    devs = [d for d in devs if n in d.id_data and d.id_data[n] == v]
+
+
+        # GOTCHA: sort simulation only works for attrs with different vals in each dev
+        # e.g. sorting by 'batch' would produce a correct general sort
+        # but mongo is free to order however it wants within a 'batch' - id comparisons won't work
+        if sort is not None:
+            desc = True
+            if 'asc' in sort:
+                desc = not sort['asc']
+
+            if sort['scope'] == 'identity':
+                devs.sort(key=lambda x: x.id_data[sort['name']], reverse=desc)
+
+        if page is None:
+            page = 1
+
+        if per_page is None:
+            per_page = 20
+
+        lo = (page-1)*per_page
+        hi = lo + per_page
+
+        return devs[lo:hi]
+
+def compare_devs(expected, api_devs):
+    assert len(expected) == len(api_devs)
+
+    for i in range(len(api_devs)):
+        assert api_devs[i]['id'] == expected[i].id

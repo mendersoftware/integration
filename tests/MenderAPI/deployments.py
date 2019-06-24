@@ -175,9 +175,9 @@ class Deployments(object):
         r = requests.delete(artifact_url, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.no_content
 
-    def get_artifacts(self):
+    def get_artifacts(self, auth_create_new_user=True):
         artifact_url = self.get_deployments_base_path() + "artifacts"
-        r = requests.get(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests.get(artifact_url, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 

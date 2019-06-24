@@ -21,6 +21,7 @@ from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import api.deviceauth as deviceauth_v1
 import api.useradm as useradm
 import api.inventory as inventory_v1
+import api.inventory_v2 as inventory
 import api.tenantadm as tenantadm
 import util.crypto
 from common import User, Device, Authset, Tenant, \
@@ -311,3 +312,108 @@ class TestDevicePatchAttributesV1:
                                         inventory_v1.URL_DEVICE_ATTRIBUTES,
                                         payload)
             assert r.status_code == 400
+
+def make_devs_get_v2(utoken, devauthd, invd, invi, tenant_token='', tenant_id=''):
+    """ GET v2 - specific data fixture 
+        Create 20 accepted devices, with inventory.
+        All submit:
+        - inventory via PATCH v1/devices/inventory/devices.
+        - id data via PATCH v2/internal/inventory/devices.
+        Each half of devices shares a 'batch' identity attribute, for testing filtering.
+        The 'middle' 10 also share a 'common' identity attribute, also for this purpose.
+    """
+    devs = []
+
+    for i in range(0,20):
+        batch = 'batch1'
+
+        if i > 9:
+            batch = 'batch2'
+
+        mac = ':'.join(['{:02x}'.format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
+        sn = ''.join(['{}'.format(random.randint(0, 9)) for i in range(6)])
+
+        id_data = {
+            'batch': batch,
+            'mac': mac,
+            'sn': sn,
+        }
+
+        if i > 4 and i < 15:
+            id_data['common'] = 'common'
+
+        dev = make_accepted_device(utoken, devauthd, tenant_token=tenant_token, id_data=id_data)
+
+        foo = ''.join(['{}'.format(random.randint(0x00, 0xFF)) for i in range(6)])
+        bar = ''.join(['{}'.format(random.randint(0x00, 0xFF)) for i in range(6)])
+
+        inv = {
+            'foo': foo,
+            'bar': bar
+        }
+
+        dev.inventory = inv
+
+        devs.append(dev)
+
+    # before returning, make sure we have all devices in inventory
+    # means first waiting for conductor so that the workflow doesn't overflow to other tests
+    # then doing the PATCHes
+    retries = 5
+    invm = ApiClient(inventory.URL_MGMT)
+    api_devs = []
+
+    while retries>0:
+        r = invm.with_auth(utoken).call('GET',
+                                            inventory.URL_MGMT_DEVICES)
+        retries-=1
+        try:
+            assert r.status_code == 200
+            api_devs = r.json()
+            assert len(api_devs) == 20
+            break
+        except AssertionError:
+            print('waiting for conductor: retry count {}'.format(retries))
+            time.sleep(1)
+            continue
+
+    assert retries != 0, 'waiting for conductor timed out'
+
+    # we allowed conductor to do its async job(s), we don't know the order of devices now
+    # sort our reference collection according to the order in api_devs
+    sorted_ids = [x['id'] for x in api_devs]
+    devs = sorted(devs, key=lambda x: sorted_ids.index(x.id))
+
+    # only now PATCH attributes via the device/internal api
+    for d in devs:
+        submit_id_internal_api(d, invi, tenant_id)
+        submit_inv_devices_api(d, invd)
+
+    return devs
+
+def submit_inv_devices_api(dev, invd):
+    payload = []
+
+    for k in dev.inventory:
+        payload.append({'name': k, 'value': dev.inventory[k]})
+
+    r = invd.with_auth(dev.token).call('PATCH',
+                                   inventory_v1.URL_DEVICE_ATTRIBUTES,
+                                   payload)
+    assert r.status_code == 200
+
+def submit_id_internal_api(dev, invi, tenant_id=''):
+    payload = []
+    for k in dev.id_data:
+        payload.append({'name': k, 'value': dev.id_data[k], 'scope': 'identity'})
+
+    now = str(round(datetime.utcnow().timestamp() * 1000))
+    r = invi.with_auth(dev.token) \
+             .with_header('X-MEN-Source', 'deviceauth') \
+             .with_header('X-MEN-Msg-Timestamp', now) \
+             .call('PATCH', \
+                  inventory.URL_INT_DEVICE_ATTRIBUTES, \
+                  payload, \
+                  path_params={'id': dev.id}, \
+                  qs_params={'tenant_id': tenant_id})
+    assert r.status_code == 200

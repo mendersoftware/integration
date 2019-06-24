@@ -75,8 +75,9 @@ def rand_id_data():
 
     return {'mac': mac, 'sn': sn}
 
-def make_pending_device(utoken, tenant_token=''):
-    id_data = rand_id_data()
+def make_pending_device(utoken, tenant_token='', id_data=None):
+    if id_data is None:
+        id_data = rand_id_data()
 
     priv, pub = util.crypto.rsa_get_keypair()
     new_set = create_authset(id_data, pub, priv, utoken, tenant_token=tenant_token)
@@ -89,8 +90,8 @@ def make_pending_device(utoken, tenant_token=''):
 
     return dev
 
-def make_accepted_device(utoken, devauthd, tenant_token=''):
-    dev = make_pending_device(utoken, tenant_token=tenant_token)
+def make_accepted_device(utoken, devauthd, tenant_token='', id_data=None):
+    dev = make_pending_device(utoken, tenant_token=tenant_token, id_data=id_data)
     aset_id = dev.authsets[0].id
     change_authset_status(dev.id, aset_id, 'accepted', utoken)
 

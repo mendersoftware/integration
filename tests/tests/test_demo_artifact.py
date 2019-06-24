@@ -141,7 +141,6 @@ class TestDemoArtifact(MenderTesting):
             name="Demo artifact deployment",
             artifact_name=artifacts[0]['name'],
             devices=devices)
-        self.deploy.check_expected_status("inprogress", deployment_id)
 
         # Verify the deployment
         self.deploy.check_expected_status("finished", deployment_id)

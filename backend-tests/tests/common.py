@@ -31,6 +31,15 @@ def mongo():
 def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""
+    yield from _clean_mongo(mongo)
+
+@pytest.yield_fixture(scope='class')
+def clean_mongo_cls(mongo):
+    """Fixture setting up a clean (i.e. empty database). Yields
+    pymongo.MongoClient connected to the DB."""
+    yield from _clean_mongo(mongo)
+
+def _clean_mongo(mongo):
     mongo_cleanup(mongo)
     yield mongo
     mongo_cleanup(mongo)

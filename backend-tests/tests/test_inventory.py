@@ -17,7 +17,7 @@ import time
 from datetime import datetime
 
 from api.client import ApiClient
-from common import mongo, clean_mongo
+from common import mongo, clean_mongo, clean_mongo_cls
 from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import api.deviceauth as deviceauth_v1
 import api.useradm as useradm
@@ -31,16 +31,30 @@ from common import User, Device, Authset, Tenant, \
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
+    yield _clean_migrated_mongo(clean_mongo)
+
+@pytest.yield_fixture(scope='class')
+def clean_migrated_mongo_cls(clean_mongo_cls):
+    yield _clean_migrated_mongo(clean_mongo)
+
+def _clean_migrated_mongo(mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
 
     deviceauth_cli.migrate()
     useradm_cli.migrate()
 
-    yield clean_mongo
+    yield mongo
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo_mt(clean_mongo):
+    yield _clean_migrated_mongo_mt(clean_mongo)
+
+@pytest.yield_fixture(scope='class')
+def clean_migrated_mongo_mt_cls(clean_mongo_cls):
+    yield _clean_migrated_mongo_mt(clean_mongo_cls)
+
+def _clean_migrated_mongo_mt(mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
     for t in ['tenant1', 'tenant2']:
@@ -53,8 +67,19 @@ def clean_migrated_mongo_mt(clean_mongo):
 def user(clean_migrated_mongo):
     yield create_user('user-foo@acme.com', 'correcthorse')
 
+@pytest.yield_fixture(scope="class")
+def user_cls(clean_migrated_mongo_cls):
+    yield create_user('user-foo@acme.com', 'correcthorse')
+
 @pytest.yield_fixture(scope="function")
 def tenants_users(clean_migrated_mongo_mt):
+    yield _tenants_users(clean_migrated_mongo_mt)
+
+@pytest.yield_fixture(scope="class")
+def tenants_users_cls(clean_migrated_mongo_mt_cls):
+    yield _tenants_users(clean_migrated_mongo_mt_cls)
+
+def _tenants_users(mongo):
     cli = CliTenantadm()
     api = ApiClient(tenantadm.URL_INTERNAL)
 
@@ -69,7 +94,7 @@ def tenants_users(clean_migrated_mongo_mt):
             user = create_tenant_user(i, t)
             t.users.append(user)
 
-    yield tenants
+    return tenants
 
 def rand_id_data():
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
@@ -418,6 +443,46 @@ def submit_id_internal_api(dev, invi, tenant_id=''):
                   path_params={'id': dev.id}, \
                   qs_params={'tenant_id': tenant_id})
     assert r.status_code == 200
+
+@pytest.fixture(scope='class')
+def get_v2_devices(user_cls):
+    useradmm = ApiClient(useradm.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    invm = ApiClient(inventory.URL_MGMT)
+    invd = ApiClient(inventory_v1.URL_DEV)
+    invi = ApiClient(inventory.URL_INT)
+
+    # log in user
+    r = useradmm.call('POST',
+                      useradm.URL_LOGIN,
+                      auth=(user_cls.name, user_cls.pwd))
+    assert r.status_code == 200
+    utoken = r.text
+
+    devs = make_devs_get_v2(utoken, devauthd, invd, invi)
+    return devs
+
+@pytest.fixture(scope='class')
+def get_v2_devices_mt(tenants_users_cls):
+    useradmm = ApiClient(useradm.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    invm = ApiClient(inventory.URL_MGMT)
+    invd = ApiClient(inventory_v1.URL_DEV)
+    invi = ApiClient(inventory.URL_INT)
+
+    for t in tenants_users_cls:
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(t.users[0].name, t.users[0].pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_token=t.tenant_token, tenant_id=t.id)
+
+        t.devices = devs
+
+    return tenants_users
 
 class TestGetDevicesBase:
     def do_test_ok_all(self, user, tenant_id='', tenant_token=''):

@@ -27,7 +27,8 @@ import api.tenantadm as tenantadm
 import util.crypto
 from common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
-        create_authset, get_device_by_id_data, change_authset_status
+        create_authset, get_device_by_id_data, change_authset_status, \
+        wait_conductor_create_devices_inv
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -173,7 +174,7 @@ class TestGetDevicesV1Base:
         devs = make_accepted_devices(utoken, devauthd, 40, tenant_token)
 
         # wait for devices to be provisioned
-        time.sleep(3)
+        wait_conductor_create_devices_inv(utoken, 40, 20)
 
         r = invm.with_auth(utoken).call('GET',
                                         inventory_v1.URL_DEVICES,
@@ -199,7 +200,7 @@ class TestGetDevicesV1Base:
         devs = make_accepted_devices(utoken, devauthd, 40, tenant_token)
 
         # wait for devices to be provisioned
-        time.sleep(3)
+        wait_conductor_create_devices_inv(utoken, 40, 20)
 
         r = invm.with_auth(utoken).call('GET',
                                         inventory_v1.URL_DEVICES,
@@ -266,7 +267,7 @@ class TestDevicePatchAttributesV1:
         devs = make_accepted_devices(utoken, devauthd, 3)
 
         # wait for devices to be provisioned
-        time.sleep(3)
+        wait_conductor_create_devices_inv(utoken, 3)
 
         for i, d in enumerate(devs):
             payload = [
@@ -326,7 +327,7 @@ class TestDevicePatchAttributesV1:
         devs = make_accepted_devices(utoken, devauthd, 1)
 
         # wait for devices to be provisioned
-        time.sleep(3)
+        wait_conductor_create_devices_inv(utoken, 1)
 
         for i, d in enumerate(devs):
             payload = [
@@ -385,25 +386,7 @@ def make_devs_get_v2(utoken, devauthd, invd, invi, tenant_token='', tenant_id=''
     # before returning, make sure we have all devices in inventory
     # means first waiting for conductor so that the workflow doesn't overflow to other tests
     # then doing the PATCHes
-    retries = 5
-    invm = ApiClient(inventory.URL_MGMT)
-    api_devs = []
-
-    while retries>0:
-        r = invm.with_auth(utoken).call('GET',
-                                            inventory.URL_MGMT_DEVICES)
-        retries-=1
-        try:
-            assert r.status_code == 200
-            api_devs = r.json()
-            assert len(api_devs) == 20
-            break
-        except AssertionError:
-            print('waiting for conductor: retry count {}'.format(retries))
-            time.sleep(1)
-            continue
-
-    assert retries != 0, 'waiting for conductor timed out'
+    api_devs = wait_conductor_create_devices_inv(utoken, 20)
 
     # we allowed conductor to do its async job(s), we don't know the order of devices now
     # sort our reference collection according to the order in api_devs
@@ -743,7 +726,7 @@ class TestGetDevicesBase:
 
         assert int(r.headers['X-Total-Count']) == 5
 
-class TestGetDevices(TestGetDevicesBase):
+class TestGetDevicesAA(TestGetDevicesBase):
     def test_ok_all(self, user_cls, get_v2_devices):
         self.do_test_ok_all(user_cls, get_v2_devices)
 

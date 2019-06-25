@@ -14,6 +14,7 @@
 #    limitations under the License.
 import pytest
 import random
+import time
 from pymongo import MongoClient
 
 from api.client import ApiClient
@@ -21,6 +22,7 @@ from infra.cli import CliUseradm, CliTenantadm
 import api.deviceauth as deviceauth_v1
 import api.deviceauth_v2 as deviceauth_v2
 import api.tenantadm as tenantadm
+import api.inventory_v2 as inventory
 import util.crypto
 
 @pytest.fixture(scope="session")
@@ -197,3 +199,35 @@ def change_authset_status(did, aid, status, utoken):
                                    deviceauth_v2.req_status(status),
                                    path_params={'did': did, 'aid': aid })
     assert r.status_code == 204
+
+def wait_conductor_create_devices_inv(utoken, num, retries=5):
+    """ After accepting a set of devices, make sure conductor
+        managed to provision them in inventory.
+
+        Otherwise, nasty heisenbugs may occur for
+        inventory-sensitive tests (initial data set pollution due to
+        async/delayed workflows).
+
+        FIXME: naive implementation; we could work with the conductor
+        api to monitor tasks, but let's go for simplicity for now.
+    """
+    invm = ApiClient(inventory.URL_MGMT)
+    api_devs = []
+
+    while retries>0:
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_MGMT_DEVICES,
+                                        qs_params={'per_page':num})
+        retries-=1
+        try:
+            assert r.status_code == 200
+            api_devs = r.json()
+            assert len(api_devs) == num
+            break
+        except AssertionError:
+            print('waiting for conductor: retry count {}, device num {}, expecting: {}'.format(retries, len(api_devs), num))
+            time.sleep(1)
+            continue
+
+    assert retries != 0, 'waiting for conductor timed out'
+    return api_devs

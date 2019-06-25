@@ -485,13 +485,10 @@ def get_v2_devices_mt(tenants_users_cls):
     return tenants_users
 
 class TestGetDevicesBase:
-    def do_test_ok_all(self, user, tenant_id='', tenant_token=''):
+    def do_test_ok_all(self, user, devs, tenant_id='', tenant_token=''):
         """ All devices """
-        useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory_v1.URL_DEV)
-        invi = ApiClient(inventory.URL_INT)
+        useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
         r = useradmm.call('POST',
@@ -499,8 +496,6 @@ class TestGetDevicesBase:
                           auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
-        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_id=tenant_id, tenant_token=tenant_token)
-
         r = invm.with_auth(utoken).call('GET',
                                         inventory.URL_MGMT_DEVICES,
                                         qs_params={'per_page':100})
@@ -511,13 +506,10 @@ class TestGetDevicesBase:
         api_devs = r.json()
         assert len(api_devs) == len(devs)
 
-    def do_test_ok_paging(self, user, tenant_id='', tenant_token=''):
+    def do_test_ok_paging(self, user, devs, tenant_id='', tenant_token=''):
         """ A couple paging scenarios """
-        useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory_v1.URL_DEV)
-        invi = ApiClient(inventory.URL_INT)
+        useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
         r = useradmm.call('POST',
@@ -525,13 +517,11 @@ class TestGetDevicesBase:
                           auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
-        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_id=tenant_id, tenant_token=tenant_token)
 
-        # default paging (20)
         cases = [
-                { 
+                {
                     'name': 'default, pg 1',
-                    'page': None, 
+                    'page': None,
                     'per_page': None,
 
                     'expected_devs': filter_page_sort_devs(devs, page=1, per_page=20),
@@ -539,7 +529,7 @@ class TestGetDevicesBase:
                 },
                 {
                     'name': 'default, pg 2',
-                    'page': 2, 
+                    'page': 2,
                     'per_page': None,
 
                     'expected_devs': [],
@@ -547,7 +537,7 @@ class TestGetDevicesBase:
                 },
                 {
                     'name': 'custom, per pg 5',
-                    'page': None, 
+                    'page': None,
                     'per_page': 5,
 
                     'expected_devs': filter_page_sort_devs(devs, page=1, per_page=5),
@@ -555,7 +545,7 @@ class TestGetDevicesBase:
                 },
                 {
                     'name': 'custom, pg 2, per pg 5',
-                    'page': 2, 
+                    'page': 2,
                     'per_page': 5,
 
                     'expected_devs': filter_page_sort_devs(devs, page=2, per_page=5),
@@ -563,7 +553,7 @@ class TestGetDevicesBase:
                 },
                 {
                     'name': 'custom, past bounds',
-                    'page': 5, 
+                    'page': 5,
                     'per_page': 5,
 
                     'expected_devs': [],
@@ -593,13 +583,10 @@ class TestGetDevicesBase:
 
             compare_devs(case['expected_devs'], api_devs)
 
-    def do_test_ok_filter(self, user, tenant_id='', tenant_token=''):
+    def do_test_ok_filter(self, user, devs, tenant_id='', tenant_token=''):
         """ Just filtering scenarios """
-        useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory_v1.URL_DEV)
-        invi = ApiClient(inventory.URL_INT)
+        useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
         r = useradmm.call('POST',
@@ -607,7 +594,6 @@ class TestGetDevicesBase:
                           auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
-        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_id=tenant_id, tenant_token=tenant_token)
 
         cases = [
             {
@@ -673,14 +659,11 @@ class TestGetDevicesBase:
             compare_devs(case['expected_devs'], api_devs)
 
             assert int(r.headers['X-Total-Count']) == case['expected_total'], 'case {}'.format(case['name'])
- 
-    def do_test_ok_sort(self, user, tenant_id='', tenant_token=''):
+
+    def do_test_ok_sort(self, user, devs, tenant_id='', tenant_token=''):
         """ Just sorting scenarios """
-        useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory_v1.URL_DEV)
-        invi = ApiClient(inventory.URL_INT)
+        useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
         r = useradmm.call('POST',
@@ -688,7 +671,6 @@ class TestGetDevicesBase:
                           auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
-        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_id=tenant_id, tenant_token=tenant_token)
 
         cases = [
             {
@@ -725,15 +707,9 @@ class TestGetDevicesBase:
 
             assert int(r.headers['X-Total-Count']) == case['expected_total'], 'case {}'.format(case['name'])
 
-    def do_test_ok_filter_sort_page(self, user, tenant_id='', tenant_token=''):
-        """
-            Full blown 'mixed' case, extend into test pairs as an improvement (on bug report?).
-        """
-        useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    def do_test_ok_filter_sort_page(self, user, devs, tenant_id='', tenant_token=''):
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory_v1.URL_DEV)
-        invi = ApiClient(inventory.URL_INT)
+        useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
         r = useradmm.call('POST',
@@ -741,8 +717,6 @@ class TestGetDevicesBase:
                           auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
-
-        devs = make_devs_get_v2(utoken, devauthd, invd, invi, tenant_id=tenant_id, tenant_token=tenant_token)
 
         r = invm.with_auth(utoken).call('GET',
                                         inventory.URL_MGMT_DEVICES,
@@ -757,55 +731,55 @@ class TestGetDevicesBase:
 
         api_devs = r.json()
 
-        expected_devs = filter_page_sort_devs(devs, 
-                page=2, 
-                per_page=2, 
+        expected_devs = filter_page_sort_devs(devs,
+                page=2,
+                per_page=2,
                 filters=[
-                    {'scope': 'identity', 'name': 'batch', 'val': 'batch1'}, 
+                    {'scope': 'identity', 'name': 'batch', 'val': 'batch1'},
                     {'scope': 'identity', 'name': 'common', 'val': 'common'}],
                 sort={'scope': 'identity', 'name': 'sn', 'asc': True})
 
         compare_devs(expected_devs, api_devs)
 
-        assert int(r.headers['X-Total-Count']) == 5 
+        assert int(r.headers['X-Total-Count']) == 5
 
 class TestGetDevices(TestGetDevicesBase):
-    def test_ok_all(self, user):
-        self.do_test_ok_all(user)
+    def test_ok_all(self, user_cls, get_v2_devices):
+        self.do_test_ok_all(user_cls, get_v2_devices)
 
-    def test_ok_paging(self, user):
-        self.do_test_ok_paging(user)
+    def test_ok_paging(self, user_cls, get_v2_devices):
+        self.do_test_ok_paging(user_cls, get_v2_devices)
 
-    def test_ok_filter(self, user):
-        self.do_test_ok_filter(user)
-    
-    def test_ok_sort(self, user):
-        self.do_test_ok_sort(user)
+    def test_ok_filter(self, user_cls, get_v2_devices):
+        self.do_test_ok_filter(user_cls, get_v2_devices)
 
-    def test_ok_filter_sort_page(self, user):
-        self.do_test_ok_filter_sort_page(user)
+    def test_ok_sort(self, user_cls, get_v2_devices):
+        self.do_test_ok_sort(user_cls, get_v2_devices)
+
+    def test_ok_filter_sort_page(self, user_cls, get_v2_devices):
+        self.do_test_ok_filter_sort_page(user_cls, get_v2_devices)
 
 
 class TestGetDevicesMultitenant(TestGetDevicesBase):
-    def test_ok_all(self, tenants_users):
-        for t in tenants_users:
-            self.do_test_ok_all(t.users[0], tenant_token=t.tenant_token, tenant_id=t.id)
+    def test_ok_all(self, tenants_users_cls, get_v2_devices_mt):
+        for t in tenants_users_cls:
+            self.do_test_ok_all(t.users[0], t.devices, tenant_token=t.tenant_token, tenant_id=t.id)
 
-    def test_ok_paging(self, tenants_users):
-        for t in tenants_users:
-            self.do_test_ok_paging(t.users[0], tenant_token=t.tenant_token, tenant_id=t.id)
+    def test_ok_paging(self, tenants_users_cls, get_v2_devices_mt):
+        for t in tenants_users_cls:
+            self.do_test_ok_paging(t.users[0], t.devices, tenant_token=t.tenant_token, tenant_id=t.id)
 
-    def test_ok_filter(self, tenants_users):
-        for t in tenants_users:
-            self.do_test_ok_filter(t.users[0], tenant_token=t.tenant_token, tenant_id=t.id)
-    
-    def test_ok_sort(self, tenants_users):
-        for t in tenants_users:
-            self.do_test_ok_sort(t.users[0], tenant_token=t.tenant_token, tenant_id=t.id)
+    def test_ok_filter(self, tenants_users_cls, get_v2_devices_mt):
+        for t in tenants_users_cls:
+            self.do_test_ok_filter(t.users[0], t.devices, tenant_token=t.tenant_token, tenant_id=t.id)
 
-    def test_ok_filter_sort_page(self, tenants_users):
-        for t in tenants_users:
-            self.do_test_ok_filter_sort_page(t.users[0], tenant_token=t.tenant_token, tenant_id=t.id)
+    def test_ok_sort(self, tenants_users_cls, get_v2_devices_mt):
+        for t in tenants_users_cls:
+            self.do_test_ok_sort(t.users[0], t.devices, tenant_token=t.tenant_token, tenant_id=t.id)
+
+    def test_ok_filter_sort_page(self, tenants_users_cls, get_v2_devices_mt):
+        for t in tenants_users_cls:
+            self.do_test_ok_filter_sort_page(t.users[0], t.devices,tenant_token=t.tenant_token, tenant_id=t.id)
 
 def filter_page_sort_devs(devs, page=None, per_page=None, filters=None, sort=None):
         """

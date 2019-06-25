@@ -142,8 +142,11 @@ PASSWORD=$(< /dev/urandom 2>/dev/null tr -dc A-Za-z0-9 | head -c12)
 MENDER_SERVER_USER="${USER}:${PASSWORD}"
 MENDER_SERVER_URI="https://localhost"
 
+RETRY_LIMIT=5
+
 # Block until the useradm service returns an HTTP 4xx response
 echo "Waiting for the useradm service to start up..."
+RETRIES=0
 while :
 do
     curl --silent -k -X POST -u $MENDER_SERVER_USER\
@@ -157,18 +160,19 @@ do
     case $retval in
         0)  break ;; # User exists - continue.
         22) break ;; # Server 400 error, ie, server is up - continue.
-        *) echo "Failed to access the mender-useradm service"
-           echo "Please check the docker-compose setup."
-           echo "curl exit code" $retval
-           # exit $retval
-           ;;
+        *) echo "It does not seem the useradm service is up and running yet. Retrying..." ;;
     esac
+    if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
+        echo "Retried $RETRIES times without success. Giving up."
+        exit 1
+    fi
+    RETRIES=$((RETRIES+1))
     sleep 5
 done
 
 
-echo "Trying to create a new user..."
-
+echo "Creating a new user..."
+RETRIES=0
 while :
 do
     docker exec \
@@ -184,14 +188,19 @@ do
             echo "Since the demo script does not cache passwords, therefore"
             echo "run 'demo down' if you want to delete the user, and create a new demo user"
             exit 0 ;;
-        *) exit $retval ;;
+        *) echo "docker exec error: " $retval; exit $retval ;;
     esac
+    if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
+        echo "Retried $RETRIES times without success. Giving up."
+        exit 1
+    fi
+    RETRIES=$((RETRIES+1))
     sleep 5
 done
 
 echo "Getting JWT Token..."
-
-until [[ $JWT != "" ]]; do
+RETRIES=0
+until [[ "$JWT" != "" ]]; do
     JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
         --fail\
         --connect-timeout 120\
@@ -200,19 +209,25 @@ until [[ $JWT != "" ]]; do
         --retry-max-time 120\
         $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
     retval=$?
-    if [ $retval -ne 0 ]; then
+    if [[ $retval -ne 0 ]]; then
         echo "Failed to get the 'JWT' token from the useradm service."
         echo "This is needed in order to use the demo Artifact."
         echo "curl exit code: " $retval
         echo "Retrying in 5..."
-        sleep 5
     fi
+    if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
+        echo "Retried $RETRIES times without success. Giving up."
+        exit 1
+    fi
+    RETRIES=$((RETRIES+1))
+    sleep 5
 done
 
 echo "JWT token: " $JWT
 
 echo "Uploading the Artifact to the server..."
 cout=
+RETRIES=0
 while :
 do
     cout=$(curl --silent -k -X POST \
@@ -227,20 +242,25 @@ do
                 --form "artifact=@${DEMO_ARTIFACT_NAME}"\
                 $MENDER_SERVER_URI/api/management/v1/deployments/artifacts)
     retval=$?
-    if [ $retval -ne 0 ]; then
+    if [[ $retval -ne 0 ]]; then
         echo "Failed to upload the Artifact to the demo server. curl error code: " $retval
         echo "Sleeping for 5 seconds before making another attempt..."
-        sleep 5
     else
         break
     fi
+    if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
+        echo "Retried $RETRIES times without success. Giving up."
+        exit 1
+    fi
+    RETRIES=$((RETRIES+1))
+    sleep 5
 done
 
 errout=$(jq '.error' <<< $cout)
 
 retval=$?
 
-if [ $retval -ne 0 ]; then
+if [[ $retval -ne 0 ]]; then
     echo "Failed to parse the json response from the Mender server"
     echo "Response: "
     echo $cout

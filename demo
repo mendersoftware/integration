@@ -49,14 +49,14 @@ while [ -n "$1" ]; do
     shift
 done
 
-# Check if the demo-artifact has been downloaded,
+# Check if the demo-Artifact has been downloaded,
 # or if there exists a newer one in storage.
 DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
 wget -q --timestamping https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
 
 retval=$?
 if [ $retval -ne 0 ]; then
-    echo "Failed to download the demo artifact"
+    echo "Failed to download the demo Artifact"
     exit $retval
 fi
 
@@ -144,84 +144,97 @@ MENDER_SERVER_URI="https://localhost"
 
 # Block until the useradm service returns an HTTP 4xx response
 echo "Waiting for the useradm service to start up..."
-until $USERADM_SERVICE_UP; do
-    $(curl --silent -k -X POST -u $MENDER_SERVER_USER\
-           --fail\
-           --connect-timeout 120\
-           --retry 60\
-           --retry-delay 2\
-           --retry-max-time 120\
-           $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
+while :
+do
+    curl --silent -k -X POST -u $MENDER_SERVER_USER\
+         --fail\
+         --connect-timeout 120\
+         --retry 60\
+         --retry-delay 2\
+         --retry-max-time 120\
+         $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
     retval=$?
     case $retval in
-        0)  USER_ADM_SERVICE_UP=true ;; # User exists - continue.
-        22) USER_ADM_SERVICE_UP=true ;; # Server 400 error, ie, server is up - continue.
+        0)  break ;; # User exists - continue.
+        22) break ;; # Server 400 error, ie, server is up - continue.
         *) echo "Failed to access the mender-useradm service"
            echo "Please check the docker-compose setup."
            echo "curl exit code" $retval
-           exit $retval
+           # exit $retval
            ;;
     esac
-    sleep 2
+    sleep 5
 done
 
 
-echo "Creating a new user..."
+echo "Trying to create a new user..."
 
-docker exec ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 /usr/bin/useradm create-user --username=${USER} --password=${PASSWORD}
-
-retval=$?
-case $retval in
-     0) echo "New user created." ;;
-     5) # Since the password is not cached in between invocations, there is no way to upload an artifact.
-        echo "The user already exists"
-        echo "Since the demo script does not cache passwords, therefore"
-        echo "run 'demo down' if you want to delete the user, and create a new demo user"
-        exit 0 ;;
-     *) exit $retval ;;
-esac
+while :
+do
+    docker exec \
+             ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
+             /usr/bin/useradm create-user \
+             --username=${USER} \
+             --password=${PASSWORD}
+    retval=$?
+    case $retval in
+        0) echo "New user created."; break ;;
+        5) # Since the password is not cached in between invocations, there is no way to upload an Artifact.
+            echo "The user already exists"
+            echo "Since the demo script does not cache passwords, therefore"
+            echo "run 'demo down' if you want to delete the user, and create a new demo user"
+            exit 0 ;;
+        *) exit $retval ;;
+    esac
+    sleep 5
+done
 
 echo "Getting JWT Token..."
 
-JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
+until [[ $JWT != "" ]]; do
+    JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
         --fail\
         --connect-timeout 120\
         --retry 60\
         --retry-delay 2\
         --retry-max-time 120\
         $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
-
-retval=$?
-if [ $retval -ne 0 ]; then
-    echo "Failed to get the 'JWT' token from the useradm service."
-    echo "This is needed in order to use the demo Artifact."
-    echo "curl exit code: " $retval
-    # exit $retval
-fi
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo "Failed to get the 'JWT' token from the useradm service."
+        echo "This is needed in order to use the demo Artifact."
+        echo "curl exit code: " $retval
+        echo "Retrying in 5..."
+        sleep 5
+    fi
+done
 
 echo "JWT token: " $JWT
 
-echo "Uploading the artifact to the server..."
-cout=$(curl --silent -k -X POST \
-              --fail\
-              --show-error\
-              --connect-timeout 120\
-              --retry-delay 2\
-              --retry 60 \
-              --retry-max-time 120\
-              --header "Authorization: Bearer ${JWT}"\
-              --form "size=${ARTIFACT_SIZE_BYTES}"\
-              --form "artifact=@${DEMO_ARTIFACT_NAME}"\
-              $MENDER_SERVER_URI/api/management/v1/deployments/artifacts)
-
-retval=$?
-
-if [ $retval -ne 0 ]; then
-    echo "Failed to upload the demo Artifact to the server"
-    echo "$cout"
-    echo "curl exited with code: " $retval
-    exit $retval
-fi
+echo "Uploading the Artifact to the server..."
+cout=
+while :
+do
+    cout=$(curl --silent -k -X POST \
+                --fail\
+                --show-error\
+                --connect-timeout 120\
+                --retry-delay 2\
+                --retry 60 \
+                --retry-max-time 120\
+                --header "Authorization: Bearer ${JWT}"\
+                --form "size=${ARTIFACT_SIZE_BYTES}"\
+                --form "artifact=@${DEMO_ARTIFACT_NAME}"\
+                $MENDER_SERVER_URI/api/management/v1/deployments/artifacts)
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo "Failed to upload the Artifact to the demo server. curl error code: " $retval
+        echo "Sleeping for 5 seconds before making another attempt..."
+        sleep 5
+    else
+        break
+    fi
+done
 
 errout=$(jq '.error' <<< $cout)
 
@@ -237,7 +250,7 @@ fi
 case "$errout" in
    " Artifact not unique"*) echo "Artifact already exists on the server" ;;
     "") echo "Artifact uploaded to the demo server" ;;
-    *) echo "Uploading the demo artifact failed with error: " $errout
+    *) echo "Uploading the demo Artifact failed with error: " $errout
        exit 1 ;;
 esac
 

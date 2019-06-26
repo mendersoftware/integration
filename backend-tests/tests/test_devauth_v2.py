@@ -28,7 +28,9 @@ import util.crypto
 from common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
         create_random_authset, create_authset, \
-        get_device_by_id_data, change_authset_status
+        get_device_by_id_data, change_authset_status, \
+        wait_conductor_create_devices_inv
+
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -362,6 +364,8 @@ def make_devs_with_authsets(user, tenant_token=''):
     for i in range(2):
         dev = make_preauthd_device_with_pending(utoken, num_pending=2, tenant_token=tenant_token)
         devices.append(dev)
+
+    wait_conductor_create_devices_inv(utoken, 5)
 
     return devices
 

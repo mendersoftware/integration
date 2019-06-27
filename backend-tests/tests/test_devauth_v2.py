@@ -1259,6 +1259,41 @@ class TestCliPropagateInventory(TestCliPropagateInventoryBase):
         self.verify_devs(api_devs, devs_authsets)
 
 
+class TestCliPropagateInventoryMultitenant(TestCliPropagateInventoryBase):
+    def test_dry_run(self, tenants_devs_authsets):
+        cli = CliDeviceauth()
+        cli.propagate_inventory(dry_run=True)
+
+        for t in tenants_devs_authsets:
+            api_devs = self.do_get_devs(t.users[0])
+            assert len(api_devs) == 5
+            self.verify_devs_unmodified(api_devs)
+
+    def test_selected_tenant(self, tenants_devs_authsets):
+        tenant = tenants_devs_authsets[0]
+        tenant_unmodified = tenants_devs_authsets[1]
+
+        cli = CliDeviceauth()
+        cli.propagate_inventory(tenant_id=tenant.id)
+
+        # all devices patched for 'tenant'
+        api_devs = self.do_get_devs(tenant.users[0])
+        self.verify_devs(api_devs, tenant.devices)
+
+        # devices untouched for the other one
+        api_devs = self.do_get_devs(tenant_unmodified.users[0])
+        assert len(api_devs) == 5
+        self.verify_devs_unmodified(api_devs)
+
+    def test_all_tenants(self, tenants_devs_authsets):
+        cli = CliDeviceauth()
+        cli.propagate_inventory()
+
+        for t in tenants_devs_authsets:
+            api_devs = self.do_get_devs(t.users[0])
+            self.verify_devs(api_devs, t.devices)
+
+
 def filter_and_page_devs(devs, page=None, per_page=None, status=None):
         if status is not None:
             devs = [d for d in devs if d.status==status]

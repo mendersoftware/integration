@@ -23,7 +23,8 @@ import api.deviceauth_v2 as deviceauth_v2
 import api.useradm as useradm
 import api.tenantadm as tenantadm
 import api.deployments as deployments
-import api.inventory as inventory
+import api.inventory as inventory_v1
+import api.inventory_v2 as inventory
 import util.crypto
 from common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
@@ -1154,10 +1155,10 @@ class TestAuthsetMgmtBase:
         return 'rejected'
 
     def verify_dev_provisioned(self, dev, utoken):
-        invm = ApiClient(inventory.URL_MGMT)
+        invm = ApiClient(inventory_v1.URL_MGMT)
 
         r = invm.with_auth(utoken).call('GET',
-                                        inventory.URL_DEVICE,
+                                        inventory_v1.URL_DEVICE,
                                         path_params={'id': dev.id})
         assert r.status_code == 200
 
@@ -1207,6 +1208,7 @@ class TestAuthsetMgmtMultitenant(TestAuthsetMgmtBase):
     def test_delete_status_failed(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
             self.do_test_delete_status_failed(t.devices, t.users[0])
+
 
 def filter_and_page_devs(devs, page=None, per_page=None, status=None):
         if status is not None:

@@ -1210,6 +1210,55 @@ class TestAuthsetMgmtMultitenant(TestAuthsetMgmtBase):
             self.do_test_delete_status_failed(t.devices, t.users[0])
 
 
+class TestCliPropagateInventoryBase:
+    def verify_devs_unmodified(self, api_devs):
+        for d in api_devs:
+            assert d['attributes']['identity'] == []
+
+    def verify_devs(self, api_devs, devs):
+        assert len(api_devs) == len(devs)
+
+    def do_get_devs(self, user):
+        invm = ApiClient(inventory.URL_MGMT)
+        useradmm = ApiClient(useradm.URL_MGMT)
+
+        # log in user
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        r = invm.with_auth(utoken).call('GET',
+                                        inventory.URL_MGMT_DEVICES,
+                                        qs_params={'per_page':100})
+
+        assert r.status_code == 200
+        api_devs = r.json()
+        return api_devs
+
+
+class TestCliPropagateInventory(TestCliPropagateInventoryBase):
+    def test_ok(self, devs_authsets, user):
+        cli = CliDeviceauth()
+
+        # do a dry run first
+        cli.propagate_inventory(dry_run=True)
+
+        api_devs = self.do_get_devs(user)
+
+        # only devices created by conductor
+        assert len(api_devs) == 5
+        self.verify_devs_unmodified(api_devs)
+
+        # do propagate inventory
+        cli.propagate_inventory()
+        api_devs = self.do_get_devs(user)
+
+        # expect all input devs to be patched correctly
+        self.verify_devs(api_devs, devs_authsets)
+
+
 def filter_and_page_devs(devs, page=None, per_page=None, status=None):
         if status is not None:
             devs = [d for d in devs if d.status==status]

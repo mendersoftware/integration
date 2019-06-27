@@ -50,10 +50,7 @@ class TestDemoArtifact(MenderTesting):
             test_env[
                 'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
             proc = subprocess.Popen(
-                [
-                    './demo', '--client', '-p',
-                    conftest.docker_compose_instance, 'up'
-                ],
+                ['./demo', '--client', 'up'],
                 cwd="..",
                 stdout=subprocess.PIPE,
                 env=test_env)

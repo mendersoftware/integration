@@ -70,3 +70,15 @@ class CliDeviceauth:
             cmd.extend(['--tenant', tenant_id])
 
         docker.exec(self.cid, cmd)
+
+    def propagate_inventory(self, tenant_id='', dry_run=False):
+        cmd = ['usr/bin/deviceauth',
+               'propagate-inventory']
+
+        if tenant_id is not None:
+            cmd.extend(['--tenant_id', tenant_id])
+
+        if dry_run:
+            cmd.extend(['--dry-run'])
+
+        docker.exec(self.cid, cmd)

@@ -32,10 +32,10 @@ class TestDemoArtifact(MenderTesting):
 
     # NOTE - The password is set on a per test-basis,
     # as it is generated on the fly by the demo script.
-    auth = authentication.Authentication(
+    demoauth = authentication.Authentication(
         username='mender-demo', email='mender-demo@example.com')
-    authv2 = auth_v2_mod.DeviceAuthV2(auth)
-    deploy = deployments.Deployments(auth, authv2)
+    demoauthv2 = auth_v2_mod.DeviceAuthV2(demoauth)
+    demodeploy = deployments.Deployments(demoauth, demoauthv2)
 
     @pytest.fixture(scope="function")
     def run_demo_script(self, request):
@@ -70,7 +70,7 @@ class TestDemoArtifact(MenderTesting):
                     password = line[-13:-1]
                     logging.info('The login password:')
                     logging.info(password)
-                    self.auth.password = password
+                    self.demoauth.password = password
                     assert len(password) == 12
                     break
             # Make sure that the demo script has not errored out,
@@ -93,27 +93,27 @@ class TestDemoArtifact(MenderTesting):
         logging.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script)
         stop_docker_compose()
-        self.auth.reset_auth_token()
+        self.demoauth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_installation")
         logging.info("--------------------------------------------------")
         self.demo_artifact_installation(run_demo_script)
         stop_docker_compose()
-        self.auth.reset_auth_token()
+        self.demoauth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_up_down_up")
         logging.info("--------------------------------------------------")
         self.demo_up_down_up(run_demo_script)
         stop_docker_compose()
-        self.auth.reset_auth_token()
+        self.demoauth.reset_auth_token()
 
     def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
-        assert len(self.auth.password) == 12, \
-            "expected password of length 12, got: %s" % self.auth.password
-        arts = self.deploy.get_artifacts()
+        assert len(self.demoauth.password) == 12, \
+            "expected password of length 12, got: %s" % self.demoauth.password
+        arts = self.demodeploy.get_artifacts()
         try:
             assert len(arts) == 1
         except:
@@ -128,41 +128,41 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
-        assert len(self.auth.password) == 12, \
-            "expected password of length 12, got: %s" % self.auth.password
-        artifacts = self.deploy.get_artifacts(
+        assert len(self.demoauth.password) == 12, \
+            "expected password of length 12, got: %s" % self.demoauth.password
+        artifacts = self.demodeploy.get_artifacts(
             auth_create_new_user=False
         )  # User should be created by the demo script.
         assert len(artifacts) == 1
         artifact_name = artifacts[0]['name']
 
         # Trigger the deployment
-        devices = self.authv2.get_devices()
+        devices = self.demoauthv2.get_devices()
         assert len(devices) == 1
 
         # Accept the device to be updated
-        self.authv2.accept_devices(1)
+        self.demoauthv2.accept_devices(1)
         devices = list(
             set([
                 device["id"]
-                for device in self.authv2.get_devices_status("accepted")
+                for device in self.demoauthv2.get_devices_status("accepted")
             ]))
         assert len(devices) == 1
 
         # Run the deployment.
-        deployment_id = self.deploy.trigger_deployment(
+        deployment_id = self.demodeploy.trigger_deployment(
             name="Demo artifact deployment",
             artifact_name=artifacts[0]['name'],
             devices=devices)
 
         # Verify the deployment
-        self.deploy.check_expected_status("finished", deployment_id)
+        self.demodeploy.check_expected_status("finished", deployment_id)
 
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
         self.demo_artifact_upload(run_demo_script)
-        assert len(self.auth.password) == 12, \
-            "expected password of length 12, got: %s" % self.auth.password
+        assert len(self.demoauth.password) == 12, \
+            "expected password of length 12, got: %s" % self.demoauth.password
         # Since the docker-compose project has not been removed
         # a user already exists in the useradm image.
         # Thus the demo script returns a 0

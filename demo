@@ -141,6 +141,12 @@ docker-compose \
     $CLIENT \
     "$@" -d
 
+retval=$?
+if [[ $retval -ne 0 ]]; then
+    echo "Failed to start docker compose"
+    exit $retval
+fi
+
 USER='mender-demo@example.com'
 PASSWORD=$(< /dev/urandom 2>/dev/null tr -dc A-Za-z0-9 | head -c12)
 

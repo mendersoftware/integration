@@ -39,6 +39,9 @@ while [ -n "$1" ]; do
     elif [ "$1" = "--client" ]; then
         CLIENT="$CLIENT_ARGS"
         echo "-- enabling client container"
+    elif [ "$1" = "-p" ] || [ "$1" = "--project-name" ]; then
+        shift
+        DOCKER_COMPOSE_PROJECT_NAME="$1"
     elif [ "$1" = "--kvm" ]; then
         echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
     elif [ "$1" = "down" ] || [ "$1" = "rm" ] || [ "$1" = "stop" ]; then

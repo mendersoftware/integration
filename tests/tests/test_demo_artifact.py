@@ -44,6 +44,12 @@ class TestDemoArtifact(MenderTesting):
         so that each invocation run keeps the environment clean."""
 
         request.addfinalizer(stop_docker_compose)
+        procs = []
+        def maybe_kill_proc():
+            for proc in procs:
+                if proc.poll() == None:
+                    proc.kill()
+        request.addfinalizer(maybe_kill_proc)
 
         def run_demo_script_up():
             test_env = os.environ.copy()
@@ -54,6 +60,7 @@ class TestDemoArtifact(MenderTesting):
                 cwd="..",
                 stdout=subprocess.PIPE,
                 env=test_env)
+            procs.append(proc)
             logging.info('Started the demo script')
             password = ""
             time.sleep(60)
@@ -66,6 +73,9 @@ class TestDemoArtifact(MenderTesting):
                     self.auth.password = password
                     assert len(password) == 12
                     break
+            # Make sure that the demo script has not errored out,
+            # or errored out with a nonzero error
+            assert proc.poll() == None or proc.returncode == 0
             return proc
 
         return run_demo_script_up
@@ -101,6 +111,8 @@ class TestDemoArtifact(MenderTesting):
 
     def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
+        assert len(self.auth.password) == 12, \
+            "expected password of length 12, got: %s" % self.auth.password
         arts = self.deploy.get_artifacts()
         try:
             assert len(arts) == 1
@@ -116,7 +128,11 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
-        artifacts = self.deploy.get_artifacts(auth_create_new_user=False) # User should be created by the demo script.
+        assert len(self.auth.password) == 12, \
+            "expected password of length 12, got: %s" % self.auth.password
+        artifacts = self.deploy.get_artifacts(
+            auth_create_new_user=False
+        )  # User should be created by the demo script.
         assert len(artifacts) == 1
         artifact_name = artifacts[0]['name']
 
@@ -145,5 +161,10 @@ class TestDemoArtifact(MenderTesting):
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
         self.demo_artifact_upload(run_demo_script)
-        self.demo_artifact_upload(run_demo_script)
-        logging.info('Finished')
+        assert len(self.auth.password) == 12, \
+            "expected password of length 12, got: %s" % self.auth.password
+        # Since the docker-compose project has not been removed
+        # a user already exists in the useradm image.
+        # Thus the demo script returns a 0
+        proc = run_demo_script()
+        assert proc.returncode == 0

@@ -23,7 +23,7 @@ import requests
 
 import conftest
 from common_docker import *
-from MenderAPI import *
+from MenderAPI import auth, auth_v2, deploy, image, logger, inv, reset_mender_api
 from mendertesting import MenderTesting
 
 
@@ -32,10 +32,10 @@ class TestDemoArtifact(MenderTesting):
 
     # NOTE - The password is set on a per test-basis,
     # as it is generated on the fly by the demo script.
-    demoauth = authentication.Authentication(
-        username='mender-demo', email='mender-demo@example.com')
-    demoauthv2 = auth_v2_mod.DeviceAuthV2(demoauth)
-    demodeploy = deployments.Deployments(demoauth, demoauthv2)
+    # demoauth = authentication.Authentication(
+    #     username='mender-demo', email='mender-demo@example.com')
+    # demoauthv2 = auth_v2_mod.DeviceAuthV2(demoauth)
+    # demodeploy = deployments.Deployments(demoauth, demoauthv2)
 
     @pytest.fixture(scope="function")
     def run_demo_script(self, request):
@@ -70,8 +70,10 @@ class TestDemoArtifact(MenderTesting):
                     password = line[-13:-1]
                     logging.info('The login password:')
                     logging.info(password)
-                    self.demoauth.password = password
+                    # self.auth.password = password
                     assert len(password) == 12
+                    auth.set_tenant(username="mender-demo", email="mender-demo@example.com",
+                                    password=password)
                     break
             # Make sure that the demo script has not errored out,
             # or errored out with a nonzero error
@@ -87,38 +89,42 @@ class TestDemoArtifact(MenderTesting):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
 
         stop_docker_compose()
+        reset_mender_api()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_upload")
         logging.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script)
         stop_docker_compose()
-        self.demoauth.reset_auth_token()
+        reset_mender_api()
+        # self.demoauth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_installation")
         logging.info("--------------------------------------------------")
         self.demo_artifact_installation(run_demo_script)
         stop_docker_compose()
-        self.demoauth.reset_auth_token()
+        reset_mender_api()
+        # self.demoauth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_up_down_up")
         logging.info("--------------------------------------------------")
         self.demo_up_down_up(run_demo_script)
         stop_docker_compose()
-        self.demoauth.reset_auth_token()
+        reset_mender_api()
+        # self.demoauth.reset_auth_token()
 
     def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
-        assert len(self.demoauth.password) == 12, \
-            "expected password of length 12, got: %s" % self.demoauth.password
-        arts = self.demodeploy.get_artifacts()
-        try:
-            assert len(arts) == 1
-        except:
-            logging.error(str(arts))
-            raise
+        assert len(auth.password) == 12, \
+            "expected password of length 12, got: %s" % auth.password
+        arts = deploy.get_artifacts()
+        # try:
+        #     assert len(arts) == 1
+        # except:
+        #     logging.error(str(arts))
+        #     raise
         assert "mender-demo-artifact" in arts[0]['name']
         # Emulate ctrl-c exit
         proc.send_signal(signal.SIGINT)
@@ -128,41 +134,41 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
-        assert len(self.demoauth.password) == 12, \
-            "expected password of length 12, got: %s" % self.demoauth.password
-        artifacts = self.demodeploy.get_artifacts(
+        assert len(auth.password) == 12, \
+            "expected password of length 12, got: %s" % auth.password
+        artifacts = deploy.get_artifacts(
             auth_create_new_user=False
         )  # User should be created by the demo script.
         assert len(artifacts) == 1
         artifact_name = artifacts[0]['name']
 
         # Trigger the deployment
-        devices = self.demoauthv2.get_devices()
+        devices = auth_v2.get_devices()
         assert len(devices) == 1
 
         # Accept the device to be updated
-        self.demoauthv2.accept_devices(1)
+        auth_v2.accept_devices(1)
         devices = list(
             set([
                 device["id"]
-                for device in self.demoauthv2.get_devices_status("accepted")
+                for device in auth_v2.get_devices_status("accepted")
             ]))
         assert len(devices) == 1
 
         # Run the deployment.
-        deployment_id = self.demodeploy.trigger_deployment(
+        deployment_id = deploy.trigger_deployment(
             name="Demo artifact deployment",
             artifact_name=artifacts[0]['name'],
             devices=devices)
 
         # Verify the deployment
-        self.demodeploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_status("finished", deployment_id)
 
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
         self.demo_artifact_upload(run_demo_script)
-        assert len(self.demoauth.password) == 12, \
-            "expected password of length 12, got: %s" % self.demoauth.password
+        assert len(auth.password) == 12, \
+            "expected password of length 12, got: %s" % auth.password
         # Since the docker-compose project has not been removed
         # a user already exists in the useradm image.
         # Thus the demo script returns a 0

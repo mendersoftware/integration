@@ -151,9 +151,32 @@ USER='mender-demo@example.com'
 PASSWORD=$(< /dev/urandom 2>/dev/null tr -dc A-Za-z0-9 | head -c12)
 
 MENDER_SERVER_USER="${USER}:${PASSWORD}"
-MENDER_SERVER_URI="https://localhost"
+# TODO - pretty up or move?
+MENDER_SERVER_URI="https://${MENDER_TEST_GATEWAY:-localhost}"
+
+echo $MENDER_TEST_GATEWAY
 
 RETRY_LIMIT=5
+
+# Get the IP of the mender-api-gateway
+RETRIES=0
+while :
+do
+    MENDER_TEST_GATEWAY=$(docker ps -q --filter name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-api-gateway | xargs -r docker inspect --format={{.NetworkSettings.Networks.${DOCKER_COMPOSE_PROJECT_NAME}_mender.IPAddress}})
+    echo $MENDER_TEST_GATEWAY
+    if [[ $MENDER_TEST_GATEWAY == "" ]]; then
+        echo "The mender-gateway-api service does not seem to be up yet. Retrying..."
+    else
+        echo "Mender gateway IP address: " $MENDER_TEST_GATEWAY
+        break
+    fi
+    if [[ RETRIES -eq 5 ]]; then
+        echo "Failed to get the IP of the 'mender-api-gateway' service"
+        exit 1
+    fi
+    RETRIES=$((RETRIES+1))
+    sleep 5
+done
 
 # Block until the useradm service returns an HTTP 4xx response
 echo "Waiting for the useradm service to start up..."
@@ -208,6 +231,14 @@ do
     RETRIES=$((RETRIES+1))
     sleep 5
 done
+
+echo "********************"
+echo $MENDER_TEST_GATEWAY
+echo "********************"
+
+MENDER_SERVER_URI="https://${MENDER_TEST_GATEWAY:-localhost}"
+
+echo $MENDER_SERVER_URI
 
 echo "Getting JWT Token..."
 RETRIES=0

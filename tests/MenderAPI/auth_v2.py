@@ -85,6 +85,7 @@ class DeviceAuthV2():
                          verify=False,
                          headers=headers,
                          data=json.dumps({"status": status}))
+        logger.info("request status code: %d, request body: %s" %(r.status_code, r.text))
         assert r.status_code == requests.status_codes.codes.no_content
 
     def check_expected_status(self, status, expected_value, max_wait=60*60, polling_frequency=1):

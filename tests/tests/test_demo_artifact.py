@@ -42,6 +42,7 @@ class TestDemoArtifact(MenderTesting):
         """Simple fixture which returns a function which runs 'demo up'.
         Afterwards the fixture brings down the docker-compose environment,
         so that each invocation run keeps the environment clean."""
+        self.demoauth.reset_auth_token()
 
         request.addfinalizer(stop_docker_compose)
         procs = []
@@ -80,36 +81,7 @@ class TestDemoArtifact(MenderTesting):
 
         return run_demo_script_up
 
-    # Give the test a timeframe, as the script might run forever,
-    # if something goes awry, or the script is not brought down properly.
-    @pytest.mark.timeout(3000)
-    def test_demo_artifact(self, run_demo_script):
-        """Tests that the demo script does indeed upload the demo Artifact to the server."""
-
-        stop_docker_compose()
-
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_artifact_upload")
-        logging.info("--------------------------------------------------")
-        self.demo_artifact_upload(run_demo_script)
-        stop_docker_compose()
-        self.demoauth.reset_auth_token()
-
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_artifact_installation")
-        logging.info("--------------------------------------------------")
-        self.demo_artifact_installation(run_demo_script)
-        stop_docker_compose()
-        self.demoauth.reset_auth_token()
-
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_up_down_up")
-        logging.info("--------------------------------------------------")
-        self.demo_up_down_up(run_demo_script)
-        stop_docker_compose()
-        self.demoauth.reset_auth_token()
-
-    def demo_artifact_upload(self, run_demo_script):
+    def test_demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password
@@ -125,7 +97,7 @@ class TestDemoArtifact(MenderTesting):
         proc.wait()
         assert proc.returncode == 0
 
-    def demo_artifact_installation(self, run_demo_script):
+    def test_demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
         assert len(self.demoauth.password) == 12, \
@@ -158,13 +130,14 @@ class TestDemoArtifact(MenderTesting):
         # Verify the deployment
         self.demodeploy.check_expected_status("finished", deployment_id)
 
-    def demo_up_down_up(self, run_demo_script):
+    def test_demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
-        self.demo_artifact_upload(run_demo_script)
+        self.test_demo_artifact_upload(run_demo_script)
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password
         # Since the docker-compose project has not been removed
-        # a user already exists in the useradm image.
+        # a user already exists in the useradm container.
         # Thus the demo script returns a 0
         proc = run_demo_script()
+        proc.wait()
         assert proc.returncode == 0

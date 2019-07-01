@@ -27,17 +27,23 @@ class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_double_update(self):
-        """Upload a device with two consecutive upgrade images"""
+    @pytest.mark.usefixtures("standard_setup_one_rofs_client_bootstrapped")
+    def test_double_update_rofs(self):
+        """Upgrade a device with two consecutive R/O images"""
 
         if not env.host_string:
-            execute(self.test_double_update,
+            execute(self.test_double_update_rofs,
                     hosts=get_mender_clients())
             return
 
-        update_image_successful(install_image=conftest.get_valid_image())
-        update_image_successful(install_image=conftest.get_valid_image())
+        # Verify that partition is read-only as expected
+        run("mount | fgrep 'on / ' | fgrep '(ro,'")
+
+        update_image_successful(install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        run("mount | fgrep 'on / ' | fgrep '(ro,'")
+
+        update_image_successful(install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
 
     @MenderTesting.fast

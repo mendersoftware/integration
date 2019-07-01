@@ -81,7 +81,7 @@ class TestDemoArtifact(MenderTesting):
 
         return run_demo_script_up
 
-    def test_demo_artifact_upload(self, run_demo_script):
+    def demo_artifact_upload(self, run_demo_script):
         proc = run_demo_script()
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password
@@ -132,7 +132,7 @@ class TestDemoArtifact(MenderTesting):
 
     def test_demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
-        self.test_demo_artifact_upload(run_demo_script)
+        self.demo_artifact_upload(run_demo_script)
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password
         # Since the docker-compose project has not been removed

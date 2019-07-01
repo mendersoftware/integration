@@ -1815,10 +1815,10 @@ def do_release():
             tag_avail = generate_new_tags(state, tag_avail, final=True)
             print()
             reply = ask("Purge all build tags from all repositories (recommended)? ")
-            if reply.lower() == "y":
+            if reply.startswith("Y") or reply.startswith("y"):
                 purge_build_tags(state, tag_avail)
             reply = ask('Merge "integration" release tag into version branch (recommended)? ')
-            if reply.lower() == "y":
+            if reply.startswith("Y") or reply.startswith("y"):
                 merge_release_tag(state, tag_avail, Component.get_component_of_type("git", "integration"))
         elif reply.lower() == "d":
             push_latest_docker_tags(state, tag_avail)

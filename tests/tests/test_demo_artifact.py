@@ -99,6 +99,8 @@ class TestDemoArtifact(MenderTesting):
 
     def test_demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
+        stop_docker_compose()
+        self.demoauth.reset_auth_token()
         run_demo_script()
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password
@@ -132,6 +134,8 @@ class TestDemoArtifact(MenderTesting):
 
     def test_demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
+        stop_docker_compose()
+        self.demoauth.reset_auth_token()
         self.demo_artifact_upload(run_demo_script)
         assert len(self.demoauth.password) == 12, \
             "expected password of length 12, got: %s" % self.demoauth.password

@@ -1,4 +1,7 @@
 #!/bin/bash
+set -xv
+# Don't ever let environ fuck with our program again!
+# export LC_ALL=C
 
 ./verify-docker-versions
 
@@ -68,7 +71,7 @@ if [ $retval -ne 0 ]; then
 fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-    ARTIFACT_SIZE_BYTES=$(stat -f %A ${DEMO_ARTIFACT_NAME}) # BSD is not GNU -_-
+    ARTIFACT_SIZE_BYTES=$(stat -f %z ${DEMO_ARTIFACT_NAME}) # BSD is not GNU -_-
 else
     ARTIFACT_SIZE_BYTES=$(stat -c %s ${DEMO_ARTIFACT_NAME})
 fi
@@ -148,13 +151,8 @@ if [[ $retval -ne 0 ]]; then
 fi
 
 USER='mender-demo@example.com'
-PASSWORD=$(< /dev/urandom 2>/dev/null tr -dc A-Za-z0-9 | head -c12)
+PASSWORD=$(LC_ALL=C < /dev/urandom 2>/dev/null tr -dc A-Za-z0-9 | head -c12)
 
-MENDER_SERVER_USER="${USER}:${PASSWORD}"
-# TODO - pretty up or move?
-MENDER_SERVER_URI="https://${MENDER_TEST_GATEWAY:-localhost}"
-
-echo $MENDER_TEST_GATEWAY
 
 RETRY_LIMIT=5
 
@@ -162,7 +160,7 @@ RETRY_LIMIT=5
 RETRIES=0
 while :
 do
-    MENDER_TEST_GATEWAY=$(docker ps -q --filter name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-api-gateway | xargs -r docker inspect --format={{.NetworkSettings.Networks.${DOCKER_COMPOSE_PROJECT_NAME}_mender.IPAddress}})
+    MENDER_TEST_GATEWAY=$(docker ps -q --filter name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-api-gateway | xargs docker inspect --format={{.NetworkSettings.Networks.${DOCKER_COMPOSE_PROJECT_NAME}_mender.IPAddress}})
     echo $MENDER_TEST_GATEWAY
     if [[ $MENDER_TEST_GATEWAY == "" ]]; then
         echo "The mender-gateway-api service does not seem to be up yet. Retrying..."
@@ -178,12 +176,22 @@ do
     sleep 5
 done
 
+MENDER_SERVER_URI="https://${MENDER_TEST_GATEWAY:-localhost}"
+
+# On MacOS docker is run in a VM,
+# therefore curl calls to the container
+# IP address does not reach the containers
+# like they should. Therefore, default to localhost.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    MENDER_SERVER_URI="https://localhost"
+fi
+
 # Block until the useradm service returns an HTTP 4xx response
 echo "Waiting for the useradm service to start up..."
 RETRIES=0
 while :
 do
-    curl --silent -k -X POST -u $MENDER_SERVER_USER\
+    curl --silent -k -X POST -u ${USER}:${PASSWORD} \
          --fail\
          --connect-timeout 120\
          --retry 60\
@@ -206,6 +214,7 @@ done
 
 
 echo "Creating a new user..."
+echo "with the password: " $PASSWORD
 RETRIES=0
 while :
 do
@@ -236,14 +245,10 @@ echo "********************"
 echo $MENDER_TEST_GATEWAY
 echo "********************"
 
-MENDER_SERVER_URI="https://${MENDER_TEST_GATEWAY:-localhost}"
-
-echo $MENDER_SERVER_URI
-
 echo "Getting JWT Token..."
 RETRIES=0
 until [[ "$JWT" != "" ]]; do
-    JWT=$(curl --silent -k -X POST -u $MENDER_SERVER_USER\
+    JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
         --fail\
         --connect-timeout 120\
         --retry 60\
@@ -268,6 +273,8 @@ done
 echo "JWT token: " $JWT
 
 echo "Uploading the Artifact to the server..."
+echo "DEMo artifact name: " $DEMO_ARTIFACT_NAME
+echo "ARTIFACT_SIZE_BYTES: " $ARTIFACT_SIZE_BYTES
 cout=
 RETRIES=0
 while :

@@ -107,7 +107,7 @@ class TestDemoArtifact(MenderTesting):
         artifacts = self.demodeploy.get_artifacts(
             auth_create_new_user=False
         )  # User should be created by the demo script.
-        assert len(artifacts) == 1
+        assert len(artifacts) == 1, "Server wrong number of artifacts: %s" % artifacts
         artifact_name = artifacts[0]['name']
 
         # Trigger the deployment

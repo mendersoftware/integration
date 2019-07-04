@@ -17,7 +17,6 @@
 from MenderAPI import *
 
 class DeviceAuthV2():
-    auth = None
 
     def __init__(self, auth):
         self.reset()

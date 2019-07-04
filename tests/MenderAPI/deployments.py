@@ -18,8 +18,6 @@ from MenderAPI import *
 class Deployments(object):
     # track the last statistic for a deployment id
     last_statistic = {}
-    auth = None
-    auth_v2 = None
 
     def __init__(self, auth, auth_v2):
         self.reset()

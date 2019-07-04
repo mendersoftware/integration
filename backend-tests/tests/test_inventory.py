@@ -17,7 +17,7 @@ import time
 from datetime import datetime
 
 from api.client import ApiClient
-from common import mongo, clean_mongo, clean_mongo_cls
+from common import mongo, clean_mongo, clean_mongo_cls, mongo_cleanup
 from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import api.deviceauth as deviceauth_v1
 import api.useradm as useradm
@@ -804,8 +804,349 @@ def filter_page_sort_devs(devs, page=None, per_page=None, filters=None, sort=Non
 
         return devs[lo:hi]
 
+class TestPatchDeviceInternal:
+    def _do_patch(self, id, attrs, ts, source):
+        invi = ApiClient(inventory.URL_INT)
+        r = invi.with_header('X-MEN-Source', source) \
+                .with_header('X-MEN-Msg-Timestamp', ts) \
+                .call('PATCH', \
+                    inventory.URL_INT_DEVICE_ATTRIBUTES, \
+                    attrs, \
+                    path_params={'id': id})
+        return r
+
+    def _do_login(self, user): 
+        useradmm = ApiClient(useradm.URL_MGMT)
+        r = useradmm.call('POST',
+                          useradm.URL_LOGIN,
+                          auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        return r.text
+
+    def _do_compare_devs(self, expected, api_devs):
+        assert len(expected) == len(api_devs)
+
+    def test_ok(self, user, mongo):
+        utoken = self._do_login(user)
+        now = milis() 
+
+        cases = [
+            # 
+            {
+                'name': 'new device',
+                'in_devs': [],
+
+                'id': 'foo',
+                'attributes': [
+                    {
+                        'name': 'inv-foo',
+                        'value': 'foo',
+                        'scope': 'inventory',
+                    },
+                    {
+                        'name': 'id-bar',
+                        'value': 'bar',
+                        'scope': 'identity',
+                    },
+                ],
+                'source': 'deviceauth',
+                'ts': now,
+
+                'out_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'inv-foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'id-bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+                        ]
+                    }
+                ]
+            },
+            # 
+            {
+                'name': 'existing device, add attributes',
+                'in_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': []
+                    }
+                ],
+
+                'id': 'foo',
+                'attributes': [
+                    {
+                        'name': 'inv-foo',
+                        'value': 'foo',
+                        'scope': 'inventory',
+                    },
+                    {
+                        'name': 'id-bar',
+                        'value': 'bar',
+                        'scope': 'identity',
+                    },
+                ],
+                'source': 'deviceauth',
+                'ts': now,
+
+                'out_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'inv-foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'id-bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+                        ]
+                    }
+                ]
+            },
+            #
+            {
+                'name': 'existing device, add + update attributes',
+                'in_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'inv-foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'id-bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+
+                        ]
+                    }
+                ],
+
+                'id': 'foo',
+                'attributes': [
+                    {
+                        'name': 'inv-foo',
+                        'value': 'newfoo',
+                        'scope': 'inventory',
+                    },
+                    {
+                        'name': 'id-bar',
+                        'value': 'newbar',
+                        'scope': 'identity',
+                    },
+                    {
+                        'name': 'sys-baz',
+                        'value': 'baz',
+                        'scope': 'system',
+                    },
+                ],
+                'source': 'deviceauth',
+                'ts': now,
+
+                'out_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'inv-foo',
+                                'value': 'newfoo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'id-bar',
+                                'value': 'newbar',
+                                'scope': 'identity',
+                            },
+                            {
+                                'name': 'sys-baz',
+                                'value': 'baz',
+                                'scope': 'system',
+                            },
+                        ]
+                    }
+                ]
+            },
+            #
+            {
+                'name': 'existing device, add attributes in diff scope',
+                'in_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+                        ]
+                    }
+                ],
+
+                'id': 'foo',
+                'attributes': [
+                    {
+                        'name': 'foo',
+                        'value': 'sys-foo',
+                        'scope': 'system',
+                    },
+                    {
+                        'name': 'bar',
+                        'value': 'sys-bar',
+                        'scope': 'system',
+                    },
+                ],
+                'source': 'deviceauth',
+                'ts': now,
+
+                'out_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': [
+                            {
+                                'name': 'foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+                            {
+                                'name': 'foo',
+                                'value': 'sys-foo',
+                                'scope': 'system',
+                            },
+                            {
+                                'name': 'bar',
+                                'value': 'sys-bar',
+                                'scope': 'system',
+                            },
+                        ]
+                    }
+                ]
+            },
+            #
+            {
+                'name': 'new device, separate from existing',
+                'in_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': []
+                    }
+                ],
+
+                'id': 'bar',
+                'attributes': [
+                    {
+                        'name': 'inv-foo',
+                        'value': 'foo',
+                        'scope': 'inventory',
+                    },
+                    {
+                        'name': 'id-bar',
+                        'value': 'bar',
+                        'scope': 'identity',
+                    },
+                ],
+                'source': 'deviceauth',
+                'ts': now,
+
+                'out_devs': [
+                    {
+                        'id': 'foo',
+                        'attributes': []
+                    },
+                    {
+                        'id': 'bar',
+                        'attributes': [
+                            {
+                                'name': 'inv-foo',
+                                'value': 'foo',
+                                'scope': 'inventory',
+                            },
+                            {
+                                'name': 'id-bar',
+                                'value': 'bar',
+                                'scope': 'identity',
+                            },
+                        ]
+                    }
+                ]
+            },
+        ]
+
+        for c in cases:
+            try:
+                print('case {}'.format(c['name']))
+
+                # set up input devs
+                for dev in c['in_devs']:
+                    r = self._do_patch(dev['id'], dev['attributes'], str(now), 'deviceauth')
+                    assert r.status_code == 200
+
+                # patch test attributes
+                now += 1
+                r = self._do_patch(c['id'], c['attributes'], str(now), c['source'])
+                assert r.status_code == 200
+
+                # get from inventory
+                invm = ApiClient(inventory.URL_MGMT)
+                r = invm.with_auth(utoken).call('GET',
+                                                inventory.URL_MGMT_DEVICES,
+                                                qs_params={'per_page':100})
+                assert r.status_code == 200
+                api_devs = r.json()
+
+                self._do_compare_devs(c['out_devs'], api_devs)
+            finally:
+                mongo_cleanup(mongo, ['inventory'])
+
+    def test_err_ts(self, user):
+        """
+            A handful of timestamp-related errors
+        """
+
+        utoken = self._do_login(user)
+        now = milis() 
+
+        # init device
+        id = 'foo'
+        r = self._do_patch(id, [], str(now), 'deviceauth')
+        assert r.status_code == 200
+
+        # fail on 'same time'
+        r = self._do_patch(id, [], str(now), 'deviceauth')
+        assert r.status_code == 412
+
+        # fail on 'almost the same time'
+        r = self._do_patch(id, [], str(now-1), 'deviceauth')
+        assert r.status_code == 412
+
 def compare_devs(expected, api_devs):
     assert len(expected) == len(api_devs)
 
     for i in range(len(api_devs)):
         assert api_devs[i]['id'] == expected[i].id
+
+def milis():
+    return round(datetime.utcnow().timestamp() * 1000)

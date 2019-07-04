@@ -46,9 +46,12 @@ def _clean_mongo(mongo):
     yield mongo
     mongo_cleanup(mongo)
 
-def mongo_cleanup(mongo):
-    dbs = mongo.database_names()
-    dbs = [d for d in dbs if d not in ['local', 'admin']]
+def mongo_cleanup(mongo, dbs = None):
+    if dbs is None:
+        dbs = mongo.database_names()
+
+        dbs = [d for d in dbs if d not in ['local', 'admin']]
+
     for d in dbs:
         mongo.drop_database(d)
 

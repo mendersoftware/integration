@@ -17,6 +17,7 @@ import logging
 import os
 import signal
 import subprocess
+import re
 
 import pytest
 import requests
@@ -46,10 +47,12 @@ class TestDemoArtifact(MenderTesting):
 
         request.addfinalizer(stop_docker_compose)
         procs = []
+
         def maybe_kill_proc():
             for proc in procs:
                 if proc.poll() == None:
                     proc.kill()
+
         request.addfinalizer(maybe_kill_proc)
 
         def run_demo_script_up():
@@ -68,7 +71,8 @@ class TestDemoArtifact(MenderTesting):
             for line in iter(proc.stdout.readline, ''):
                 logging.info(line)
                 if "Login password:" in line.strip():
-                    password = line[-13:-1]
+                    password = re.search("Login password: .*([^ ]{12})",
+                                         line).group(1)
                     logging.info('The login password:')
                     logging.info(password)
                     self.demoauth.password = password
@@ -76,6 +80,7 @@ class TestDemoArtifact(MenderTesting):
                     break
             # Make sure that the demo script has not errored out,
             # or errored out with a nonzero error
+            logging.info("The demo password is: %s\n" % password)
             assert proc.poll() == None or proc.returncode == 0
             return proc
 
@@ -107,7 +112,8 @@ class TestDemoArtifact(MenderTesting):
         artifacts = self.demodeploy.get_artifacts(
             auth_create_new_user=False
         )  # User should be created by the demo script.
-        assert len(artifacts) == 1, "Server wrong number of artifacts: %s" % artifacts
+        assert len(
+            artifacts) == 1, "Server wrong number of artifacts: %s" % artifacts
         artifact_name = artifacts[0]['name']
 
         # Trigger the deployment

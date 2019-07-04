@@ -1,7 +1,4 @@
 #!/bin/bash
-set -xv
-# Don't ever let environ fuck with our program again!
-# export LC_ALL=C
 
 ./verify-docker-versions
 
@@ -161,7 +158,6 @@ RETRIES=0
 while :
 do
     MENDER_TEST_GATEWAY=$(docker ps -q --filter name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-api-gateway | xargs docker inspect --format={{.NetworkSettings.Networks.${DOCKER_COMPOSE_PROJECT_NAME}_mender.IPAddress}})
-    echo $MENDER_TEST_GATEWAY
     if [[ $MENDER_TEST_GATEWAY == "" ]]; then
         echo "The mender-gateway-api service does not seem to be up yet. Retrying..."
     else
@@ -193,10 +189,7 @@ while :
 do
     curl --silent -k -X POST -u ${USER}:${PASSWORD} \
          --fail\
-         --connect-timeout 120\
-         --retry 60\
-         --retry-delay 2\
-         --retry-max-time 120\
+         --connect-timeout 5\
          $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
     retval=$?
     case $retval in
@@ -214,7 +207,6 @@ done
 
 
 echo "Creating a new user..."
-echo "with the password: " $PASSWORD
 RETRIES=0
 while :
 do
@@ -241,24 +233,17 @@ do
     sleep 5
 done
 
-echo "********************"
-echo $MENDER_TEST_GATEWAY
-echo "********************"
-
 echo "Getting JWT Token..."
 RETRIES=0
 until [[ "$JWT" != "" ]]; do
     JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
         --fail\
-        --connect-timeout 120\
-        --retry 60\
-        --retry-delay 2\
-        --retry-max-time 120\
+        --connect-timeout 5\
         $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
     retval=$?
     if [[ $retval -ne 0 ]]; then
         echo "Failed to get the 'JWT' token from the useradm service."
-        echo "This is needed in order to use the demo Artifact."
+        echo "This is needed in order to upload the demo Artifact."
         echo "curl exit code: " $retval
         echo "Retrying in 5..."
     fi
@@ -273,8 +258,6 @@ done
 echo "JWT token: " $JWT
 
 echo "Uploading the Artifact to the server..."
-echo "DEMo artifact name: " $DEMO_ARTIFACT_NAME
-echo "ARTIFACT_SIZE_BYTES: " $ARTIFACT_SIZE_BYTES
 cout=
 RETRIES=0
 while :
@@ -282,10 +265,7 @@ do
     cout=$(curl --silent -k -X POST \
                 --fail\
                 --show-error\
-                --connect-timeout 120\
-                --retry-delay 2\
-                --retry 60 \
-                --retry-max-time 120\
+                --connect-timeout 5\
                 --header "Authorization: Bearer ${JWT}"\
                 --form "size=${ARTIFACT_SIZE_BYTES}"\
                 --form "artifact=@${DEMO_ARTIFACT_NAME}"\
@@ -323,12 +303,13 @@ case "$errout" in
        exit 1 ;;
 esac
 
-echo "****************************************"
+echo "******************************************"
 echo
-echo "Username: "      ${USER}
-echo "Login password: ${PASSWORD}"
+formatter="%-20s%-30s\n"
+printf "$formatter"  "Username:"        ${USER}
+printf "$formatter"  "Login password:"  ${PASSWORD}
 echo
-echo "****************************************"
+echo "******************************************"
 echo "Please keep the password available, it will not be cached by the login script."
 echo "Backend ready and running in the background. Press Enter to show the logs."
 echo "Press Ctrl-C to stop the backend and quit."

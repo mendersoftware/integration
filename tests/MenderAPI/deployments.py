@@ -178,7 +178,7 @@ class Deployments(object):
     def get_artifacts(self, auth_create_new_user=True):
         artifact_url = self.get_deployments_base_path() + "artifacts"
         r = requests.get(artifact_url, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
-        assert r.status_code == requests.status_codes.codes.ok
+        assert r.status_code == requests.status_codes.codes.ok, "r.status_code: %d" % r.status_code
         return r.json()
 
     def abort(self, deployment_id):

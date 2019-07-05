@@ -832,6 +832,23 @@ class TestPatchDeviceInternalBase:
     def _do_compare_devs(self, expected, api_devs):
         assert len(expected) == len(api_devs)
 
+        for e in expected:
+            found = [d for d in api_devs if d['id'] == e['id']]
+            assert len(found) == 1
+            found = found[0]
+
+            for scope in ['identity', 'inventory', 'system', 'custom']:
+                exp_attrs = found['attributes'][scope]
+                api_attrs = e['attributes'][scope]
+                self._do_compare_attrs(exp_attrs, api_attrs)
+
+    def _do_compare_attrs(self, exp_attrs, api_attrs):
+        assert len(exp_attrs) == len(api_attrs)
+        exp_attrs = sorted(exp_attrs, key=lambda x: x['name'])
+        api_attrs = sorted(api_attrs, key=lambda x: x['name'])
+
+        assert exp_attrs == api_attrs
+
     def do_test_ok(self, user, mongo, tenant_id=None):
         utoken = self._do_login(user)
         now = milis() 
@@ -861,18 +878,24 @@ class TestPatchDeviceInternalBase:
                 'out_devs': [
                     {
                         'id': 'foo',
-                        'attributes': [
-                            {
-                                'name': 'inv-foo',
-                                'value': 'foo',
-                                'scope': 'inventory',
-                            },
-                            {
-                                'name': 'id-bar',
-                                'value': 'bar',
-                                'scope': 'identity',
-                            },
-                        ]
+                        'attributes': {
+                            'inventory': [
+                                {
+                                    'name': 'inv-foo',
+                                    'value': 'foo',
+                                    'scope': 'inventory',
+                                }
+                            ],
+                            'identity': [
+                                {
+                                    'name': 'id-bar',
+                                    'value': 'bar',
+                                    'scope': 'identity',
+                                },
+                            ],
+                            'custom': [],
+                            'system': [],
+                        }
                     }
                 ]
             },
@@ -905,18 +928,24 @@ class TestPatchDeviceInternalBase:
                 'out_devs': [
                     {
                         'id': 'foo',
-                        'attributes': [
-                            {
-                                'name': 'inv-foo',
-                                'value': 'foo',
-                                'scope': 'inventory',
-                            },
-                            {
-                                'name': 'id-bar',
-                                'value': 'bar',
-                                'scope': 'identity',
-                            },
-                        ]
+                        'attributes': {
+                            'inventory': [
+                                {
+                                    'name': 'inv-foo',
+                                    'value': 'foo',
+                                    'scope': 'inventory'
+                                }
+                            ],
+                            'identity': [
+                                {
+                                    'name': 'id-bar',
+                                    'value': 'bar',
+                                    'scope': 'identity',
+                                }
+                            ],
+                            'custom': [],
+                            'system': [],
+                        }
                     }
                 ]
             },
@@ -966,23 +995,30 @@ class TestPatchDeviceInternalBase:
                 'out_devs': [
                     {
                         'id': 'foo',
-                        'attributes': [
-                            {
-                                'name': 'inv-foo',
-                                'value': 'newfoo',
-                                'scope': 'inventory',
-                            },
-                            {
-                                'name': 'id-bar',
-                                'value': 'newbar',
-                                'scope': 'identity',
-                            },
-                            {
-                                'name': 'sys-baz',
-                                'value': 'baz',
-                                'scope': 'system',
-                            },
-                        ]
+                        'attributes': {
+                            'inventory': [
+                                {
+                                    'name': 'inv-foo',
+                                    'value': 'newfoo',
+                                    'scope': 'inventory',
+                                },
+                            ],
+                            'identity': [
+                                {
+                                    'name': 'id-bar',
+                                    'value': 'newbar',
+                                    'scope': 'identity',
+                                }
+                            ],
+                            'system': [
+                                {
+                                    'name': 'sys-baz',
+                                    'value': 'baz',
+                                    'scope': 'system',
+                                }
+                            ],
+                            'custom': []
+                        }
                     }
                 ]
             },
@@ -1026,28 +1062,35 @@ class TestPatchDeviceInternalBase:
                 'out_devs': [
                     {
                         'id': 'foo',
-                        'attributes': [
-                            {
-                                'name': 'foo',
-                                'value': 'foo',
-                                'scope': 'inventory',
-                            },
-                            {
-                                'name': 'bar',
-                                'value': 'bar',
-                                'scope': 'identity',
-                            },
-                            {
-                                'name': 'foo',
-                                'value': 'sys-foo',
-                                'scope': 'system',
-                            },
-                            {
-                                'name': 'bar',
-                                'value': 'sys-bar',
-                                'scope': 'system',
-                            },
-                        ]
+                        'attributes': {
+                            'inventory': [
+                                {
+                                    'name': 'foo',
+                                    'value': 'foo',
+                                    'scope': 'inventory',
+                                }
+                            ],
+                            'identity': [
+                                {
+                                    'name': 'bar',
+                                    'value': 'bar',
+                                    'scope': 'identity',
+                                }
+                            ],
+                            'system': [
+                                {
+                                    'name': 'foo',
+                                    'value': 'sys-foo',
+                                    'scope': 'system',
+                                },
+                                {
+                                    'name': 'bar',
+                                    'value': 'sys-bar',
+                                    'scope': 'system',
+                                }
+                            ],
+                            'custom': []
+                        }
                     }
                 ]
             },
@@ -1080,25 +1123,36 @@ class TestPatchDeviceInternalBase:
                 'out_devs': [
                     {
                         'id': 'foo',
-                        'attributes': []
+                        'attributes': {
+                            'identity': [],
+                            'inventory': [],
+                            'custom': [],
+                            'system': []
+                        }
                     },
                     {
                         'id': 'bar',
-                        'attributes': [
-                            {
-                                'name': 'inv-foo',
-                                'value': 'foo',
-                                'scope': 'inventory',
-                            },
-                            {
-                                'name': 'id-bar',
-                                'value': 'bar',
-                                'scope': 'identity',
-                            },
-                        ]
+                        'attributes': {
+                            'inventory': [
+                                {
+                                    'name': 'inv-foo',
+                                    'value': 'foo',
+                                    'scope': 'inventory',
+                                }
+                            ],
+                            'identity': [
+                                {
+                                    'name': 'id-bar',
+                                    'value': 'bar',
+                                    'scope': 'identity',
+                                }
+                            ],
+                            'custom': [],
+                            'system': []
+                        }
                     }
                 ]
-            },
+            }
         ]
 
         for c in cases:

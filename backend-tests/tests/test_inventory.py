@@ -804,15 +804,21 @@ def filter_page_sort_devs(devs, page=None, per_page=None, filters=None, sort=Non
 
         return devs[lo:hi]
 
-class TestPatchDeviceInternal:
-    def _do_patch(self, id, attrs, ts, source):
+class TestPatchDeviceInternalBase:
+    def _do_patch(self, id, attrs, ts, source, tenant_id=None):
         invi = ApiClient(inventory.URL_INT)
+
+        qs = {}
+        if tenant_id is not None:
+            qs = {'tenant_id': tenant_id}
+
         r = invi.with_header('X-MEN-Source', source) \
                 .with_header('X-MEN-Msg-Timestamp', ts) \
                 .call('PATCH', \
                     inventory.URL_INT_DEVICE_ATTRIBUTES, \
                     attrs, \
-                    path_params={'id': id})
+                    path_params={'id': id},
+                    qs_params=qs)
         return r
 
     def _do_login(self, user): 
@@ -826,7 +832,7 @@ class TestPatchDeviceInternal:
     def _do_compare_devs(self, expected, api_devs):
         assert len(expected) == len(api_devs)
 
-    def test_ok(self, user, mongo):
+    def do_test_ok(self, user, mongo, tenant_id=None):
         utoken = self._do_login(user)
         now = milis() 
 
@@ -1101,12 +1107,12 @@ class TestPatchDeviceInternal:
 
                 # set up input devs
                 for dev in c['in_devs']:
-                    r = self._do_patch(dev['id'], dev['attributes'], str(now), 'deviceauth')
+                    r = self._do_patch(dev['id'], dev['attributes'], str(now), 'deviceauth', tenant_id)
                     assert r.status_code == 200
 
                 # patch test attributes
                 now += 1
-                r = self._do_patch(c['id'], c['attributes'], str(now), c['source'])
+                r = self._do_patch(c['id'], c['attributes'], str(now), c['source'], tenant_id)
                 assert r.status_code == 200
 
                 # get from inventory
@@ -1119,9 +1125,12 @@ class TestPatchDeviceInternal:
 
                 self._do_compare_devs(c['out_devs'], api_devs)
             finally:
-                mongo_cleanup(mongo, ['inventory'])
+                db = 'inventory'
+                if tenant_id is not None:
+                    db += '-' + tenant_id
+                mongo_cleanup(mongo, [db])
 
-    def test_err_ts(self, user):
+    def do_test_err_ts(self, user, tenant_id=None):
         """
             A handful of timestamp-related errors
         """
@@ -1131,16 +1140,34 @@ class TestPatchDeviceInternal:
 
         # init device
         id = 'foo'
-        r = self._do_patch(id, [], str(now), 'deviceauth')
+        r = self._do_patch(id, [], str(now), 'deviceauth', tenant_id)
         assert r.status_code == 200
 
         # fail on 'same time'
-        r = self._do_patch(id, [], str(now), 'deviceauth')
+        r = self._do_patch(id, [], str(now), 'deviceauth', tenant_id)
         assert r.status_code == 412
 
         # fail on 'almost the same time'
-        r = self._do_patch(id, [], str(now-1), 'deviceauth')
+        r = self._do_patch(id, [], str(now-1), 'deviceauth', tenant_id)
         assert r.status_code == 412
+
+
+class TestPatchDeviceInternal(TestPatchDeviceInternalBase):
+    def test_ok(self, user, mongo):
+        self.do_test_ok(user, mongo)
+
+    def test_err_ts(self, user):
+        self.do_test_err_ts(user)
+
+
+class TestPatchDeviceInternalMultitenant(TestPatchDeviceInternalBase):
+    def test_ok(self, tenants_users, mongo):
+        for t in tenants_users:
+            self.do_test_ok(t.users[0], mongo, t.id)
+
+    def test_err_ts(self, tenants_users):
+        for t in tenants_users:
+            self.do_test_err_ts(t.users[0], t.id)
 
 def compare_devs(expected, api_devs):
     assert len(expected) == len(api_devs)

@@ -1230,6 +1230,11 @@ def trigger_jenkins_build(state, tag_avail):
         substr = ask("Which one (substring is ok as long as it's unique)? ")
         found = 0
         for param in params.keys():
+            if param == substr:
+                # Exact match
+                name = param
+                found = 1
+                break
             if param.find(substr) >= 0:
                 name = param
                 found += 1

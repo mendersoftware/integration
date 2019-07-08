@@ -278,6 +278,7 @@ esac
 
 echo "****************************************"
 echo
+echo "Username: mender-demo@example.com"
 echo  "Login password: ${PASSWORD}"
 echo
 echo "****************************************"

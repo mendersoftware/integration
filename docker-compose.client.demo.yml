@@ -6,4 +6,4 @@ services:
     #
     mender-client:
         ports:
-            - "3000:80"
+            - "85:85"

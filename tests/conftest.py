@@ -135,6 +135,7 @@ def pytest_exception_interact(node, call, report):
     if report.failed:
         for log in log_files:
             logger.info("printing content of : %s" % log)
+            logger.info("Running with PID: %d, PPID: %d" % (os.getpid(), os.getppid()))
             with open(log) as f:
                 for line in f.readlines():
                     logger.info("%s: %s" % (log, line))

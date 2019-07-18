@@ -133,6 +133,7 @@ def pytest_runtest_setup(item):
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
+        logging.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
         for log in log_files:
             logger.info("printing content of : %s" % log)
             with open(log) as f:

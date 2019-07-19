@@ -92,7 +92,7 @@ class Authentication:
         self.auth_header = None
 
     def _do_login(self, username, password):
-        r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False, auth=HTTPBasicAuth(username, password))
+        r = requests_retry().post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False, auth=HTTPBasicAuth(username, password))
         assert r.status_code == 200 or r.status_code == 401
 
         if r.status_code == 200:

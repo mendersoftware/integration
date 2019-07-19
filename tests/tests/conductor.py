@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import requests
+from MenderAPI import requests_retry
 
 
 class Conductor:
@@ -41,7 +42,7 @@ class Conductor:
             'q': query,
         }
 
-        rsp = requests.get(self.addr+self.API_WF_SEARCH, qs)
+        rsp = requests_retry().get(self.addr+self.API_WF_SEARCH, params=qs)
         rsp.raise_for_status()
         return rsp.json()
 

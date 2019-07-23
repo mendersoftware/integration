@@ -121,6 +121,11 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "docker_image": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm-enterprise"],
+                "release_component": True,
+            },
         },
         "docker_image": {
             "deployments": {
@@ -193,6 +198,11 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "git": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm-enterprise"],
+                "release_component": True,
+            },
         },
         "docker_container": {
             "mender-deployments": {
@@ -248,6 +258,11 @@ class Component:
             "mender-useradm": {
                 "git": ["useradm"],
                 "docker_image": ["useradm"],
+                "release_component": True,
+            },
+            "mender-useradm-enterprise": {
+                "git": ["useradm-enterprise"],
+                "docker_image": ["useradm-enterprise"],
                 "release_component": True,
             },
         },
@@ -352,6 +367,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",
     "useradm": "USERADM_REV",
+    "useradm-enterprise": "USERADM_ENTERPRISE_REV",
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",

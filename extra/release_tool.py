@@ -368,6 +368,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-conductor": "MENDER_CONDUCTOR_REV",
     "mender-conductor-enterprise": "MENDER_CONDUCTOR_ENTERPRISE_REV",
     "deployments": "DEPLOYMENTS_REV",
+    "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",

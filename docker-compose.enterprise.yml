@@ -1,0 +1,8 @@
+version: '2'
+services:
+
+    mender-deployments:
+        image: mendersoftware/deployments-enterprise:master
+
+    mender-useradm:
+        image: mendersoftware/useradm-enterprise:master

@@ -56,6 +56,11 @@ class Component:
                 "docker_container": ["mender-deployments"],
                 "release_component": True,
             },
+            "deployments-enterprise": {
+                "docker_image": ["deployments-enterprise"],
+                "docker_container": ["mender-deployments"],
+                "release_component": False,
+            },
             "deviceadm": {
                 "docker_image": ["deviceadm"],
                 "docker_container": ["mender-device-adm"],
@@ -121,12 +126,22 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "docker_image": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm"],
+                "release_component": False,
+            },
         },
         "docker_image": {
             "deployments": {
                 "git": ["deployments"],
                 "docker_container": ["mender-deployments"],
                 "release_component": True,
+            },
+            "deployments-enterprise": {
+                "git": ["deployments-enterprise"],
+                "docker_container": ["mender-deployments"],
+                "release_component": False,
             },
             "deviceadm": {
                 "git": ["deviceadm"],
@@ -193,11 +208,16 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "git": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm"],
+                "release_component": False,
+            },
         },
         "docker_container": {
             "mender-deployments": {
-                "git": ["deployments"],
-                "docker_image": ["deployments"],
+                "git": ["deployments", "deployments-enterprise"],
+                "docker_image": ["deployments", "deployments-enterprise"],
                 "release_component": True,
             },
             "mender-device-auth": {
@@ -246,8 +266,8 @@ class Component:
                 "release_component": False,
             },
             "mender-useradm": {
-                "git": ["useradm"],
-                "docker_image": ["useradm"],
+                "git": ["useradm", "useradm-enterprise"],
+                "docker_image": ["useradm", "useradm-enterprise"],
                 "release_component": True,
             },
         },

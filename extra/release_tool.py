@@ -373,6 +373,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",
     "useradm": "USERADM_REV",
+    "useradm-enterprise": "USERADM_ENTERPRISE_REV",
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",

@@ -126,6 +126,11 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "docker_image": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm"],
+                "release_component": False,
+            },
         },
         "docker_image": {
             "deployments": {
@@ -203,6 +208,11 @@ class Component:
                 "docker_container": ["mender-useradm"],
                 "release_component": True,
             },
+            "useradm-enterprise": {
+                "git": ["useradm-enterprise"],
+                "docker_container": ["mender-useradm"],
+                "release_component": False,
+            },
         },
         "docker_container": {
             "mender-deployments": {
@@ -256,8 +266,8 @@ class Component:
                 "release_component": False,
             },
             "mender-useradm": {
-                "git": ["useradm"],
-                "docker_image": ["useradm"],
+                "git": ["useradm", "useradm-enterprise"],
+                "docker_image": ["useradm", "useradm-enterprise"],
                 "release_component": True,
             },
         },

@@ -56,6 +56,11 @@ class Component:
                 "docker_container": ["mender-deployments"],
                 "release_component": True,
             },
+            "deployments-enterprise": {
+                "docker_image": ["deployments-enterprise"],
+                "docker_container": ["mender-deployments"],
+                "release_component": False,
+            },
             "deviceadm": {
                 "docker_image": ["deviceadm"],
                 "docker_container": ["mender-device-adm"],
@@ -128,6 +133,11 @@ class Component:
                 "docker_container": ["mender-deployments"],
                 "release_component": True,
             },
+            "deployments-enterprise": {
+                "git": ["deployments-enterprise"],
+                "docker_container": ["mender-deployments"],
+                "release_component": False,
+            },
             "deviceadm": {
                 "git": ["deviceadm"],
                 "docker_container": ["mender-device-adm"],
@@ -196,8 +206,8 @@ class Component:
         },
         "docker_container": {
             "mender-deployments": {
-                "git": ["deployments"],
-                "docker_image": ["deployments"],
+                "git": ["deployments", "deployments-enterprise"],
+                "docker_image": ["deployments", "deployments-enterprise"],
                 "release_component": True,
             },
             "mender-device-auth": {

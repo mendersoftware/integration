@@ -140,12 +140,20 @@ def pytest_exception_interact(node, call, report):
             with open(log) as f:
                 for line in f.readlines():
                     logger.info("%s: %s" % (log, line))
+
         try:
             logger.info("Printing client deployment log, if possible:")
             output = execute(run, "cat /data/mender/deployment*.log || true", hosts=get_mender_clients())
             logger.info(output)
         except:
             logger.info("Not able to print client deployment log")
+
+        try:
+            logger.info("Printing client systemd log, if possible:")
+            output = execute(run, "journalctl -u mender || true", hosts=get_mender_clients())
+            logger.info(output)
+        except:
+            logger.info("Not able to print client systemd log")
 
 
 

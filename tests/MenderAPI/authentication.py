@@ -108,11 +108,9 @@ class Authentication:
         docker_compose_cmd(cmd)
 
     def _create_tenant(self, username):
-        cmd = '-f ../docker-compose.tenant.yml %s exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (conftest.mt_docker_compose_file,
-                                                                                          username)
+        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
         return docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ../docker-compose.tenant.yml %s exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (conftest.mt_docker_compose_file,
-                                                                                     tenant_id)
+        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
         return docker_compose_cmd(cmd)

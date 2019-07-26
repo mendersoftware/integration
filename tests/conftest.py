@@ -40,7 +40,6 @@ docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 inline_logs = False
-mt_docker_compose_file = ""
 run_tenant_tests = True
 machine_name = None
 
@@ -73,19 +72,12 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    global extra_files, inline_logs, mt_docker_compose_file
+    global extra_files, inline_logs
     verify_sane_test_environment()
 
     env.api_version = config.getoption("api")
 
     inline_logs = config.getoption("--inline-logs")
-
-    if config.getoption("--mt-docker-compose-file") is None:
-        if os.path.exists("../docker-compose.mt.yml"):
-            logger.warn("--mt-docker-compose-file not set, but ../docker-compose.mt.yml exists, using that file.")
-            mt_docker_compose_file = "-f ../docker-compose.mt.yml"
-    else:
-        mt_docker_compose_file = "-f %s" % config.getoption("--mt-docker-compose-file")
 
     global machine_name
     machine_name = config.getoption("--machine-name")

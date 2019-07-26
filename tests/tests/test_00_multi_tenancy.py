@@ -25,8 +25,6 @@ from common_update import update_image_successful, update_image_failed, \
 from mendertesting import MenderTesting
 from tests import artifact_lock
 
-@pytest.mark.skipif(len(conftest.mt_docker_compose_file) == 0,
-                    reason="set --mt-docker-compose-file to run test")
 class TestMultiTenancy(MenderTesting):
     def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
         expected_string = "deployment aborted at the backend"

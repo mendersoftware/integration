@@ -9,6 +9,8 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 # don't complain about non-verified ssl connections
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
+from requests_helpers import requests_retry
+
 from common import *
 from common_docker import *
 

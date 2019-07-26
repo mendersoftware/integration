@@ -42,7 +42,7 @@ class TestCreateOrganization(MenderTesting):
         logging.info("TestCreateOrganization: making request")
 
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
 
         assert rsp.status_code == 202
 
@@ -59,29 +59,29 @@ class TestCreateOrganization(MenderTesting):
         smtp_mock.assert_called()
         logging.info("TestCreateOrganization: Assert ok.")
 
-        r = requests.post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version),
-                verify=False,
-                auth=HTTPBasicAuth("some.user@example.com", "asdfqwer1234"))
+        r = requests_retry().post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version),
+                                  verify=False,
+                                  auth=HTTPBasicAuth("some.user@example.com", "asdfqwer1234"))
         assert r.status_code == 200
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
     def test_duplicate_organization_name(self):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
         assert rsp.status_code == 202
         payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user2@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
         assert rsp.status_code == 202
 
     @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
     def test_duplicate_email(self):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
         logging.debug("first request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 202
 
         payload = {"request_id": "123457", "organization": "tenant-foo2", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests.post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
         logging.debug("second request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 409
 

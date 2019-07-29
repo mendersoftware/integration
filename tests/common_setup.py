@@ -212,13 +212,13 @@ def multitenancy_setup_without_client(request):
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.tenant.yml \
-                        %s up -d" % (conftest.mt_docker_compose_file),
+                        -f ../docker-compose.enterprise.yml \
+                        up -d",
                         use_common_files=False)
 
     # wait a bit for the backend to start
     wait_for_containers(15, ["../docker-compose.yml",
-                             "../docker-compose.tenant.yml",
+                             "../docker-compose.enterprise.yml",
                              "../docker-compose.storage.minio.yml"])
 
     def fin():
@@ -239,14 +239,14 @@ def standard_setup_one_client_bootstrapped_with_s3_and_mt(request):
                         -f ../docker-compose.testing.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.storage.s3.yml \
-                        -f ../docker-compose.tenant.yml \
-                        %s up -d" % (conftest.mt_docker_compose_file),
+                        -f ../docker-compose.enterprise.yml \
+                        up -d",
                         use_common_files=False)
 
 
     wait_for_containers(15, ["../docker-compose.yml",
                              "../docker-compose.testing.yml ",
-                             "../docker-compose.tenant.yml",
+                             "../docker-compose.enterprise.yml",
                              "../docker-compose.storage.minio.yml",
                              "../docker-compose.storage.s3.yml"])
 
@@ -268,16 +268,15 @@ def multitenancy_setup_without_client_with_smtp(request):
     docker_compose_cmd("-f ../docker-compose.yml \
                         -f ../docker-compose.storage.minio.yml \
                         -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.tenant.yml \
-                        %s \
+                        -f ../docker-compose.enterprise.yml \
                         -f ../extra/smtp-testing/conductor-workers-smtp-test.yml \
                         -f ../extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
-                        up -d"  % (conftest.mt_docker_compose_file),
+                        up -d",
                        use_common_files=False, env={"HOST_IP": host_ip})
 
     # wait a bit for the backend to start
     wait_for_containers(15, ["../docker-compose.yml",
-                             "../docker-compose.tenant.yml",
+                             "../docker-compose.enterprise.yml",
                              "../docker-compose.storage.minio.yml"])
 
     def fin():

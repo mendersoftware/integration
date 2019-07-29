@@ -1,8 +1,81 @@
 version: '2'
 services:
 
+    # subsitute services with 'enterprise' versions
     mender-deployments:
         image: mendersoftware/deployments-enterprise:master
 
     mender-useradm:
         image: mendersoftware/useradm-enterprise:master
+
+    mender-conductor:
+        image: mendersoftware/mender-conductor-enterprise:master
+
+    # add services
+    mender-tenantadm:
+        image: mendersoftware/tenantadm:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        environment:
+            TENANTADM_CONDUCTOR_ADDR: http://mender-conductor:8080
+
+    mender-org-welcome-email-preparer:
+        image: mendersoftware/org-welcome-email-preparer:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-conductor
+        environment:
+            CONDUCTOR: "http://mender-conductor:8080"
+
+    mender-email-sender:
+        image: mendersoftware/email-sender:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-conductor
+        environment:
+            CONDUCTOR: "http://mender-conductor:8080"
+            DEMO: "true"
+
+    # add service aliases
+    mender-mongo:
+        networks:
+            mender:
+                aliases:
+                    - mongo-tenantadm
+                    - mongo-deployments
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
+
+    # configure the rest
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
+
+    mender-useradm:
+        environment:
+            USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
+
+    mender-api-gateway:
+        environment:
+            HAVE_MULTITENANT: 1
+
+    mender-gui:
+        environment:
+            HAVE_MULTITENANT: 1
+
+networks:
+    mender:

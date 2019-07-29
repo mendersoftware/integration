@@ -29,7 +29,7 @@ import asyncore
 from MenderAPI import *
 
 class TestCreateOrganization(MenderTesting):
-    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    @pytest.mark.usefixtures("enterprise_no_client_smtp")
     def test_success(self):
 
         logging.info("Starting TestCreateOrganization")
@@ -64,7 +64,7 @@ class TestCreateOrganization(MenderTesting):
                                   auth=HTTPBasicAuth("some.user@example.com", "asdfqwer1234"))
         assert r.status_code == 200
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    @pytest.mark.usefixtures("enterprise_no_client_smtp")
     def test_duplicate_organization_name(self):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
@@ -73,7 +73,7 @@ class TestCreateOrganization(MenderTesting):
         rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
         assert rsp.status_code == 202
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client_with_smtp")
+    @pytest.mark.usefixtures("enterprise_no_client_smtp")
     def test_duplicate_email(self):
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
         rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)

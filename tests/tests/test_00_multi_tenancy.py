@@ -50,7 +50,7 @@ class TestMultiTenancy(MenderTesting):
                     skip_reboot_verification=True,
                     hosts=get_mender_client_by_container_name(mender_client_container))
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_token_validity(self):
         """ verify that only devices with valid tokens can bootstrap
             successfully to a multitenancy setup """
@@ -98,7 +98,7 @@ class TestMultiTenancy(MenderTesting):
         set_correct_tenant_token(token)
         auth_v2.get_devices(expected_devices=1)
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_artifacts_exclusive_to_user(self):
         users = [
             {"email": "foo1@foo1.com", "password": "hunter2hunter2", "username": "foo1"},
@@ -124,7 +124,7 @@ class TestMultiTenancy(MenderTesting):
             assert len(artifacts_for_user)
             assert artifacts_for_user[0]["name"] == user["email"]
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_clients_exclusive_to_user(self):
         users = [
             {
@@ -181,7 +181,7 @@ class TestMultiTenancy(MenderTesting):
             else:
                 assert False, "decommissioned device still available in inventory"
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_multi_tenancy_deployment(self):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
@@ -219,7 +219,7 @@ class TestMultiTenancy(MenderTesting):
                                 fail=user["fail"])
 
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_multi_tenancy_deployment_aborting(self):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
@@ -250,7 +250,7 @@ class TestMultiTenancy(MenderTesting):
                     hosts=get_mender_client_by_container_name(user["container"]))
 
     @MenderTesting.aws_s3
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped_with_s3_and_mt")
+    @pytest.mark.usefixtures("enterprise_client_s3")
     def test_multi_tenancy_deployment_s3(self):
 
         def verify_object_id_and_tagging():

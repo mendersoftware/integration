@@ -169,17 +169,17 @@ class TestPreauth(TestPreauthBase):
 
 class TestPreauthMultiTenant(TestPreauthBase):
     @pytest.mark.skip(reason="there is a problem with this test: MEN-1797")
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_ok_preauth_and_bootstrap(self):
         self.__create_tenant_and_container()
         self.do_test_ok_preauth_and_bootstrap()
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_ok_preauth_and_remove(self):
         self.__create_tenant_and_container()
         self.do_test_ok_preauth_and_remove()
 
-    @pytest.mark.usefixtures("multitenancy_setup_without_client")
+    @pytest.mark.usefixtures("enterprise_no_client")
     def test_fail_preauth_existing(self):
         self.__create_tenant_and_container()
         self.do_test_fail_preauth_existing()

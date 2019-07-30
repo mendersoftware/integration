@@ -22,11 +22,14 @@ from common_update import update_image_successful, update_image_failed
 from MenderAPI import deploy, image, inv
 from mendertesting import MenderTesting
 import shutil
+import os
 
 class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
+    @pytest.mark.skipif(not os.path.exists("mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name),
+                        reason="Thud branch and older from Yocto does not have R/O rootfs support")
     @pytest.mark.usefixtures("standard_setup_one_rofs_client_bootstrapped")
     def test_double_update_rofs(self):
         """Upgrade a device with two consecutive R/O images"""

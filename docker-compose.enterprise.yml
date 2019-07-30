@@ -5,9 +5,6 @@ services:
     mender-deployments:
         image: mendersoftware/deployments-enterprise:master
 
-    mender-useradm:
-        image: mendersoftware/useradm-enterprise:master
-
     mender-conductor:
         image: mendersoftware/mender-conductor-enterprise:master
 
@@ -66,6 +63,7 @@ services:
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 
     mender-useradm:
+        image: mendersoftware/useradm-enterprise:master
         environment:
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 

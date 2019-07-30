@@ -124,6 +124,7 @@ services:
             - ./conductor/server/config:/app/config
         environment:
             - CONFIG_PROP=config.properties
+            - LOG_CONFIG=/app/config/log4j.properties
 
     mender-mongo:
         volumes:

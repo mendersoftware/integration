@@ -25,7 +25,7 @@ from common_update import update_image_successful, update_image_failed, \
 from mendertesting import MenderTesting
 from tests import artifact_lock
 
-class TestMultiTenancy(MenderTesting):
+class TestMultiTenancyEnterprise(MenderTesting):
     def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
         expected_string = "deployment aborted at the backend"
 

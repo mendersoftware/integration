@@ -167,7 +167,7 @@ class TestPreauth(TestPreauthBase):
         self.do_test_fail_preauth_existing()
 
 
-class TestPreauthMultiTenant(TestPreauthBase):
+class TestPreauthEnterprise(TestPreauthBase):
     @pytest.mark.skip(reason="there is a problem with this test: MEN-1797")
     @pytest.mark.usefixtures("enterprise_no_client")
     def test_ok_preauth_and_bootstrap(self):

@@ -203,8 +203,8 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):
-    if not conftest.run_tenant_tests:
-        pytest.skip("Tenant tests disabled")
+    if conftest.is_integration_branch:
+        pytest.skip("Enterprise tests disabled on integration branches")
 
     stop_docker_compose()
     reset_mender_api()
@@ -229,8 +229,8 @@ def enterprise_no_client(request):
 
 @pytest.fixture(scope="function")
 def enterprise_client_s3(request):
-    if not conftest.run_tenant_tests:
-        pytest.skip("Tenant tests disabled")
+    if conftest.is_integration_branch:
+        pytest.skip("Enterprise tests disabled on integration branches")
 
     stop_docker_compose()
     reset_mender_api()
@@ -257,8 +257,8 @@ def enterprise_client_s3(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client_smtp(request):
-    if not conftest.run_tenant_tests:
-        pytest.skip("Tenant tests disabled")
+    if conftest.is_integration_branch:
+        pytest.skip("Enterprise tests disabled on integration branches")
 
     stop_docker_compose()
     reset_mender_api()

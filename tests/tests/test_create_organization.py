@@ -28,7 +28,7 @@ from threading import Thread
 import asyncore
 from MenderAPI import *
 
-class TestCreateOrganization(MenderTesting):
+class TestCreateOrganizationEnterprise(MenderTesting):
     @pytest.mark.usefixtures("enterprise_no_client_smtp")
     def test_success(self):
 

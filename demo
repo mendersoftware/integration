@@ -6,9 +6,7 @@ usage() {
     cat <<EOF
 $(basename $0) [options] docker-options
 
---client
-	Enable emulated client. To enable more than one client, you can use:
-	  $(basename $0) --client scale mender-client=2
+--client    Enable emulated client
 
 All other arguments passed to this command are passed directly to
 docker-compose, if you want to run the demo, run:

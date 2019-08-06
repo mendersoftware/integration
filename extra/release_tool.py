@@ -1707,13 +1707,22 @@ def determine_version_to_include_in_release(state, repo):
         follow_branch = "%s/master" % find_upstream_remote(state, repo.git())
 
     if prev_of_repo:
-        cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+        print_line()
 
-        print("cd %s && git %s:" % (repo.git(), " ".join(cmd)))
-        execute_git(state, repo.git(), cmd)
+        git_cmd = ["log", "%s..%s" % (prev_of_repo, follow_branch)]
+        print("cd %s && git %s:" % (repo.git(), " ".join(git_cmd)))
+        execute_git(state, repo.git(), git_cmd)
 
         print()
-        print("Above is the output of 'cd %s && git %s'" % (repo.git(), " ".join(cmd)))
+        print()
+
+        changelog_cmd = [os.path.join(integration_dir(), "extra/changelog-generator/changelog-generator"),
+                         "--repo", "%s..%s" % (prev_of_repo, follow_branch)]
+        print("cd %s && %s:" % (repo.git(), " ".join(changelog_cmd)))
+        subprocess.check_call(changelog_cmd, cwd=os.path.join(state['repo_dir'], repo.git()))
+
+        print_line()
+        print("Above is the output of:\n\ncd %s\ngit %s\n%s\n" % (repo.git(), " ".join(git_cmd), " ".join(changelog_cmd)))
         reply = ask("Based on this, is there a reason for a new release of %s? "
                     % repo.git())
 

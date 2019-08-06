@@ -3,8 +3,8 @@ version: '2'
 services:
   mender-gui-tests-runner:
     build:
-      dockerfile: tests/e2e_tests/Dockerfile.gui
-      context: .
+      dockerfile: Dockerfile.gui
+      context: ${INTEGRATION_PATH}/tests/e2e_tests
     networks:
       - mender
     depends_on:

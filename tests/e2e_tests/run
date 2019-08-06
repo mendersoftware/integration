@@ -78,6 +78,8 @@ run_tests() {
         return 1
     fi
 
+    docker-compose exec -T mender-useradm /usr/bin/useradm create-user --username mender-demo@example.com --password mysecretpassword
+
     docker attach $cid || failed=1
 
     get_container_exit_code $cid || true

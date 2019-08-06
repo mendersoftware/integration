@@ -1,0 +1,9 @@
+{
+    "baseUrl": "https://docker.mender.io/",
+    "env": {
+        "username": "mender-demo@example.com",
+        "password": "mysecretpassword"
+    },
+    "viewportWidth": 1440,
+    "viewportHeight": 900
+}

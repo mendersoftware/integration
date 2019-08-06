@@ -1,0 +1,26 @@
+{
+    "name": "mender-gui",
+    "version": "1.0.0",
+    "description": "Test mender e2e - with focusing on the GUI",
+    "main": "login.spec.js",
+    "dependencies": {
+        "cypress": "^3.4.1",
+        "cypress-file-upload": "^3.3.3",
+        "jwt-decode": "^2.2.0"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/mendersoftware/integration.git"
+    },
+    "scripts": {
+      "test": "cypress run --parallel",
+      "watch": "cypress open --port 8888 --project tests/e2e_tests --config pageLoadTimeout=100000,watchForFileChanges=true"
+    },
+    "author": "Michael Clelland",
+    "license": "ISC",
+    "bugs": {
+      "url": "https://github.com/mendersoftware/gui/issues"
+    },
+    "homepage": "https://github.com/mendersoftware/gui#readme"
+  }
+  

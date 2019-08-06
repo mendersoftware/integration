@@ -3,6 +3,7 @@ set -e
 
 COMPOSE_CMD="docker-compose -p gui-tests \
              -f ${INTEGRATION_PATH}/docker-compose.yml \
+             -f ${INTEGRATION_PATH}/docker-compose.client.yml
              -f ${INTEGRATION_PATH}/docker-compose.demo.yml \
              -f tests/e2e_tests/docker-compose.e2e-tests.yml"
 

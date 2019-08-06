@@ -4,7 +4,7 @@ import jwtDecode from 'jwt-decode'
 
 context('Layout assertions', () => {
   beforeEach(() => {
-    cy.visit('/')
+    cy.visit(Cypress.config().baseUrl)
     // enter valid username and password
     cy.get('[id=email]').type(Cypress.env('username'))
     cy.get('[name=password]').type(Cypress.env('password'))
@@ -32,7 +32,7 @@ context('Layout assertions', () => {
       cy.get('a').contains('Pending').click().end()
       cy.get('.deviceListItem input').click().end()
       cy.get('button').contains('Authorize').click().end()
-      cy.get('a').contains('Device groups').click().end().wait(2000)
+      cy.get('a').contains('Device groups').click().wait(5000).end()
       
       cy.get('.deviceListItem')
         .should('contain', "qemux86-64")

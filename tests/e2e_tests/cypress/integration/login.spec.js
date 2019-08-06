@@ -6,7 +6,6 @@ context('Login', () => {
     })
 
     it('Logs in using UI', () => {
-        cy.visit('/')
         cy.location('hash').should('equal', '#/login')
       
         // enter valid username and password
@@ -40,7 +39,6 @@ context('Login', () => {
       })
       
       it('Does not log in with invalid password', () => {
-        cy.visit('/')
         cy.location('hash').should('equal', '#/login')
         cy.get('[id=email]').type(Cypress.env('username'))
         cy.get('[name=password]').type('lewrongpassword')

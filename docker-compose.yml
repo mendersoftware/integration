@@ -103,7 +103,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor:master
+        image: mendersoftware/mender-conductor:2.11.0-1
         depends_on:
             - mender-elasticsearch
             - mender-redis

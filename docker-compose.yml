@@ -27,6 +27,8 @@ services:
         environment:
             - INTEGRATION_VERSION
             - MENDER_ARTIFACT_VERSION
+            - MENDER_VERSION
+            - MENDER_DEB_PACKAGE_VERSION
 
     #
     # mender-api-gateway

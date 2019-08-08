@@ -13,7 +13,8 @@
     "url": "git+https://github.com/mendersoftware/integration.git"
   },
   "scripts": {
-    "test": "cypress run --parallel",
+    "test": "cypress run --project .",
+    "ciTest": "cypress run --project . --config video=false",
     "watch": "cypress open --port 8888 --project tests/e2e_tests --config pageLoadTimeout=100000,watchForFileChanges=true"
   },
   "author": "Michael Clelland",

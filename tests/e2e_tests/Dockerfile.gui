@@ -1,4 +1,4 @@
-FROM cypress/included:3.4.0
+FROM cypress/included:3.4.1
 WORKDIR /e2e
 RUN mkdir -p downloaded-tools && \
   curl -SL --fail "https://mender.s3-accelerate.amazonaws.com/temp_master/core-image-full-cmdline-qemux86-64.ext4" \
@@ -9,5 +9,8 @@ RUN mkdir -p downloaded-tools && \
   -o /usr/bin/mender-artifact && \
   chmod +x /usr/bin/mender-artifact
 COPY package-lock.json package.json ./
+ENV CI=1
 RUN npm ci
+COPY . ./
+RUN npx cypress verify
 CMD npm run test

@@ -6,5 +6,7 @@
     },
     "demoDeviceName": "QEMU Virtual CPU",
     "viewportWidth": 1440,
-    "viewportHeight": 900
+    "viewportHeight": 900,
+    "chromeWebSecurity": false,
+    "videoUploadOnPasses": false
 }

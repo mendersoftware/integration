@@ -5,6 +5,7 @@ services:
     build:
       dockerfile: Dockerfile.gui
       context: ${INTEGRATION_PATH}/tests/e2e_tests
+    command: npm run ciTest
     networks:
       - mender
     depends_on:

@@ -65,6 +65,19 @@ make_compose_cmd () {
 
 run_tests() {
     $COMPOSE_CMD build && $COMPOSE_CMD up -d
+    declare retries=5
+    while [[ $retries -gt 0 && -z $cid ]]; do
+        useradmid=$(get_container_id mender-useradm)
+        sleep 1
+        retries=$((retries-1))
+    done
+
+    if [[ -z $useradmid ]]; then
+        echo "failed to get container id"
+        return 1
+    fi
+
+    docker exec $useradmid /usr/bin/useradm create-user --username mender-demo@example.com --password mysecretpassword
 
     declare retries=5
     while [[ $retries -gt 0 && -z $cid ]]; do
@@ -77,8 +90,6 @@ run_tests() {
         echo "failed to get container id"
         return 1
     fi
-
-    docker-compose exec -T mender-useradm /usr/bin/useradm create-user --username mender-demo@example.com --password mysecretpassword
 
     docker attach $cid || failed=1
 

@@ -11,6 +11,16 @@ services:
     depends_on:
       - mender-api-gateway
       - mender-gui
+      - mender-client
+      - mender-deployments
+      - mender-device-auth
+      - mender-inventory
+      - mender-useradm
+      - mender-mongo
+      - mender-conductor
+      - mender-elasticsearch
+      - mender-redis
+      - minio
 
     ##
     ## to execute or edit the tests locally:
@@ -22,13 +32,12 @@ services:
 
     # entrypoint: cypress open --port 8888 --project /e2e --config pageLoadTimeout=100000,watchForFileChanges=true
     # ports:
-    #     - '8888:8888'
+    #   - '8888:8888'
     # environment:
-    #     - CYPRESS_baseUrl=https://docker.mender.io
-    #     - DISPLAY=10.20.32.214:0
+    #   - DISPLAY=10.20.32.214:0
     # volumes:
-    #     - ./tests/e2e_tests:/e2e
-    #     - /tmp/.X11-unix:/tmp/.X11-unix
+    #   - ./tests/e2e_tests:/e2e
+    #   - /tmp/.X11-unix:/tmp/.X11-unix
 
     ##
     ## you probably have to take some preparatory measures (mainly X forwarding) to get the cypress window to show up
@@ -39,3 +48,5 @@ services:
     build:
       dockerfile: ${GUI_REPOSITORY}/Dockerfile
       context: ${GUI_REPOSITORY}
+    environment:
+      - GATEWAY_IP=docker.mender.io

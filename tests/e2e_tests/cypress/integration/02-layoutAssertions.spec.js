@@ -1,14 +1,14 @@
 /// <reference types="Cypress" />
 
-import jwtDecode from 'jwt-decode'
+var jwtDecode = require('jwt-decode');
 
 context('Layout assertions', () => {
   beforeEach(() => {
-    cy.visit(Cypress.config().baseUrl)
+    cy.visit(`${Cypress.config().baseUrl}ui/`)
     // enter valid username and password
     cy.get('[id=email]').type(Cypress.env('username'))
     cy.get('[name=password]').type(Cypress.env('password'))
-    cy.contains('button', 'Log in').click().wait(500)
+    cy.contains('button', 'Log in').click().wait(5000)
       .then(() =>
         cy.getCookie('JWT').then(cookie => {
           const userId = jwtDecode(cookie.value).sub
@@ -20,6 +20,16 @@ context('Layout assertions', () => {
   })
 
   describe('Overall layout and structure', () => {
+    it('shows the left navigation', () => {
+      cy.get('.leftFixed.leftNav')
+        .should('contain', 'Dashboard')
+        .and('contain', 'Devices')
+        .and('contain', 'Releases')
+        .and('contain', 'Deployments')
+        .and('be.visible')
+        .end();
+    });
+
     it('has clickable header buttons', () => {
       cy.get('a').contains('Dashboard').click().end()
       cy.get('a').contains('Devices').click().end()
@@ -28,7 +38,7 @@ context('Layout assertions', () => {
     })
 
     it('can authorize a device', () => {
-      cy.get('a').contains('Devices').click().end()
+      cy.get('a').contains('Devices').click().wait(30000).end()
       cy.get('a').contains('Pending').click().end()
       cy.get('.deviceListItem input').click().end()
       cy.get('button').contains('Authorize').click().end()

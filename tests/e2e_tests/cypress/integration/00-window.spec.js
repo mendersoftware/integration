@@ -2,7 +2,7 @@
 
 context('Basic window specs', () => {
   beforeEach(() => {
-    cy.visit(Cypress.config().baseUrl)
+    cy.visit(`${Cypress.config().baseUrl}ui/`)
   })
 
   it('cy.window() - get the global window object', () => {

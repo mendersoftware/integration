@@ -114,6 +114,7 @@ if [ -n "$failed" ]; then
     tmppath=$(mktemp /tmp/acceptance.XXXXXX)
     echo "-- tests failed, dumping logs to $tmppath"
     $COMPOSE_CMD logs > $tmppath
+    cat $tmppath
 fi
 
 cleanup

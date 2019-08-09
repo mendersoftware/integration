@@ -11,6 +11,6 @@ RUN mkdir -p downloaded-tools && \
 COPY package-lock.json package.json ./
 ENV CI=1
 RUN npm ci
-COPY . ./
+COPY cypress.json cypress ./
 RUN npx cypress verify
 CMD npm run test

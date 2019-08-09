@@ -66,7 +66,7 @@ make_compose_cmd () {
 run_tests() {
     $COMPOSE_CMD build && $COMPOSE_CMD up -d
     declare retries=5
-    while [[ $retries -gt 0 && -z $cid ]]; do
+    while [[ $retries -gt 0 && -z $useradmid ]]; do
         useradmid=$(get_container_id mender-useradm)
         sleep 1
         retries=$((retries-1))
@@ -80,20 +80,32 @@ run_tests() {
     docker exec $useradmid /usr/bin/useradm create-user --username mender-demo@example.com --password mysecretpassword
 
     declare retries=5
-    while [[ $retries -gt 0 && -z $cid ]]; do
-        cid=$(get_container_id mender-gui-tests-runner)
+    while [[ $retries -gt 0 && -z $runnerid ]]; do
+        runnerid=$(get_container_id mender-gui-tests-runner)
         sleep 1
         retries=$((retries-1))
     done
 
-    if [[ -z $cid ]]; then
+    if [[ -z $runnerid ]]; then
         echo "failed to get container id"
         return 1
     fi
 
-    docker attach $cid || failed=1
+    declare retries=60
+    while [[ $retries -gt 0 || -z $clientid ]]; do
+        clientid=$(get_container_id mender-client)
+        if docker logs $clientid 2>&1 | grep -i "login"; then
+            break
+        fi
+        sleep 10
+        retries=$((retries-1))
+    done
+    
+    docker exec $runnerid npm run ciTest || failed=1
 
-    get_container_exit_code $cid || true
+    # docker attach $runnerid || failed=1
+
+    get_container_exit_code $runnerid || true
     [ $? == 0 ] || failed=1
 }
 

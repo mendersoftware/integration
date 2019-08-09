@@ -38,19 +38,19 @@ context('Layout assertions', () => {
     })
 
     it('can authorize a device', () => {
-      cy.get('a').contains('Devices').click().wait(30000).end()
+      cy.get('a').contains('Devices').click().end()
       cy.get('a').contains('Pending').click().end()
       cy.get('.deviceListItem input').click().end()
       cy.get('button').contains('Authorize').click().end()
-      cy.get('a').contains('Device groups').click().wait(5000).end()
+      cy.get('a').contains('Device groups').click().wait(30000).end()
       
       cy.get('.deviceListItem')
         .should('contain', "qemux86-64")
     })
 
     it('has basic inventory', () => {
-      cy.get('a').contains('Devices').click().end()
-      cy.get('div.rightFluid .deviceListItem').click()
+      cy.get('a').contains('Devices').click().wait(3000).end()
+      cy.get('.deviceListItem').click()
         .should('contain', "qemux86-64").end()
       cy.get('.expandedDevice')
         .should('contain', `${Cypress.env('demoDeviceName') || 'mender-image-master'}`)

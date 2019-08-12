@@ -1,0 +1,12 @@
+{
+    "baseUrl": "https://docker.mender.io/",
+    "env": {
+        "username": "mender-demo@example.com",
+        "password": "mysecretpassword"
+    },
+    "demoDeviceName": "QEMU Virtual CPU",
+    "viewportWidth": 1440,
+    "viewportHeight": 900,
+    "chromeWebSecurity": false,
+    "videoUploadOnPasses": false
+}

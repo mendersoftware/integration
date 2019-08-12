@@ -25,3 +25,9 @@ artifacts
 core-image-full-*
 large_image.dat
 update.mender
+
+# Mac specific junk files
+.DS_Store
+# folders for local testing dependencies
+node_modules
+venv

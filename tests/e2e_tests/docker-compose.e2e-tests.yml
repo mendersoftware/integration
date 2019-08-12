@@ -3,14 +3,49 @@ version: '2'
 services:
   mender-gui-tests-runner:
     build:
-      dockerfile: tests/e2e_tests/Dockerfile.gui
-      context: .
+      dockerfile: Dockerfile.gui
+      context: ${INTEGRATION_PATH}/tests/e2e_tests
     networks:
       - mender
     depends_on:
       - mender-api-gateway
       - mender-gui
+      - mender-client
+      - mender-deployments
+      - mender-device-auth
+      - mender-inventory
+      - mender-useradm
+      - mender-mongo
+      - mender-conductor
+      - mender-elasticsearch
+      - mender-redis
+      - minio
+
+    ##
+    ## to execute or edit the tests locally:
+    ## 
+    ## either use cypress locally using `npm install` in the e2e_tests directory
+    ## or:
+    ## add the following to your local `docker-compose.override.yml` and start the demo environment with that
+    ## 
+
+    # entrypoint: cypress open --port 8888 --project /e2e --config pageLoadTimeout=100000,watchForFileChanges=true
+    # ports:
+    #   - '8888:8888'
+    # environment:
+    #   - DISPLAY=10.20.32.214:0
+    # volumes:
+    #   - ./tests/e2e_tests:/e2e
+    #   - /tmp/.X11-unix:/tmp/.X11-unix
+
+    ##
+    ## you probably have to take some preparatory measures (mainly X forwarding) to get the cypress window to show up
+    ## - you might find help on: https://www.cypress.io/blog/2019/05/02/run-cypress-with-a-single-docker-command/
+    ##
+
   mender-gui:
     build:
       dockerfile: ${GUI_REPOSITORY}/Dockerfile
       context: ${GUI_REPOSITORY}
+    environment:
+      - GATEWAY_IP=docker.mender.io

@@ -29,7 +29,6 @@ import asyncore
 from MenderAPI import *
 
 class TestCreateOrganizationEnterprise(MenderTesting):
-    @pytest.mark.skip(reason="See QA-89")
     @pytest.mark.usefixtures("enterprise_no_client_smtp")
     def test_success(self):
 

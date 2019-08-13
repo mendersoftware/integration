@@ -112,10 +112,12 @@ def pytest_configure(config):
 
     version = subprocess.check_output(["../extra/release_tool.py", "--version-of", "integration"])
     if re.search("(^|/)[0-9]+\.[0-9]+\.[x0-9]+", version):
+        logger.warn("VERSION: %s" % version)
         # Don't run enterprise tests for release branches.
         # Has to do with tenantadm's release cycle (master only), but we're forced to skip the whole enterprise set.
         global is_integration_branch
         is_integration_branch = True
+        logger.warn("IS INTEGRATION BRANCH")
 
     MenderTesting.set_test_conditions(config)
 

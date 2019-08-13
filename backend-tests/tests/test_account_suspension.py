@@ -65,7 +65,7 @@ def tenants_users_devices(tenants_users, mongo):
 
     yield tenants_users
 
-class TestAccountSuspensionMultitenant:
+class TestAccountSuspensionEnterprise:
     def test_user_cannot_log_in(self, tenants_users):
         tc = ApiClient(tenantadm.URL_INTERNAL)
 

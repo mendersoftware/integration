@@ -119,12 +119,6 @@ services:
             # mounts a docker volume named `mender-artifacts` as /export directory
             - mender-artifacts:/export:rw
 
-    mender-conductor:
-        volumes:
-            - ./conductor/server/config:/app/config
-        environment:
-            - CONFIG_PROP=config.properties
-
     mender-mongo:
         volumes:
             - mender-db:/data/db:rw

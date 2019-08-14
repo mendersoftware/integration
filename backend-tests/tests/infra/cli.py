@@ -18,8 +18,19 @@ class CliUseradm:
     def __init__(self):
         self.cid = docker.getid('mender-useradm')
 
+        # is it an open useradm, or useradm-enterprise?
+        for path in ['/usr/bin/useradm', '/usr/bin/useradm-enterprise']:
+            try: 
+                docker.exec(self.cid, [path, '--version'])
+                self.path=path
+            except:
+                continue
+
+        if self.path is None:
+            raise RuntimeError('no runnable binary found in mender-useradm')
+
     def create_user(self, username, password, tenant_id=''):
-        cmd = ['/usr/bin/useradm',
+        cmd = [self.path,
                'create-user',
                '--username', username,
                '--password', password]
@@ -31,7 +42,7 @@ class CliUseradm:
         return uid
 
     def migrate(self, tenant_id=None):
-        cmd = ['usr/bin/useradm',
+        cmd = [self.path,
                'migrate']
 
         if tenant_id is not None:

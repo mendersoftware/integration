@@ -44,6 +44,6 @@ context('Login', () => {
 
     // still on /login page plus an error is displayed
     cy.location('hash').should('equal', '#/login');
-    cy.contains('username or password is incorrect').should('be.visible');
+    cy.contains('There was a problem logging in').should('be.visible');
   });
 });

@@ -157,7 +157,6 @@ PASSWORD=$(base64 /dev/urandom | head -c 12)
 RETRY_LIMIT=5
 
 # Block until the useradm service returns an HTTP 4xx response
-echo "Waiting for the useradm service to start up..."
 RETRIES=0
 while :
 do
@@ -189,11 +188,11 @@ do
              ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
              /usr/bin/useradm create-user \
              --username=${USER} \
-             --password=${PASSWORD}
+             --password=${PASSWORD} \
+             > /dev/null
     retval=$?
     case $retval in
         0)
-            echo "New user created."
             echo "****************************************"
             echo
             echo "Username: mender-demo@example.com"
@@ -221,7 +220,6 @@ done
 
 if [[ $UPLOAD_ARTIFACT == "true" ]]; then
 
-    echo "Getting JWT Token..."
     RETRIES=0
     until [[ "$JWT" != "" ]]; do
         JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
@@ -242,9 +240,7 @@ if [[ $UPLOAD_ARTIFACT == "true" ]]; then
         RETRIES=$((RETRIES+1))
         sleep 5
     done
-    echo "JWT token: " $JWT
 
-    echo "Uploading the Artifact to the server..."
     cout=
     RETRIES=0
     while :
@@ -283,15 +279,17 @@ if [[ $UPLOAD_ARTIFACT == "true" ]]; then
     fi
 
     case "$errout" in
-    " Artifact not unique"*) echo "Artifact already exists on the server" ;;
-        "") echo "Artifact uploaded to the demo server" ;;
+    " Artifact not unique"*) ;;  # Artifact already exists on the server
+        "") ;;  # Artifact uploaded to the demo server
         *) echo "Uploading the demo Artifact failed with error: " $errout
         exit 1 ;;
     esac
 
 fi
 
-echo "Backend ready and running in the background. Press Enter to show the logs."
+echo "Mender demo server ready and running in the background. Copy credentials above and log in at $MENDER_SERVER_URI"
+
+echo "Press Enter to show the logs."
 echo "Press Ctrl-C to stop the backend and quit."
 read -se
 

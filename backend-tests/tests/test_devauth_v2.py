@@ -263,7 +263,7 @@ class TestPreauth(TestPreauthBase):
                                             body)
         assert r.status_code == 400
 
-class TestPreauthMultitenant(TestPreauthBase):
+class TestPreauthEnterprise(TestPreauthBase):
     def test_ok(self, tenants_users):
         user = tenants_users[0].users[0]
 
@@ -719,7 +719,7 @@ class TestDeviceMgmt(TestDeviceMgmtBase):
         self.do_test_device_count(devs_authsets, user)
 
 
-class TestDeviceMgmtMultitenant(TestDeviceMgmtBase):
+class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
     def test_ok_get_devices(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
             self.do_test_ok_get_devices(t.devices, t.users[0])
@@ -1179,7 +1179,7 @@ class TestAuthsetMgmt(TestAuthsetMgmtBase):
         self.do_test_delete_status_failed(devs_authsets, user)
 
 
-class TestAuthsetMgmtMultitenant(TestAuthsetMgmtBase):
+class TestAuthsetMgmtEnterprise(TestAuthsetMgmtBase):
     def test_get_authset_status(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
             self.do_test_get_authset_status(t.devices, t.users[0])

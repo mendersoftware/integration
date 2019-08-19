@@ -211,7 +211,7 @@ class TestGetDevices(TestGetDevicesBase):
     def test_filter_devices_ok(self, user):
         self.do_test_filter_devices_ok(user)
 
-class TestGetDevicesMultitenant(TestGetDevicesBase):
+class TestGetDevicesEnterprise(TestGetDevicesBase):
     def test_get_devices_ok(self, tenants_users):
         for t in tenants_users:
             self.do_test_get_devices_ok(t.users[0], tenant_token=t.tenant_token)

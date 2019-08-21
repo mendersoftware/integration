@@ -2198,6 +2198,13 @@ def select_test_suite(git_checkout):
     else:
         return "all"
 
+def do_select_test_suite():
+    """Process --select-test-suite argument."""
+
+    # assume git repos are checked out a level above integration
+    git_checkout = os.path.abspath(os.path.join(integration_dir(), '..'))
+    print(select_test_suite(git_checkout))
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--version-of", dest="version_of", metavar="SERVICE",
@@ -2233,6 +2240,8 @@ def main():
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
+    parser.add_argument("--select-test-suite", action="store_true",
+                        help="Based on checked out git revisions, decide which integration suite must run ('open', 'enterprise', 'all').")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")
     parser.add_argument("--verify-integration-references", action="store_true",
@@ -2279,6 +2288,8 @@ def main():
         do_release()
     elif args.verify_integration_references:
         do_verify_integration_references(args, optional_too=args.all)
+    elif args.select_test_suite:
+        do_select_test_suite()
     else:
         parser.print_help()
         sys.exit(1)

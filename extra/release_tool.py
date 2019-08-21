@@ -393,6 +393,13 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
 }
 
+# categorize backend services wrt open/enterprise versions
+# important for test suite selection
+BACKEND_SERVICES_OPEN = {"deviceadm", "deviceauth", "inventory"}
+BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
+BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
+BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
+
 class BuildParam():
     type = None
     value = None
@@ -2132,6 +2139,64 @@ def do_verify_integration_references(args, optional_too):
     if problem:
         print("\nMake sure all *.yml files contain the correct versions.")
         sys.exit(1)
+
+def is_repo_fresh_master(path):
+    """ Check if we're on the most recent commit in 'master'.
+    """
+    remote = find_upstream_remote(None, path)
+
+    sha_master = execute_git(None, path, ["rev-parse", remote + "/master"], capture=True, capture_stderr=True)
+    sha_head = execute_git(None, path, ["rev-parse", "HEAD"], capture=True, capture_stderr=True)
+
+    return sha_master == sha_head
+
+def select_test_suite(git_checkout):
+    """ Check what backend components are checked out in custom revisions and decide
+        which integration test suite should be ran - 'open', 'enterprise' or both.
+        To be used when running integration tests to see which components 'triggered' the build 
+        (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
+        in case of manually parametrized builds).
+        Rules:
+        - open services, without closed versions, should trigger both setup test runs
+        - open services with closed versions should trigger the 'open' test suite
+        - enterprise services can run just the 'enterprise' setup
+    """
+    # check all known git components for custom revisions
+    # answers the question what we're actually building
+    built_components = set({})
+    for repo in Component.get_components_of_type("git", only_release=False):
+        path = os.path.abspath(os.path.join(git_checkout, repo.git()))
+        if not is_repo_fresh_master(path):
+            built_components.add(repo.name)
+
+    # seems like we're building plain master of everything - run all tests
+    if len(built_components) == 0:
+        return "all"
+
+    # if we're building only backend services - we can proceed with test selection
+    # if not - assume we must run all test suites (e.g. for mender-cli, etc.)
+    non_service_components = built_components - BACKEND_SERVICES
+    if len(non_service_components) > 0:
+        return "all"
+
+    built_services = BACKEND_SERVICES & built_components
+
+    # count open vs open-enterprise vs enterprise services
+    open_services = built_services & BACKEND_SERVICES_OPEN
+    ent_services = built_services & BACKEND_SERVICES_ENT
+    open_ent_services = built_services & BACKEND_SERVICES_OPEN_ENT
+
+    # open services appear in both setups - run 'all'
+    if len(open_services) > 0:
+        return "all"
+    # only open services with enterprise counterparts - appear only in 'open' setup
+    elif len(ent_services) == 0:
+        return "open"
+    # only enterprise services - just 'enterprise' setup is enough
+    elif len(open_ent_services) == 0:
+        return "enterprise"
+    else:
+        return "all"
 
 def main():
     parser = argparse.ArgumentParser()

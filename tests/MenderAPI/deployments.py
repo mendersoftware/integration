@@ -95,7 +95,7 @@ class Deployments(object):
 
         try:
             json.loads(r.text)
-        except Exception, e:
+        except Exception as e:
             assert e is None
 
         if not self.last_statistic.setdefault(deployment_id, []) or \
@@ -138,7 +138,7 @@ class Deployments(object):
                 for device in self.auth_v2.get_devices():
                     try:
                         all_failed_logs += self.get_logs(device["id"], deployment_id) + "\n" * 5
-                    except Exception, e:
+                    except Exception as e:
                         logger.warn("failed to get logs.")
 
                 pytest.fail("deployment unexpectedly failed, here are the deployment logs: \n\n %s" % (all_failed_logs))

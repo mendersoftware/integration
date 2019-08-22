@@ -50,7 +50,7 @@ class Deployments:
                                   files=(
                                       ("description", (None, description)),
                                       ("size", (None, str(os.path.getsize(filename)))),
-                                      ("artifact", (filename, open(filename), "application/octet-stream"))
+                                      ("artifact", (filename, open(filename, 'rb'), "application/octet-stream"))
                                   ))
 
         logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))

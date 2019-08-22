@@ -393,6 +393,13 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
 }
 
+# categorize backend services wrt open/enterprise versions
+# important for test suite selection
+BACKEND_SERVICES_OPEN = {"deviceadm", "deviceauth", "inventory"}
+BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
+BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
+BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
+
 class BuildParam():
     type = None
     value = None
@@ -2079,6 +2086,17 @@ def figure_out_checked_out_revision(state, repo_git):
 
     return [(ref, "tag") for ref in refs]
 
+def find_repo_path(name, paths):
+    """ Try to find the git repo 'name' under some known paths.
+        Return abspath or None if not found.
+    """
+    for p in paths:
+        path = os.path.normpath(os.path.join(integration_dir(), p, name))
+        if os.path.isdir(path):
+            return path
+
+    return None
+
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
     data = get_docker_compose_data(int_dir)
@@ -2093,15 +2111,12 @@ def do_verify_integration_references(args, optional_too):
             continue
 
         # Try some common locations.
-        tried = []
-        for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
-            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git()))
-            tried.append(path)
-            if os.path.isdir(path):
-                break
-        else:
+        paths = ["..", "../go/src/github.com/mendersoftware"]
+        path = find_repo_path(repo.git(), paths)
+
+        if path is None:
             print("%s not found. Tried: %s"
-                  % (repo.git(), ", ".join(tried)))
+                  % (repo.git(), ", ".join(paths)))
             sys.exit(2)
 
         revs = figure_out_checked_out_revision(None, path)
@@ -2132,6 +2147,74 @@ def do_verify_integration_references(args, optional_too):
     if problem:
         print("\nMake sure all *.yml files contain the correct versions.")
         sys.exit(1)
+
+def is_repo_fresh_master(path):
+    """ Check if we're on the most recent commit in 'master'.
+    """
+    remote = find_upstream_remote(None, path)
+
+    sha_master = execute_git(None, path, ["rev-parse", remote + "/master"], capture=True, capture_stderr=True)
+    sha_head = execute_git(None, path, ["rev-parse", "HEAD"], capture=True, capture_stderr=True)
+
+    return sha_master == sha_head
+
+def select_test_suite():
+    """ Check what backend components are checked out in custom revisions and decide
+        which integration test suite should be ran - 'open', 'enterprise' or both.
+        To be used when running integration tests to see which components 'triggered' the build 
+        (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
+        in case of manually parametrized builds).
+        Rules:
+        - open services, without closed versions, should trigger both setup test runs
+        - open services with closed versions should trigger the 'open' test suite
+        - enterprise services can run just the 'enterprise' setup
+    """
+    # check all known git components for custom revisions
+    # answers the question what we're actually building
+    paths = ["..", "../go/src/github.com/mendersoftware"]
+
+    built_components = set({})
+    for repo in Component.get_components_of_type("git", only_release=False):
+        path = find_repo_path(repo.git(), paths)
+        if path is None:
+            raise RuntimeError("cannot find repo {} in any of {}".format(repo.git(), paths))
+
+        if not is_repo_fresh_master(path):
+            built_components.add(repo.name)
+
+    # seems like we're building plain master of everything - run all tests
+    if len(built_components) == 0:
+        return "all"
+
+    # if we're building only backend services - we can proceed with test selection
+    # if not - assume we must run all test suites (e.g. for mender-cli, etc.)
+    non_service_components = built_components - BACKEND_SERVICES
+    if len(non_service_components) > 0:
+        return "all"
+
+    built_services = BACKEND_SERVICES & built_components
+
+    # count open vs open-enterprise vs enterprise services
+    open_services = built_services & BACKEND_SERVICES_OPEN
+    ent_services = built_services & BACKEND_SERVICES_ENT
+    open_ent_services = built_services & BACKEND_SERVICES_OPEN_ENT
+
+    # open services appear in both setups - run 'all'
+    if len(open_services) > 0:
+        return "all"
+    # only open services with enterprise counterparts - appear only in 'open' setup
+    elif len(ent_services) == 0:
+        return "open"
+    # only enterprise services - just 'enterprise' setup is enough
+    elif len(open_ent_services) == 0:
+        return "enterprise"
+    else:
+        return "all"
+
+def do_select_test_suite():
+    """Process --select-test-suite argument."""
+
+    print(select_test_suite())
 
 def main():
     parser = argparse.ArgumentParser()
@@ -2168,6 +2251,8 @@ def main():
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
+    parser.add_argument("--select-test-suite", action="store_true",
+                        help="Based on checked out git revisions, decide which integration suite must run ('open', 'enterprise', 'all').")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")
     parser.add_argument("--verify-integration-references", action="store_true",
@@ -2214,6 +2299,8 @@ def main():
         do_release()
     elif args.verify_integration_references:
         do_verify_integration_references(args, optional_too=args.all)
+    elif args.select_test_suite:
+        do_select_test_suite()
     else:
         parser.print_help()
         sys.exit(1)

@@ -149,7 +149,7 @@ class Deployments:
                     try:
                         all_failed_logs += self.get_logs(device["id"], deployment_id) + "\n" * 5
                     except Exception as e:
-                        logger.warn("failed to get logs.")
+                        logger.warning("failed to get logs.")
 
                 pytest.fail("deployment unexpectedly failed, here are the deployment logs: \n\n %s" % (all_failed_logs))
 

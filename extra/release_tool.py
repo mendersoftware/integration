@@ -2086,6 +2086,17 @@ def figure_out_checked_out_revision(state, repo_git):
 
     return [(ref, "tag") for ref in refs]
 
+def find_repo_path(name, paths):
+    """ Try to find the git repo 'name' under some known paths.
+        Return abspath or None if not found.
+    """
+    for p in paths:
+        path = os.path.normpath(os.path.join(integration_dir(), p, name))
+        if os.path.isdir(path):
+            return path
+
+    return None
+
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
     data = get_docker_compose_data(int_dir)
@@ -2100,15 +2111,12 @@ def do_verify_integration_references(args, optional_too):
             continue
 
         # Try some common locations.
-        tried = []
-        for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
-            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git()))
-            tried.append(path)
-            if os.path.isdir(path):
-                break
-        else:
+        paths = ["..", "../go/src/github.com/mendersoftware"]
+        path = find_repo_path(repo.git(), paths)
+
+        if path is None:
             print("%s not found. Tried: %s"
-                  % (repo.git(), ", ".join(tried)))
+                  % (repo.git(), ", ".join(paths)))
             sys.exit(2)
 
         revs = figure_out_checked_out_revision(None, path)
@@ -2150,7 +2158,7 @@ def is_repo_fresh_master(path):
 
     return sha_master == sha_head
 
-def select_test_suite(git_checkout):
+def select_test_suite():
     """ Check what backend components are checked out in custom revisions and decide
         which integration test suite should be ran - 'open', 'enterprise' or both.
         To be used when running integration tests to see which components 'triggered' the build 
@@ -2163,9 +2171,14 @@ def select_test_suite(git_checkout):
     """
     # check all known git components for custom revisions
     # answers the question what we're actually building
+    paths = ["..", "../go/src/github.com/mendersoftware"]
+
     built_components = set({})
     for repo in Component.get_components_of_type("git", only_release=False):
-        path = os.path.abspath(os.path.join(git_checkout, repo.git()))
+        path = find_repo_path(repo.git(), paths)
+        if path is None:
+            raise RuntimeError("cannot find repo {} in any of {}".format(repo.git(), paths))
+
         if not is_repo_fresh_master(path):
             built_components.add(repo.name)
 
@@ -2201,9 +2214,7 @@ def select_test_suite(git_checkout):
 def do_select_test_suite():
     """Process --select-test-suite argument."""
 
-    # assume git repos are checked out a level above integration
-    git_checkout = os.path.abspath(os.path.join(integration_dir(), '..'))
-    print(select_test_suite(git_checkout))
+    print(select_test_suite())
 
 def main():
     parser = argparse.ArgumentParser()

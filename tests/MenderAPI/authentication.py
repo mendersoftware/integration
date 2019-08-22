@@ -58,8 +58,8 @@ class Authentication:
         # try login - the user might be in a shared db already (if not running xdist)
         r = self._do_login(self.email, self.password)
 
-        logging.info("Getting authentication token for user")
-        logging.info(self.username)
+        logger.info("Getting authentication token for user")
+        logger.info(self.username)
 
         if create_new_user:
             if r.status_code is not 200:
@@ -82,7 +82,7 @@ class Authentication:
             r = self._do_login(self.email, self.password)
             assert r.status_code == 200
 
-        logging.info("Using Authorization headers: " + str(r.text))
+        logger.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
 
     def get_tenant_id(self):

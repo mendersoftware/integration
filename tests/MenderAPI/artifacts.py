@@ -13,10 +13,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
 import os
 import shutil
+import subprocess
+from .. import conftest
 
+from . import logger
 
 class Artifacts():
     artifacts_tool_path = "mender-artifact"

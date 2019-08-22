@@ -13,7 +13,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
+import time
+import json
+import os
+import logging
+import requests
+import pytest
+
+from . import logger
+from . import api_version
+from .requests_helpers import requests_retry
+from ..common_docker import get_mender_gateway
 
 class Deployments:
     # track the last statistic for a deployment id

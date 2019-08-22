@@ -13,7 +13,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
+import requests
+
+from . import api_version
+from .requests_helpers import requests_retry
+from ..common_docker import get_mender_gateway
 
 class Inventory():
     auth = None

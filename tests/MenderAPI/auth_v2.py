@@ -13,8 +13,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import time
+import json
+import requests
+import pytest
 
-from MenderAPI import *
+from . import logger
+from .requests_helpers import requests_retry
+
+from ..common_docker import get_mender_gateway
+from ..common_docker import get_mender_clients
 
 class DeviceAuthV2():
 

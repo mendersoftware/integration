@@ -45,8 +45,8 @@ class Artifacts():
                   artifact_file_created.name,
                   signed_arg,
                   ("-v %d" % version) if version else ""
-               )
-        )
+                  )
+              )
         for script in scripts:
             cmd += " -s %s" % script
 
@@ -61,7 +61,6 @@ class Artifacts():
         python dictionary.
         """
         conf = {}
-        cmd = "debugfs -R 'cat /etc/mender/mender.conf' %s" % image
 
         output = subprocess.check_output("debugfs -R 'cat /etc/mender/mender.conf' " + \
                                              "core-image-full-cmdline-%s.ext4" % \
@@ -96,4 +95,3 @@ class Artifacts():
         finally:
             shutil.rmtree(tmp_conf_dir)
         return conf
-

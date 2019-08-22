@@ -73,8 +73,8 @@ class Authentication:
                     tenant_data_json = json.loads(tenant_data)
 
                     self.current_tenant = {"tenant_id": tenant_id,
-                                        "tenant_token": tenant_data_json["tenant_token"],
-                                        "name": tenant_data_json["name"]}
+                                           "tenant_token": tenant_data_json["tenant_token"],
+                                           "name": tenant_data_json["name"]}
 
                 else:
                     self._create_user(self.email, self.password)

@@ -15,7 +15,7 @@
 
 from MenderAPI import *
 
-class Deployments(object):
+class Deployments:
     # track the last statistic for a deployment id
     last_statistic = {}
 
@@ -99,9 +99,9 @@ class Deployments(object):
             assert e is None
 
         if not self.last_statistic.setdefault(deployment_id, []) or \
-            self.last_statistic[deployment_id][-1] != str(r.text):
-                self.last_statistic[deployment_id].append(str(r.text))
-                logger.info("Statistics contains new entry: " + str(r.text))
+                self.last_statistic[deployment_id][-1] != str(r.text):
+            self.last_statistic[deployment_id].append(str(r.text))
+            logger.info("Statistics contains new entry: " + str(r.text))
 
         return json.loads(r.text)
 

@@ -12,11 +12,12 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+import time
+import logging
+
 from fabric.contrib.files import *
 from fabric.api import *
-from requests.auth import HTTPBasicAuth
-import logging
-import time
 
 # This is used to remember which docker-compose setup we're currently running.
 # This is for optimization purposes to avoid respawning the docker-compose
@@ -119,6 +120,6 @@ def have_token():
         except Exception:
             sleepsec += 5
             time.sleep(5)
-            logging.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
+            logging.info("waiting for mender-store file, sleepsec: %d" % sleepsec)
 
     assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"

@@ -12,16 +12,15 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from fabric.api import *
+
 import subprocess
 import tempfile
 import time
-import conftest
-import psutil
 import logging
-import common
 import os
 
+from fabric.api import *
+import conftest
 
 COMPOSE_FILES = [
     "../docker-compose.yml",
@@ -84,7 +83,7 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
 
             except subprocess.CalledProcessError as e:
                 logger.warn("failed to run docker-compose: error: %s, retrying..." % (e.output))
-                time.sleep (count * 30)
+                time.sleep(count * 30)
                 continue
 
         raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))

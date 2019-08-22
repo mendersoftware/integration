@@ -77,6 +77,9 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
                 if "up -d" in arg_list:
                     store_logs()
 
+                # Return as string (Python 2/3 compatible)
+                if isinstance(output, bytes):
+                    return output.decode()
                 return output
 
             except subprocess.CalledProcessError as e:
@@ -129,7 +132,9 @@ def docker_get_ip_of(service):
                                      conftest.docker_compose_instance,
                                      shell=True)
 
-    # Return as list.
+    # Return as list of strings (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().split()
     return output.split()
 
 def docker_get_docker_host_ip():
@@ -144,6 +149,9 @@ def docker_get_docker_host_ip():
                                      "| head -n1 | xargs -r " \
                                      "docker inspect --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'",
                                      shell=True)
+    # Return as string (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().split()[0]
     return output.split()[0]
 
 
@@ -154,6 +162,9 @@ def get_mender_clients(service="mender-client"):
 def get_mender_client_by_container_name(image_name):
     cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s_%s" % (conftest.docker_compose_instance, image_name)
     output = subprocess.check_output(cmd, shell=True)
+    # Return as string (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().strip() + ":8822"
     return output.strip() + ":8822"
 
 def get_mender_gateway(service="mender-api-gateway"):

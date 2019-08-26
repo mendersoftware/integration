@@ -14,6 +14,7 @@
 #    limitations under the License.
 
 from fabric.api import *
+from requests.auth import HTTPBasicAuth
 import pytest
 from ..common import *
 from ..common_docker import *

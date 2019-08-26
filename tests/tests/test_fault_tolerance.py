@@ -21,12 +21,12 @@ import shutil
 import subprocess
 import tempfile
 import time
-from common_setup import *
-from helpers import Helpers
-from MenderAPI import deploy, image, logger
-from common_update import *
-from mendertesting import MenderTesting
-from common import *
+from ..common_setup import *
+from ..helpers import Helpers
+from ..MenderAPI import deploy, image, logger
+from .common_update import *
+from .mendertesting import MenderTesting
+from ..common import *
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
     {

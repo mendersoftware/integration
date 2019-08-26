@@ -15,11 +15,11 @@
 
 from fabric.api import *
 import pytest
-from common_setup import *
-from helpers import Helpers
-from MenderAPI import deploy
-from common_update import update_image_successful, common_update_procedure
-from mendertesting import MenderTesting
+from ..common_setup import *
+from ..helpers import Helpers
+from ..MenderAPI import deploy
+from .common_update import update_image_successful, common_update_procedure
+from .mendertesting import MenderTesting
 import shutil
 
 class TestDBMigration(MenderTesting):

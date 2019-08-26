@@ -17,11 +17,11 @@ import time
 import socket
 import subprocess
 import pytest
-import conftest
+from . import conftest
 
-from MenderAPI import auth, auth_v2, reset_mender_api
-from common import *
-from common_docker import *
+from .MenderAPI import auth, auth_v2, reset_mender_api
+from .common import *
+from .common_docker import *
 
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):

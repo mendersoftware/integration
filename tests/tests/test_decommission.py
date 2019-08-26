@@ -16,13 +16,11 @@
 from fabric.api import *
 import time
 import pytest
-import common
-from common_setup import *
-import common_docker
-from helpers import Helpers
-from common_update import common_update_procedure
-from MenderAPI import inv, auth_v2
-from mendertesting import MenderTesting
+from ..common_setup import *
+from ..helpers import Helpers
+from .common_update import common_update_procedure
+from ..MenderAPI import inv, auth_v2
+from .mendertesting import MenderTesting
 from conductor import Conductor
 
 

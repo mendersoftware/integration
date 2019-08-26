@@ -4,7 +4,7 @@ import os
 import sys
 import subprocess
 import argparse
-import conftest
+from .. import conftest
 import shutil
 import common
 from MenderAPI import auth, auth_v2

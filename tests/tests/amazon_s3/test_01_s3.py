@@ -15,10 +15,10 @@
 
 from fabric.api import *
 import pytest
-from common import *
-from common_setup import *
-from tests import MenderTesting
-from tests import common_update
+from ...common import *
+from ...common_setup import *
+from .. import MenderTesting
+from .. import common_update
 
 @MenderTesting.fast
 @MenderTesting.aws_s3

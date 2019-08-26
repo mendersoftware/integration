@@ -15,15 +15,15 @@
 
 from fabric.api import *
 import pytest
-from common import *
-from common_setup import *
-from common_docker import *
-from mendertesting import MenderTesting
-from common_update import common_update_procedure
-from MenderAPI import auth, auth_v2, deploy, inv
+from ..common import *
+from ..common_setup import *
+from ..common_docker import *
+from .mendertesting import MenderTesting
+from .common_update import common_update_procedure
+from ..MenderAPI import auth, auth_v2, deploy, inv
 import subprocess
 import time
-import conftest
+from .. import conftest
 import shutil
 import filelock
 import re

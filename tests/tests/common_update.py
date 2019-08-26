@@ -13,14 +13,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from common_docker import *
-from common import *
-from helpers import Helpers
-from MenderAPI import auth_v2, deploy, image, logger
+from ..common_docker import *
+from ..common import *
+from ..helpers import Helpers
+from ..MenderAPI import auth_v2, deploy, image, logger
 import random
 from fabric.api import *
 import tempfile
-from tests import artifact_lock
+from . import artifact_lock
 import pytest
 
 

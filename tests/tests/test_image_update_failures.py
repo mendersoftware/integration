@@ -16,12 +16,12 @@
 from fabric.api import *
 import pytest
 import time
-from common import *
-from common_setup import *
-from helpers import Helpers
-from MenderAPI import auth_v2, deploy, image, logger
-from common_update import common_update_procedure
-from mendertesting import MenderTesting
+from ..common import *
+from ..common_setup import *
+from ..helpers import Helpers
+from ..MenderAPI import auth_v2, deploy, image, logger
+from .common_update import common_update_procedure
+from .mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFailures(MenderTesting):

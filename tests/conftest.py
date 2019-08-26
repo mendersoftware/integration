@@ -16,7 +16,7 @@
 from fabric.api import *
 import logging
 import requests
-from common_docker import *
+from .common_docker import stop_docker_compose, log_files
 import random
 import filelock
 import uuid
@@ -25,8 +25,8 @@ import os
 import re
 import pytest
 import distutils.spawn
-import log
-from tests.mendertesting import MenderTesting
+from . import log
+from .tests.mendertesting import MenderTesting
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)

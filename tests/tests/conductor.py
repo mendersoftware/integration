@@ -13,7 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import requests
-from MenderAPI import requests_retry
+from ..MenderAPI.requests_helpers import requests_retry
 
 
 class Conductor:

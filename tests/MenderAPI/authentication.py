@@ -19,8 +19,7 @@ from requests.auth import HTTPBasicAuth
 from . import logger
 from . import api_version
 from .requests_helpers import requests_retry
-from ..common_docker import docker_compose_cmd
-from ..common_docker import get_mender_gateway
+from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILES_PATH
 
 class Authentication:
     auth_header = None
@@ -115,9 +114,9 @@ class Authentication:
         docker_compose_cmd(cmd)
 
     def _create_tenant(self, username):
-        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
+        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
         return docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
+        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
         return docker_compose_cmd(cmd)

@@ -60,7 +60,7 @@ def standard_setup_one_rofs_client_bootstrapped():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.client.rofs.yml up -d")
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.client.rofs.yml up -d")
 
     ssh_is_opened()
 
@@ -73,10 +73,10 @@ def standard_setup_one_docker_client_bootstrapped():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.docker-client.yml \
-                        -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.storage.minio.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
                        use_common_files=False)
 
     ssh_is_opened()
@@ -95,11 +95,11 @@ def standard_setup_one_client_bootstrapped_with_s3():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.client.yml \
-                        -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.storage.s3.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml up -d",
                        use_common_files=False)
 
     docker_compose_cmd("logs -f &")
@@ -114,9 +114,9 @@ def standard_setup_without_client():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.testing.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml up -d",
                        use_common_files=False)
 
 @pytest.fixture(scope="function")
@@ -130,11 +130,11 @@ def setup_with_legacy_client():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.client.yml \
-                        -f legacy-v1-client.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.testing.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml up -d",
                        use_common_files=False)
 
     ssh_is_opened()
@@ -145,7 +145,7 @@ def standard_setup_with_signed_artifact_client(request):
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../extra/signed-artifact-client-testing/docker-compose.signed-client.yml up -d")
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml up -d")
 
     ssh_is_opened()
     auth.reset_auth_token()
@@ -157,11 +157,11 @@ def standard_setup_with_short_lived_token():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.client.yml \
-                        -f ../docker-compose.storage.minio.yml  \
-                        -f ../docker-compose.testing.yml \
-                        -f ../extra/expired-token-testing/docker-compose.short-token.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml  \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/extra/expired-token-testing/docker-compose.short-token.yml up -d",
                        use_common_files=False)
 
     ssh_is_opened()
@@ -179,11 +179,11 @@ def setup_failover():
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.client.yml \
-                        -f ../docker-compose.storage.minio.yml  \
-                        -f ../docker-compose.testing.yml \
-                        -f ../extra/failover-testing/docker-compose.failover-server.yml up -d",
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.client.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml  \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/extra/failover-testing/docker-compose.failover-server.yml up -d",
                        use_common_files=False)
 
     ssh_is_opened()
@@ -212,17 +212,17 @@ def enterprise_no_client(request):
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.enterprise.yml \
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
                         up -d",
                        use_common_files=False)
 
     # wait a bit for the backend to start
-    wait_for_containers(15, ["../docker-compose.yml",
-                             "../docker-compose.enterprise.yml",
-                             "../docker-compose.storage.minio.yml"])
+    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml"])
 
     def fin():
         stop_docker_compose()
@@ -238,20 +238,20 @@ def enterprise_client_s3(request):
     stop_docker_compose()
     reset_mender_api()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.storage.s3.yml \
-                        -f ../docker-compose.enterprise.yml \
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
                         up -d",
                        use_common_files=False)
 
 
-    wait_for_containers(15, ["../docker-compose.yml",
-                             "../docker-compose.testing.yml ",
-                             "../docker-compose.enterprise.yml",
-                             "../docker-compose.storage.minio.yml",
-                             "../docker-compose.storage.s3.yml"])
+    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.testing.yml ",
+                             COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml"])
 
     def fin():
         stop_docker_compose()
@@ -268,19 +268,19 @@ def enterprise_no_client_smtp(request):
 
     host_ip = get_host_ip()
 
-    docker_compose_cmd("-f ../docker-compose.yml \
-                        -f ../docker-compose.storage.minio.yml \
-                        -f ../docker-compose.testing.yml \
-                        -f ../docker-compose.enterprise.yml \
-                        -f ../extra/smtp-testing/conductor-workers-smtp-test.yml \
-                        -f ../extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
+                        -f " + COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml \
+                        -f " + COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
                         up -d",
                        use_common_files=False, env={"HOST_IP": host_ip})
 
     # wait a bit for the backend to start
-    wait_for_containers(15, ["../docker-compose.yml",
-                             "../docker-compose.enterprise.yml",
-                             "../docker-compose.storage.minio.yml"])
+    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+                             COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml"])
 
     def fin():
         stop_docker_compose()

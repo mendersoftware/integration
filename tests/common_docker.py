@@ -22,11 +22,13 @@ import os
 from fabric.api import *
 import conftest
 
+COMPOSE_FILES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+
 COMPOSE_FILES = [
-    "../docker-compose.yml",
-    "../docker-compose.client.yml",
-    "../docker-compose.storage.minio.yml",
-    "../docker-compose.testing.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
 ]
 
 log_files = []
@@ -213,8 +215,8 @@ def ssh_is_opened_impl(cmd="true", wait=60*60):
 
 def new_tenant_client(name, tenant):
     logging.info("creating client connected to tenant: " + tenant)
-    docker_compose_cmd("-f ../docker-compose.enterprise.yml -f ../docker-compose.mt.client.yml \
-                        run -d --name=%s_%s mender-client" % (conftest.docker_compose_instance,
-                                                              name),
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml -f " + COMPOSE_FILES_PATH + \
+                       "/docker-compose.mt.client.yml run -d --name=%s_%s mender-client" %
+                       (conftest.docker_compose_instance, name),
                        env={"TENANT_TOKEN": "%s" % tenant})
     time.sleep(45)

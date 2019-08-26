@@ -12,6 +12,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+from fabric.api import *
 from .mendertesting import MenderTesting
 from ..common_setup import *
 from ..MenderAPI import auth_v2, inv

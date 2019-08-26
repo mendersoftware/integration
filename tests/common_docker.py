@@ -19,7 +19,17 @@ import time
 import logging
 import os
 
-from fabric.api import *
+from platform import python_version
+if python_version().startswith('2'):
+    from fabric.api import *
+else:
+    # Dummy parallel decorator for Python3/Fabric 2
+    # Feature has not been implemented: https://github.com/pyinvoke/invoke/issues/63
+    def parallel(func):
+        def func_wrapper():
+            return None
+        return func_wrapper
+
 import conftest
 
 COMPOSE_FILES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))

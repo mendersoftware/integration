@@ -44,8 +44,6 @@ services:
     ##
 
   mender-gui:
-    build:
-      dockerfile: ${GUI_REPOSITORY}/Dockerfile
-      context: ${GUI_REPOSITORY}
+    image: mendersoftware/gui:pr
     environment:
       - GATEWAY_IP=docker.mender.io

@@ -39,7 +39,8 @@ GITLAB_SERVER = "https://gitlab.com/api/v4"
 GITLAB_JOB = "projects/Northern.tech%2FMender%2Fmender-qa"
 GITLAB_TOKEN = None
 GITLAB_CREDS_MISSING_ERR = """GitLab credentials not found. Possible locations:
-- GITLAB_TOKEN environment variable"""
+- GITLAB_TOKEN environment variable
+- 'pass' password management storage, under "token" label."""
 
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
@@ -416,19 +417,25 @@ EXTRA_BUILDPARAMS_CACHE = None
 def print_line():
     print("--------------------------------------------------------------------------------")
 
-def init_jenkins_creds():
-    global JENKINS_USER
-    global JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+def get_value_from_password_storage(server, key):
+    """Gets a value from the 'pass' password storage framework. 'server' is the
+    server string which should be used to look up the key. If key is None, it
+    returns the first line, which is usually the password. Other lines are
+    treated as "key: value" pairs. 'key' can be either a string or a list of
+    strings."""
 
-    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
-        return
+    if type(key) is str:
+        keys = [key]
+    else:
+        keys = key
 
     try:
-        server = JENKINS_SERVER
+        # Remove https prefix.
         if server.startswith("https://"):
             server = server[len("https://"):]
+        # Remove address part.
+        if server.index("/") >= 0:
+            server = server[:server.index("/")]
 
         output = subprocess.check_output(["pass", "find", server]).decode()
         count = 0
@@ -439,16 +446,15 @@ def init_jenkins_creds():
         if count == 0:
             return
 
-        print("Attempting to fetch Jenkins credentials from 'pass'...")
+        print("Attempting to fetch credentials from 'pass'...")
 
         output = subprocess.check_output(["pass", "show", server]).decode()
         line_no = 0
         for line in output.split('\n'):
             line_no += 1
 
-            if line_no == 1:
-                JENKINS_PASSWORD = line
-                continue
+            if keys is None and line_no == 1:
+                return line
 
             if line.find(":") < 0:
                 continue
@@ -456,15 +462,29 @@ def init_jenkins_creds():
             key, value = line.split(":", 1)
             key = key.strip()
             value = value.strip()
-            if key in ["login", "user", "username"]:
-                JENKINS_USER = value
+            if key in keys:
+                return value
 
     except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+def init_jenkins_creds():
+    global JENKINS_USER
+    global JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+
+    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
         return
+
+    JENKINS_USER = get_value_from_password_storage(JENKINS_SERVER, ["login", "user", "username"])
+    JENKINS_PASSWORD = get_value_from_password_storage(JENKINS_SERVER, None)
 
 def init_gitlab_creds():
     global GITLAB_TOKEN
     GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
+    if GITLAB_TOKEN is None:
+        GITLAB_TOKEN = get_value_from_password_storage(GITLAB_SERVER, "token")
 
 def integration_dir():
     """Return the location of the integration repository."""

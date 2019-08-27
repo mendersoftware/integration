@@ -49,7 +49,7 @@ VERSION_BUMP_STRING = "Bump versions for Mender"
 PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
-# Wheter we are using GitLab
+# Whether we are using GitLab
 USE_GITLAB = False
 
 class Component:

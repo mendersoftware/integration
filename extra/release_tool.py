@@ -49,7 +49,7 @@ VERSION_BUMP_STRING = "Bump versions for Mender"
 PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
-# Wheter we are using GitLab
+# Whether we are using GitLab
 USE_GITLAB = False
 
 class Component:
@@ -1417,10 +1417,15 @@ def trigger_gitlab_build(params, extra_buildparams):
 
     headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
 
+    match = re.match("^pull/([0-9]+)/head$", params['MENDER_QA_REV'])
+    if match is not None:
+        mender_qa_ref = "pr_" + match.group(1)
+    else:
+        mender_qa_ref = params['MENDER_QA_REV']
+
     # Prepare json POST data
     # See https://docs.gitlab.com/ee/api/pipelines.html#create-a-new-pipeline
-    # mender-qa ref hardcoded to master, it will not work for PR-like refs
-    postdata = {"ref": "master", "variables": []}
+    postdata = {"ref": mender_qa_ref, "variables": []}
     for key, value in params.items():
         postdata["variables"].append({"key": key, "value": value})
     for key, build_param in extra_buildparams.items():

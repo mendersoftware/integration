@@ -434,7 +434,7 @@ def get_value_from_password_storage(server, key):
         if server.startswith("https://"):
             server = server[len("https://"):]
         # Remove address part.
-        if server.index("/") >= 0:
+        if "/" in server:
             server = server[:server.index("/")]
 
         output = subprocess.check_output(["pass", "find", server]).decode()

@@ -185,4 +185,4 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_ARG="-k $SPECIFIC_INTEGRATION_TEST"
 fi
 
-python -m pytest $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT $pass_args $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS
+python2 -m pytest $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT $pass_args $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS

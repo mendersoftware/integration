@@ -13,10 +13,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
+from platform import python_version
+if python_version().startswith('2'):
+    from fabric.api import *
+else:
+    # User should re-implement: ???
+    pass
+
 import logging
 import requests
-from common_docker import *
+from .common_docker import stop_docker_compose, log_files
 import random
 import filelock
 import uuid
@@ -25,8 +31,8 @@ import os
 import re
 import pytest
 import distutils.spawn
-import log
-from tests.mendertesting import MenderTesting
+from . import log
+from .tests.mendertesting import MenderTesting
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)

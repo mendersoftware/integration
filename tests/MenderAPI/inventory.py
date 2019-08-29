@@ -13,7 +13,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
+import requests
+
+from . import api_version
+from .requests_helpers import requests_retry
+from ..common_docker import get_mender_gateway
 
 class Inventory():
     auth = None
@@ -31,7 +35,6 @@ class Inventory():
 
     def get_devices(self, has_group=None):
         """get_devices API. has_group can be True/False/None string."""
-        headers = self.auth.get_auth_token()
         params = {}
         if has_group is not None:
             params = ({"has_group": has_group})
@@ -40,7 +43,6 @@ class Inventory():
         return ret.json()
 
     def get_device(self, device_id):
-        headers = self.auth.get_auth_token()
         devurl = "%s%s/%s" % (self.get_inv_base_path(), "device", device_id)
         ret = requests_retry().get(devurl, headers=self.auth.get_auth_token(), verify=False)
         return ret

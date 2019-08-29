@@ -15,12 +15,12 @@
 
 from fabric.api import *
 import pytest
-from common import *
-from common_setup import *
-from helpers import Helpers
-from common_update import update_image_successful, update_image_failed
-from MenderAPI import deploy, image, inv
-from mendertesting import MenderTesting
+from ..common import *
+from ..common_setup import *
+from ..helpers import Helpers
+from .common_update import update_image_successful, update_image_failed
+from ..MenderAPI import deploy, image, inv
+from .mendertesting import MenderTesting
 import shutil
 import os
 

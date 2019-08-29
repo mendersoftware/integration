@@ -13,8 +13,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import time
+import json
+import requests
+import pytest
 
-from MenderAPI import *
+from . import logger
+from .requests_helpers import requests_retry
+
+from ..common_docker import get_mender_gateway
+from ..common_docker import get_mender_clients
 
 class DeviceAuthV2():
 
@@ -44,26 +52,25 @@ class DeviceAuthV2():
         starttime = time.time()
         sleeptime = 5
 
+        got_devices = False
         while starttime + max_wait >= time.time():
             time.sleep(sleeptime)
             # Linear backoff
             sleeptime += 5
-            try:
-                logger.info("getting all devices from :%s" % (device_status_path))
-                devices = requests_retry().get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
-                assert devices.status_code == requests.status_codes.codes.ok
-                assert len(devices.json()) == expected_devices
+            logger.info("getting all devices from: %s" % (device_status_path))
+            devices = requests_retry().get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
+            if devices.status_code == requests.status_codes.codes.ok and len(devices.json()) == expected_devices:
+                got_devices = True
                 break
-            except AssertionError:
+            else:
                 if devices is not None and getattr(devices, "text"):
                     logger.info("fail to get devices (payload: %s), will try for at least %d more seconds"
                                 % (devices.text, starttime + max_wait - time.time()))
                 else:
                     logger.info("failed to get devices, will try for at least %d more seconds"
                                 % (starttime + max_wait - time.time()))
-                continue
-        else:
-            assert False, "Not able to get devices"
+
+        assert got_devices, "Not able to get devices"
 
         devices_json = devices.json()
 

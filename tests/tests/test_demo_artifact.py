@@ -21,10 +21,10 @@ import subprocess
 import pytest
 import requests
 
-import conftest
-from common_docker import *
-from MenderAPI import *
-from mendertesting import MenderTesting
+from .. import conftest
+from ..common_docker import *
+from ..MenderAPI import *
+from .mendertesting import MenderTesting
 
 
 class TestDemoArtifact(MenderTesting):
@@ -34,7 +34,7 @@ class TestDemoArtifact(MenderTesting):
     # as it is generated on the fly by the demo script.
     auth = authentication.Authentication(
         username='mender-demo', email='mender-demo@example.com')
-    authv2 = auth_v2_mod.DeviceAuthV2(auth)
+    authv2 = DeviceAuthV2(auth)
     deploy = deployments.Deployments(auth, authv2)
 
     @pytest.fixture(scope="function")

@@ -13,10 +13,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
 import os
 import shutil
+import subprocess
+from .. import conftest
 
+from . import logger
 
 class Artifacts():
     artifacts_tool_path = "mender-artifact"
@@ -45,8 +47,8 @@ class Artifacts():
                   artifact_file_created.name,
                   signed_arg,
                   ("-v %d" % version) if version else ""
-               )
-        )
+                  )
+              )
         for script in scripts:
             cmd += " -s %s" % script
 
@@ -61,7 +63,6 @@ class Artifacts():
         python dictionary.
         """
         conf = {}
-        cmd = "debugfs -R 'cat /etc/mender/mender.conf' %s" % image
 
         output = subprocess.check_output("debugfs -R 'cat /etc/mender/mender.conf' " + \
                                              "core-image-full-cmdline-%s.ext4" % \
@@ -96,4 +97,3 @@ class Artifacts():
         finally:
             shutil.rmtree(tmp_conf_dir)
         return conf
-

@@ -16,12 +16,12 @@
 from fabric.api import *
 import pytest
 import time
-from common import *
-from common_setup import *
-from helpers import Helpers
-from MenderAPI import auth_v2, deploy, image, logger
-from common_update import update_image_successful, update_image_failed, common_update_procedure
-from mendertesting import MenderTesting
+from ..common import *
+from ..common_setup import *
+from ..helpers import Helpers
+from ..MenderAPI import auth_v2, deploy, image, logger
+from .common_update import update_image_successful, update_image_failed, common_update_procedure
+from .mendertesting import MenderTesting
 
 @MenderTesting.fast
 class TestSignedUpdates(MenderTesting):

@@ -26,9 +26,9 @@ import socket
 import traceback
 import json
 from fabric.contrib.files import exists
-import conftest
-from common_docker import *
-from common import *
+from . import conftest
+from .common_docker import *
+from .common import *
 
 from MenderAPI import auth_v2
 

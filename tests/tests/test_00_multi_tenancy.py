@@ -15,15 +15,15 @@
 
 from fabric.api import *
 import pytest
-from common import *
-from common_docker import *
-from common_setup import *
-from helpers import Helpers
-from MenderAPI import auth, auth_v2, deploy, image, logger, inv
-from common_update import update_image_successful, update_image_failed, \
+from ..common import *
+from ..common_docker import *
+from ..common_setup import *
+from ..helpers import Helpers
+from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
+from .common_update import update_image_successful, update_image_failed, \
                           common_update_procedure
-from mendertesting import MenderTesting
-from tests import artifact_lock
+from .mendertesting import MenderTesting
+from . import artifact_lock
 
 class TestMultiTenancyEnterprise(MenderTesting):
     def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):

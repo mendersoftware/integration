@@ -13,7 +13,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
+import json
+from requests.auth import HTTPBasicAuth
+
+from . import logger
+from . import api_version
+from .requests_helpers import requests_retry
+from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILES_PATH
 
 class Authentication:
     auth_header = None
@@ -58,8 +64,8 @@ class Authentication:
         # try login - the user might be in a shared db already (if not running xdist)
         r = self._do_login(self.email, self.password)
 
-        logging.info("Getting authentication token for user")
-        logging.info(self.username)
+        logger.info("Getting authentication token for user")
+        logger.info(self.username)
 
         if create_new_user:
             if r.status_code is not 200:
@@ -73,8 +79,8 @@ class Authentication:
                     tenant_data_json = json.loads(tenant_data)
 
                     self.current_tenant = {"tenant_id": tenant_id,
-                                        "tenant_token": tenant_data_json["tenant_token"],
-                                        "name": tenant_data_json["name"]}
+                                           "tenant_token": tenant_data_json["tenant_token"],
+                                           "name": tenant_data_json["name"]}
 
                 else:
                     self._create_user(self.email, self.password)
@@ -82,7 +88,7 @@ class Authentication:
             r = self._do_login(self.email, self.password)
             assert r.status_code == 200
 
-        logging.info("Using Authorization headers: " + str(r.text))
+        logger.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
 
     def get_tenant_id(self):
@@ -108,9 +114,9 @@ class Authentication:
         docker_compose_cmd(cmd)
 
     def _create_tenant(self, username):
-        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
+        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
         return docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ../docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
+        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
         return docker_compose_cmd(cmd)

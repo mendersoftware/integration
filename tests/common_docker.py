@@ -12,22 +12,33 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from fabric.api import *
+
 import subprocess
 import tempfile
 import time
-import conftest
-import psutil
 import logging
-import common
 import os
 
+from platform import python_version
+if python_version().startswith('2'):
+    from fabric.api import *
+else:
+    # Dummy parallel decorator for Python3/Fabric 2
+    # Feature has not been implemented: https://github.com/pyinvoke/invoke/issues/63
+    def parallel(func):
+        def func_wrapper():
+            return None
+        return func_wrapper
+
+import conftest
+
+COMPOSE_FILES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 
 COMPOSE_FILES = [
-    "../docker-compose.yml",
-    "../docker-compose.client.yml",
-    "../docker-compose.storage.minio.yml",
-    "../docker-compose.testing.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+    COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
 ]
 
 log_files = []
@@ -77,11 +88,14 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
                 if "up -d" in arg_list:
                     store_logs()
 
+                # Return as string (Python 2/3 compatible)
+                if isinstance(output, bytes):
+                    return output.decode()
                 return output
 
             except subprocess.CalledProcessError as e:
-                logger.warn("failed to run docker-compose: error: %s, retrying..." % (e.output))
-                time.sleep (count * 30)
+                logger.warning("failed to run docker-compose: error: %s, retrying..." % (e.output))
+                time.sleep(count * 30)
                 continue
 
         raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
@@ -129,7 +143,9 @@ def docker_get_ip_of(service):
                                      conftest.docker_compose_instance,
                                      shell=True)
 
-    # Return as list.
+    # Return as list of strings (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().split()
     return output.split()
 
 def docker_get_docker_host_ip():
@@ -144,6 +160,9 @@ def docker_get_docker_host_ip():
                                      "| head -n1 | xargs -r " \
                                      "docker inspect --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'",
                                      shell=True)
+    # Return as string (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().split()[0]
     return output.split()[0]
 
 
@@ -154,6 +173,9 @@ def get_mender_clients(service="mender-client"):
 def get_mender_client_by_container_name(image_name):
     cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s_%s" % (conftest.docker_compose_instance, image_name)
     output = subprocess.check_output(cmd, shell=True)
+    # Return as string (Python 2/3 compatible)
+    if isinstance(output, bytes):
+        return output.decode().strip() + ":8822"
     return output.strip() + ":8822"
 
 def get_mender_gateway(service="mender-api-gateway"):
@@ -203,8 +225,8 @@ def ssh_is_opened_impl(cmd="true", wait=60*60):
 
 def new_tenant_client(name, tenant):
     logging.info("creating client connected to tenant: " + tenant)
-    docker_compose_cmd("-f ../docker-compose.enterprise.yml -f ../docker-compose.mt.client.yml \
-                        run -d --name=%s_%s mender-client" % (conftest.docker_compose_instance,
-                                                              name),
+    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml -f " + COMPOSE_FILES_PATH + \
+                       "/docker-compose.mt.client.yml run -d --name=%s_%s mender-client" %
+                       (conftest.docker_compose_instance, name),
                        env={"TENANT_TOKEN": "%s" % tenant})
     time.sleep(45)

@@ -13,9 +13,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from MenderAPI import *
+import time
+import json
+import os
+import logging
+import requests
+import pytest
 
-class Deployments(object):
+from . import logger
+from . import api_version
+from .requests_helpers import requests_retry
+from ..common_docker import get_mender_gateway
+
+class Deployments:
     # track the last statistic for a deployment id
     last_statistic = {}
 
@@ -40,7 +50,7 @@ class Deployments(object):
                                   files=(
                                       ("description", (None, description)),
                                       ("size", (None, str(os.path.getsize(filename)))),
-                                      ("artifact", (filename, open(filename), "application/octet-stream"))
+                                      ("artifact", (filename, open(filename, 'rb'), "application/octet-stream"))
                                   ))
 
         logger.info("Received image upload status code: " + str(r.status_code) + " with payload: " + str(r.text))
@@ -95,13 +105,13 @@ class Deployments(object):
 
         try:
             json.loads(r.text)
-        except Exception, e:
+        except Exception as e:
             assert e is None
 
         if not self.last_statistic.setdefault(deployment_id, []) or \
-            self.last_statistic[deployment_id][-1] != str(r.text):
-                self.last_statistic[deployment_id].append(str(r.text))
-                logger.info("Statistics contains new entry: " + str(r.text))
+                self.last_statistic[deployment_id][-1] != str(r.text):
+            self.last_statistic[deployment_id].append(str(r.text))
+            logger.info("Statistics contains new entry: " + str(r.text))
 
         return json.loads(r.text)
 
@@ -138,8 +148,8 @@ class Deployments(object):
                 for device in self.auth_v2.get_devices():
                     try:
                         all_failed_logs += self.get_logs(device["id"], deployment_id) + "\n" * 5
-                    except Exception, e:
-                        logger.warn("failed to get logs.")
+                    except Exception as e:
+                        logger.warning("failed to get logs.")
 
                 pytest.fail("deployment unexpectedly failed, here are the deployment logs: \n\n %s" % (all_failed_logs))
 

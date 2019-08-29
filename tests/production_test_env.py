@@ -4,12 +4,13 @@ import os
 import sys
 import subprocess
 import argparse
-import conftest
 import shutil
-import common
-from MenderAPI import auth, auth_v2
-sys.path.insert(0, "./tests")
-from common_update import common_update_procedure
+
+sys.path.insert(0, "../")
+from tests import conftest
+from tests import common
+from tests.MenderAPI import auth, auth_v2
+from tests.tests import common_update
 
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
 
@@ -97,7 +98,7 @@ if args.deploy:
 
     # perform upgrade
     devices_to_update = list(set([device["id"] for device in auth_v2.get_devices_status("accepted", expected_devices=10)]))
-    deployment_id, artifact_id = common_update_procedure("core-image-full-cmdline-%s.ext4" % machine_name, device_type="test", devices=devices_to_update)
+    deployment_id, artifact_id = common_update.common_update_procedure("core-image-full-cmdline-%s.ext4" % machine_name, device_type="test", devices=devices_to_update)
 
     print("deployment_id=%s" % deployment_id)
     print("artifact_id=%s" % artifact_id)

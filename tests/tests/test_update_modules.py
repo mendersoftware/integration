@@ -15,13 +15,13 @@
 
 from fabric.api import *
 import pytest
-from helpers import Helpers
-from common_update import *
-from MenderAPI import deploy, image
-from mendertesting import MenderTesting
-from common_setup import *
+from ..helpers import Helpers
+from .common_update import *
+from ..MenderAPI import deploy, image
+from .mendertesting import MenderTesting
+from ..common_setup import *
 import shutil
-from common import *
+from ..common import *
 
 class TestUpdateModules(MenderTesting):
     @MenderTesting.fast

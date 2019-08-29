@@ -14,19 +14,20 @@
 #    limitations under the License.
 
 from fabric.api import *
+from requests.auth import HTTPBasicAuth
 import pytest
-from common import *
-from common_docker import *
-from common_setup import *
-from mendertesting import MenderTesting
-import sys
-sys.path.insert(0, '..')
+from ..common import *
+from ..common_docker import *
+from ..common_setup import *
+from ..MenderAPI.requests_helpers import requests_retry
+from .mendertesting import MenderTesting
+
 import time
 import requests
 import smtpd_mock
 from threading import Thread
 import asyncore
-from MenderAPI import *
+from ..MenderAPI import *
 
 class TestCreateOrganizationEnterprise(MenderTesting):
     @pytest.mark.usefixtures("enterprise_no_client_smtp")

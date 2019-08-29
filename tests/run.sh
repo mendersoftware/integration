@@ -181,17 +181,8 @@ if ! pip2 list|grep -e pytest-html >/dev/null 2>&1; then
     echo "WARNING: install pytest-html for html results report"
 fi
 
-if [[ -n $UPGRADE_FROM ]]; then
-    UPGRADE_TEST_ARG="--upgrade-from $UPGRADE_FROM"
-fi
-
 if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_ARG="-k $SPECIFIC_INTEGRATION_TEST"
 fi
 
-if [ $# -eq 0 ]; then
-    py.test $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT --runfast --runslow $UPGRADE_TEST_ARG $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS
-    exit $?
-fi
-
-python -m pytest $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT $pass_args $DEFAULT_TESTS
+python -m pytest $XDIST_ARGS $MAX_FAIL_ARG -s --verbose --junitxml=results.xml $HTML_REPORT $pass_args $SPECIFIC_INTEGRATION_TEST_ARG $DEFAULT_TESTS

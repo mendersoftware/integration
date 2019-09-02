@@ -2260,8 +2260,8 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
-    parser.add_argument("-c", "--ci-server", metavar="jenkins|gitlab", dest="ci_server", default="jenkins", nargs="?",
-                        help="Select server CI where to trigger the builds. Default is Jenkins.")
+    parser.add_argument("-c", "--ci-server", metavar="jenkins|gitlab", dest="ci_server", default="gitlab", nargs="?",
+                        help="Select server CI where to trigger the builds. Default is GitLab.")
     parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
                         help="Can only be used with -b. Specifies a repository and pull request number "
                         + "that should be triggered with the rest of the repository versions. "

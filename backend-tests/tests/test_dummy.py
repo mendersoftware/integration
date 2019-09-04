@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2018 Northern.tech AS
+# Copyright 2019 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,8 +14,15 @@
 #    limitations under the License.
 import pytest
 
+# These are here to prevent non-zero exit by pytest if no tests are run. This
+# can happen on the 2.1.x branch, since it has no enterprise tests, but will
+# execute with '-k Enterprise'
+
 def test_dummy():
     print('test_dummy executed')
 
 def test_dummy_multitenant():
     print('test_dummy_multitenant executed')
+
+def test_dummy_Enterprise():
+    print('test_dummy_Enterprise executed')

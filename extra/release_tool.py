@@ -1299,7 +1299,7 @@ def trigger_build(state, tag_avail):
         for param in sorted(params.keys()):
             print(fmt_str % (param, params[param]))
 
-        reply = ask("Will trigger a build with these values, ok? (yes) ")
+        reply = ask("Will trigger a build with these values, ok? (no) ")
         if reply.startswith("Y") or reply.startswith("y"):
             break
 

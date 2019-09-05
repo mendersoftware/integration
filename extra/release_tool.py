@@ -35,6 +35,13 @@ JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations
 - JENKINS_USER / JENKINS_PASSWORD environment variables
 - 'pass' password management storage."""
 
+GITLAB_SERVER = "https://gitlab.com/api/v4"
+GITLAB_JOB = "projects/Northern.tech%2FMender%2Fmender-qa"
+GITLAB_TOKEN = None
+GITLAB_CREDS_MISSING_ERR = """GitLab credentials not found. Possible locations:
+- GITLAB_TOKEN environment variable
+- 'pass' password management storage, under "token" label."""
+
 # What we use in commits messages when bumping versions.
 VERSION_BUMP_STRING = "Bump versions for Mender"
 
@@ -42,6 +49,8 @@ VERSION_BUMP_STRING = "Bump versions for Mender"
 PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
+# Whether we are using GitLab
+USE_GITLAB = False
 
 class Component:
     # A map that lists all our git repositories, docker images, and docker
@@ -385,7 +394,14 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
 }
 
-class JenkinsParam:
+# categorize backend services wrt open/enterprise versions
+# important for test suite selection
+BACKEND_SERVICES_OPEN = {"deviceadm", "deviceauth", "inventory"}
+BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
+BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
+BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
+
+class BuildParam():
     type = None
     value = None
 
@@ -393,24 +409,33 @@ class JenkinsParam:
         self.type = type
         self.value = value
 
+    def __repr__(self):
+        return "{0.type}:'{0.value}'".format(self)
+
 EXTRA_BUILDPARAMS_CACHE = None
 
 def print_line():
     print("--------------------------------------------------------------------------------")
 
-def init_jenkins_creds():
-    global JENKINS_USER
-    global JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+def get_value_from_password_storage(server, key):
+    """Gets a value from the 'pass' password storage framework. 'server' is the
+    server string which should be used to look up the key. If key is None, it
+    returns the first line, which is usually the password. Other lines are
+    treated as "key: value" pairs. 'key' can be either a string or a list of
+    strings."""
 
-    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
-        return
+    if type(key) is str:
+        keys = [key]
+    else:
+        keys = key
 
     try:
-        server = JENKINS_SERVER
+        # Remove https prefix.
         if server.startswith("https://"):
             server = server[len("https://"):]
+        # Remove address part.
+        if "/" in server:
+            server = server[:server.index("/")]
 
         output = subprocess.check_output(["pass", "find", server]).decode()
         count = 0
@@ -421,16 +446,15 @@ def init_jenkins_creds():
         if count == 0:
             return
 
-        print("Attempting to fetch Jenkins credentials from 'pass'...")
+        print("Attempting to fetch credentials from 'pass'...")
 
         output = subprocess.check_output(["pass", "show", server]).decode()
         line_no = 0
         for line in output.split('\n'):
             line_no += 1
 
-            if line_no == 1:
-                JENKINS_PASSWORD = line
-                continue
+            if keys is None and line_no == 1:
+                return line
 
             if line.find(":") < 0:
                 continue
@@ -438,11 +462,29 @@ def init_jenkins_creds():
             key, value = line.split(":", 1)
             key = key.strip()
             value = value.strip()
-            if key in ["login", "user", "username"]:
-                JENKINS_USER = value
+            if key in keys:
+                return value
 
     except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+def init_jenkins_creds():
+    global JENKINS_USER
+    global JENKINS_PASSWORD
+    JENKINS_USER = os.getenv("JENKINS_USER")
+    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
+
+    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
         return
+
+    JENKINS_USER = get_value_from_password_storage(JENKINS_SERVER, ["login", "user", "username"])
+    JENKINS_PASSWORD = get_value_from_password_storage(JENKINS_SERVER, None)
+
+def init_gitlab_creds():
+    global GITLAB_TOKEN
+    GITLAB_TOKEN = os.getenv("GITLAB_TOKEN")
+    if GITLAB_TOKEN is None:
+        GITLAB_TOKEN = get_value_from_password_storage(GITLAB_SERVER, "token")
 
 def integration_dir():
     """Return the location of the integration repository."""
@@ -1133,11 +1175,17 @@ def generate_new_tags(state, tag_avail, final):
 
     return next_tag_avail
 
-def get_extra_buildparams_from_jenkins():
+def get_extra_buildparams():
     global EXTRA_BUILDPARAMS_CACHE
     if EXTRA_BUILDPARAMS_CACHE is not None:
-        return EXTRA_BUILDPARAMS_CACHE
+        pass
+    elif USE_GITLAB:
+        EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_yaml()
+    else:
+        EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_jenkins()
+    return EXTRA_BUILDPARAMS_CACHE
 
+def get_extra_buildparams_from_jenkins():
     try:
         import requests
     except ImportError:
@@ -1184,23 +1232,45 @@ def get_extra_buildparams_from_jenkins():
     for key, type, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
         # Skip keys that are in versioned repos.
         if not in_versioned_repos.get(key):
-            extra_buildparams[key] = JenkinsParam(type, value)
+            extra_buildparams[key] = BuildParam(type, value)
 
-    EXTRA_BUILDPARAMS_CACHE = extra_buildparams
     return extra_buildparams
 
-def trigger_jenkins_build(state, tag_avail):
+def get_extra_buildparams_from_yaml():
     try:
         import requests
     except ImportError:
         print("requests module missing, try running 'sudo pip3 install requests'.")
         sys.exit(2)
+    try:
+        import yaml
+    except ImportError:
+        print("yaml module missing, try running 'sudo pip3 install yaml'.")
+        sys.exit(2)
 
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
+    reply = requests.get("https://raw.githubusercontent.com/mendersoftware/mender-qa/master/.gitlab-ci.yml")
+    build_variables = yaml.safe_load(reply.content.decode()).get("variables")
+    assert isinstance(build_variables, dict)
 
-    extra_buildparams = get_extra_buildparams_from_jenkins()
+    # Add all fetched parameters that are not part of our versioned repositories
+    # as extra build parameters.
+    extra_buildparams = {}
+    in_versioned_repos = {}
+    for key in GIT_TO_BUILDPARAM_MAP.keys():
+        for repo in Component.get_components_of_type("git"):
+            if repo.git() == key:
+                in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
+                # Break out of innermost loop.
+                break
+
+    for key, value in build_variables.items():
+        if not in_versioned_repos.get(key):
+            extra_buildparams[key] = BuildParam("string", value)
+
+    return extra_buildparams
+
+def trigger_build(state, tag_avail):
+    extra_buildparams = get_extra_buildparams()
 
     for param in extra_buildparams.keys():
         if state_value(state, ["extra_buildparams", param]) is None:
@@ -1274,6 +1344,22 @@ def trigger_jenkins_build(state, tag_avail):
             # that they can be repeated in subsequent builds.
             update_state(state, ['extra_buildparams', name], params[name])
 
+    if USE_GITLAB:
+        trigger_gitlab_build(params, extra_buildparams)
+    else:
+        trigger_jenkins_build(params, extra_buildparams)
+
+def trigger_jenkins_build(params, extra_buildparams):
+    try:
+        import requests
+    except ImportError:
+        print("requests module missing, try running 'sudo pip3 install requests'.")
+        sys.exit(2)
+
+    init_jenkins_creds()
+    if not JENKINS_USER or not JENKINS_PASSWORD:
+        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
+
     # Order is important here, because Jenkins passes in the same parameters
     # multiple times, as pairs that complete each other.
     # Jenkins additionally needs the input as json as well, so create that from
@@ -1313,6 +1399,49 @@ def trigger_jenkins_build(state, tag_avail):
                 print("Link: %s/%s/%s/" % (JENKINS_SERVER, JENKINS_JOB, match.group(1)))
             else:
                 print("Unable to determine build number.")
+    except Exception:
+        print("Failed to start build:")
+        traceback.print_exc()
+
+def trigger_gitlab_build(params, extra_buildparams):
+
+    try:
+        import requests
+    except ImportError:
+        print("requests module missing, try running 'sudo pip3 install requests'.")
+        sys.exit(2)
+
+    init_gitlab_creds()
+    if not GITLAB_TOKEN:
+        raise SystemExit(GITLAB_CREDS_MISSING_ERR)
+
+    headers = {'PRIVATE-TOKEN': GITLAB_TOKEN}
+
+    match = re.match("^pull/([0-9]+)/head$", params['MENDER_QA_REV'])
+    if match is not None:
+        mender_qa_ref = "pr_" + match.group(1)
+    else:
+        mender_qa_ref = params['MENDER_QA_REV']
+
+    # Prepare json POST data
+    # See https://docs.gitlab.com/ee/api/pipelines.html#create-a-new-pipeline
+    postdata = {"ref": mender_qa_ref, "variables": []}
+    for key, value in params.items():
+        postdata["variables"].append({"key": key, "value": value})
+    for key, build_param in extra_buildparams.items():
+        if not key in [var["key"] for var in postdata["variables"]]:
+            postdata["variables"].append({"key": key, "value": build_param.value})
+
+    try:
+        reply = requests.post("%s/%s/pipeline" % (GITLAB_SERVER, GITLAB_JOB),
+                json=postdata, headers=headers)
+
+        if reply.status_code < 200 or reply.status_code >= 300:
+            print("Request returned: %d: %s" % (reply.status_code, reply.reason))
+        else:
+            print("Build started.")
+            print("Link: %s" % reply.json().get("web_url"))
+
     except Exception:
         print("Failed to start build:")
         traceback.print_exc()
@@ -1654,7 +1783,7 @@ def do_build(args):
         for repo in Component.get_components_of_type("git"):
             tag_avail[repo.git()]['build_tag'] = state[repo.git()]["version"]
 
-    extra_buildparams = get_extra_buildparams_from_jenkins()
+    extra_buildparams = get_extra_buildparams()
 
     for pr in args.pr or []:
         match = re.match("^([^/]+)/([0-9]+)$", pr)
@@ -1669,7 +1798,7 @@ def do_build(args):
             # For versioned Mender repos.
             tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
 
-    trigger_jenkins_build(state, tag_avail)
+    trigger_build(state, tag_avail)
 
 def determine_version_to_include_in_release(state, repo):
     version = state_value(state, [repo.git(), 'version'])
@@ -1865,7 +1994,7 @@ def do_release():
                 git_list.append((state, repo.git(), ["push", remote, tag_avail[repo.git()]['build_tag']]))
             query_execute_git_list(git_list)
         elif reply.lower() == "b":
-            trigger_jenkins_build(state, tag_avail)
+            trigger_build(state, tag_avail)
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "u":
@@ -1982,6 +2111,17 @@ def figure_out_checked_out_revision(state, repo_git):
 
     return [(ref, "tag") for ref in refs]
 
+def find_repo_path(name, paths):
+    """ Try to find the git repo 'name' under some known paths.
+        Return abspath or None if not found.
+    """
+    for p in paths:
+        path = os.path.normpath(os.path.join(integration_dir(), p, name))
+        if os.path.isdir(path):
+            return path
+
+    return None
+
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
     data = get_docker_compose_data(int_dir)
@@ -1996,15 +2136,12 @@ def do_verify_integration_references(args, optional_too):
             continue
 
         # Try some common locations.
-        tried = []
-        for partial_path in ["..", "../go/src/github.com/mendersoftware"]:
-            path = os.path.normpath(os.path.join(int_dir, partial_path, repo.git()))
-            tried.append(path)
-            if os.path.isdir(path):
-                break
-        else:
+        paths = ["..", "../go/src/github.com/mendersoftware"]
+        path = find_repo_path(repo.git(), paths)
+
+        if path is None:
             print("%s not found. Tried: %s"
-                  % (repo.git(), ", ".join(tried)))
+                  % (repo.git(), ", ".join(paths)))
             sys.exit(2)
 
         revs = figure_out_checked_out_revision(None, path)
@@ -2036,6 +2173,74 @@ def do_verify_integration_references(args, optional_too):
         print("\nMake sure all *.yml files contain the correct versions.")
         sys.exit(1)
 
+def is_repo_fresh_master(path):
+    """ Check if we're on the most recent commit in 'master'.
+    """
+    remote = find_upstream_remote(None, path)
+
+    sha_master = execute_git(None, path, ["rev-parse", remote + "/master"], capture=True, capture_stderr=True)
+    sha_head = execute_git(None, path, ["rev-parse", "HEAD"], capture=True, capture_stderr=True)
+
+    return sha_master == sha_head
+
+def select_test_suite():
+    """ Check what backend components are checked out in custom revisions and decide
+        which integration test suite should be ran - 'open', 'enterprise' or both.
+        To be used when running integration tests to see which components 'triggered' the build 
+        (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
+        in case of manually parametrized builds).
+        Rules:
+        - open services, without closed versions, should trigger both setup test runs
+        - open services with closed versions should trigger the 'open' test suite
+        - enterprise services can run just the 'enterprise' setup
+    """
+    # check all known git components for custom revisions
+    # answers the question what we're actually building
+    paths = ["..", "../go/src/github.com/mendersoftware"]
+
+    built_components = set({})
+    for repo in Component.get_components_of_type("git", only_release=False):
+        path = find_repo_path(repo.git(), paths)
+        if path is None:
+            raise RuntimeError("cannot find repo {} in any of {}".format(repo.git(), paths))
+
+        if not is_repo_fresh_master(path):
+            built_components.add(repo.name)
+
+    # seems like we're building plain master of everything - run all tests
+    if len(built_components) == 0:
+        return "all"
+
+    # if we're building only backend services - we can proceed with test selection
+    # if not - assume we must run all test suites (e.g. for mender-cli, etc.)
+    non_service_components = built_components - BACKEND_SERVICES
+    if len(non_service_components) > 0:
+        return "all"
+
+    built_services = BACKEND_SERVICES & built_components
+
+    # count open vs open-enterprise vs enterprise services
+    open_services = built_services & BACKEND_SERVICES_OPEN
+    ent_services = built_services & BACKEND_SERVICES_ENT
+    open_ent_services = built_services & BACKEND_SERVICES_OPEN_ENT
+
+    # open services appear in both setups - run 'all'
+    if len(open_services) > 0:
+        return "all"
+    # only open services with enterprise counterparts - appear only in 'open' setup
+    elif len(ent_services) == 0:
+        return "open"
+    # only enterprise services - just 'enterprise' setup is enough
+    elif len(open_ent_services) == 0:
+        return "enterprise"
+    else:
+        return "all"
+
+def do_select_test_suite():
+    """Process --select-test-suite argument."""
+
+    print(select_test_suite())
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--version-of", dest="version_of", metavar="SERVICE",
@@ -2055,6 +2260,8 @@ def main():
     parser.add_argument("-b", "--build", dest="build", metavar="VERSION",
                         const=True, nargs="?",
                         help="Build the given version of Mender")
+    parser.add_argument("-c", "--ci-server", metavar="jenkins|gitlab", dest="ci_server", default="gitlab", nargs="?",
+                        help="Select server CI where to trigger the builds. Default is GitLab.")
     parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
                         help="Can only be used with -b. Specifies a repository and pull request number "
                         + "that should be triggered with the rest of the repository versions. "
@@ -2069,6 +2276,8 @@ def main():
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
+    parser.add_argument("--select-test-suite", action="store_true",
+                        help="Based on checked out git revisions, decide which integration suite must run ('open', 'enterprise', 'all').")
     parser.add_argument("-n", "--dry-run", action="store_true",
                         help="Don't take any action at all")
     parser.add_argument("--verify-integration-references", action="store_true",
@@ -2096,6 +2305,10 @@ def main():
     if args.dry_run:
         global DRY_RUN
         DRY_RUN = True
+    assert args.ci_server in ["jenkins", "gitlab"], "%s is not a valid CI server!" % args.ci_server
+    if args.ci_server == "gitlab":
+        global USE_GITLAB
+        USE_GITLAB = True
 
     if args.version_of is not None:
         do_version_of(args)
@@ -2111,6 +2324,8 @@ def main():
         do_release()
     elif args.verify_integration_references:
         do_verify_integration_references(args, optional_too=args.all)
+    elif args.select_test_suite:
+        do_select_test_suite()
     else:
         parser.print_help()
         sys.exit(1)

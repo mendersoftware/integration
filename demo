@@ -27,8 +27,7 @@ DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME:-$(tr -d ".-" <<<${PWD
 
 CLIENT=
 CLIENT_ARGS="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
-# The demo environment has some external dependencies upon: wget, curl, jq
-hash wget 2>/dev/null || { echo >&2 "The demo script requires the 'wget' tool to be available. Aborting."; exit 1; }
+# The demo environment has some external dependencies upon: curl, jq
 hash curl 2>/dev/null || { echo >&2 "The demo script requires the 'curl' tool to be available. Aborting."; exit 1; }
 hash jq 2>/dev/null || { echo >&2 "The demo script requires the 'jq' tool to be available. Aborting."; exit 1; }
 
@@ -58,7 +57,7 @@ done
 # Check if the demo-Artifact has been downloaded,
 # or if there exists a newer one in storage.
 DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
-wget -q -O mender-demo-artifact.mender https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
+curl -sz mender-demo-artifact.mender -o mender-demo-artifact.mender https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
 
 retval=$?
 if [ $retval -ne 0 ]; then

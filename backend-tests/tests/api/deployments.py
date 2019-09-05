@@ -13,6 +13,11 @@
 #    limitations under the License.
 import api.client
 
+URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/deployments'
 URL_DEVICES = api.client.GATEWAY_URL + '/api/devices/v1/deployments'
 
-URL_NEXT = '/device/deployments/next'
+URL_NEXT   = '/device/deployments/next'
+URL_LOG    = '/device/deployments/{id}/log'
+URL_STATUS = '/device/deployments/{id}/status'
+URL_DEPLOYMENT  = '/deployments/{id}'
+URL_DEPLOYMENTS = '/deployments'

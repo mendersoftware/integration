@@ -16,7 +16,7 @@ git:
     - deployments-enterprise
     docker_container:
     - mender-deployments
-    release_component: false
+    release_component: true
 
   deviceadm:
     docker_image:
@@ -112,7 +112,7 @@ git:
     - useradm-enterprise
     docker_container:
     - mender-useradm
-    release_component: false
+    release_component: true
 
 docker_image:
   deployments:
@@ -127,7 +127,7 @@ docker_image:
     - deployments-enterprise
     docker_container:
     - mender-deployments
-    release_component: false
+    release_component: true
 
   deviceadm:
     git:
@@ -225,7 +225,7 @@ docker_image:
     - useradm-enterprise
     docker_container:
     - mender-useradm
-    release_component: false
+    release_component: true
 
 docker_container:
   mender-deployments:

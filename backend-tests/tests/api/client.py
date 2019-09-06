@@ -31,10 +31,10 @@ class ApiClient:
         self.headers[hdr]=val
         return self
 
-    def call(self, method, url, body=None, path_params={}, qs_params={}, headers={}, auth=None):
+    def call(self, method, url, body=None, path_params={}, qs_params={}, headers={}, auth=None, files=None):
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
-        return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False)
+        return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
 
     def __make_url(self, path):
         return os.path.join(self.base_url,

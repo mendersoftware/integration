@@ -315,7 +315,7 @@ def get_docker_compose_data_from_json_list(json_list):
     """
     data = {}
     for json_str in json_list:
-        json_elem = yaml.load(json_str)
+        json_elem = yaml.safe_load(json_str)
         for container, cont_info in json_elem['services'].items():
             image = cont_info.get('image')
             if image is None or "mendersoftware/" not in image:
@@ -1103,7 +1103,7 @@ def trigger_build(state, tag_avail):
             subprocess.call("%s %s" % (editor, RELEASE_TOOL_STATE), shell=True)
             with open(RELEASE_TOOL_STATE) as fd:
                 state.clear()
-                state.update(yaml.load(fd))
+                state.update(yaml.safe_load(fd))
             # Trigger update of parameters from disk.
             params = None
             continue
@@ -1546,7 +1546,7 @@ def do_build(args):
         print("Fetching cached parameters from %s. Delete to reset."
               % RELEASE_TOOL_STATE)
         with open(RELEASE_TOOL_STATE) as fd:
-            state = yaml.load(fd)
+            state = yaml.safe_load(fd)
     else:
         state = {}
 
@@ -1692,7 +1692,7 @@ def do_release():
         print("Loading existing release state data...")
         print("Note that you can always edit or delete %s manually" % RELEASE_TOOL_STATE)
         fd = open(RELEASE_TOOL_STATE)
-        state = yaml.load(fd)
+        state = yaml.safe_load(fd)
         fd.close()
 
     if state_value(state, ['repo_dir']) is None:

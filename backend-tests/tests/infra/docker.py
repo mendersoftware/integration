@@ -21,6 +21,11 @@ def exec(container_id, cmd):
     ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ret.stdout.decode('utf-8').strip()
 
+def cmd(container_id, docker_cmd, cmd=[]):
+    cmd = ['docker', docker_cmd] + [str(container_id)] + cmd
+    ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return ret.stdout.decode('utf-8').strip()
+
 def getid(service_name):
     cmd = ['docker', 'ps', '-q', '-f', 'name={}'.format(service_name)]
     ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

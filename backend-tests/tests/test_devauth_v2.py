@@ -1224,3 +1224,135 @@ def compare_aset(authset, api_authset):
        assert authset.id_data == api_authset['identity_data']
        assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
        assert authset.status == api_authset['status']
+
+class TestDefaultTenantTokenEnterprise(object):
+
+    uc = ApiClient(useradm.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
+    def test_default_tenant_token(self, clean_mongo):
+        """Connect with a device without a tenant-token, and make sure it shows up in the default tenant account"""
+
+        default_tenant = create_tenant('default-tenant')
+
+        # Restart the deviceauth service with the new token belonging to `default-tenant`
+        deviceauth_cli = CliDeviceauth()
+        deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        # Create a user for the default tenant
+        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        r = self.uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(default_tenant_user.name, default_tenant_user.pwd))
+        assert r.status_code == 200
+        default_utoken = r.text
+
+        # Create a device with an empty tenant token, and try to authorize
+        create_random_authset(default_utoken, '') # Emty tenant token
+
+        # Device must show up in the default tenant's account
+        r = self.devauthm.with_auth(default_utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == 1
+        api_dev = api_devs[0]
+        assert api_dev['status'] == 'pending'
+
+
+    def test_valid_tenant_not_duplicated_for_default_tenant(self, clean_mongo):
+        """Verify that a valid tenant-token login does not show up in the default tenant's account"""
+
+        default_tenant = create_tenant('default-tenant')
+
+        # Restart the deviceauth service with the new token belonging to `default-tenant`
+        deviceauth_cli = CliDeviceauth()
+        deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        # Create a user for the default tenant
+        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        r = self.uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(default_tenant_user.name, default_tenant_user.pwd))
+        assert r.status_code == 200
+        default_utoken = r.text
+
+        # Create a second user, which has it's own tenant token
+        tenant1 = create_tenant('tenant1')
+
+        tenant1_user = create_user('foo@bar.com', 'foobarbaz', tenant1.id)
+        r = self.uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(tenant1_user.name, tenant1_user.pwd))
+        assert r.status_code == 200
+        tenant1_utoken = r.text
+
+        # Create a device, and try to authorize
+        create_random_authset(tenant1_utoken, tenant1.tenant_token)
+
+        # Device should show up in the 'tenant1's account
+        r = self.devauthm.with_auth(tenant1_utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == 1
+        api_dev = api_devs[0]
+        assert api_dev['status'] == 'pending'
+
+
+        # Device must not show up in the default tenant's account
+        r = self.devauthm.with_auth(default_utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == 0
+
+
+    @pytest.mark.xfail(strict=True, reason="The deviceauth scope changed to allow invalid tokens")
+    def test_invalid_tenant_token_added_to_default_account(self, clean_mongo):
+        """Verify that an invalid tenant token does show up in the default tenant account"""
+
+        default_tenant = create_tenant('default-tenant')
+
+        # Restart the deviceauth service with the new token belonging to `default-tenant`
+        deviceauth_cli = CliDeviceauth()
+        deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        # Create a user for the default tenant
+        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        r = self.uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(default_tenant_user.name, default_tenant_user.pwd))
+        assert r.status_code == 200
+        default_utoken = r.text
+
+        # Create a second user, which has it's own tenant token
+        tenant1 = create_tenant('tenant1')
+
+        tenant1_user = create_user('foo@bar.com', 'foobarbaz', tenant1.id)
+        r = self.uc.call('POST',
+                    useradm.URL_LOGIN,
+                    auth=(tenant1_user.name, tenant1_user.pwd))
+        assert r.status_code == 200
+        tenant1_utoken = r.text
+
+        # Device must not show up in the 'tenant1's account, so the authset will not be pending
+        with pytest.raises(AssertionError) as e:
+            create_random_authset(tenant1_utoken, 'mumbojumbotoken')
+        assert "assert 0 == 1" in str(e.value)
+
+        # Double check that it is not added to tenant1
+        r = self.devauthm.with_auth(tenant1_utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == 0
+
+
+        # Device must show up in the default tenant's account
+        r = self.devauthm.with_auth(default_utoken).call('GET',
+                                            deviceauth_v2.URL_DEVICES)
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == 1

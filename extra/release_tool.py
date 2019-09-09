@@ -1999,15 +1999,15 @@ def do_verify_integration_references(args, optional_too):
         print("\nMake sure all *.yml files contain the correct versions.")
         sys.exit(1)
 
-def is_repo_fresh_master(path):
-    """ Check if we're on the most recent commit in 'master'.
-    """
+def is_repo_on_known_branch(path):
+    """Check if we're on the most recent commit in a well known branch, 'master' or
+    a version branch."""
+
     remote = find_upstream_remote(None, path)
 
-    sha_master = execute_git(None, path, ["rev-parse", remote + "/master"], capture=True, capture_stderr=True)
-    sha_head = execute_git(None, path, ["rev-parse", "HEAD"], capture=True, capture_stderr=True)
-
-    return sha_master == sha_head
+    branches = execute_git(None, path, ["for-each-ref", "--format=%(refname:short)", "--points-at", "HEAD",
+                                        "refs/remotes/%s/*" % remote], capture=True).split()
+    return any([re.search("/([0-9]+\.[0-9]+\.[0-9x]+|master)$", branch) for branch in branches])
 
 def select_test_suite():
     """ Check what backend components are checked out in custom revisions and decide
@@ -2030,7 +2030,7 @@ def select_test_suite():
         if path is None:
             raise RuntimeError("cannot find repo {} in any of {}".format(repo.git(), paths))
 
-        if not is_repo_fresh_master(path):
+        if not is_repo_on_known_branch(path):
             built_components.add(repo.name)
 
     # seems like we're building plain master of everything - run all tests

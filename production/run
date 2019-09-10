@@ -8,9 +8,18 @@ export MENDER_ARTIFACT_VERSION=$(../extra/release_tool.py -g mender-artifact)
 export MENDER_VERSION=$(../extra/release_tool.py -g mender)
 export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
+ENTERPRISE_DOCKER_COMPOSE=
+ENTERPRISE_PROD=
+if [ -f ./config/enterprise.yml ]; then
+    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml"
+    ENTERPRISE_PROD="-f ./config/enterprise.yml"
+fi
+
 exec docker-compose \
      -p menderproduction \
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \
-     -f ./prod.yml \
+     $ENTERPRISE_DOCKER_COMPOSE \
+     -f ./config/prod.yml \
+     $ENTERPRISE_PROD \
      "$@"

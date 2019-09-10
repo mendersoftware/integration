@@ -10,8 +10,6 @@
 # - certificates and key are mounted into containers using volumes
 # - minio artifacts are stored in a named volume `mender-artifacts`; volume
 #   needs to be created manually using `docker volume create mender-artifacts`
-# - paths need to be adjusted, ie, replace /template/ with production directory
-#   (see list of compose bugs)
 
 # related compose bugs:
 # - https://github.com/docker/compose/issues/3874
@@ -24,7 +22,7 @@ services:
     mender-useradm:
         command: server --automigrate
         volumes:
-            - ./template/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
+            - ./production/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
         logging:
             options:
                 max-file: "10"
@@ -33,7 +31,7 @@ services:
     mender-device-auth:
         command: server --automigrate
         volumes:
-            - ./template/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+            - ./production/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
         logging:
             options:
                 max-file: "10"
@@ -53,8 +51,8 @@ services:
         networks:
             - mender
         volumes:
-            - ./template/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
-            - ./template/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro
+            - ./production/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
+            - ./production/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro
         logging:
             options:
                 max-file: "10"
@@ -84,14 +82,14 @@ services:
             DOWNLOAD_SPEED: 1m
             MAX_CONNECTIONS: 100
         volumes:
-            - ./template/keys-generated/certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
-            - ./template/keys-generated/certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key:ro
+            - ./production/keys-generated/certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt:ro
+            - ./production/keys-generated/certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key:ro
             - ./storage-proxy/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
 
     mender-deployments:
         command: server --automigrate
         volumes:
-            - ./template/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
+            - ./production/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
         environment:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/storage-proxy.crt
             # access key, the same value as MINIO_ACCESS_KEY

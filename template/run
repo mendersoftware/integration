@@ -7,6 +7,11 @@ export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
 export MENDER_ARTIFACT_VERSION=$(../extra/release_tool.py -g mender-artifact)
 export MENDER_VERSION=$(../extra/release_tool.py -g mender)
 export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    export GATEWAY_IP=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -1)
+else
+    export GATEWAY_IP=$(ip route get 1 | awk '{print $7;exit}')
+fi
 
 exec docker-compose \
      -p menderproduction \

@@ -25,6 +25,7 @@ services:
         networks:
             - mender
         environment:
+            - GATEWAY_IP
             - INTEGRATION_VERSION
             - MENDER_ARTIFACT_VERSION
             - MENDER_VERSION

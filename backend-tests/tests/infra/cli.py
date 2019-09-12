@@ -81,3 +81,19 @@ class CliDeviceauth:
             cmd.extend(['--tenant', tenant_id])
 
         docker.exec(self.cid, cmd)
+
+    def add_default_tenant_token(self, tenant_token):
+        """
+        Stops the container, adds the default_tenant_token to the config file
+        at '/etc/deviceauth/config.yaml, and starts the container back up.
+
+        :param tenant_token - 'the default tenant token to set'
+        """
+
+        # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml')
+        cmd = ['/bin/sed', '-i', '$adefault_tenant_token: {}'.format(tenant_token), '/etc/deviceauth/config.yaml']
+        docker.exec(self.cid, cmd)
+
+        # Restart the container, so that it is picked up by the device-auth service on startup
+        docker.cmd(self.cid, 'stop')
+        docker.cmd(self.cid, 'start')

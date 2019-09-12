@@ -1309,7 +1309,6 @@ class TestDefaultTenantTokenEnterprise(object):
         assert len(api_devs) == 0
 
 
-    @pytest.mark.xfail(strict=True, reason="The deviceauth scope changed to allow invalid tokens")
     def test_invalid_tenant_token_added_to_default_account(self, clean_mongo):
         """Verify that an invalid tenant token does show up in the default tenant account"""
 

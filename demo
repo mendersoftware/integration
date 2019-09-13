@@ -67,8 +67,10 @@ fi
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     ARTIFACT_SIZE_BYTES=$(stat -f %z ${DEMO_ARTIFACT_NAME}) # BSD is not GNU -_-
+    export GATEWAY_IP=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -1)
 else
     ARTIFACT_SIZE_BYTES=$(stat -c %s ${DEMO_ARTIFACT_NAME})
+    export GATEWAY_IP=$(ip route get 1 | awk '{print $7;exit}')
 fi
 
 # speed up first start by pulling containers in parallel

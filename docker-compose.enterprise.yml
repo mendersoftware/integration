@@ -6,7 +6,7 @@ services:
         image: mendersoftware/deployments-enterprise:master
 
     mender-conductor:
-        image: mendersoftware/mender-conductor-enterprise:1.4.x
+        image: mendersoftware/mender-conductor-enterprise:1.4.0
 
     # add services
     mender-tenantadm:
@@ -34,7 +34,7 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
 
     mender-email-sender:
-        image: mendersoftware/email-sender:1.4.x
+        image: mendersoftware/email-sender:1.4.0
         extends:
             file: common.yml
             service: mender-base

@@ -80,7 +80,7 @@ collect_changes() {
             if [ "$REPO_ONLY" != 1 ]; then
                 cd "$BASE_DIR/$repo"
             fi
-            git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json'
+            git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json' ':!**/__snapshots__/**'
         )
     done
 }

@@ -200,9 +200,6 @@ def get_valid_image():
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here
-    if distutils.spawn.find_executable("mender-stress-test-client") is None:
-        raise SystemExit("mender-stress-test-client not found in PATH")
-
     if distutils.spawn.find_executable("mender-artifact") is None:
         raise SystemExit("mender-artifact not found in PATH")
 

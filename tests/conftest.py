@@ -67,7 +67,6 @@ def pytest_addoption(parser):
     parser.addoption("--runnightly", action="store_true", help="run nightly (very slow) tests")
     parser.addoption("--runs3", action="store_true", help="run fast tests")
 
-    parser.addoption("--upgrade-from", action="store", help="perform upgrade test", default="")
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
     parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
@@ -206,9 +205,6 @@ def get_valid_image():
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here
-    if distutils.spawn.find_executable("mender-stress-test-client") is None:
-        raise SystemExit("mender-stress-test-client not found in PATH")
-
     if distutils.spawn.find_executable("mender-artifact") is None:
         raise SystemExit("mender-artifact not found in PATH")
 

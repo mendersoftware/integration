@@ -3,18 +3,18 @@ import os
 import requests
 import random
 import time
-import util.crypto
+import testutils.util.crypto
 
 from datetime import datetime, timedelta
 
-import api.client
-import api.deviceauth as deviceauth_v1
-import api.useradm as useradm
-import api.inventory as inventory
-import api.deployments as deployments
+import testutils.api.client
+import testutils.api.deviceauth as deviceauth_v1
+import testutils.api.useradm as useradm
+import testutils.api.inventory as inventory
+import testutils.api.deployments as deployments
 
-from api.client import ApiClient
-from common import User, Device, Authset, Tenant, \
+from testutils.api.client import ApiClient
+from testutils.common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
         create_authset, change_authset_status, clean_mongo, mongo
 
@@ -27,7 +27,7 @@ def rand_id_data():
 def make_pending_device(utoken, tenant_token=''):
     id_data = rand_id_data()
 
-    priv, pub = util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.rsa_get_keypair()
     new_set = create_authset(id_data, pub, priv, utoken, tenant_token=tenant_token)
 
     dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
@@ -78,7 +78,7 @@ def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=''):
 
 
 def upload_image(filename, auth_token, description="abc"):
-    image_path_url = api.client.GATEWAY_URL + "/api/management/v1/deployments/artifacts"
+    image_path_url = testutils.api.client.GATEWAY_URL + "/api/management/v1/deployments/artifacts"
     r = requests.post(
         image_path_url,
         verify=False,

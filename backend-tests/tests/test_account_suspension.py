@@ -15,16 +15,16 @@ import pytest
 import random
 import time
 
-from common import mongo, clean_mongo
-from api.client import ApiClient
-import api.useradm as useradm
-import api.deviceauth as deviceauth
-import api.deviceauth_v2 as deviceauth_v2
-import api.tenantadm as tenantadm
-import api.deployments as deployments
-from infra.cli import CliTenantadm, CliUseradm
-import util.crypto
-from common import User, Device, Tenant, \
+from testutils.common import mongo, clean_mongo
+from testutils.api.client import ApiClient
+import testutils.api.useradm as useradm
+import testutils.api.deviceauth as deviceauth
+import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.tenantadm as tenantadm
+import testutils.api.deployments as deployments
+from testutils.infra.cli import CliTenantadm, CliUseradm
+import testutils.util.crypto
+from testutils.common import User, Device, Tenant, \
         create_user, create_tenant, create_tenant_user, \
         create_random_authset, get_device_by_id_data, change_authset_status
 

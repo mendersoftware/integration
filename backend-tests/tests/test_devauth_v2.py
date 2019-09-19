@@ -15,17 +15,17 @@ import pytest
 import random
 import time
 
-from api.client import ApiClient
-from common import mongo, clean_mongo
-from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
-import api.deviceauth as deviceauth_v1
-import api.deviceauth_v2 as deviceauth_v2
-import api.useradm as useradm
-import api.tenantadm as tenantadm
-import api.deployments as deployments
-import api.inventory as inventory
-import util.crypto
-from common import User, Device, Authset, Tenant, \
+from testutils.api.client import ApiClient
+from testutils.common import mongo, clean_mongo
+from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
+import testutils.api.deviceauth as deviceauth_v1
+import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.useradm as useradm
+import testutils.api.tenantadm as tenantadm
+import testutils.api.deployments as deployments
+import testutils.api.inventory as inventory
+import testutils.util.crypto
+from testutils.common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
         create_random_authset, create_authset, \
         get_device_by_id_data, change_authset_status
@@ -125,7 +125,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth device
-        priv, pub = util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = {'mac': 'pretenditsamac'}
         body = deviceauth_v2.preauth_req(
                     id_data,
@@ -150,7 +150,7 @@ class TestPreauthBase:
         aset = api_dev['auth_sets'][0]
 
         assert aset['identity_data'] == id_data
-        assert util.crypto.rsa_compare_keys(aset['pubkey'], pub)
+        assert testutils.util.crypto.rsa_compare_keys(aset['pubkey'], pub)
         assert aset['status'] == 'preauthorized'
 
         # actual device can obtain auth token
@@ -194,7 +194,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth duplicate device
-        priv, pub = util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = devices[0].id_data
         body = deviceauth_v2.preauth_req(
                     id_data,
@@ -219,7 +219,7 @@ class TestPreauthBase:
 
         assert len(existing['auth_sets']) == 1
         aset = existing['auth_sets'][0]
-        assert util.crypto.rsa_compare_keys(aset['pubkey'], devices[0].pubkey)
+        assert testutils.util.crypto.rsa_compare_keys(aset['pubkey'], devices[0].pubkey)
         assert aset['status'] == 'pending'
 
 
@@ -243,7 +243,7 @@ class TestPreauth(TestPreauthBase):
         utoken = r.text
 
         # id data not json
-        priv, pub = util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = '{\"mac\": \"foo\"}'
         body = deviceauth_v2.preauth_req(
                     id_data,
@@ -311,7 +311,7 @@ class TestPreauthEnterprise(TestPreauthBase):
 
             assert len(ad['auth_sets']) == 1
             aset = ad['auth_sets'][0]
-            assert util.crypto.rsa_compare_keys(aset['pubkey'], orig_device.pubkey)
+            assert testutils.util.crypto.rsa_compare_keys(aset['pubkey'], orig_device.pubkey)
 
 def make_devs_with_authsets(user, tenant_token=''):
     """ create a good number of devices, some with >1 authsets, with different statuses.
@@ -388,7 +388,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=''):
 
     dev = None
     for i in range(num_auth_sets):
-        priv, pub = util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.rsa_get_keypair()
         new_set = create_authset(id_data, pub, priv, utoken, tenant_token=tenant_token)
 
         if dev is None:
@@ -429,7 +429,7 @@ def make_rejected_device(utoken, num_auth_sets=1, tenant_token=''):
 def make_preauthd_device(utoken):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
 
-    priv, pub = util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.rsa_get_keypair()
     id_data = rand_id_data()
 
     body = deviceauth_v2.preauth_req(
@@ -455,7 +455,7 @@ def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=''):
     dev = make_preauthd_device(utoken)
 
     for i in range(num_pending):
-        priv, pub = util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.rsa_get_keypair()
         aset = create_authset(dev.id_data, pub, priv, utoken, tenant_token=tenant_token)
         dev.authsets.append(Authset(aset.id, aset.did, dev.id_data, pub, priv, 'pending'))
 
@@ -681,7 +681,7 @@ class TestDeviceMgmtBase:
             # GOTCHA: don't rely on indexing, authsets can get reshuffled
             # depending on actual contents (we don't order them, so it's up to mongo)
             for api_aset in api_dev['auth_sets']:
-                aset = [a for a in dev.authsets if util.crypto.rsa_compare_keys(a.pubkey, api_aset['pubkey'])]
+                aset = [a for a in dev.authsets if testutils.util.crypto.rsa_compare_keys(a.pubkey, api_aset['pubkey'])]
                 assert len(aset) == 1
                 aset = aset[0]
 
@@ -1222,7 +1222,7 @@ def filter_and_page_devs(devs, page=None, per_page=None, status=None):
 def compare_aset(authset, api_authset):
        assert authset.id == api_authset['id']
        assert authset.id_data == api_authset['identity_data']
-       assert util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
+       assert testutils.util.crypto.rsa_compare_keys(authset.pubkey, api_authset['pubkey'])
        assert authset.status == api_authset['status']
 
 class TestDefaultTenantTokenEnterprise(object):

@@ -14,6 +14,7 @@
 #    limitations under the License.
 import pytest
 import random
+import pymongo
 from pymongo import MongoClient
 
 from testutils.api.client import ApiClient
@@ -135,8 +136,8 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
 
     aset = aset[0]
 
-    assert aset['identity_data'] == id_data 
-    assert aset['status'] == 'pending' 
+    assert aset['identity_data'] == id_data
+    assert aset['status'] == 'pending'
 
     return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
@@ -153,7 +154,13 @@ def create_tenant_user(idx, tenant, docker_prefix=None):
 
     return create_user(name, pwd, tenant.id, docker_prefix)
 
-def get_device_by_id_data(dauthm, id_data, utoken):
+def create_org(name, user, password):
+    cli = CliTenantadm()
+
+    return cli.create_org(name, user, password)
+
+
+def get_device_by_id_data(devauthm, id_data, utoken):
     page = 0
     per_page = 20
     qs_params = {}

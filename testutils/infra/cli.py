@@ -15,8 +15,12 @@
 import testutils.infra.docker as docker
 
 class CliUseradm:
-    def __init__(self):
-        self.cid = docker.getid('mender-useradm')
+    def __init__(self, docker_prefix=None):
+        filt = ['mender-useradm']
+        if docker_prefix is not None:
+            filt.append(docker_prefix)
+
+        self.cid = docker.getid(filt)
 
         # is it an open useradm, or useradm-enterprise?
         for path in ['/usr/bin/useradm', '/usr/bin/useradm-enterprise']:
@@ -52,8 +56,12 @@ class CliUseradm:
 
 
 class CliTenantadm:
-    def __init__(self):
-        self.cid = docker.getid('mender-tenantadm')
+    def __init__(self, docker_prefix=None):
+        filt = ['mender-tenantadm']
+        if docker_prefix is not None:
+            filt.append(docker_prefix)
+
+        self.cid = docker.getid(filt)
 
     def create_tenant(self, name):
         cmd = ['/usr/bin/tenantadm',
@@ -70,8 +78,12 @@ class CliTenantadm:
         docker.execute(self.cid, cmd)
 
 class CliDeviceauth:
-    def __init__(self):
-        self.cid = docker.getid('mender-device-auth')
+    def __init__(self, docker_prefix=None):
+        filt = ['mender-device-auth']
+        if docker_prefix is not None:
+            filt.append(docker_prefix)
+
+        self.cid = docker.getid(filt)
 
     def migrate(self, tenant_id=None):
         cmd = ['usr/bin/deviceauth',

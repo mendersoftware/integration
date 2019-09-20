@@ -77,9 +77,9 @@ class Tenant:
         self.tenant_token=token
 
 
-def create_tenant(name):
+def create_tenant(name, docker_prefix=None):
     """ Create a tenant via cli, record its id and token for further use.  """
-    cli = CliTenantadm()
+    cli = CliTenantadm(docker_prefix)
     api = ApiClient(tenantadm.URL_INTERNAL)
 
     id = cli.create_tenant(name)
@@ -142,18 +142,18 @@ def create_authset(id_data, pubkey, privkey, utoken, tenant_token=''):
 
     return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
-def create_user(name, pwd, tid=''):
-    cli = CliUseradm()
+def create_user(name, pwd, tid='', docker_prefix=None):
+    cli = CliUseradm(docker_prefix)
 
     uid = cli.create_user(name, pwd, tid)
 
     return User(uid, name, pwd)
 
-def create_tenant_user(idx, tenant):
+def create_tenant_user(idx, tenant, docker_prefix=None):
     name = 'user{}@{}.com'.format(idx, tenant.name)
     pwd = 'correcthorse'
 
-    return create_user(name, pwd, tenant.id)
+    return create_user(name, pwd, tenant.id, docker_prefix)
 
 def get_device_by_id_data(id_data, utoken):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)

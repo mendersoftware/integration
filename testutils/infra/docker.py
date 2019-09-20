@@ -26,9 +26,11 @@ def cmd(container_id, docker_cmd, cmd=[]):
     ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ret.stdout.decode('utf-8').strip()
 
-def getid(service_name):
-    cmd = ['docker', 'ps', '-q', '-f', 'name={}'.format(service_name)]
-    ret = subprocess.check_output(cmd).decode('utf-8').strip()
+def getid(filters):
+    filters = ["grep {}".format(f) for f in filters] 
+    cmd = "docker ps | " + " | ".join(filters)  + " | awk '{print $1}'"
+
+    ret = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
 
     if ret == '':
         raise RuntimeError('container id for {} not found'.format(service_name))

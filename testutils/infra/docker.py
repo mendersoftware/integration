@@ -18,8 +18,8 @@ PROJECT_NAME='backendtests'
 
 def execute(container_id, cmd):
     cmd = ['docker', 'exec', '{}'.format(container_id)] + cmd
-    ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    return ret.stdout.decode('utf-8').strip()
+    ret = subprocess.check_output(cmd).decode('utf-8').strip()
+    return ret
 
 def cmd(container_id, docker_cmd, cmd=[]):
     cmd = ['docker', docker_cmd] + [str(container_id)] + cmd
@@ -28,10 +28,9 @@ def cmd(container_id, docker_cmd, cmd=[]):
 
 def getid(service_name):
     cmd = ['docker', 'ps', '-q', '-f', 'name={}'.format(service_name)]
-    ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    ret = subprocess.check_output(cmd).decode('utf-8').strip()
 
-    tid = ret.stdout.decode('utf-8').strip()
-    if tid == '':
+    if ret == '':
         raise RuntimeError('container id for {} not found'.format(service_name))
 
-    return ret.stdout.decode('utf-8').strip()
+    return ret

@@ -71,6 +71,24 @@ class CliTenantadm:
         tid = docker.execute(self.cid, cmd)
         return tid
 
+    def create_org(self, name, username, pwd):
+        cmd = ['/usr/bin/tenantadm',
+               'create-org',
+               '--name', name,
+               '--username', username,
+               '--password', pwd]
+
+        tid = docker.execute(self.cid, cmd)
+        return tid
+
+    def get_tenant(self, tid):
+        cmd = ['/usr/bin/tenantadm',
+               'get-tenant',
+               '--id', tid]
+
+        tenant = docker.execute(self.cid, cmd)
+        return tenant
+
     def migrate(self):
         cmd = ['usr/bin/tenantadm',
                'migrate']

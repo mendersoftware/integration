@@ -1851,12 +1851,15 @@ def do_integration_versions_including(args):
 
     git_dir = integration_dir()
     remote = find_upstream_remote(None, git_dir)
-    output = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
-                                         "--sort=-version:refname",
-                                         "refs/tags/*",
-                                         "refs/remotes/%s/master" % remote,
-                                         "refs/remotes/%s/[1-9]*" % remote],
-                         capture=True)
+    git_query = ["for-each-ref",
+                 "--format=%(refname:short)",
+                 "--sort=-version:refname:short",
+                 "refs/tags/*",
+                 "refs/remotes/%s/master" % remote,
+                 "refs/remotes/%s/[1-9]*" % remote]
+    if args.all:
+        git_query += ["refs/heads/*"]
+    output = execute_git(None, git_dir, git_query, capture=True)
     candidates = []
     for line in output.strip().split('\n'):
         # Filter out build tags.
@@ -2098,7 +2101,8 @@ def main():
                         + "argument determines which type of name is returned. The default is git. "
                         + "By default does not list optional repositories.")
     parser.add_argument("-a", "--all", action="store_true", default=False,
-                        help="When used with -l, list all repositories, including optional ones.")
+                        help="When used with -l, list all repositories, including optional ones. "
+                        + "When used with -f, include local branches in addition to upstream branches.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",

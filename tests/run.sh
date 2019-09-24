@@ -84,17 +84,6 @@ function get_requirements() {
         exit 1
     fi
 
-   curl --fail "https://stress-client.s3-accelerate.amazonaws.com/release/mender-stress-test-client" \
-        -o downloaded-tools/mender-stress-test-client \
-        -z downloaded-tools/mender-stress-test-client
-
-    if [ $? -ne 0 ]; then
-        echo "failed to download mender-stress-test-client" 
-        exit 1
-    fi
-
-    chmod +x downloaded-tools/mender-stress-test-client
-
     export PATH=$PWD/downloaded-tools:$PATH
 
     inject_pre_generated_ssh_keys
@@ -118,9 +107,6 @@ if [[ $1 == "--get-requirements" ]]; then
 fi
 
 dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
-
-# mender-stress-test-client is here
-export PATH=$PATH:~/go/bin/
 
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements

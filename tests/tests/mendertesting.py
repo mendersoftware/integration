@@ -31,9 +31,6 @@ class MenderTesting(object):
         if config.getoption("--runs3"):
             MenderTesting.aws_cond = True
 
-        if config.getoption("--upgrade-from"):
-            MenderTesting.upgrade_from = config.getoption("--upgrade-from")
-
         if not MenderTesting.slow_cond and not MenderTesting.fast_cond and not MenderTesting.nightly_cond and not MenderTesting.aws_cond:
             # Default to running everything but nightly.
             MenderTesting.slow_cond = True
@@ -43,4 +40,3 @@ class MenderTesting(object):
         MenderTesting.fast = pytest.mark.skipif(not MenderTesting.fast_cond, reason="need --runfast option to run")
         MenderTesting.nightly = pytest.mark.skipif(not MenderTesting.nightly_cond, reason="need --runnightly option to run")
         MenderTesting.aws_s3 = pytest.mark.skipif(not MenderTesting.aws_cond, reason="need --runs3 option to run")
-        MenderTesting.upgrade_from = pytest.mark.skipif(not MenderTesting.upgrade_from, reason="need --upgrade-from option to run")

@@ -49,6 +49,8 @@ def tenants_users(tenants, clean_mongo):
 @pytest.yield_fixture(scope="function")
 def tenants_users_devices(tenants_users, mongo):
     uc = ApiClient(useradm.URL_MGMT)
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
     for t in tenants_users:
         user = t.users[0]
         r = uc.call('POST',
@@ -58,7 +60,7 @@ def tenants_users_devices(tenants_users, mongo):
         utoken = r.text
 
         for _ in range(2):
-            aset = create_random_authset(utoken, t.tenant_token)
+            aset = create_random_authset(devauthd, devauthm, utoken, t.tenant_token)
             dev = Device(aset.did, aset.id_data, aset.pubkey, t.tenant_token)
             dev.authsets.append(aset)
             t.devices.append(dev)
@@ -143,6 +145,7 @@ class TestAccountSuspensionEnterprise:
 
     def test_accepted_dev_cant_authenticate(self, tenants_users_devices):
         dacd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
         tc = ApiClient(tenantadm.URL_INTERNAL)
 
@@ -157,7 +160,7 @@ class TestAccountSuspensionEnterprise:
         utoken = r.text
 
         aset = device.authsets[0]
-        change_authset_status(aset.did, aset.id, 'accepted', utoken)
+        change_authset_status(devauthm, aset.did, aset.id, 'accepted', utoken)
 
         # suspend
         r = tc.call('PUT',
@@ -184,6 +187,7 @@ class TestAccountSuspensionEnterprise:
 
     def test_authenticated_dev_is_rejected(self, tenants_users_devices):
         dacd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
         tc = ApiClient(tenantadm.URL_INTERNAL)
         dc = ApiClient(deployments.URL_DEVICES)
@@ -198,7 +202,7 @@ class TestAccountSuspensionEnterprise:
         utoken = r.text
 
         aset = tenants_users_devices[0].devices[0].authsets[0]
-        change_authset_status(aset.did, aset.id, 'accepted', utoken)
+        change_authset_status(devauthm, aset.did, aset.id, 'accepted', utoken)
 
         # request auth
         body, sighdr = deviceauth.auth_req(aset.id_data,

@@ -5,3 +5,5 @@ filelock>=2.0
 psutil
 selenium
 pytest-timeout
+pymongo==3.6.1
+

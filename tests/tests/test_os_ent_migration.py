@@ -136,7 +136,7 @@ def migrate_ent_setup():
 
     cli = CliTenantadm(docker_prefix=docker_compose_instance)
     tid = cli.create_org('tenant', u.name, u.pwd)
-    time.sleep(5)
+    time.sleep(10)
 
     tenant = cli.get_tenant(tid)
 

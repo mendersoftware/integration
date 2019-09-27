@@ -98,7 +98,7 @@ git:
     - tenantadm
     docker_container:
     - mender-tenantadm
-    release_component: false
+    release_component: true
 
   useradm:
     docker_image:
@@ -211,7 +211,7 @@ docker_image:
     - tenantadm
     docker_container:
     - mender-tenantadm
-    release_component: false
+    release_component: true
 
   useradm:
     git:
@@ -302,7 +302,7 @@ docker_container:
     - tenantadm
     docker_image:
     - tenantadm
-    release_component: false
+    release_component: true
 
   mender-useradm:
     git:

@@ -90,8 +90,7 @@ run_tests() {
 
     docker attach $cid || failed=1
 
-    get_container_exit_code $cid || true
-    [ $? == 0 ] || failed=1
+    failed=$(get_container_exit_code $cid)
 }
 
 get_container_id() {
@@ -99,7 +98,7 @@ get_container_id() {
 }
 
 get_container_exit_code() {
-    docker inspect --format '{{.State.ExitCode}}' $1
+    echo "$(docker inspect --format '{{.State.ExitCode}}' $1 || echo 1)"
 }
 
 copy_test_reports_if_args() {

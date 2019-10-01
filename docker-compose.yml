@@ -98,6 +98,7 @@ services:
         networks:
             mender:
                 aliases:
+                    - mongo-tenantadm
                     - mongo-deployments
                     - mongo-device-auth
                     - mongo-inventory

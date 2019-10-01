@@ -17,9 +17,9 @@ from Crypto.Hash import SHA256
 from base64 import b64encode, urlsafe_b64decode, urlsafe_b64encode
 import json
 
-import api.client
+import testutils.api.client
 
-URL_MGMT = api.client.GATEWAY_URL + '/api/management/v2/devauth'
+URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v2/devauth'
 
 URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
 URL_AUTHSET = '/devices/{did}/auth/{aid}'

@@ -1,0 +1,6 @@
+version: '2'
+services:
+
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_DEFAULT_TENANT_TOKEN: $DEFAULT_TENANT_TOKEN

@@ -16,12 +16,12 @@ import pytest
 import random
 from pymongo import MongoClient
 
-from api.client import ApiClient
-from infra.cli import CliUseradm, CliTenantadm
-import api.deviceauth as deviceauth_v1
-import api.deviceauth_v2 as deviceauth_v2
-import api.tenantadm as tenantadm
-import util.crypto
+from testutils.api.client import ApiClient
+from testutils.infra.cli import CliUseradm, CliTenantadm
+import testutils.api.deviceauth as deviceauth_v1
+import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.tenantadm as tenantadm
+import testutils.util.crypto
 
 @pytest.fixture(scope="session")
 def mongo():
@@ -77,9 +77,9 @@ class Tenant:
         self.tenant_token=token
 
 
-def create_tenant(name):
+def create_tenant(name, docker_prefix=None):
     """ Create a tenant via cli, record its id and token for further use.  """
-    cli = CliTenantadm()
+    cli = CliTenantadm(docker_prefix)
     api = ApiClient(tenantadm.URL_INTERNAL)
 
     id = cli.create_tenant(name)
@@ -108,31 +108,29 @@ def create_tenant(name):
 
     return Tenant(name, id, token)
 
-def create_random_authset(utoken, tenant_token=''):
+def create_random_authset(dauthd1, dauthm, utoken, tenant_token=''):
     """ create_device with random id data and keypair"""
-    priv, pub = util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.rsa_get_keypair()
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
     id_data = {'mac': mac}
 
-    return create_authset(id_data, pub, priv, utoken, tenant_token)
+    return create_authset(dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token)
 
-def create_authset(id_data, pubkey, privkey, utoken, tenant_token=''):
-    api = ApiClient(deviceauth_v1.URL_DEVICES)
-
+def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=''):
     body, sighdr = deviceauth_v1.auth_req(id_data, pubkey, privkey, tenant_token)
 
     # submit auth req
-    r = api.call('POST',
-                 deviceauth_v1.URL_AUTH_REQS,
-                 body,
-                 headers=sighdr)
+    r = dauthd1.call('POST',
+                     deviceauth_v1.URL_AUTH_REQS,
+                     body,
+                     headers=sighdr)
     assert r.status_code == 401
 
     # dev must exist and have *this* aset
-    api_dev = get_device_by_id_data(id_data, utoken)
+    api_dev = get_device_by_id_data(dauthm, id_data, utoken)
     assert api_dev is not None
 
-    aset = [a for a in api_dev['auth_sets'] if util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
+    aset = [a for a in api_dev['auth_sets'] if testutils.util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
     assert len(aset) == 1
 
     aset = aset[0]
@@ -142,21 +140,20 @@ def create_authset(id_data, pubkey, privkey, utoken, tenant_token=''):
 
     return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
-def create_user(name, pwd, tid=''):
-    cli = CliUseradm()
+def create_user(name, pwd, tid='', docker_prefix=None):
+    cli = CliUseradm(docker_prefix)
 
     uid = cli.create_user(name, pwd, tid)
 
     return User(uid, name, pwd)
 
-def create_tenant_user(idx, tenant):
+def create_tenant_user(idx, tenant, docker_prefix=None):
     name = 'user{}@{}.com'.format(idx, tenant.name)
     pwd = 'correcthorse'
 
-    return create_user(name, pwd, tenant.id)
+    return create_user(name, pwd, tenant.id, docker_prefix)
 
-def get_device_by_id_data(id_data, utoken):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+def get_device_by_id_data(dauthm, id_data, utoken):
     page = 0
     per_page = 20
     qs_params = {}
@@ -165,7 +162,7 @@ def get_device_by_id_data(id_data, utoken):
         page = page + 1
         qs_params['page'] = page
         qs_params['per_page'] = per_page
-        r = devauthm.with_auth(utoken).call('GET',
+        r = dauthm.with_auth(utoken).call('GET',
                 deviceauth_v2.URL_DEVICES, qs_params=qs_params)
         assert r.status_code == 200
         api_devs = r.json()
@@ -181,10 +178,55 @@ def get_device_by_id_data(id_data, utoken):
 
     return found[0]
 
-def change_authset_status(did, aid, status, utoken):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    r = devauthm.with_auth(utoken).call('PUT',
+def change_authset_status(dauthm, did, aid, status, utoken):
+    r = dauthm.with_auth(utoken).call('PUT',
                                    deviceauth_v2.URL_AUTHSET_STATUS,
                                    deviceauth_v2.req_status(status),
                                    path_params={'did': did, 'aid': aid })
     assert r.status_code == 204
+
+def rand_id_data():
+    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
+    sn = "".join(["{}".format(random.randint(0x00, 0xFF)) for i in range(6)])
+
+    return {'mac': mac, 'sn': sn}
+
+def make_pending_device(dauthd1, dauthm, utoken, tenant_token=''):
+    id_data = rand_id_data()
+
+    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    new_set = create_authset(dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token=tenant_token)
+
+    dev = Device(new_set.did, new_set.id_data, pub, tenant_token)
+
+    dev.authsets.append(new_set)
+
+    dev.status = 'pending'
+
+    return dev
+
+def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=''):
+    dev = make_pending_device(dauthd1, dauthm, utoken, tenant_token=tenant_token)
+    aset_id = dev.authsets[0].id
+    change_authset_status(dauthm, dev.id, aset_id, 'accepted', utoken)
+
+    aset = dev.authsets[0]
+    aset.status = 'accepted'
+
+    # obtain auth token
+    body, sighdr = deviceauth_v1.auth_req(aset.id_data,
+                                          aset.pubkey,
+                                          aset.privkey,
+                                          tenant_token)
+
+    r = dauthd1.call('POST',
+                      deviceauth_v1.URL_AUTH_REQS,
+                      body,
+                      headers=sighdr)
+
+    assert r.status_code == 200
+    dev.token = r.text
+
+    dev.status = 'accepted'
+
+    return dev

@@ -15,15 +15,16 @@ import pytest
 import random
 import time
 
-from api.client import ApiClient
-from common import mongo, clean_mongo
-from infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
-import api.deviceauth as deviceauth_v1
-import api.useradm as useradm
-import api.inventory as inventory
-import api.tenantadm as tenantadm
-import util.crypto
-from common import User, Device, Authset, Tenant, \
+from testutils.api.client import ApiClient
+from testutils.common import mongo, clean_mongo
+from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
+import testutils.api.deviceauth as deviceauth_v1
+import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.useradm as useradm
+import testutils.api.inventory as inventory
+import testutils.api.tenantadm as tenantadm
+import testutils.util.crypto
+from testutils.common import User, Device, Authset, Tenant, \
         create_user, create_tenant, create_tenant_user, \
         create_authset, get_device_by_id_data, change_authset_status
 
@@ -76,10 +77,13 @@ def rand_id_data():
     return {'mac': mac, 'sn': sn}
 
 def make_pending_device(utoken, tenant_token=''):
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+
     id_data = rand_id_data()
 
-    priv, pub = util.crypto.rsa_get_keypair()
-    new_set = create_authset(id_data, pub, priv, utoken, tenant_token=tenant_token)
+    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    new_set = create_authset(devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token)
 
     dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
 
@@ -90,9 +94,11 @@ def make_pending_device(utoken, tenant_token=''):
     return dev
 
 def make_accepted_device(utoken, devauthd, tenant_token=''):
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
     dev = make_pending_device(utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
-    change_authset_status(dev.id, aset_id, 'accepted', utoken)
+    change_authset_status(devauthm, dev.id, aset_id, 'accepted', utoken)
 
     aset = dev.authsets[0]
     aset.status = 'accepted'

@@ -19,6 +19,9 @@ tests/large_image.dat
 tests/results.xml
 tests/downloaded-tools
 
+backend-tests/results.xml
+backend-tests/report.html
+
 __pycache__
 .cache
 artifacts

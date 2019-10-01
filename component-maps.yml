@@ -89,8 +89,10 @@ git:
   mender-conductor-enterprise:
     docker_image:
     - mender-conductor-enterprise
+    - org-welcome-email-preparer
     docker_container:
     - mender-conductor
+    - mender-org-welcome-email-preparer
     release_component: true
 
   tenantadm:
@@ -206,6 +208,13 @@ docker_image:
     - mender-conductor
     release_component: true
 
+  org-welcome-email-preparer:
+    git:
+    - mender-conductor-enterprise
+    docker_container:
+    - mender-org-welcome-email-preparer
+    release_component: true
+
   tenantadm:
     git:
     - tenantadm
@@ -295,6 +304,13 @@ docker_container:
     - mender-conductor
     docker_image:
     - email-sender
+    release_component: true
+
+  mender-org-welcome-email-preparer:
+    git:
+    - mender-conductor-enterprise
+    docker_image:
+    - org-welcome-email-preparer
     release_component: true
 
   mender-tenantadm:

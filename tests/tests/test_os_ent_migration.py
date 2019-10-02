@@ -34,7 +34,7 @@ import testutils.api.useradm as useradm
 
 @pytest.fixture(scope="class")
 def initial_os_setup():
-    """ Start the minimum OS setup, create some uses and devices. 
+    """ Start the minimum OS setup, create some uses and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
 
@@ -87,7 +87,7 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     return dict(ent_data.items() + initial_enterprise_setup.items())
 
 def initialize_os_setup():
-    """ Seed the OS setup with all operational data - users and devices. 
+    """ Seed the OS setup with all operational data - users and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
     uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
@@ -112,9 +112,9 @@ def initialize_os_setup():
     # get tokens for all
     for d in devs:
         body, sighdr = deviceauth_v1.auth_req(
-                            d.id_data,
-                            d.authsets[0].pubkey,           
-                            d.authsets[0].privkey)
+            d.id_data,
+            d.authsets[0].pubkey,
+            d.authsets[0].privkey)
 
         r = dauthd.call('POST',
                         deviceauth_v1.URL_AUTH_REQS,
@@ -128,7 +128,7 @@ def initialize_os_setup():
 
 def migrate_ent_setup():
     """ Migrate the ENT setup - create a tenant and user via create-org,
-        substitute default token env in the ent. testing layer. 
+        substitute default token env in the ent. testing layer.
     """
     ensure_conductor_ready(60, 'create_organization')
 
@@ -165,10 +165,10 @@ class TestEntMigration:
             r = uadmm.call('POST', useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 401
 
-        # but enterprise user can 
+        # but enterprise user can
         ent_user = migrated_enterprise_setup["tenant"].users[0]
-        r = uadmm.call('POST', 
-                       useradm.URL_LOGIN, 
+        r = uadmm.call('POST',
+                       useradm.URL_LOGIN,
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
 
@@ -192,8 +192,8 @@ class TestEntMigration:
         # but even despite the 'dummy' tenant token
         # os devices can get into the deviceauth db for acceptance
         ent_user = migrated_enterprise_setup["tenant"].users[0]
-        r = uadmm.call('POST', 
-                       useradm.URL_LOGIN, 
+        r = uadmm.call('POST',
+                       useradm.URL_LOGIN,
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
         utoken=r.text
@@ -201,7 +201,7 @@ class TestEntMigration:
         for d in migrated_enterprise_setup["os_devs"]:
             body, sighdr = deviceauth_v1.auth_req(
                                 d.id_data,
-                                d.authsets[0].pubkey,           
+                                d.authsets[0].pubkey,
                                 d.authsets[0].privkey,
                                 tenant_token='dummy')
 
@@ -223,7 +223,7 @@ class TestEntMigration:
 def ensure_conductor_ready(max_time=120, wfname='create_organization'):
     """
     Wait on:
-    - conductor api being up, not refusing conns 
+    - conductor api being up, not refusing conns
     - a particular workflow being available.
     """
     ip = get_mender_conductor()
@@ -231,7 +231,7 @@ def ensure_conductor_ready(max_time=120, wfname='create_organization'):
         try:
             r = requests.get("http://{}:8080/api/metadata/workflow/{}".format(ip, wfname))
             if r.status_code != 404:
-                return 
+                return
         except requests.ConnectionError:
             pass
 

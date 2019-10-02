@@ -54,7 +54,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:MEN-2648
+        image: mendersoftware/deviceauth:master
         extends:
             file: common.yml
             service: mender-base

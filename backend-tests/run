@@ -34,25 +34,30 @@ usage() {
 parse_args(){
     whitespace="[[:space:]]"
 
-    # FIXME args must be passed in the form -f=<path>; spaces don't workalthough they're standard...
     while [ $# -gt 0 ]; do
-        PARAM=`echo $1 | awk -F= '{print $1}'`
-        VALUE=`echo $1 | awk -F= '{print $2}'`
-        case $PARAM in
+        case "$1" in
             -h | --help)
-            usage
-            exit
-            ;;
+                usage
+                exit
+                ;;
             -c | --skip-cleanup)
-            SKIP_CLEANUP=1
-            ;;
+                SKIP_CLEANUP=1
+                ;;
             -f)
-            COMPOSE_FILES+=( $VALUE )
-            ;;
+                shift
+                COMPOSE_FILES+=( $1 )
+                ;;
+            -f=*)
+                COMPOSE_FILES+=( ${1#-f=} )
+                ;;
             *)
+                PYTEST_ARGS="$PYTEST_ARGS '$1'"
+                ;;
         esac
         shift 1
     done
+
+    export PYTEST_ARGS
 
     make_compose_cmd
 }

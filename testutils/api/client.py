@@ -42,7 +42,7 @@ class ApiClient:
         pass
 
     def __subst_path_params(self, url, path_params):
-        return url.format_map(path_params)
+        return url.format(**path_params)
 
     def __make_headers(self, headers):
         return dict(self.headers, **headers)

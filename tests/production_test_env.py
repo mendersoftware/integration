@@ -37,8 +37,8 @@ conftest.docker_compose_instance = args.docker_compose_instance
 def fill_production_template():
 
     # copy production environment yml file
-    subprocess.check_output(["cp", "template/prod.yml", "production-testing-env.yml"], cwd="../")
-    subprocess.check_output("sed -i 's/template\///g' ../production-testing-env.yml", shell=True)
+    subprocess.check_output(["cp", "production/config/prod.yml.template", "production-testing-env.yml"], cwd="../")
+    subprocess.check_output("sed -i 's,/production/,/,g' ../production-testing-env.yml", shell=True)
     subprocess.check_output("sed -i 's/ALLOWED_HOSTS: my-gateway-dns-name/ALLOWED_HOSTS: ~./' ../production-testing-env.yml", shell=True)
     subprocess.check_output("sed -i '0,/set-my-alias-here.com/s/set-my-alias-here.com/localhost/' ../production-testing-env.yml", shell=True)
     subprocess.check_output("sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost:9000|' ../production-testing-env.yml", shell=True)

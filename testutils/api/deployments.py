@@ -11,9 +11,13 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import testutils.api.client
 
-import api.client
+URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v1/deployments'
+URL_DEVICES = testutils.api.client.GATEWAY_URL + '/api/devices/v1/deployments'
 
-URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/useradm'
-
-URL_LOGIN = '/auth/login'
+URL_NEXT   = '/device/deployments/next'
+URL_LOG    = '/device/deployments/{id}/log'
+URL_STATUS = '/device/deployments/{id}/status'
+URL_DEPLOYMENT  = '/deployments/{id}'
+URL_DEPLOYMENTS = '/deployments'

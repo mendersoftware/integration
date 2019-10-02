@@ -13,9 +13,18 @@ else
     export GATEWAY_IP=$(ip route get 1 | awk '{print $7;exit}')
 fi
 
+ENTERPRISE_DOCKER_COMPOSE=
+ENTERPRISE_PROD=
+if [ -f ./config/enterprise.yml ]; then
+    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml"
+    ENTERPRISE_PROD="-f ./config/enterprise.yml"
+fi
+
 exec docker-compose \
      -p menderproduction \
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \
-     -f ./prod.yml \
+     $ENTERPRISE_DOCKER_COMPOSE \
+     -f ./config/prod.yml \
+     $ENTERPRISE_PROD \
      "$@"

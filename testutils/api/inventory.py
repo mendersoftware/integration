@@ -11,10 +11,10 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import api.client
+import testutils.api.client
 
-URL_MGMT = api.client.GATEWAY_URL + '/api/management/v1/inventory'
-URL_DEV = api.client.GATEWAY_URL + '/api/devices/v1/inventory'
+URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v1/inventory'
+URL_DEV = testutils.api.client.GATEWAY_URL + '/api/devices/v1/inventory'
 
 URL_DEVICE = '/devices/{id}'
 URL_DEVICES = '/devices'

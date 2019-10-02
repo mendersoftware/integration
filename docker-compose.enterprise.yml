@@ -10,7 +10,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: mendersoftware/tenantadm:master
+        image: mendersoftware/tenantadm:MEN-2648
         extends:
             file: common.yml
             service: mender-base

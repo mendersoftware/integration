@@ -16,17 +16,23 @@ import socket
 
 PROJECT_NAME='backendtests'
 
-def exec(container_id, cmd):
+def execute(container_id, cmd):
     cmd = ['docker', 'exec', '{}'.format(container_id)] + cmd
+    ret = subprocess.check_output(cmd).decode('utf-8').strip()
+    return ret
+
+def cmd(container_id, docker_cmd, cmd=[]):
+    cmd = ['docker', docker_cmd] + [str(container_id)] + cmd
     ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ret.stdout.decode('utf-8').strip()
 
-def getid(service_name):
-    cmd = ['docker', 'ps', '-q', '-f', 'name={}'.format(service_name)]
-    ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def getid(filters):
+    filters = ["grep {}".format(f) for f in filters] 
+    cmd = "docker ps | " + " | ".join(filters)  + " | awk '{print $1}'"
 
-    tid = ret.stdout.decode('utf-8').strip()
-    if tid == '':
+    ret = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+
+    if ret == '':
         raise RuntimeError('container id for {} not found'.format(service_name))
 
-    return ret.stdout.decode('utf-8').strip()
+    return ret

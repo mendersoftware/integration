@@ -13,10 +13,10 @@
 #    limitations under the License.
 import json
 
-import api.client
-import util.crypto
+import testutils.api.client
+import testutils.util.crypto
 
-URL_DEVICES = api.client.GATEWAY_URL + '/api/devices/v1/authentication'
+URL_DEVICES = testutils.api.client.GATEWAY_URL + '/api/devices/v1/authentication'
 URL_INTERNAL = 'http://mender-device-auth:8080/api/internal/v1/devauth'
 
 URL_AUTH_REQS = '/auth_requests'
@@ -28,5 +28,5 @@ def auth_req(id_data, pubkey, privkey, tenant_token=''):
         "tenant_token": tenant_token,
         "pubkey": pubkey,
     }
-    signature = util.crypto.rsa_sign_data(json.dumps(payload), privkey)
+    signature = testutils.util.crypto.rsa_sign_data(json.dumps(payload), privkey)
     return payload, {'X-MEN-Signature': signature}

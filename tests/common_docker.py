@@ -100,16 +100,40 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
 
         raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
-
 def stop_docker_compose():
+     with conftest.docker_lock:
+         # Take down all docker instances in this namespace.
+         cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % conftest.docker_compose_instance
+         logger.info("running %s" % cmd)
+         subprocess.check_call(cmd, shell=True)
+         cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % conftest.docker_compose_instance
+         logger.info("running %s" % cmd)
+         subprocess.check_call(cmd, shell=True)
+
+def stop_docker_compose_exclude(exclude=[]):
     with conftest.docker_lock:
-        # Take down all docker instances in this namespace.
-        cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % conftest.docker_compose_instance
+        """
+        Take down all docker instances in this namespace, except for 'exclude'd container names.
+        'exclude' doesn't need exact names, it's a verbatim grep regex.
+        """
+
+        cmd = "docker ps -aq -f name=%s  | xargs -r docker rm -fv" % conftest.docker_compose_instance
+
+        # exclude containers by crude grep -v and awk'ing out the id
+        # that's because docker -f allows only simple comparisons, no negations/logical ops
+        if len(exclude) != 0:
+            cmd_excl = 'grep -vE "(' + " | ".join(exclude) + ')"'
+            cmd_id = "awk 'NR>1 {print $1}'"
+            cmd = "docker ps -a -f name=%s | %s | %s | xargs -r docker rm -fv" % (conftest.docker_compose_instance, cmd_excl, cmd_id)
+
         logger.info("running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
-        cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % conftest.docker_compose_instance
-        logger.info("running %s" % cmd)
-        subprocess.check_call(cmd, shell=True)
+
+        # if we're preserving some containers, don't destroy the network (will error out on exit)
+        if len(exclude) == 0:
+            cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % conftest.docker_compose_instance
+            logger.info("running %s" % cmd)
+            subprocess.check_call(cmd, shell=True)
 
 
 def start_docker_compose(clients=1):

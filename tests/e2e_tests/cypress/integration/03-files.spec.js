@@ -67,8 +67,9 @@ context('Deployments', () => {
     cy.get('.repository-list-item').contains('mender-demo-artifact').click().end()
     cy.get('a').contains('Create deployment').click({ force: true }).wait(5000).end()
     cy.get('[placeholder="Select a device group to deploy to"]').click({ force: true })
-    cy.get('[role="tooltip"]').get('li').contains('All devices').click().end()
-    cy.get('button').contains('Create deployment').click().wait(30000).end()
+    cy.get('[role="tooltip"]').get('li').contains('All devices').click().wait(2000).end()
+    cy.get('button').contains('Next').click().end()
+    cy.get('.MuiDialog-container button').contains('Create').click().wait(30000).end()
     cy.get('[role="tab"]').contains('Finished').click().end()
     cy.get('tr').get('time').should($elems => {
       const time = Cypress.moment($elems[0].getAttribute("datetime"))

@@ -13,3 +13,4 @@ services:
         command: ${PYTEST_ARGS}
         environment:
             PYTHONPATH: "/testutils"
+            PYTHONDONTWRITEBYTECODE: 1

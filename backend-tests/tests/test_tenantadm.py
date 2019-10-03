@@ -3,13 +3,13 @@ import pytest
 import subprocess
 import time
 
-import api
 import pymongo
-import infra
 
-from common import mongo, mongo_cleanup
-from common import User, Device, Tenant, create_user, create_tenant, \
-        create_tenant_user, create_org
+from testutils.common import mongo, mongo_cleanup
+from testutils.common import User, Device, Tenant, create_user, create_tenant, \
+    create_tenant_user, create_org
+from testutils import api
+from testutils import infra
 
 logger = logging.getLogger(__name__)
 

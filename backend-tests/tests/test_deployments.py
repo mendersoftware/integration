@@ -1,4 +1,6 @@
 import pytest
+import multiprocessing as mp
+import logging
 import os
 import requests
 import random
@@ -16,14 +18,17 @@ import testutils.api.deployments as deployments
 
 from testutils.api.client import ApiClient
 from testutils.common import User, Device, Authset, Tenant, \
-        create_user, create_tenant, create_tenant_user, \
-        create_authset, change_authset_status, clean_mongo, mongo
+    create_user, create_tenant, create_tenant_user, \
+    create_authset, change_authset_status, clean_mongo, mongo
+
 
 def rand_id_data():
-    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
+    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x')
+                    for i in range(6)])
     sn = "".join(["{}".format(random.randint(0x00, 0xFF)) for i in range(6)])
 
     return {'mac': mac, 'sn': sn}
+
 
 def make_pending_device(utoken, tenant_token=''):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
@@ -32,7 +37,8 @@ def make_pending_device(utoken, tenant_token=''):
     id_data = rand_id_data()
 
     priv, pub = testutils.util.crypto.rsa_get_keypair()
-    new_set = create_authset(devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token)
+    new_set = create_authset(devauthd, devauthm, id_data,
+                             pub, priv, utoken, tenant_token=tenant_token)
 
     dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
 
@@ -41,6 +47,7 @@ def make_pending_device(utoken, tenant_token=''):
     dev.status = 'pending'
 
     return dev
+
 
 def make_accepted_device(utoken, devauthd, tenant_token=''):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
@@ -70,6 +77,7 @@ def make_accepted_device(utoken, devauthd, tenant_token=''):
 
     return dev
 
+
 def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=''):
     """ Create accepted devices.
         returns list of Device objects."""
@@ -84,7 +92,8 @@ def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=''):
 
 
 def upload_image(filename, auth_token, description="abc"):
-    image_path_url = testutils.api.client.GATEWAY_URL + "/api/management/v1/deployments/artifacts"
+    image_path_url = testutils.api.client.GATEWAY_URL + \
+        "/api/management/v1/deployments/artifacts"
     r = requests.post(
         image_path_url,
         verify=False,
@@ -94,6 +103,7 @@ def upload_image(filename, auth_token, description="abc"):
                ("artifact", (filename, open(filename, 'rb'),
                              "application/octet-stream"))))
     assert r.status_code == 201
+
 
 def create_tenant_test_setup(user_name, tenant_name, nr_deployments=3, nr_devices=100):
     """
@@ -161,7 +171,7 @@ class TestDeploymentsEndpointEnterprise(object):
                 "devices": ["dummyuuid" + str(i) for i in range(100)],
                 "phases": [{
                     "start_ts": str((datetime.utcnow() +
-                         timedelta(days=1)).isoformat("T")) + "Z",
+                                     timedelta(days=1)).isoformat("T")) + "Z",
                     "batch_size": 100,
                 }],
             },
@@ -515,7 +525,8 @@ class TestDeploymentsEndpointEnterprise(object):
 
         deploymentclient = ApiClient(deployments.URL_MGMT)
         tenant1, tenant2 = setup_deployments_enterprise_test
-        resp = deploymentclient.with_auth(tenant2.users[0].utoken).call('GET', '/deployments')
+        resp = deploymentclient.with_auth(
+            tenant2.users[0].utoken).call('GET', '/deployments')
         assert resp.status_code == 200
         # Store the second tenants user deployemnts, to verify that
         # it remains unchanged after the tests have run
@@ -528,7 +539,8 @@ class TestDeploymentsEndpointEnterprise(object):
         )
         assert resp.status_code == 201
         deployment_id = os.path.basename(resp.headers['Location'])
-        resp = deploymentclient.with_auth(tenant1.users[0].utoken).call('GET', '/deployments')
+        resp = deploymentclient.with_auth(
+            tenant1.users[0].utoken).call('GET', '/deployments')
         assert resp.status_code == 200
         assert len(resp.json()) == 4
         # Get the test deployment from the list
@@ -544,10 +556,10 @@ class TestDeploymentsEndpointEnterprise(object):
         TestDeploymentsEndpointEnterprise.compare_response_json(
             expected_response, id_response_body_dict)
         # Verify that the second tenant's deployemnts remain untouched
-        resp = deploymentclient.with_auth(tenant2.users[0].utoken).call('GET', '/deployments')
+        resp = deploymentclient.with_auth(
+            tenant2.users[0].utoken).call('GET', '/deployments')
         assert resp.status_code == 200
         assert backup_tenant_user_deployments == resp.json()
-
 
     def compare_response_json(expected_response, response_body_json):
         """Compare the keys that are present in the expected json dict with the matching response keys.
@@ -567,6 +579,7 @@ class TestDeploymentsEndpointEnterprise(object):
             for k in exp.keys() & rsp.keys():
                 assert exp[k] == rsp[k]
 
+
 def setup_devices_and_management(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
@@ -578,7 +591,8 @@ def setup_devices_and_management(nr_devices=100):
     invm = ApiClient(inventory.URL_MGMT)
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
-    r = useradmm.call('POST', useradm.URL_LOGIN, auth=(user.name, user.pwd))
+    r = useradmm.call('POST', useradm.URL_LOGIN,
+                      auth=(user.name, user.pwd))
     assert r.status_code == 200
     utoken = r.text
     # Upload a dummy artifact to the server
@@ -600,24 +614,31 @@ def setup_devices_and_management(nr_devices=100):
 
     return user, tenant, utoken, devs
 
+
 def try_update(device,
-               expected_status_code=200,
-               artifact_name="bugs-bunny"):
+               default_artifact_name="bugs-bunny",
+               default_device_type="qemux86-64"):
     """
     Try to make an update with a device
-    :param devices:              list of devices
-    :param expected_status_code: expected status code
-    :param artifact_name:        artifact name used in the request
+    :param devices:               list of devices
+    :param expected_status_code:  expected status code
+    :param default_artifact_name: default artifact name of the
+                                  artifact used in the request
+
+    NOTE: You can override the device type and artifact name 
+          by creating a device_type/artifact_name member of the
+          Device object.
     """
     api_dev_deploy = ApiClient(deployments.URL_DEVICES)
     # Try to retrieve next update and assert expected status code
     resp = api_dev_deploy.with_auth(device.token).call(
         'GET',
         deployments.URL_NEXT,
-        qs_params={"artifact_name": artifact_name,
-                   "device_type"  : "qemux86-64"}
+        qs_params={"artifact_name": getattr(
+            device, "artifact_name", default_artifact_name),
+            "device_type": getattr(
+            device, "device_type", default_device_type)}
     )
-    assert resp.status_code == expected_status_code
     if resp.status_code == 200:
         # Update device status upon successful request
         api_dev_deploy.with_auth(device.token).call(
@@ -625,7 +646,7 @@ def try_update(device,
             deployments.URL_STATUS.format(id=resp.json()["id"]),
             body={"status": "success"}
         )
-
+    return resp.status_code
 
 
 class TestDeploymentsEnterprise(object):
@@ -636,9 +657,9 @@ class TestDeploymentsEnterprise(object):
 
         # Make deployment request
         deployment_req = {
-            "name"          : "phased-deployment",
-            "artifact_name" : "deployments-phase-testing",
-            "devices"       : [dev.id for dev in devs]
+            "name": "phased-deployment",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs]
         }
         api_mgmt_dep.with_auth(utoken).call(
             "POST",
@@ -647,18 +668,14 @@ class TestDeploymentsEnterprise(object):
         )
 
         for dev in devs:
-            try_update(
-                dev,
-                expected_status_code=200,
-                artifact_name="bugs-bunny"
-            )
+            status_code = try_update(dev)
+            assert status_code == 200
+            dev.artifact_name = deployment_req["artifact_name"]
+
         for dev in devs:
             # Deployment already finished
-            try_update(
-                dev,
-                expected_status_code=204,
-                artifact_name="bugs-bunny"
-            )
+            status_code = try_update(dev)
+            assert status_code == 204
 
         deployment_req["name"] = "really-old-update"
         api_mgmt_dep.with_auth(utoken).call(
@@ -668,23 +685,20 @@ class TestDeploymentsEnterprise(object):
         )
         for dev in devs:
             # Already installed
-            try_update(
-                dev,
-                expected_status_code=204,
-                artifact_name=deployment_req["artifact_name"]
-            )
+            status_code = try_update(dev)
+            assert status_code == 204
 
 
 class TestPhasedRolloutDeploymentsEnterprise:
-    def try_phased_updates(self, deployment, devices, user_token):
+    def try_phased_updates(self, deployment, devices, user_token, expected_update_status=200):
         ### Static helper function ###
         # Setup Deployment APIs
         api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
 
         devices_updated = 0
         num_phases = len(deployment["phases"])
-        batch_sizes = [int((deployment["phases"][i]["batch_size"] / 100.0) \
-                             * len(devices)) for i in range(num_phases-1)]
+        batch_sizes = [int((deployment["phases"][i]["batch_size"] / 100.0)
+                           * len(devices)) for i in range(num_phases-1)]
         # Final batch_size might not be specified
         batch_sizes.append(len(devices) - sum(batch_sizes))
 
@@ -717,8 +731,9 @@ class TestPhasedRolloutDeploymentsEnterprise:
                 #       request will break the remainder of the test
                 while now < (start_ts - timedelta(milliseconds=500)):
                     # Spam update requests from random non-updated devices
-                    dev = random.choice(devices[devices_updated:])
-                    try_update(dev, expected_status_code=204)
+                    dev = random.choice(devices)
+                    status_code = try_update(dev)
+                    assert status_code == 204
                     now = datetime.utcnow()
                 # Sleep the last 500ms to let the next phase start
                 time.sleep(0.5)
@@ -730,30 +745,27 @@ class TestPhasedRolloutDeploymentsEnterprise:
             if devices_updated > 0:
                 # Allready updated
                 for device in devices[:devices_updated]:
-                    try_update(
-                        device,
-                        artifact_name=deployment["artifact_name"],
-                        expected_status_code=204
-                    )
+                    status_code = try_update(device)
+                    assert status_code == 204
 
             # Check phase count has not been incremented by the above requests
             resp = api_mgmt_deploy.with_auth(
                 user_token).call(
                     'GET',
-                    deployments.URL_DEPLOYMENT.format(id=deployment_id)
-                )
+                    deployments.URL_DEPLOYMENTS_ID.format(id=deployment_id)
+            )
             phase = resp.json()["phases"][i]
             assert phase["device_count"] == 0
 
             # Devices that should update
             for n, device in enumerate(
                     devices[devices_updated:(devices_updated
-                                                 + batch_sizes[i])], 1):
-                try_update(
-                    device,
-                    artifact_name="bugs-bunny",
-                    expected_status_code=200
-                )
+                                             + batch_sizes[i])], 1):
+                status_code = try_update(device)
+                assert status_code == expected_update_status
+                if expected_update_status == 200:
+                    # Make sure to override artifact_name property
+                    device.artifact_name = deployment["artifact_name"]
                 # Check phase count is incremented correctly
                 resp = api_mgmt_deploy.with_auth(
                     user_token).call('GET', os.path.join('/deployments', deployment_id))
@@ -764,11 +776,8 @@ class TestPhasedRolloutDeploymentsEnterprise:
                 # Capacity exceeded
                 for device in devices[(devices_updated
                                        + batch_sizes[i]):]:
-                    try_update(
-                        device,
-                        artifact_name="bugs-bunny",
-                        expected_status_code=204
-                    )
+                    status_code = try_update(device)
+                    assert status_code == 204
 
             devices_updated += batch_sizes[i]
 
@@ -778,7 +787,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
             phases = resp.json()["phases"]
             for p in range(i+1):
                 assert phases[p]["device_count"] == batch_sizes[p]
-            for p in range(i+1,len(phases)):
+            for p in range(i+1, len(phases)):
                 assert phases[p]["device_count"] == 0
 
         # Finally confirm that deployment is finished
@@ -791,13 +800,12 @@ class TestPhasedRolloutDeploymentsEnterprise:
         user, tenant, utoken, devs = setup_devices_and_management()
 
         deployment_req = {
-            "name"          : "phased-regular-deployment",
-            "artifact_name" : "deployments-phase-testing",
-            "devices"       : [dev.id for dev in devs],
-            "phases"        : [{}]
+            "name": "phased-regular-deployment",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [{}]
         }
         self.try_phased_updates(deployment_req, devs, utoken)
-
 
     def test_delayed_deployment(self, clean_mongo):
         """
@@ -806,16 +814,15 @@ class TestPhasedRolloutDeploymentsEnterprise:
         user, tenant, utoken, devs = setup_devices_and_management()
 
         deployment_req = {
-            "name"          : "phased-delayed-deployment",
-            "artifact_name" : "deployments-phase-testing",
-            "devices"       : [dev.id for dev in devs],
-            "phases"        : [
-                {"start_ts" : (datetime.utcnow() + timedelta(
-                               seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ")}
+            "name": "phased-delayed-deployment",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [
+                {"start_ts": (datetime.utcnow() + timedelta(
+                    seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ")}
             ]
         }
         self.try_phased_updates(deployment_req, devs, utoken)
-
 
     def test_two_phases_full_spec(self, clean_mongo):
         """
@@ -823,52 +830,52 @@ class TestPhasedRolloutDeploymentsEnterprise:
         """
         user, tenant, utoken, devs = setup_devices_and_management()
         deployment_req = {
-            "name"    : "two-fully-spec-deployments",
-            "artifact_name" : "deployments-phase-testing",
-            "devices" : [dev.id for dev in devs],
-            "phases"        : [
+            "name": "two-fully-spec-deployments",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [
                 {
-                    "batch_size" : 10,
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    "batch_size": 10,
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
                 {
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "batch_size" : 90
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "batch_size": 90
                 }
             ]
         }
         self.try_phased_updates(deployment_req, devs, utoken)
 
-
     def test_three_phased_deployments(self, clean_mongo):
         """
         Three phases; with no start_ts in first and no batch_size in third.
         """
-        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+        user, tenant, utoken, devs = setup_devices_and_management(
+            nr_devices=101)
 
         deployment_req = {
-            "name"    : "three-phased-deployments",
-            "artifact_name" : "deployments-phase-testing",
-            "devices" : [dev.id for dev in devs],
-            "phases"        : [
+            "name": "three-phased-deployments",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [
                 {
-                    "batch_size" : 13
+                    "batch_size": 13
                 },
                 {
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "batch_size" : 17
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "batch_size": 17
                 },
                 {
-                    "batch_size" : 29,
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    "batch_size": 29,
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
                 {
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 }
             ]
         }
@@ -880,29 +887,30 @@ class TestPhasedRolloutDeploymentsEnterprise:
         the server returns 400, with an appropriate error message.
         """
 
-        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+        user, tenant, utoken, devs = setup_devices_and_management(
+            nr_devices=101)
 
         deployment_req = {
-            "name"    : "empty-batch-test",
-            "artifact_name" : "deployments-phase-testing",
-            "devices" : [dev.id for dev in devs[:11]],
-            "phases"        : [
+            "name": "empty-batch-test",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs[:11]],
+            "phases": [
                 {
-                    "batch_size" : 10
+                    "batch_size": 10
                 },
                 {
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "batch_size" : 20
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "batch_size": 20
                 },
                 {
-                    "batch_size" : 5,
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    "batch_size": 5,
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
                 {
-                    "start_ts"   : (datetime.utcnow() + timedelta(
-                                    seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
             ]
         }
@@ -915,3 +923,180 @@ class TestPhasedRolloutDeploymentsEnterprise:
         assert resp.status_code == 400
         assert "Attempt to create a batch with zero devices not allowed" in resp.text
         assert "Batch: (3) will be empty" in resp.text
+
+    def test_no_artifact_for_devices(self, clean_mongo):
+        """
+        Tests that phase counts and statistics are updated correctly
+        when there are no applicable artifact for the devices.
+        """
+        user, tenant, utoken, devs = setup_devices_and_management(
+            nr_devices=101)
+
+        for dev in devs:
+            dev.device_type = "pranked_exclamation-mark"
+
+        deployment_req = {
+            "name": "three-phased-deployments",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [
+                {
+                    "batch_size": 13
+                },
+                {
+                    "batch_size": 29,
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                },
+                {
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                }
+            ]
+        }
+        self.try_phased_updates(deployment_req, devs,
+                                utoken, expected_update_status=204)
+
+
+def calculate_phase_sizes(deployment_request):
+    batch_sizes = []
+    devices_in_phases = 0
+    device_count = len(deployment_request["devices"])
+    last_phase_idx = len(deployment_request["phases"])-1
+
+    for i, phase in enumerate(deployment_request["phases"]):
+        if i != last_phase_idx:
+            batch_sizes.append(int((phase["batch_size"]/100.0) * device_count))
+        else:
+            batch_sizes.append(device_count - devices_in_phases)
+        devices_in_phases += batch_sizes[i]
+    return batch_sizes
+
+
+class TestPhasedRolloutConcurrencyEnterprise:
+    def try_concurrent_phased_updates(self, deployment, devices,
+                                      user_token, expected_update_status=200):
+        ### Static helper function ###
+        # Setup Deployment APIs
+        api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
+        status_codes = []
+
+        devices_updated = 0
+        num_phases = len(deployment["phases"])
+        batch_sizes = [int((deployment["phases"][i]["batch_size"] / 100.0)
+                           * len(devices)) for i in range(num_phases-1)]
+        # Final batch_size might not be specified
+        batch_sizes.append(len(devices) - sum(batch_sizes))
+
+        # POST deployment
+        resp = api_mgmt_deploy.with_auth(user_token).call(
+            'POST',
+            deployments.URL_DEPLOYMENTS,
+            body=deployment
+        )
+        assert resp.status_code == 201
+
+        # Store the location from the GET /deployments/{id} request
+        deployment_id = os.path.basename(resp.headers['Location'])
+
+        for i in range(num_phases):
+            if i == 0 and "start_ts" not in deployment["phases"][i]:
+                # First phase don't need to specify `start_ts`
+                pass
+            elif "start_ts" in deployment["phases"][i]:
+                # Sleep until next phase starts
+                start_ts = datetime.strptime(
+                    deployment["phases"][i]["start_ts"],
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+                now = datetime.utcnow()
+                wait_time = start_ts - now
+
+                # While phase in progress:
+                # Spam update requests from random batches of devices
+                # concurrently by creating a pool of minimum 4 processes
+                # that send requests in parallel.
+                with mp.Pool(max(4, mp.cpu_count())) as pool:
+                    while now <= (start_ts - timedelta(milliseconds=500)):
+                        # NOTE: ^ add a half a second buffer time to
+                        #       account for the delay in sending and
+                        #       processing the request.
+
+                        # Give the devices array a stirr
+                        random.shuffle(devices)
+                        # Concurrently process a batch of requests
+                        device_batch = devices[:max(4, mp.cpu_count())]
+                        status_codes = pool.map(try_update, device_batch)
+
+                        # Create status code map for usefull debug
+                        # message if we receive a non-empty response
+                        status_code_map = {}
+                        for s in [200, 204, 400, 404, 500]:
+                            status_code_map[s] = sum(
+                                (map(lambda sc: sc == s, status_codes)))
+                        # Check that all requests received an empty response
+                        assert(status_code_map[204] == len(status_codes),
+                               "Expected empty response (204) during inactive "
+                               + "phase, but received the following status "
+                               + "code frequencies: %s" % status_code_map)
+                        now = datetime.utcnow()
+                # Sleep the last 500ms to let the next phase start
+                time.sleep(0.5)
+            else:
+                raise ValueError("Invalid phased deployment request, "
+                                 "missing `start_ts` for phase %d" % i)
+
+            # Make all devices attempt to update (in a concurrent manner)
+            # and check that the number of successful responses equals
+            # the number of devices in the batch.
+            with mp.Pool(processes=max(4, mp.cpu_count())) as pool:
+                status_codes = pool.map(try_update, devices)
+                resp = api_mgmt_deploy.with_auth(user_token).call(
+                    'GET',
+                    deployments.URL_DEPLOYMENTS_ID.format(id=deployment_id)
+                )
+                assert resp.status_code == 200
+                phases = resp.json()["phases"]
+                assert sum(map(
+                    lambda s: s == 200, status_codes)) == batch_sizes[i]
+
+            for j in range(len(devices)):
+                if status_codes[j] == 200:
+                    devices[j].artifact_name = "deployments-phase-testing"
+
+            # Check phase count equals batch size
+            resp = api_mgmt_deploy.with_auth(user_token).call(
+                'GET',
+                deployments.URL_DEPLOYMENTS_ID.format(id=deployment_id))
+            assert resp.status_code == 200
+            phases = resp.json()["phases"]
+            for p in range(i+1):
+                assert phases[p]["device_count"] == batch_sizes[p]
+            for p in range(i+1, len(phases)):
+                assert phases[p]["device_count"] == 0
+
+        # Finally confirm that deployment is finished
+        assert resp.json()["status"] == "finished"
+
+    def test_two_phases_concurrent_devices(self, clean_mongo):
+        """
+        Two phases where devices perform requests in parallel to stress
+        the backends capability of handling parallel requests.
+        """
+        user, tenant, utoken, devs = setup_devices_and_management()
+        deployment_req = {
+            "name": "two-fully-spec-deployments",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+            "phases": [
+                {
+                    "batch_size": 10,
+                },
+                {
+                    "start_ts": (datetime.utcnow() + timedelta(
+                        seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "batch_size": 90
+                }
+            ]
+        }
+        self.try_concurrent_phased_updates(deployment_req, devs, utoken)

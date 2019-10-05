@@ -102,6 +102,37 @@ get_container_exit_code() {
     docker inspect --format '{{.State.ExitCode}}' $1
 }
 
+copy_test_reports_if_args() {
+    while [ -n "$1" ]; do
+        case "$1" in
+            --junit-xml=*)
+                RESULTS_FILE="${1#--junit-xml=}"
+                ;;
+            --junit-xml)
+                shift
+                RESULTS_FILE="$1"
+                ;;
+            --html=*)
+                REPORT_FILE="${1#--html=}"
+                ;;
+            --html)
+                shift
+                REPORT_FILE="$1"
+                ;;
+        esac
+        shift
+    done
+
+    if [ -n "$RESULTS_FILE" ]; then
+        echo "-- copying file $RESULTS_FILE"
+        docker cp ${cid}:/$RESULTS_FILE . || true
+    fi
+    if [ -n "$REPORT_FILE" ]; then
+        echo "-- copying file $REPORT_FILE"
+        docker cp ${cid}:/$REPORT_FILE . || true
+    fi
+}
+
 cleanup(){
     [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
 }
@@ -115,6 +146,8 @@ if [ -n "$failed" ]; then
     echo "-- tests failed, dumping logs to $tmppath"
     $COMPOSE_CMD logs > $tmppath
 fi
+
+copy_test_reports_if_args $PYTEST_ARGS
 
 cleanup
 

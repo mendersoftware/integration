@@ -295,4 +295,4 @@ echo "Press Enter to show the logs."
 echo "Press Ctrl-C to stop the backend and quit."
 read -se
 
-docker-compose logs --follow
+docker-compose -p ${DOCKER_COMPOSE_PROJECT_NAME} logs --follow

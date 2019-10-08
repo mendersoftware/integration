@@ -74,6 +74,7 @@ services:
     mender-gui:
         environment:
             HAVE_MULTITENANT: 1
+            HAVE_ENTERPRISE: 1
 
 networks:
     mender:

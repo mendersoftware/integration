@@ -135,6 +135,7 @@ exitfunc() {
 }
 
 trap exitfunc SIGINT
+trap exitfunc SIGTERM
 
 echo "Starting the Mender demo environment..."
 

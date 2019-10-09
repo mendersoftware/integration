@@ -55,6 +55,7 @@ class TestDemoArtifact(MenderTesting):
                     conftest.docker_compose_instance, 'up'
                 ],
                 cwd="..",
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 env=test_env)
             logging.info('Started the demo script')

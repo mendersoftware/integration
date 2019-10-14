@@ -187,7 +187,7 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
-BACKEND_SERVICES_OPEN = {"deviceadm", "deviceauth", "inventory"}
+BACKEND_SERVICES_OPEN = {"deviceauth", "inventory"}
 BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
 BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT

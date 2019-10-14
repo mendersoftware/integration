@@ -19,10 +19,8 @@ git:
     release_component: false
 
   deviceadm:
-    docker_image:
-    - deviceadm
-    docker_container:
-    - mender-device-adm
+    docker_image: []
+    docker_container: []
     release_component: false
 
   deviceauth:
@@ -127,13 +125,6 @@ docker_image:
     - deployments-enterprise
     docker_container:
     - mender-deployments
-    release_component: false
-
-  deviceadm:
-    git:
-    - deviceadm
-    docker_container:
-    - mender-device-adm
     release_component: false
 
   deviceauth:
@@ -243,13 +234,6 @@ docker_container:
     docker_image:
     - deviceauth
     release_component: true
-
-  mender-device-adm:
-    git:
-    - deviceadm
-    docker_image:
-    - deviceadm
-    release_component: false
 
   mender-gui:
     git:

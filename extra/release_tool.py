@@ -310,6 +310,7 @@ def get_docker_compose_data_from_json_list(json_list):
     {
         image_name: {
             "container": container_name,
+            "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
             "version": version,
         }
     }
@@ -318,17 +319,22 @@ def get_docker_compose_data_from_json_list(json_list):
     for json_str in json_list:
         json_elem = yaml.safe_load(json_str)
         for container, cont_info in json_elem['services'].items():
-            image = cont_info.get('image')
-            if image is None or "mendersoftware/" not in image:
+            full_image = cont_info.get('image')
+            if full_image is None or ("mendersoftware" not in full_image and "mender.io" not in full_image):
                 continue
-            image_and_ver = image.split("/", 1)[1].split(":", 1)
-            if data.get(image_and_ver[0]) is not None:
+            split = full_image.rsplit("/", 1)
+            prefix = split[0]
+            split = split[1].split(":", 1)
+            image = split[0]
+            ver = split[1]
+            if data.get(image) is not None:
                 raise Exception(("More than one container is using the image name '%s'. "
                                  + "The tool currently does not support this.")
-                                % image_and_ver[0])
-            data[image_and_ver[0]] = {
+                                % image)
+            data[image] = {
                 "container": container,
-                "version": image_and_ver[1]
+                "image_prefix": prefix,
+                "version": ver
             }
     return data
 
@@ -1316,7 +1322,7 @@ def set_docker_compose_version_to(dir, repo, tag):
             new = open(filename + ".tmp", "w")
             for line in old:
                 # Replace build tag with a new one.
-                line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(yml.yml()),
+                line = re.sub(r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$" % re.escape(yml.yml()),
                               r"\g<1>%s\2" % tag, line)
                 new.write(line)
             new.close()
@@ -1409,6 +1415,8 @@ def push_latest_docker_tags(state, tag_avail):
     # Only for the message. We need to generate a new one for each repository.
     overall_minor_version = state['version'][0:state['version'].rindex('.')]
 
+    compose_data = get_docker_compose_data_for_rev(integration_dir(), tag_avail['integration']['sha'])
+
     for tip in [overall_minor_version, "latest"]:
         reply = ask('Do you want to update ":%s" tags? ' % tip)
         if not reply.startswith("Y") and not reply.startswith("y"):
@@ -1425,12 +1433,14 @@ def push_latest_docker_tags(state, tag_avail):
             else:
                 minor_version = state[repo.git()]['version'][0:state[repo.git()]['version'].rindex('.')]
 
+            prefix = compose_data[image]["image_prefix"]
+
             exec_list.append(["docker", "pull",
-                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag'])])
+                              "%s/%s:%s" % (prefix, image.docker_image(), tag_avail[repo.git()]['build_tag'])])
             exec_list.append(["docker", "tag",
-                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag']),
-                              "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
-            exec_list.append(["docker", "push", "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
+                              "%s/%s:%s" % (prefix, image.docker_image(), tag_avail[repo.git()]['build_tag']),
+                              "%s/%s:%s" % (prefix, image.docker_image(), minor_version)])
+            exec_list.append(["docker", "push", "%s/%s:%s" % (prefix, image.docker_image(), minor_version)])
 
         query_execute_list(exec_list)
 
@@ -1952,6 +1962,29 @@ def find_repo_path(name, paths):
 
     return None
 
+def do_map_name(args):
+    int_dir = integration_dir()
+    if args.in_integration_version:
+        data = get_docker_compose_data_for_rev(int_dir, args.in_integration_version)
+    else:
+        data = get_docker_compose_data(int_dir)
+
+    cli_types = {
+        "container": "docker_container",
+        "docker": "docker_image",
+        "git": "git",
+    }
+    comp = Component.get_component_of_type(cli_types[args.map_name[0]], args.map_name[1])
+    if args.map_name[2] == "docker_url":
+        to_type = "docker_image"
+    else:
+        to_type = cli_types[args.map_name[2]]
+    for result in comp.associated_components_of_type(to_type):
+        if args.map_name[2] == "docker_url":
+            print("%s/%s" % (data[result.name]['image_prefix'], result.name))
+        else:
+            print(result.name)
+
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
     data = get_docker_compose_data(int_dir)
@@ -2103,6 +2136,9 @@ def main():
     parser.add_argument("-a", "--all", action="store_true", default=False,
                         help="When used with -l, list all repositories, including optional ones. "
                         + "When used with -f, include local branches in addition to upstream branches.")
+    parser.add_argument("-m", "--map-name", metavar=("FROM-TYPE", "SERVICE", "TO-TYPE"), dest="map_name", nargs=3,
+                        help="Map the SERVICE name from one type to another. FROM-TYPE and TO-TYPE may be git, docker "
+                        + "or container. TO-TYPE may additionally be docker_url. May return more than one result.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",
@@ -2151,6 +2187,8 @@ def main():
         do_integration_versions_including(args)
     elif args.build:
         do_build(args)
+    elif args.map_name:
+        do_map_name(args)
     elif args.release:
         do_release()
     elif args.verify_integration_references:

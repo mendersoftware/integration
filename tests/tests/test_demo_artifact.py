@@ -38,14 +38,23 @@ class TestDemoArtifact(MenderTesting):
     deploy = deployments.Deployments(auth, authv2)
 
     @pytest.fixture(scope="function")
-    def run_demo_script(self, request):
+    def run_demo_script(self, request, exit_cond="Login password:"):
         """Simple fixture which returns a function which runs 'demo up'.
         Afterwards the fixture brings down the docker-compose environment,
-        so that each invocation run keeps the environment clean."""
+        so that each invocation run keeps the environment clean
+
+        :param exit_cond
+
+               Is the string which needs to be present in the output of the demo
+               script in order for it to return the process handle to the test
+               asking for it. If the string does not exist, the process will block
+               indefinitely, and hence the tests employing this fixture will need
+               to have a timeout.
+        """
 
         request.addfinalizer(stop_docker_compose)
 
-        def run_demo_script_up():
+        def run_demo_script_up(exit_cond=exit_cond):
             test_env = os.environ.copy()
             test_env[
                 'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
@@ -55,6 +64,7 @@ class TestDemoArtifact(MenderTesting):
                     conftest.docker_compose_instance, 'up'
                 ],
                 cwd="..",
+                stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 env=test_env)
             logging.info('Started the demo script')
@@ -62,12 +72,13 @@ class TestDemoArtifact(MenderTesting):
             time.sleep(60)
             for line in iter(proc.stdout.readline, ''):
                 logging.info(line)
-                if "Login password:" in line.strip():
-                    password = line[-13:-1]
-                    logging.info('The login password:')
-                    logging.info(password)
-                    self.auth.password = password
-                    assert len(password) == 12
+                if exit_cond in line.strip():
+                    if exit_cond == "Login password:":
+                        password = line[-13:-1]
+                        logging.info('The login password:')
+                        logging.info(password)
+                        self.auth.password = password
+                        assert len(password) == 12
                     break
             return proc
 
@@ -102,8 +113,8 @@ class TestDemoArtifact(MenderTesting):
         stop_docker_compose()
         self.auth.reset_auth_token()
 
-    def demo_artifact_upload(self, run_demo_script):
-        proc = run_demo_script()
+    def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):
+        proc = run_demo_script(exit_cond)
         arts = self.deploy.get_artifacts()
         try:
             assert len(arts) == 1
@@ -111,8 +122,8 @@ class TestDemoArtifact(MenderTesting):
             logging.error(str(arts))
             raise
         assert "mender-demo-artifact" in arts[0]['name']
-        # Emulate ctrl-c exit
-        proc.send_signal(signal.SIGINT)
+        # Bring down the demo script
+        proc.send_signal(signal.SIGTERM)
         proc.wait()
         assert proc.returncode == 0
 
@@ -147,6 +158,11 @@ class TestDemoArtifact(MenderTesting):
 
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
+
+        # Upload demo artifact and create demo user
         self.demo_artifact_upload(run_demo_script)
-        self.demo_artifact_upload(run_demo_script)
+
+        # Verify that the demo user is still present, when bringing
+        # the environment up a second time
+        self.demo_artifact_upload(run_demo_script, exit_cond="The user already exists")
         logging.info('Finished')

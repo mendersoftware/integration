@@ -89,7 +89,7 @@ git:
     - mender-conductor-enterprise
     docker_container:
     - mender-conductor
-    release_component: true
+    release_component: false
 
   tenantadm:
     docker_image:
@@ -195,7 +195,7 @@ docker_image:
     - mender-conductor-enterprise
     docker_container:
     - mender-conductor
-    release_component: true
+    release_component: false
 
   tenantadm:
     git:

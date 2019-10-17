@@ -94,8 +94,10 @@ run_tests() {
     fi
 
     docker attach $cid || failed=1
-
-    failed=$(get_container_exit_code $cid)
+    rc=$(get_container_exit_code $cid)
+    if [ "$failed" != "1" ] && [ "$rc" != "0" ]; then 
+        failed=$rc
+    fi
 }
 
 get_container_id() {
@@ -145,7 +147,7 @@ parse_args "$@"
 build_backend_tests_runner
 run_tests
 
-if [ -n "$failed" ]; then
+if [ "$failed" != "" ]; then
     tmppath=$(mktemp /tmp/acceptance.XXXXXX)
     echo "-- tests failed, dumping logs to $tmppath"
     $COMPOSE_CMD logs > $tmppath

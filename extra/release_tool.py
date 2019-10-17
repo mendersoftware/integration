@@ -53,234 +53,7 @@ DRY_RUN = False
 USE_GITLAB = False
 
 class Component:
-    # A map that lists all our git repositories, docker images, and docker
-    # container names, and how they are associated to one another. When you add
-    # something to this list, make sure to add it to all three sections: "git",
-    # "docker_image" and "docker_container". Binary tools that don't have Docker
-    # components, will only have the "git" part.
-    COMPONENT_MAPS = {
-        "git": {
-            "deployments": {
-                "docker_image": ["deployments"],
-                "docker_container": ["mender-deployments"],
-                "release_component": True,
-            },
-            "deployments-enterprise": {
-                "docker_image": ["deployments-enterprise"],
-                "docker_container": ["mender-deployments"],
-                "release_component": False,
-            },
-            "deviceadm": {
-                "docker_image": ["deviceadm"],
-                "docker_container": ["mender-device-adm"],
-                "release_component": False,
-            },
-            "deviceauth": {
-                "docker_image": ["deviceauth"],
-                "docker_container": ["mender-device-auth"],
-                "release_component": True,
-            },
-            "gui": {
-                "docker_image": ["gui"],
-                "docker_container": ["mender-gui"],
-                "release_component": True,
-            },
-            "integration": {
-                "docker_image": [],
-                "docker_container": [],
-                "release_component": True,
-            },
-            "inventory": {
-                "docker_image": ["inventory"],
-                "docker_container": ["mender-inventory"],
-                "release_component": True,
-            },
-            "mender": {
-                "docker_image": ["mender-client-qemu", "mender-client-docker", "mender-client-qemu-rofs"],
-                "docker_container": ["mender-client"],
-                "release_component": True,
-            },
-            "mender-api-gateway-docker": {
-                "docker_image": ["api-gateway"],
-                "docker_container": ["mender-api-gateway"],
-                "release_component": True,
-            },
-            "mender-artifact": {
-                "docker_image": [],
-                "docker_container": [],
-                "release_component": True,
-            },
-            "mender-cli": {
-                "docker_image": [],
-                "docker_container": [],
-                "release_component": True,
-            },
-            "mender-conductor": {
-                "docker_image": ["mender-conductor", "email-sender"],
-                "docker_container": ["mender-conductor", "mender-email-sender"],
-                "release_component": True,
-            },
-            "mender-conductor-enterprise": {
-                "docker_image": ["mender-conductor-enterprise"],
-                "docker_container": ["mender-conductor"],
-                "release_component": True,
-            },
-            "tenantadm": {
-                "docker_image": ["tenantadm"],
-                "docker_container": ["mender-tenantadm"],
-                "release_component": False,
-            },
-            "useradm": {
-                "docker_image": ["useradm"],
-                "docker_container": ["mender-useradm"],
-                "release_component": True,
-            },
-            "useradm-enterprise": {
-                "docker_image": ["useradm-enterprise"],
-                "docker_container": ["mender-useradm"],
-                "release_component": False,
-            },
-        },
-        "docker_image": {
-            "deployments": {
-                "git": ["deployments"],
-                "docker_container": ["mender-deployments"],
-                "release_component": True,
-            },
-            "deployments-enterprise": {
-                "git": ["deployments-enterprise"],
-                "docker_container": ["mender-deployments"],
-                "release_component": False,
-            },
-            "deviceadm": {
-                "git": ["deviceadm"],
-                "docker_container": ["mender-device-adm"],
-                "release_component": False,
-            },
-            "deviceauth": {
-                "git": ["deviceauth"],
-                "docker_container": ["mender-device-auth"],
-                "release_component": True,
-            },
-            "gui": {
-                "git": ["gui"],
-                "docker_container": ["mender-gui"],
-                "release_component": True,
-            },
-            "inventory": {
-                "git": ["inventory"],
-                "docker_container": ["mender-inventory"],
-                "release_component": True,
-            },
-            "mender-client-docker": {
-                "git": ["mender"],
-                "docker_container": ["mender-client"],
-                "release_component": True,
-            },
-            "mender-client-qemu": {
-                "git": ["mender"],
-                "docker_container": ["mender-client"],
-                "release_component": True,
-            },
-            "mender-client-qemu-rofs": {
-                "git": ["mender"],
-                "docker_container": ["mender-client"],
-                "release_component": True,
-            },
-            "api-gateway": {
-                "git": ["mender-api-gateway-docker"],
-                "docker_container": ["mender-api-gateway"],
-                "release_component": True,
-            },
-            "mender-conductor": {
-                "git": ["mender-conductor"],
-                "docker_container": ["mender-conductor"],
-                "release_component": True,
-            },
-            "email-sender": {
-                "git": ["mender-conductor"],
-                "docker_container": ["mender-email-sender"],
-                "release_component": True,
-            },
-            "mender-conductor-enterprise": {
-                "git": ["mender-conductor-enterprise"],
-                "docker_container": ["mender-conductor"],
-                "release_component": True,
-            },
-            "tenantadm": {
-                "git": ["tenantadm"],
-                "docker_container": ["mender-tenantadm"],
-                "release_component": False,
-            },
-            "useradm": {
-                "git": ["useradm"],
-                "docker_container": ["mender-useradm"],
-                "release_component": True,
-            },
-            "useradm-enterprise": {
-                "git": ["useradm-enterprise"],
-                "docker_container": ["mender-useradm"],
-                "release_component": False,
-            },
-        },
-        "docker_container": {
-            "mender-deployments": {
-                "git": ["deployments", "deployments-enterprise"],
-                "docker_image": ["deployments", "deployments-enterprise"],
-                "release_component": True,
-            },
-            "mender-device-auth": {
-                "git": ["deviceauth"],
-                "docker_image": ["deviceauth"],
-                "release_component": True,
-            },
-            "mender-device-adm": {
-                "git": ["deviceadm"],
-                "docker_image": ["deviceadm"],
-                "release_component": False,
-            },
-            "mender-gui": {
-                "git": ["gui"],
-                "docker_image": ["gui"],
-                "release_component": True,
-            },
-            "mender-inventory": {
-                "git": ["inventory"],
-                "docker_image": ["inventory"],
-                "release_component": True,
-            },
-            "mender-client": {
-                "git": ["mender"],
-                "docker_image": ["mender-client-qemu", "mender-client-docker", "mender-client-qemu-rofs"],
-                "release_component": True,
-            },
-            "mender-api-gateway": {
-                "git": ["mender-api-gateway-docker"],
-                "docker_image": ["api-gateway"],
-                "release_component": True,
-            },
-            "mender-conductor": {
-                "git": ["mender-conductor", "mender-conductor-enterprise"],
-                "docker_image": ["mender-conductor", "mender-conductor-enterprise"],
-                "release_component": True,
-            },
-            "mender-email-sender": {
-                "git": ["mender-conductor"],
-                "docker_image": ["email-sender"],
-                "release_component": True,
-            },
-            "mender-tenantadm": {
-                "git": ["tenantadm"],
-                "docker_image": ["tenantadm"],
-                "release_component": False,
-            },
-            "mender-useradm": {
-                "git": ["useradm", "useradm-enterprise"],
-                "docker_image": ["useradm", "useradm-enterprise"],
-                "release_component": True,
-            },
-        },
-    }
+    COMPONENT_MAPS = None
 
     name = None
     type = None
@@ -305,8 +78,19 @@ class Component:
             raise Exception("Tried to get yml name from non-yml component")
         return self.name
 
+    def set_custom_component_maps(self, maps):
+        # Set local maps for this object only.
+        self.COMPONENT_MAPS = maps
+
+    @staticmethod
+    def _initialize_component_maps():
+        if Component.COMPONENT_MAPS is None:
+            with open(os.path.join(integration_dir(), "component-maps.yml")) as fd:
+                Component.COMPONENT_MAPS = yaml.safe_load(fd)
+
     @staticmethod
     def get_component_of_type(type, name):
+        Component._initialize_component_maps()
         if Component.COMPONENT_MAPS[type].get(name) is None:
             raise KeyError("Component '%s' of type %s not found" % (name, type))
         return Component(name, type)
@@ -322,6 +106,7 @@ class Component:
 
     @staticmethod
     def get_components_of_type(type, only_release=None, only_non_release=False):
+        Component._initialize_component_maps()
         if only_release is None:
             if only_non_release:
                 only_release = False
@@ -343,12 +128,14 @@ class Component:
     def associated_components_of_type(self, type):
         """Returns all components of type `type` that are associated with self."""
 
+        Component._initialize_component_maps()
+
         if type == self.type:
             return [Component(self.name, self.type)]
 
         try:
             comps = []
-            for name in Component.COMPONENT_MAPS[self.type][self.name][type]:
+            for name in self.COMPONENT_MAPS[self.type][self.name][type]:
                 comps.append(Component(name, type))
             return comps
         except KeyError:
@@ -369,6 +156,10 @@ class Component:
         for comp in comps:
             comp.type = "yml"
         return comps
+
+    def is_release_component(self):
+        Component._initialize_component_maps()
+        return self.COMPONENT_MAPS[self.type][self.name]['release_component']
 
 
 # A map from git repo name to build parameter name in Jenkins.
@@ -396,7 +187,7 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
-BACKEND_SERVICES_OPEN = {"deviceadm", "deviceauth", "inventory"}
+BACKEND_SERVICES_OPEN = {"deviceauth", "inventory"}
 BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
 BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
@@ -518,25 +309,31 @@ def get_docker_compose_data_from_json_list(json_list):
     {
         image_name: {
             "container": container_name,
+            "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
             "version": version,
         }
     }
     """
     data = {}
     for json_str in json_list:
-        json_elem = yaml.load(json_str)
+        json_elem = yaml.safe_load(json_str)
         for container, cont_info in json_elem['services'].items():
-            image = cont_info.get('image')
-            if image is None or "mendersoftware/" not in image:
+            full_image = cont_info.get('image')
+            if full_image is None or ("mendersoftware" not in full_image and "mender.io" not in full_image):
                 continue
-            image_and_ver = image.split("/", 1)[1].split(":", 1)
-            if data.get(image_and_ver[0]) is not None:
+            split = full_image.rsplit("/", 1)
+            prefix = split[0]
+            split = split[1].split(":", 1)
+            image = split[0]
+            ver = split[1]
+            if data.get(image) is not None:
                 raise Exception(("More than one container is using the image name '%s'. "
                                  + "The tool currently does not support this.")
-                                % image_and_ver[0])
-            data[image_and_ver[0]] = {
+                                % image)
+            data[image] = {
                 "container": container,
-                "version": image_and_ver[1]
+                "image_prefix": prefix,
+                "version": ver
             }
     return data
 
@@ -1312,7 +1109,7 @@ def trigger_build(state, tag_avail):
             subprocess.call("%s %s" % (editor, RELEASE_TOOL_STATE), shell=True)
             with open(RELEASE_TOOL_STATE) as fd:
                 state.clear()
-                state.update(yaml.load(fd))
+                state.update(yaml.safe_load(fd))
             # Trigger update of parameters from disk.
             params = None
             continue
@@ -1524,7 +1321,7 @@ def set_docker_compose_version_to(dir, repo, tag):
             new = open(filename + ".tmp", "w")
             for line in old:
                 # Replace build tag with a new one.
-                line = re.sub(r"^(\s*image:\s*mendersoftware/%s:)\S+(\s*)$" % re.escape(yml.yml()),
+                line = re.sub(r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$" % re.escape(yml.yml()),
                               r"\g<1>%s\2" % tag, line)
                 new.write(line)
             new.close()
@@ -1617,6 +1414,8 @@ def push_latest_docker_tags(state, tag_avail):
     # Only for the message. We need to generate a new one for each repository.
     overall_minor_version = state['version'][0:state['version'].rindex('.')]
 
+    compose_data = get_docker_compose_data_for_rev(integration_dir(), tag_avail['integration']['sha'])
+
     for tip in [overall_minor_version, "latest"]:
         reply = ask('Do you want to update ":%s" tags? ' % tip)
         if not reply.startswith("Y") and not reply.startswith("y"):
@@ -1633,12 +1432,14 @@ def push_latest_docker_tags(state, tag_avail):
             else:
                 minor_version = state[repo.git()]['version'][0:state[repo.git()]['version'].rindex('.')]
 
+            prefix = compose_data[image]["image_prefix"]
+
             exec_list.append(["docker", "pull",
-                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag'])])
+                              "%s/%s:%s" % (prefix, image.docker_image(), tag_avail[repo.git()]['build_tag'])])
             exec_list.append(["docker", "tag",
-                              "mendersoftware/%s:%s" % (image.docker_image(), tag_avail[repo.git()]['build_tag']),
-                              "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
-            exec_list.append(["docker", "push", "mendersoftware/%s:%s" % (image.docker_image(), minor_version)])
+                              "%s/%s:%s" % (prefix, image.docker_image(), tag_avail[repo.git()]['build_tag']),
+                              "%s/%s:%s" % (prefix, image.docker_image(), minor_version)])
+            exec_list.append(["docker", "push", "%s/%s:%s" % (prefix, image.docker_image(), minor_version)])
 
         query_execute_list(exec_list)
 
@@ -1755,7 +1556,7 @@ def do_build(args):
         print("Fetching cached parameters from %s. Delete to reset."
               % RELEASE_TOOL_STATE)
         with open(RELEASE_TOOL_STATE) as fd:
-            state = yaml.load(fd)
+            state = yaml.safe_load(fd)
     else:
         state = {}
 
@@ -1901,7 +1702,7 @@ def do_release():
         print("Loading existing release state data...")
         print("Note that you can always edit or delete %s manually" % RELEASE_TOOL_STATE)
         fd = open(RELEASE_TOOL_STATE)
-        state = yaml.load(fd)
+        state = yaml.safe_load(fd)
         fd.close()
 
     if state_value(state, ['repo_dir']) is None:
@@ -2021,6 +1822,37 @@ def do_set_version_to(args):
     repo = Component.get_component_of_any_type(args.set_version_of)
     set_docker_compose_version_to(integration_dir(), repo, args.version)
 
+def is_marked_as_releaseable_in_integration_version(integration_version, repo_git, repo_git_version):
+    try:
+        component_maps = execute_git(None, integration_dir(),
+                                     ["show", "%s:component-maps.yml" % integration_version],
+                                     capture=True, capture_stderr=True)
+    except subprocess.CalledProcessError:
+        # No component-maps.yml found.
+        if integration_version == "master":
+            # For master branch, we should require that the maps are found, so
+            # that we update the paths in case we move it somewhere.
+            raise Exception("Could not find component-maps.yml at expected location in master branch. Please fix!")
+        elif repo_git_version == "master":
+            # If we're looking for the master version of component, and the
+            # component-maps.yml isn't found, we assume that the component is
+            # not releaseable. The reasoning behind this is that no releaseable
+            # component should ever use "master" in any other branch than
+            # integration/master, where we know that component-maps.yml
+            # exists. This gets rid of many false positives from tenantadm,
+            # which is marked as master in a whole range of old integration
+            # versions.
+            return False
+        else:
+            # Else we assume it is releaseable.
+            return True
+
+    # When we have the component-maps.yml data from the given integration
+    # version, do a lookup.
+    comp = Component.get_component_of_type("git", repo_git)
+    comp.set_custom_component_maps(yaml.safe_load(component_maps))
+    return comp.is_release_component()
+
 def do_integration_versions_including(args):
     if not args.version:
         print("--integration-versions-including requires --version argument")
@@ -2028,12 +1860,15 @@ def do_integration_versions_including(args):
 
     git_dir = integration_dir()
     remote = find_upstream_remote(None, git_dir)
-    output = execute_git(None, git_dir, ["for-each-ref", "--format=%(refname:short)",
-                                         "--sort=-version:refname",
-                                         "refs/tags/*",
-                                         "refs/remotes/%s/master" % remote,
-                                         "refs/remotes/%s/[1-9]*" % remote],
-                         capture=True)
+    git_query = ["for-each-ref",
+                 "--format=%(refname:short)",
+                 "--sort=-version:refname:short",
+                 "refs/tags/*",
+                 "refs/remotes/%s/master" % remote,
+                 "refs/remotes/%s/[1-9]*" % remote]
+    if args.all:
+        git_query += ["refs/heads/*"]
+    output = execute_git(None, git_dir, git_query, capture=True)
     candidates = []
     for line in output.strip().split('\n'):
         # Filter out build tags.
@@ -2058,6 +1893,10 @@ def do_integration_versions_including(args):
             # If key doesn't exist it's because the version is from before
             # that component existed. So definitely not a match.
             continue
+
+        if not is_marked_as_releaseable_in_integration_version(candidate, repo.git(), args.version):
+            continue
+
         if version == args.version:
             matches.append(candidate)
 
@@ -2121,6 +1960,29 @@ def find_repo_path(name, paths):
             return path
 
     return None
+
+def do_map_name(args):
+    int_dir = integration_dir()
+    if args.in_integration_version:
+        data = get_docker_compose_data_for_rev(int_dir, args.in_integration_version)
+    else:
+        data = get_docker_compose_data(int_dir)
+
+    cli_types = {
+        "container": "docker_container",
+        "docker": "docker_image",
+        "git": "git",
+    }
+    comp = Component.get_component_of_type(cli_types[args.map_name[0]], args.map_name[1])
+    if args.map_name[2] == "docker_url":
+        to_type = "docker_image"
+    else:
+        to_type = cli_types[args.map_name[2]]
+    for result in comp.associated_components_of_type(to_type):
+        if args.map_name[2] == "docker_url":
+            print("%s/%s" % (data[result.name]['image_prefix'], result.name))
+        else:
+            print(result.name)
 
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
@@ -2271,7 +2133,11 @@ def main():
                         + "argument determines which type of name is returned. The default is git. "
                         + "By default does not list optional repositories.")
     parser.add_argument("-a", "--all", action="store_true", default=False,
-                        help="When used with -l, list all repositories, including optional ones.")
+                        help="When used with -l, list all repositories, including optional ones. "
+                        + "When used with -f, include local branches in addition to upstream branches.")
+    parser.add_argument("-m", "--map-name", metavar=("FROM-TYPE", "SERVICE", "TO-TYPE"), dest="map_name", nargs=3,
+                        help="Map the SERVICE name from one type to another. FROM-TYPE and TO-TYPE may be git, docker "
+                        + "or container. TO-TYPE may additionally be docker_url. May return more than one result.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
     parser.add_argument("--simulate-push", action="store_true",
@@ -2320,6 +2186,8 @@ def main():
         do_integration_versions_including(args)
     elif args.build:
         do_build(args)
+    elif args.map_name:
+        do_map_name(args)
     elif args.release:
         do_release()
     elif args.verify_integration_references:

@@ -1,0 +1,298 @@
+# A map that lists all our git repositories, docker images, and docker container
+# names, and how they are associated to one another. When you add something to
+# this list, make sure to add it to all three sections: "git", "docker_image"
+# and "docker_container". Binary tools that don't have Docker components, will
+# only have the "git" part.
+git:
+  deployments:
+    docker_image:
+    - deployments
+    docker_container:
+    - mender-deployments
+    release_component: true
+
+  deployments-enterprise:
+    docker_image:
+    - deployments-enterprise
+    docker_container:
+    - mender-deployments
+    release_component: false
+
+  deviceadm:
+    docker_image: []
+    docker_container: []
+    release_component: false
+
+  deviceauth:
+    docker_image:
+    - deviceauth
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
+  gui:
+    docker_image:
+    - gui
+    docker_container:
+    - mender-gui
+    release_component: true
+
+  integration:
+    docker_image: []
+    docker_container: []
+    release_component: true
+
+  inventory:
+    docker_image:
+    - inventory
+    docker_container:
+    - mender-inventory
+    release_component: true
+
+  mender:
+    docker_image:
+    - mender-client-qemu
+    - mender-client-docker
+    - mender-client-qemu-rofs
+    docker_container:
+    - mender-client
+    release_component: true
+
+  mender-api-gateway-docker:
+    docker_image:
+    - api-gateway
+    docker_container:
+    - mender-api-gateway
+    release_component: true
+
+  mender-artifact:
+    docker_image: []
+    docker_container: []
+    release_component: true
+
+  mender-cli:
+    docker_image: []
+    docker_container: []
+    release_component: true
+
+  mender-conductor:
+    docker_image:
+    - mender-conductor
+    - email-sender
+    docker_container:
+    - mender-conductor
+    - mender-email-sender
+    release_component: true
+
+  mender-conductor-enterprise:
+    docker_image:
+    - mender-conductor-enterprise
+    docker_container:
+    - mender-conductor
+    release_component: false
+
+  tenantadm:
+    docker_image:
+    - tenantadm
+    docker_container:
+    - mender-tenantadm
+    release_component: false
+
+  useradm:
+    docker_image:
+    - useradm
+    docker_container:
+    - mender-useradm
+    release_component: true
+
+  useradm-enterprise:
+    docker_image:
+    - useradm-enterprise
+    docker_container:
+    - mender-useradm
+    release_component: false
+
+docker_image:
+  deployments:
+    git:
+    - deployments
+    docker_container:
+    - mender-deployments
+    release_component: true
+
+  deployments-enterprise:
+    git:
+    - deployments-enterprise
+    docker_container:
+    - mender-deployments
+    release_component: false
+
+  deviceauth:
+    git:
+    - deviceauth
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
+  gui:
+    git:
+    - gui
+    docker_container:
+    - mender-gui
+    release_component: true
+
+  inventory:
+    git:
+    - inventory
+    docker_container:
+    - mender-inventory
+    release_component: true
+
+  mender-client-docker:
+    git:
+    - mender
+    docker_container:
+    - mender-client
+    release_component: true
+
+  mender-client-qemu:
+    git:
+    - mender
+    docker_container:
+    - mender-client
+    release_component: true
+
+  mender-client-qemu-rofs:
+    git:
+    - mender
+    docker_container:
+    - mender-client
+    release_component: true
+
+  api-gateway:
+    git:
+    - mender-api-gateway-docker
+    docker_container:
+    - mender-api-gateway
+    release_component: true
+
+  mender-conductor:
+    git:
+    - mender-conductor
+    docker_container:
+    - mender-conductor
+    release_component: true
+
+  email-sender:
+    git:
+    - mender-conductor
+    docker_container:
+    - mender-email-sender
+    release_component: true
+
+  mender-conductor-enterprise:
+    git:
+    - mender-conductor-enterprise
+    docker_container:
+    - mender-conductor
+    release_component: false
+
+  tenantadm:
+    git:
+    - tenantadm
+    docker_container:
+    - mender-tenantadm
+    release_component: false
+
+  useradm:
+    git:
+    - useradm
+    docker_container:
+    - mender-useradm
+    release_component: true
+
+  useradm-enterprise:
+    git:
+    - useradm-enterprise
+    docker_container:
+    - mender-useradm
+    release_component: false
+
+docker_container:
+  mender-deployments:
+    git:
+    - deployments
+    - deployments-enterprise
+    docker_image:
+    - deployments
+    - deployments-enterprise
+    release_component: true
+
+  mender-device-auth:
+    git:
+    - deviceauth
+    docker_image:
+    - deviceauth
+    release_component: true
+
+  mender-gui:
+    git:
+    - gui
+    docker_image:
+    - gui
+    release_component: true
+
+  mender-inventory:
+    git:
+    - inventory
+    docker_image:
+    - inventory
+    release_component: true
+
+  mender-client:
+    git:
+    - mender
+    docker_image:
+    - mender-client-qemu
+    - mender-client-docker
+    - mender-client-qemu-rofs
+    release_component: true
+
+  mender-api-gateway:
+    git:
+    - mender-api-gateway-docker
+    docker_image:
+    - api-gateway
+    release_component: true
+
+  mender-conductor:
+    git:
+    - mender-conductor
+    - mender-conductor-enterprise
+    docker_image:
+    - mender-conductor
+    - mender-conductor-enterprise
+    release_component: true
+
+  mender-email-sender:
+    git:
+    - mender-conductor
+    docker_image:
+    - email-sender
+    release_component: true
+
+  mender-tenantadm:
+    git:
+    - tenantadm
+    docker_image:
+    - tenantadm
+    release_component: false
+
+  mender-useradm:
+    git:
+    - useradm
+    - useradm-enterprise
+    docker_image:
+    - useradm
+    - useradm-enterprise
+    release_component: true

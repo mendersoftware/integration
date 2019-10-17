@@ -873,3 +873,45 @@ class TestPhasedRolloutDeploymentsEnterprise:
             ]
         }
         self.try_phased_updates(deployment_req, devs, utoken)
+
+    def test_disallow_empty_phase(self, clean_mongo):
+        """
+        Test that in the case a batch is empty due to rounding errors,
+        the server returns 400, with an appropriate error message.
+        """
+
+        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+
+        deployment_req = {
+            "name"    : "empty-batch-test",
+            "artifact_name" : "deployments-phase-testing",
+            "devices" : [dev.id for dev in devs[:11]],
+            "phases"        : [
+                {
+                    "batch_size" : 10
+                },
+                {
+                    "start_ts"   : (datetime.utcnow() + timedelta(
+                                    seconds=15)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "batch_size" : 20
+                },
+                {
+                    "batch_size" : 5,
+                    "start_ts"   : (datetime.utcnow() + timedelta(
+                                    seconds=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                },
+                {
+                    "start_ts"   : (datetime.utcnow() + timedelta(
+                                    seconds=45)).strftime("%Y-%m-%dT%H:%M:%SZ")
+                },
+            ]
+        }
+
+        resp = ApiClient(deployments.URL_MGMT).with_auth(utoken).call(
+            'POST',
+            deployments.URL_DEPLOYMENTS,
+            body=deployment_req,
+        )
+        assert resp.status_code == 400
+        assert "Attempt to create a batch with zero devices not allowed" in resp.text
+        assert "Batch: (3) will be empty" in resp.text

@@ -1,0 +1,5 @@
+requests==2.19
+pymongo==3.6.1
+pycrypto==2.6
+pytest==5.2
+pytest-html==2.0

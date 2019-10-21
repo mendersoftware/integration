@@ -21,7 +21,9 @@ import pytest
 import json
 import logging
 
-from Crypto.PublicKey import RSA
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 import time
 
@@ -36,10 +38,7 @@ class TestPreauthBase(MenderTesting):
 
         # we'll use the same pub key for the preauth'd device, so get it
         res = execute(Client.get_pub_key, hosts=client)
-        preauth_key = res[client].exportKey()
-
-        # stick an extra newline on the key - this is how a device would send it
-        preauth_key += '\n'
+        preauth_key = res[client]
 
         # preauthorize a new device
         preauth_iddata = {"mac": "mac-preauth"}
@@ -217,8 +216,16 @@ class Client:
 
         Client.__wait_for_keygen()
         keystr = run('cat {}'.format(Client.PRIV_KEY))
-        key = RSA.importKey(keystr)
-        return key.publickey()
+        private_key = serialization.load_pem_private_key(
+            data=keystr.encode() if isinstance(keystr, str) else keystr,
+            password=None,
+            backend=default_backend()
+        )
+        public_key = private_key.public_key()
+        return public_key.public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo
+        )
 
     @staticmethod
     def substitute_id_data(id_data_dict):

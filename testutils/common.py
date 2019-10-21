@@ -125,14 +125,14 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
                      deviceauth_v1.URL_AUTH_REQS,
                      body,
                      headers=sighdr)
-    assert r.status_code == 401
+    assert r.status_code == 401, r.text
 
     # dev must exist and have *this* aset
     api_dev = get_device_by_id_data(dauthm, id_data, utoken)
     assert api_dev is not None
 
     aset = [a for a in api_dev['auth_sets'] if testutils.util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
-    assert len(aset) == 1
+    assert len(aset) == 1, str(aset)
 
     aset = aset[0]
 

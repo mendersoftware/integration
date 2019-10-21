@@ -11,12 +11,6 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from Crypto.PublicKey import RSA
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
-from base64 import b64encode, urlsafe_b64decode, urlsafe_b64encode
-import json
-
 import testutils.api.client
 
 URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v2/devauth'

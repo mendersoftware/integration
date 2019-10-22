@@ -7,6 +7,7 @@ tags
 /release-state.yml
 
 /docker-compose.testing.yml
+/docker-compose.testing.enterprise.yml
 tests/.cache/
 tests/broken_update.ext4
 tests/core-image-full-cmdline-vexpress-qemu-broken-network.ext4

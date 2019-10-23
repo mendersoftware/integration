@@ -1432,7 +1432,7 @@ def push_latest_docker_tags(state, tag_avail):
             else:
                 minor_version = state[repo.git()]['version'][0:state[repo.git()]['version'].rindex('.')]
 
-            prefix = compose_data[image]["image_prefix"]
+            prefix = compose_data[image.docker_image()]["image_prefix"]
 
             exec_list.append(["docker", "pull",
                               "%s/%s:%s" % (prefix, image.docker_image(), tag_avail[repo.git()]['build_tag'])])

@@ -161,7 +161,7 @@ class TestBasicIntegration(MenderTesting):
                 wait_count = 0
 
         def deployment_triggered_callback():
-            output = run("mender --check-update")
+            output = run("mender -check-update")
             if output.return_code != 0:
                 logger.error(output)
                 pytest.fail("Forcing the update check failed")

@@ -25,33 +25,26 @@ import testutils.api.deployments as deployments
 from testutils.infra.cli import CliTenantadm, CliUseradm
 import testutils.util.crypto
 from testutils.common import User, Device, Tenant, \
-        create_user, create_tenant, create_tenant_user, \
-        create_random_authset, get_device_by_id_data, change_authset_status
+        create_org, create_random_authset, get_device_by_id_data, \
+        change_authset_status
 
 @pytest.yield_fixture(scope="function")
 def tenants(clean_mongo):
     tenants = []
 
     for n in ['tenant1', 'tenant2']:
-        tenants.append(create_tenant(n))
+        username = "user@"+n+".com"
+        password = "correcthorse"
+        tenants.append(create_org(n, username, password))
 
     yield tenants
 
-@pytest.yield_fixture(scope="function")
-def tenants_users(tenants, clean_mongo):
-    for t in tenants:
-        for i in range(2):
-            user = create_tenant_user(i, t)
-            t.users.append(user)
-
-    yield tenants
-
-@pytest.yield_fixture(scope="function")
-def tenants_users_devices(tenants_users, mongo):
+@pytest.fixture(scope="function")
+def tenants_users_devices(tenants, mongo):
     uc = ApiClient(useradm.URL_MGMT)
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
-    for t in tenants_users:
+    for t in tenants:
         user = t.users[0]
         r = uc.call('POST',
                     useradm.URL_LOGIN,
@@ -65,22 +58,22 @@ def tenants_users_devices(tenants_users, mongo):
             dev.authsets.append(aset)
             t.devices.append(dev)
 
-    yield tenants_users
+    yield tenants
 
 class TestAccountSuspensionEnterprise:
-    def test_user_cannot_log_in(self, tenants_users):
+    def test_user_cannot_log_in(self, tenants):
         tc = ApiClient(tenantadm.URL_INTERNAL)
 
         uc = ApiClient(useradm.URL_MGMT)
 
-        for u in tenants_users[0].users:
+        for u in tenants[0].users:
             r = uc.call('POST',
                         useradm.URL_LOGIN,
                         auth=(u.name, u.pwd))
             assert r.status_code == 200
 
         # tenant's users can log in
-        for u in tenants_users[0].users:
+        for u in tenants[0].users:
             r = uc.call('POST',
                         useradm.URL_LOGIN,
                         auth=(u.name, u.pwd))
@@ -92,31 +85,31 @@ class TestAccountSuspensionEnterprise:
         r = tc.call('PUT',
                 tenantadm.URL_INTERNAL_SUSPEND,
                 tenantadm.req_status('suspended'),
-                path_params={'tid': tenants_users[0].id})
+                path_params={'tid': tenants[0].id})
         assert r.status_code == 200
 
         time.sleep(10)
 
         # none of tenant's users can log in
-        for u in tenants_users[0].users:
+        for u in tenants[0].users:
             r = uc.call('POST',
                         useradm.URL_LOGIN,
                         auth=(u.name, u.pwd))
             assert r.status_code == 401
 
         # but other users still can
-        for u in tenants_users[1].users:
+        for u in tenants[1].users:
             r = uc.call('POST',
                         useradm.URL_LOGIN,
                         auth=(u.name, u.pwd))
             assert r.status_code == 200
 
-    def test_authenticated_user_is_rejected(self, tenants_users):
+    def test_authenticated_user_is_rejected(self, tenants):
         tc = ApiClient(tenantadm.URL_INTERNAL)
         uc = ApiClient(useradm.URL_MGMT)
         dc = ApiClient(deviceauth_v2.URL_MGMT)
 
-        u = tenants_users[0].users[0]
+        u = tenants[0].users[0]
 
         # log in
         r = uc.call('POST',
@@ -134,7 +127,7 @@ class TestAccountSuspensionEnterprise:
         r = tc.call('PUT',
                 tenantadm.URL_INTERNAL_SUSPEND,
                 tenantadm.req_status('suspended'),
-                path_params={'tid': tenants_users[0].id})
+                path_params={'tid': tenants[0].id})
         assert r.status_code == 200
 
         time.sleep(10)

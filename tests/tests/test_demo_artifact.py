@@ -33,7 +33,7 @@ class TestDemoArtifact(MenderTesting):
     # NOTE - The password is set on a per test-basis,
     # as it is generated on the fly by the demo script.
     auth = authentication.Authentication(
-        username='mender-demo', email='mender-demo@example.com')
+        name='mender-demo', username='mender-demo@example.com')
     authv2 = DeviceAuthV2(auth)
     deploy = deployments.Deployments(auth, authv2)
 

@@ -26,9 +26,8 @@ import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 import testutils.util.crypto
 from testutils.common import User, Device, Authset, Tenant, \
-        create_user, create_tenant, create_tenant_user, \
-        create_random_authset, create_authset, \
-        get_device_by_id_data, change_authset_status
+    create_user, create_org, create_random_authset, create_authset, \
+    get_device_by_id_data, change_authset_status
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -84,12 +83,9 @@ def tenants_users(clean_migrated_mongo_mt):
     tenants=[]
 
     for n in names:
-        tenants.append(create_tenant(n))
-
-    for t in tenants:
-        for i in range(2):
-            user = create_tenant_user(i, t)
-            t.users.append(user)
+        username = "user@"+n+".com"
+        password = "correcthorse"
+        tenants.append(create_org(n, username, password))
 
     yield tenants
 
@@ -1248,14 +1244,16 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_default_tenant_token(self, clean_mongo):
         """Connect with a device without a tenant-token, and make sure it shows up in the default tenant account"""
 
-        default_tenant = create_tenant('default-tenant')
+        default_tenant = create_org(name="default-tenant",
+                                    username="root@admin.com",
+                                    password="foobarbaz")
+        default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        # Create a user for the default tenant
-        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        # Retrieve user token for management API
         r = self.uc.call('POST',
                     useradm.URL_LOGIN,
                     auth=(default_tenant_user.name, default_tenant_user.pwd))
@@ -1278,14 +1276,15 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_valid_tenant_not_duplicated_for_default_tenant(self, clean_mongo):
         """Verify that a valid tenant-token login does not show up in the default tenant's account"""
 
-        default_tenant = create_tenant('default-tenant')
+        default_tenant = create_org(
+            'default-tenant', 'root@admin.com', 'foobarbaz')
+        default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        # Create a user for the default tenant
-        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        # Get default user token for management api
         r = self.uc.call('POST',
                     useradm.URL_LOGIN,
                     auth=(default_tenant_user.name, default_tenant_user.pwd))
@@ -1293,9 +1292,9 @@ class TestDefaultTenantTokenEnterprise(object):
         default_utoken = r.text
 
         # Create a second user, which has it's own tenant token
-        tenant1 = create_tenant('tenant1')
+        tenant1 = create_org('tenant1', 'foo@bar.com', 'foobarbaz')
+        tenant1_user = tenant1.users[0]
 
-        tenant1_user = create_user('foo@bar.com', 'foobarbaz', tenant1.id)
         r = self.uc.call('POST',
                     useradm.URL_LOGIN,
                     auth=(tenant1_user.name, tenant1_user.pwd))
@@ -1303,11 +1302,12 @@ class TestDefaultTenantTokenEnterprise(object):
         tenant1_utoken = r.text
 
         # Create a device, and try to authorize
-        create_random_authset(self.devauthd, self.devauthm, tenant1_utoken, tenant1.tenant_token)
+        create_random_authset(self.devauthd, self.devauthm,
+                              tenant1_utoken, tenant1.tenant_token)
 
         # Device should show up in the 'tenant1's account
         r = self.devauthm.with_auth(tenant1_utoken).call('GET',
-                                            deviceauth_v2.URL_DEVICES)
+                                                         deviceauth_v2.URL_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
         assert len(api_devs) == 1
@@ -1326,14 +1326,15 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_invalid_tenant_token_added_to_default_account(self, clean_mongo):
         """Verify that an invalid tenant token does show up in the default tenant account"""
 
-        default_tenant = create_tenant('default-tenant')
+        default_tenant = create_org(
+            'default-tenant', 'root@admin.com', 'foobarbaz')
+        default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        # Create a user for the default tenant
-        default_tenant_user = create_user('root@admin.com', 'foobarbaz', default_tenant.id)
+        # Get default user auth token for management api
         r = self.uc.call('POST',
                     useradm.URL_LOGIN,
                     auth=(default_tenant_user.name, default_tenant_user.pwd))
@@ -1341,9 +1342,8 @@ class TestDefaultTenantTokenEnterprise(object):
         default_utoken = r.text
 
         # Create a second user, which has it's own tenant token
-        tenant1 = create_tenant('tenant1')
-
-        tenant1_user = create_user('foo@bar.com', 'foobarbaz', tenant1.id)
+        tenant1 = create_org('tenant1', 'foo@bar.com', 'foobarbaz')
+        tenant1_user = tenant1.users[0]
         r = self.uc.call('POST',
                     useradm.URL_LOGIN,
                     auth=(tenant1_user.name, tenant1_user.pwd))

@@ -25,8 +25,8 @@ import testutils.api.inventory as inventory
 import testutils.api.tenantadm as tenantadm
 import testutils.util.crypto
 from testutils.common import User, Device, Authset, Tenant, \
-        create_user, create_tenant, create_tenant_user, \
-        create_authset, get_device_by_id_data, change_authset_status
+        create_user, create_org, create_authset, get_device_by_id_data, \
+        change_authset_status
 
 @pytest.yield_fixture(scope='function')
 def clean_migrated_mongo(clean_mongo):
@@ -61,12 +61,9 @@ def tenants_users(clean_migrated_mongo_mt):
     tenants=[]
 
     for n in names:
-        tenants.append(create_tenant(n))
-
-    for t in tenants:
-        for i in range(2):
-            user = create_tenant_user(i, t)
-            t.users.append(user)
+        username = "user@%s.com" % n
+        password = "correcthorse"
+        tenant = create_org(n, username, password)
 
     yield tenants
 

@@ -170,7 +170,7 @@ class TestFaultTolerance(MenderTesting):
             assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
-    @MenderTesting.nightly
+    @MenderTesting.slow
     def test_image_download_retry_hosts_broken(self, install_image=conftest.get_valid_image()):
         """
             Block storage host (minio) by modifying the hosts file.
@@ -188,10 +188,12 @@ class TestFaultTolerance(MenderTesting):
         with Helpers.RebootDetector() as reboot:
             deployment_id, new_yocto_id = common_update_procedure(install_image)
 
-            self.wait_for_download_retry_attempts()
+            self.wait_for_download_retry_attempts("update fetch failed")
             run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
             reboot.verify_reboot_performed()
+            deploy.check_expected_status("finished", deployment_id)
+
             assert Helpers.get_active_partition() == inactive_part
             assert Helpers.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()

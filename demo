@@ -95,8 +95,10 @@ fi
 
 # Pass this value on to the GUI container as an env variable
 export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
-export MENDER_ARTIFACT_VERSION=$(extra/release_tool.py -g mender-artifact)
-export MENDER_VERSION=$(extra/release_tool.py -g mender)
+# Parse the Mender-Artifact version used from the other-components.yml file's image tag
+export MENDER_ARTIFACT_VERSION=$(awk -F':' '/mendersoftware\/mender-artifact/ {print $3}' other-components.yml)
+# Parse the mender version from docker-compose.yml mender image's tag
+export MENDER_VERSION=$(awk -F':' '/mendersoftware\/mender-client/ {print $3}' docker-compose.client.yml)
 export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
 RUN_UP=$(echo "$@" | grep '\bup\b')

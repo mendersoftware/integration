@@ -91,25 +91,6 @@ def standard_setup_two_clients_bootstrapped():
     auth_v2.accept_devices(2)
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client_bootstrapped_with_s3():
-    stop_docker_compose()
-    reset_mender_api()
-
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.client.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml up -d",
-                       use_common_files=False)
-
-    docker_compose_cmd("logs -f &")
-    ssh_is_opened()
-
-    auth.reset_auth_token()
-    auth_v2.accept_devices(1)
-
-
-@pytest.fixture(scope="function")
 def standard_setup_without_client():
     stop_docker_compose()
     reset_mender_api()
@@ -223,35 +204,6 @@ def enterprise_no_client(request):
     wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml"])
-
-    def fin():
-        stop_docker_compose()
-
-    request.addfinalizer(fin)
-
-
-@pytest.fixture(scope="function")
-def enterprise_client_s3(request):
-    if conftest.is_integration_branch:
-        pytest.skip("Enterprise tests disabled on integration branches")
-
-    stop_docker_compose()
-    reset_mender_api()
-
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
-                        up -d",
-                       use_common_files=False)
-
-
-    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
-                             COMPOSE_FILES_PATH + "/docker-compose.testing.yml ",
-                             COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
-                             COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
-                             COMPOSE_FILES_PATH + "/docker-compose.storage.s3.yml"])
 
     def fin():
         stop_docker_compose()

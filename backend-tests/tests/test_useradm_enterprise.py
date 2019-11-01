@@ -28,7 +28,7 @@ from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 from testutils.common import User, Tenant, \
-        create_tenant, create_tenant_user
+    create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
@@ -51,12 +51,14 @@ def tenants_users(clean_migrated_mongo):
     api = ApiClient(tenantadm.URL_INTERNAL)
 
     for n in ['tenant1', 'tenant2']:
-        tenants.append(create_tenant(n))
-
-    for t in tenants:
-        for i in range(2):
-            user = create_tenant_user(i, t)
-            t.users.append(user)
+        username = "user%d@%s.com" # user[12]@tenant[12].com
+        password = "correcthorse"
+        # Create tenant with two users
+        tenant = create_org(n, username % (1, n), "123password")
+        tenant.users.append(create_user(username % (2, n),
+                                        password,
+                                        tenant.id))
+        tenants.append(tenant)
 
     yield tenants
 

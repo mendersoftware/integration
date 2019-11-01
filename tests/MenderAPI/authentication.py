@@ -14,6 +14,8 @@
 #    limitations under the License.
 
 import json
+import os
+import time
 from requests.auth import HTTPBasicAuth
 
 from . import logger
@@ -24,36 +26,41 @@ from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILE
 class Authentication:
     auth_header = None
 
-    username = "admin"
-    email = "admin@admin.net"
+    org_name = "admin"
+    username = "admin@admin.net"
     password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
     multitenancy = False
     current_tenant = {}
 
-    def __init__(self, username=username, email=email, password=password):
+    def __init__(self, name=org_name, username=username, password=password):
+        """
+        :param org_name: Name of tenant organization
+        :param username: Username - must be an email
+        :param password: Password associated with tenant user
+        """
         self.reset()
+        self.org_name = name
         self.username = username
-        self.email = email
         self.password = password
 
     def reset(self):
         # Reset all temporary values.
         self.auth_header = Authentication.auth_header
+        self.org_name = Authentication.org_name
         self.username = Authentication.username
-        self.email = Authentication.email
         self.password = Authentication.password
         self.multitenancy = Authentication.multitenancy
         self.current_tenant = Authentication.current_tenant
 
-    def set_tenant(self, username, email, password):
-        self.new_tenant(username, email, password)
+    def set_tenant(self, org_name, username, password):
+        self.new_tenant(org_name, username, password)
 
-    def new_tenant(self, username, email, password):
+    def new_tenant(self, org_name, username, password):
         self.multitenancy = True
         self.reset_auth_token()
+        self.org_name = org_name
         self.username = username
-        self.email = email
         self.password = password
         self.get_auth_token()
 
@@ -61,35 +68,51 @@ class Authentication:
         if self.auth_header is not None:
             return self.auth_header
 
-        # try login - the user might be in a shared db already (if not running xdist)
-        r = self._do_login(self.email, self.password)
+        # try login - the user might be in a shared db
+        #             already (if not running xdist)
+        r = self._do_login(self.username, self.password)
 
         logger.info("Getting authentication token for user")
-        logger.info(self.username)
+        logger.info(self.org_name)
 
         if create_new_user:
             if r.status_code is not 200:
                 if self.multitenancy:
-                    tenant_id = self._create_tenant(self.username)
+                    tenant_id = self._create_org(self.org_name,
+                                                 self.username,
+                                                 self.password)
                     tenant_id = tenant_id.strip()
-
-                    self._create_user(self.email, self.password, tenant_id)
 
                     tenant_data = self._get_tenant_data(tenant_id)
                     tenant_data_json = json.loads(tenant_data)
 
-                    self.current_tenant = {"tenant_id": tenant_id,
-                                           "tenant_token": tenant_data_json["tenant_token"],
-                                           "name": tenant_data_json["name"]}
+                    self.current_tenant = {
+                        "tenant_id":    tenant_id,
+                        "tenant_token": tenant_data_json["tenant_token"],
+                        "name":         tenant_data_json["name"]
+                    }
 
                 else:
-                    self._create_user(self.email, self.password)
+                    self.create_user(self.username, self.password)
 
-            r = self._do_login(self.email, self.password)
+            # It might take some time for create_org to propagate the new user.
+            # Retry login for a minute.
+            for i in range(60):
+                r = self._do_login(self.username, self.password)
+                if r.status_code == 200:
+                    break
+                time.sleep(1)
             assert r.status_code == 200
 
         logger.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
+
+    def create_user(self, username, password, tenant_id=""):
+        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user ' \
+            '--username %s --password %s' % (username, password)
+        if tenant_id != "":
+            cmd += " --tenant-id %s" % tenant_id
+        docker_compose_cmd(cmd)
 
     def get_tenant_id(self):
         return self.current_tenant["tenant_id"]
@@ -98,25 +121,29 @@ class Authentication:
         self.auth_header = None
 
     def _do_login(self, username, password):
-        r = requests_retry().post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version), verify=False, auth=HTTPBasicAuth(username, password))
+        r = requests_retry().post(
+            "https://%s/api/management/%s/useradm/auth/login" %
+            (get_mender_gateway(), api_version),
+            verify=False,
+            auth=HTTPBasicAuth(username, password))
         assert r.status_code == 200 or r.status_code == 401
 
         if r.status_code == 200:
             self.auth_header = {"Authorization": "Bearer " + str(r.text)}
         return r
 
-    def _create_user(self, username, password, tenant_id=""):
-        if tenant_id != "":
-            tenant_id = "--tenant-id " + tenant_id
-
-        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s %s' % (username,
-                                                                                                      password, tenant_id)
-        docker_compose_cmd(cmd)
-
-    def _create_tenant(self, username):
-        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm create-tenant --name %s' % (username)
+    def _create_org(self, name, username, password):
+        cmd = "-f " + os.path.join(
+            COMPOSE_FILES_PATH,
+            "docker-compose.enterprise.yml") \
+            + " exec -T mender-tenantadm /usr/bin/tenantadm create-org " \
+            + "--name %s --username %s --password %s" % (name,
+                                                         username,
+                                                         password)
         return docker_compose_cmd(cmd)
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml exec -T mender-tenantadm /usr/bin/tenantadm get-tenant --id %s' % (tenant_id)
+        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml ' \
+            + 'exec -T mender-tenantadm /usr/bin/tenantadm' \
+            + ' get-tenant --id %s' % (tenant_id)
         return docker_compose_cmd(cmd)

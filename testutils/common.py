@@ -12,17 +12,22 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import json
 import pytest
 import random
+import time
+
 import pymongo
 from pymongo import MongoClient
 
-from testutils.api.client import ApiClient
-from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.tenantadm as tenantadm
+import testutils.api.useradm as useradm
 import testutils.util.crypto
+from testutils.api.client import ApiClient
+from testutils.infra.cli import CliUseradm, CliTenantadm
+
 
 @pytest.fixture(scope="session")
 def mongo():
@@ -45,9 +50,9 @@ def mongo_cleanup(mongo):
 
 class User:
     def __init__(self, id, name, pwd):
-        self.name=name
-        self.pwd=pwd
-        self.id=id
+        self.name = name
+        self.pwd = pwd
+        self.id = id
 
 
 class Authset:
@@ -63,62 +68,34 @@ class Authset:
 class Device:
     def __init__(self, id, id_data, pubkey, tenant_token=''):
         self.id = id
-        self.id_data=id_data
-        self.pubkey=pubkey
-        self.tenant_token=tenant_token
+        self.id_data = id_data
+        self.pubkey = pubkey
+        self.tenant_token = tenant_token
         self.authsets = []
         self.token = None
 
 class Tenant:
     def __init__(self, name, id, token):
-        self.name=name
-        self.users=[]
-        self.devices=[]
-        self.id=id
-        self.tenant_token=token
+        self.name = name
+        self.users = []
+        self.devices = []
+        self.id = id
+        self.tenant_token = token
 
-
-def create_tenant(name, docker_prefix=None):
-    """ Create a tenant via cli, record its id and token for further use.  """
-    cli = CliTenantadm(docker_prefix)
-    api = ApiClient(tenantadm.URL_INTERNAL)
-
-    id = cli.create_tenant(name)
-
-    page = 0
-    per_page = 20
-    qs_params = {}
-    found = None
-    while True:
-        page = page + 1
-        qs_params['page'] = page
-        qs_params['per_page'] = per_page
-        r = api.call('GET', tenantadm.URL_INTERNAL_TENANTS, qs_params=qs_params)
-        assert r.status_code == 200
-        api_tenants = r.json()
-
-        found = [at for at in api_tenants if at['id'] == id]
-        if len(found) > 0:
-            break
-
-        if len(api_tenants) == 0:
-            break
-
-    assert len(found) == 1
-    token = found[0]['tenant_token']
-
-    return Tenant(name, id, token)
 
 def create_random_authset(dauthd1, dauthm, utoken, tenant_token=''):
     """ create_device with random id data and keypair"""
     priv, pub = testutils.util.crypto.rsa_get_keypair()
-    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x') for i in range(6)])
+    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x')
+                    for i in range(6)])
     id_data = {'mac': mac}
 
     return create_authset(dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token)
 
+
 def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=''):
-    body, sighdr = deviceauth_v1.auth_req(id_data, pubkey, privkey, tenant_token)
+    body, sighdr = deviceauth_v1.auth_req(
+        id_data, pubkey, privkey, tenant_token)
 
     # submit auth req
     r = dauthd1.call('POST',
@@ -131,7 +108,8 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     api_dev = get_device_by_id_data(dauthm, id_data, utoken)
     assert api_dev is not None
 
-    aset = [a for a in api_dev['auth_sets'] if testutils.util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
+    aset = [a for a in api_dev['auth_sets']
+            if testutils.util.crypto.rsa_compare_keys(a['pubkey'], pubkey)]
     assert len(aset) == 1, str(aset)
 
     aset = aset[0]
@@ -141,23 +119,51 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
 
     return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
-def create_user(name, pwd, tid='', docker_prefix=None):
+
+def create_user(name, pwd, tid="", docker_prefix=None):
     cli = CliUseradm(docker_prefix)
 
     uid = cli.create_user(name, pwd, tid)
 
     return User(uid, name, pwd)
 
-def create_tenant_user(idx, tenant, docker_prefix=None):
-    name = 'user{}@{}.com'.format(idx, tenant.name)
-    pwd = 'correcthorse'
 
-    return create_user(name, pwd, tenant.id, docker_prefix)
-
-def create_org(name, user, password):
+def create_org(name, username, password):
     cli = CliTenantadm()
+    user_id = None
+    tenant_id = cli.create_org(name, username, password)
+    tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
+    api = ApiClient(useradm.URL_MGMT)
+    # Try log in every second for 1 minute.
+    # - There usually is a slight delay (in order of ms) for propagating
+    #   the created user to the db.
+    for i in range(60):
+        rsp = api.call(
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(username, password)
+        )
+        if rsp.status_code == 200:
+            break
+        time.sleep(1)
 
-    return cli.create_org(name, user, password)
+    user_token = rsp.text
+    rsp = api.with_auth(user_token).call(
+        "GET",
+        useradm.URL_USERS
+    )
+    users = json.loads(rsp.text)
+    for user in users:
+        if user["email"] == username:
+            user_id = user["id"]
+            break
+    if user_id == None:
+        raise ValueError("Error retrieving user id.")
+
+    tenant = Tenant(name, tenant_id, tenant_token)
+    user = User(user_id, username, password)
+    tenant.users.append(user)
+    return tenant
 
 
 def get_device_by_id_data(dauthm, id_data, utoken):

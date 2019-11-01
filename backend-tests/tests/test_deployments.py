@@ -18,9 +18,7 @@ import testutils.api.deployments as deployments
 
 from testutils.api.client import ApiClient
 from testutils.common import User, Device, Authset, Tenant, \
-    create_user, create_tenant, create_tenant_user, \
-    create_authset, change_authset_status, clean_mongo, mongo
-
+        create_org, create_authset, change_authset_status, clean_mongo, mongo
 
 def rand_id_data():
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), 'x')
@@ -107,12 +105,12 @@ def upload_image(filename, auth_token, description="abc"):
 
 def create_tenant_test_setup(user_name, tenant_name, nr_deployments=3, nr_devices=100):
     """
-    Creates a tenant, and a user belonging to the tenant belonging to the user
+    Creates a tenant, and a user belonging to the tenant
     with 'nr_deployments', and 'nr_devices'
     """
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
-    tenant = create_tenant(tenant_name)
-    user = create_tenant_user(user_name, tenant)
+    tenant = create_org(tenant_name, user_name, "correcthorse")
+    user = tenant.users[0]
     r = ApiClient(useradm.URL_MGMT).call(
         'POST', useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -147,9 +145,9 @@ def setup_deployments_enterprise_test(clean_mongo,
     Creates two tenants, with one user each, where each user has three deployments,
     and a hundred devices each.
     """
-    tenant1 = create_tenant_test_setup('bugs-bunny', 'acme')
+    tenant1 = create_tenant_test_setup('bugs@bunny.org', 'acme')
     # Add a second tenant to make sure that the functionality does not interfere with other tenants
-    tenant2 = create_tenant_test_setup('road-runner', 'indiedev')
+    tenant2 = create_tenant_test_setup('road@runner.org', 'indiedev')
     # Create 'existing_deployments' predefined deployments to act as noise for the server to handle
     # for both users
     return tenant1, tenant2
@@ -584,8 +582,8 @@ def setup_devices_and_management(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
-    tenant = create_tenant('acme')
-    user = create_tenant_user('bugs-bunny', tenant)
+    tenant = create_org('acme', 'bugs@bunny.org', "correcthorse")
+    user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
     invm = ApiClient(inventory.URL_MGMT)

@@ -3,7 +3,6 @@ import pytest
 class MenderTesting(object):
     slow_cond = False
     fast_cond = False
-    upgrade_from = False
 
     slow = None
     fast = None

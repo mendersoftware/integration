@@ -12,13 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from pymongo import MongoClient
+from pymongo import MongoClient as PyMongoClient
 
 class MongoClient:
-    def __init__(self, addr):
-        self.client = MongoClient('mender-mongo:27017')
+    def __init__(self, addr="mender-mongo:27017"):
+        self.client = PyMongoClient(addr)
 
-    def cleanup(self, db):
+    def cleanup(self):
         dbs = self.client.database_names()
         dbs = [d for d in dbs if d not in ['local', 'admin']]
         for d in dbs:

@@ -39,7 +39,6 @@ class ApiClient:
     def __make_url(self, path):
         return os.path.join(self.base_url,
                             path if not path.startswith("/") else path[1:])
-        pass
 
     def __subst_path_params(self, url, path_params):
         return url.format(**path_params)

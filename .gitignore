@@ -7,17 +7,7 @@ tags
 /release-state.yml
 
 /docker-compose.testing.yml
-tests/.cache/
-tests/broken_update.ext4
-tests/core-image-full-cmdline-vexpress-qemu-broken-network.ext4
-tests/core-image-full-cmdline-vexpress-qemu.ext4
-tests/core-image-full-cmdline-qemux86-64-broken-network.ext4
-tests/core-image-full-cmdline-qemux86-64.ext4
-tests/mender-image-full-cmdline-rofs-qemux86-64.ext4
-tests/mender-image-full-cmdline-rofs-vexpress-qemu.ext4
-tests/large_image.dat
-tests/results.xml
-tests/downloaded-tools
+/docker-compose.testing.enterprise.yml
 
 __pycache__
 .cache

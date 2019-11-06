@@ -5,9 +5,32 @@ DEFAULT_TESTS=tests/
 MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
+usage() {
+    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [<pytest-args>] [tests/<testfile.py>]"
+    echo
+    echo "    -h                               Display help"
+    echo "    --machine-name[=] <machine-name> Specify the machine to test"
+    echo "    --no-download                    Do not download the external dependencies"
+    echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
+    echo "    <pytest-args>                    Passes these arguments along to pytest"
+    echo "    tests/<testfile.py>              Name the test-file to run"
+    echo
+    echo "Any remaining arguments will be passed along to pytest."
+    echo
+    echo "Recognized Environment Variables:"
+    echo
+    echo "XDIST_PARALLEL_ARG                 The number of parallel jobs for pytest-xdist"
+    echo "SPECIFIC_INTEGRATION_TEST          The ability to pass <testname-regexp> to pytest -k"
+    exit 0
+}
+
 check_tests_arguments() {
     while [ -n "$1" ]; do
         case "$1" in
+            -h|--help)
+                set +x
+                usage
+                ;;
             --machine-name=*)
                 MACHINE_NAME="${1#--machine-name=}"
                 ;;
@@ -80,7 +103,7 @@ function get_requirements() {
     chmod +x downloaded-tools/mender-artifact
 
     if [ $? -ne 0 ]; then
-        echo "failed to download ext4 image" 
+        echo "failed to download ext4 image"
         exit 1
     fi
 
@@ -151,8 +174,6 @@ fi
 XDIST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
 MAX_FAIL_ARG="--maxfail=1"
 HTML_REPORT="--html=report.html --self-contained-html"
-UPGRADE_TEST_ARG=""
-SPECIFIC_INTEGRATION_TEST_ARG=""
 
 if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
     XDIST_ARGS=""

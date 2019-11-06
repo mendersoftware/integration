@@ -1,0 +1,23 @@
+####################
+#  Pip2 specifics  #
+####################
+
+requests>=2.12.0           ; python_version < "3.0"
+pytest>=3.0                ; python_version < "3.0"
+filelock>=2.0              ; python_version < "3.0"
+psutil                     ; python_version < "3.0"
+selenium                   ; python_version < "3.0"
+pytest-timeout             ; python_version < "3.0"
+pymongo==3.6.1             ; python_version < "3.0"
+pytest-xdist               ; python_version < "3.0"
+pytest-html                ; python_version < "3.0"
+fabric==1.14.0             ; python_version < "3.0"
+pycrypto                   ; python_version < "3.0"
+# test_full_integration
+docker-compose==1.24.0     ; python_version < "3.0"
+
+
+####################
+#  Pip3 specifics  #
+####################
+pyyaml                      ; python_version >= "3.0"

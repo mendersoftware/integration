@@ -15,6 +15,10 @@ check_tests_arguments() {
                 shift
                 MACHINE_NAME="$1"
                 ;;
+            --foo-bar)
+                echo "Bar Baz"
+                exit 0
+                ;;
             --no-download)
                 DOWNLOAD_REQUIREMENTS=""
                 ;;

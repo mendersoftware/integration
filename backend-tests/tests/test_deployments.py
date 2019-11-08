@@ -88,14 +88,12 @@ def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=''):
 
     return devices
 
-
 def upload_image(filename, auth_token, description="abc"):
-    image_path_url = testutils.api.client.GATEWAY_URL + \
-        "/api/management/v1/deployments/artifacts"
-    r = requests.post(
-        image_path_url,
-        verify=False,
-        headers={"Authorization": "Bearer " + auth_token},
+    api_client = ApiClient(deployments.URL_MGMT)
+    api_client.headers={}
+    r = api_client.with_auth(auth_token).call(
+        'POST',
+        deployments.URL_DEPLOYMENTS_ARTIFACTS,
         files=(("description", (None, description)),
                ("size", (None, str(os.path.getsize(filename)))),
                ("artifact", (filename, open(filename, 'rb'),

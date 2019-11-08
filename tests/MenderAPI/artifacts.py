@@ -65,8 +65,8 @@ class Artifacts():
         conf = {}
 
         output = subprocess.check_output("debugfs -R 'cat /etc/mender/mender.conf' " + \
-                                             "core-image-full-cmdline-%s.ext4" % \
-                                             conftest.machine_name, shell=True)
+                                             "%s" % \
+                                             image, shell=True)
         import json
         conf = json.loads(output)
 

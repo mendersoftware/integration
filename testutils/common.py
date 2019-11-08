@@ -17,15 +17,13 @@ import pytest
 import random
 import time
 
-import pymongo
-from pymongo import MongoClient
-
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
 from testutils.api.client import ApiClient
+from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 
 
@@ -38,14 +36,11 @@ def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""
     mongo_cleanup(mongo)
-    yield mongo
+    yield mongo.client
     mongo_cleanup(mongo)
 
 def mongo_cleanup(mongo):
-    dbs = mongo.database_names()
-    dbs = [d for d in dbs if d not in ['local', 'admin']]
-    for d in dbs:
-        mongo.drop_database(d)
+    mongo.cleanup()
 
 
 class User:

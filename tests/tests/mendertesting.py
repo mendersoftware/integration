@@ -3,13 +3,9 @@ import pytest
 class MenderTesting(object):
     slow_cond = False
     fast_cond = False
-    nightly_cond = False
-    aws_cond = False
-    upgrade_from = False
 
     slow = None
     fast = None
-    nightly = None
 
     @staticmethod
     def set_test_conditions(config):
@@ -23,20 +19,10 @@ class MenderTesting(object):
         else:
             MenderTesting.fast_cond = False
 
-        if config.getoption("--runnightly"):
-            MenderTesting.nightly_cond = True
-        else:
-            MenderTesting.nightly_cond = False
-
-        if config.getoption("--runs3"):
-            MenderTesting.aws_cond = True
-
-        if not MenderTesting.slow_cond and not MenderTesting.fast_cond and not MenderTesting.nightly_cond and not MenderTesting.aws_cond:
-            # Default to running everything but nightly.
+        if not MenderTesting.slow_cond and not MenderTesting.fast_cond:
+            # Default to running everything
             MenderTesting.slow_cond = True
             MenderTesting.fast_cond = True
 
         MenderTesting.slow = pytest.mark.skipif(not MenderTesting.slow_cond, reason="need --runslow option to run")
         MenderTesting.fast = pytest.mark.skipif(not MenderTesting.fast_cond, reason="need --runfast option to run")
-        MenderTesting.nightly = pytest.mark.skipif(not MenderTesting.nightly_cond, reason="need --runnightly option to run")
-        MenderTesting.aws_s3 = pytest.mark.skipif(not MenderTesting.aws_cond, reason="need --runs3 option to run")

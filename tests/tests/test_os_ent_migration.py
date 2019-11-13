@@ -32,6 +32,8 @@ import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
 
+from conductor import Conductor
+
 @pytest.fixture(scope="class")
 def initial_os_setup():
     """ Start the minimum OS setup, create some uses and devices.
@@ -137,6 +139,20 @@ def migrate_ent_setup():
     cli = CliTenantadm(docker_prefix=docker_compose_instance)
     tid = cli.create_org('tenant', u.name, u.pwd)
     time.sleep(10)
+
+    c = Conductor(get_mender_conductor())
+    wfs = c.get_running_wfs('create_organization')
+    print('RUNNING WFS: \n {}'.format(wfs))
+    assert len(wfs['results']) == 1
+
+    time.sleep(10)
+
+    wfid = wfs['results'][0]['workflowId']
+    wf = c.get_wf(wfid)
+    print('OUR WF {}'.format(wf))
+
+    # always fails ?!
+    assert wf['status'] == 'COMPLETED'
 
     tenant = cli.get_tenant(tid)
 

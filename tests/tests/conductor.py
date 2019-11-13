@@ -18,9 +18,21 @@ from ..MenderAPI.requests_helpers import requests_retry
 
 class Conductor:
     API_WF_SEARCH = '/api/workflow/search'
+    API_WF_RUNNING = '/api/workflow/running/{}'
+    API_WF = '/api/workflow/{}'
 
     def __init__(self, host):
         self.addr = 'http://%s:8080' % (host,)
+
+    def get_running_wfs(self, name):
+        rsp = requests.get(self.addr+self.API_WF_SEARCH.format(name))
+        assert rsp.status_code == 200
+        return rsp.json()
+
+    def get_wf(self, wfid):
+        rsp = requests.get(self.addr+self.API_WF.format(wfid))
+        assert rsp.status_code == 200
+        return rsp.json()
 
     def get_decommission_device_wfs(self, device_id, state='COMPLETED'):
         """

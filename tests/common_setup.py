@@ -23,6 +23,13 @@ from .MenderAPI import auth, auth_v2, reset_mender_api
 from .common import *
 from .common_docker import *
 
+from testutils.infra.container_manager import factory
+container_factory = factory.get_factory()
+
+# Temporary ugly hack...
+from testutils.infra.container_manager import docker_compose_manager
+docker_compose_manager.docker_compose_instance = conftest.docker_compose_instance
+
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):
         out = subprocess.check_output("docker-compose -p %s %s ps -q" % (conftest.docker_compose_instance, "-f " + " -f ".join(defined_in)), shell=True)
@@ -36,69 +43,66 @@ def wait_for_containers(expected_containers, defined_in):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
-    restart_docker_compose()
+    env = container_factory.getStandardSetup(1)
+    env.setup()
+
+    ssh_is_opened()
     reset_mender_api()
 
-
-def setup_set_client_number_bootstrapped(clients):
-    docker_compose_cmd("scale mender-client=%d" % clients)
-    ssh_is_opened()
-
-    auth.reset_auth_token()
-    auth_v2.accept_devices(clients)
-
+    request.addfinalizer(env.teardown)
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client_bootstrapped():
-    restart_docker_compose()
+def standard_setup_one_client_bootstrapped(request):
+    env = container_factory.getStandardSetup(1)
+    env.setup()
+
+    ssh_is_opened()
     reset_mender_api()
     auth_v2.accept_devices(1)
 
+    request.addfinalizer(env.teardown)
 
 @pytest.fixture(scope="function")
-def standard_setup_one_rofs_client_bootstrapped():
-    stop_docker_compose()
-    reset_mender_api()
-
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.client.rofs.yml up -d")
+def standard_setup_one_rofs_client_bootstrapped(request):
+    env = container_factory.getRofsClientSetup()
+    env.setup()
 
     ssh_is_opened()
-
-    auth.reset_auth_token()
+    reset_mender_api()
     auth_v2.accept_devices(1)
 
+    request.addfinalizer(env.teardown)
 
 @pytest.fixture(scope="function")
-def standard_setup_one_docker_client_bootstrapped():
-    stop_docker_compose()
-    reset_mender_api()
-
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
-                       use_common_files=False)
+def standard_setup_one_docker_client_bootstrapped(request):
+    env = container_factory.getDockerClientSetup()
+    env.setup()
 
     ssh_is_opened()
-
-    auth.reset_auth_token()
+    reset_mender_api()
     auth_v2.accept_devices(1)
 
+    request.addfinalizer(env.teardown)
+
 @pytest.fixture(scope="function")
-def standard_setup_two_clients_bootstrapped():
-    restart_docker_compose(2)
+def standard_setup_two_clients_bootstrapped(request):
+    env = container_factory.getStandardSetup(2)
+    env.setup()
+
+    ssh_is_opened()
     reset_mender_api()
     auth_v2.accept_devices(2)
 
+    request.addfinalizer(env.teardown)
+
 @pytest.fixture(scope="function")
-def standard_setup_without_client():
-    stop_docker_compose()
+def standard_setup_without_client(request):
+    env = container_factory.getStandardSetup(0)
+    env.setup()
+
     reset_mender_api()
 
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml up -d",
-                       use_common_files=False)
+    request.addfinalizer(env.teardown)
 
 @pytest.fixture(scope="function")
 def setup_with_legacy_client():

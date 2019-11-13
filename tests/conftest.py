@@ -22,7 +22,7 @@ else:
 
 import logging
 import requests
-from .common_docker import stop_docker_compose, log_files
+from .common_docker import stop_docker_compose
 import random
 import filelock
 import uuid
@@ -33,12 +33,14 @@ import pytest
 import distutils.spawn
 from . import log
 from .tests.mendertesting import MenderTesting
+from testutils.infra.container_manager import log_files
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("filelock").setLevel(logging.INFO)
 logger = log.setup_custom_logger("root", "master")
+logging.getLogger().setLevel(logging.INFO)
 
 docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 

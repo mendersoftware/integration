@@ -132,6 +132,11 @@ def migrate_ent_setup():
     """
     ensure_conductor_ready(60, 'create_organization')
 
+    # extra long sleep to make sure all services ran their migrations
+    # maybe conductor fails because some services are still in a migration phase,
+    # and not serving the API yet?
+    time.sleep(30)
+
     u = User('', 'baz@tenant.com', 'correcthorse')
 
     cli = CliTenantadm(docker_prefix=docker_compose_instance)

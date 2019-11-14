@@ -13,15 +13,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
 import time
+
+from fabric.api import *
 import pytest
-from ..common_setup import *
-from ..helpers import Helpers
+
+from ..common_setup import standard_setup_one_client
+from ..common_docker import get_mender_clients, get_mender_conductor
 from .common_update import common_update_procedure
-from ..MenderAPI import inv, auth_v2
+from ..MenderAPI import inv, auth_v2, logger
 from .mendertesting import MenderTesting
-from conductor import Conductor
+from .conductor import Conductor
 
 
 class TestDeviceDecommissioning(MenderTesting):

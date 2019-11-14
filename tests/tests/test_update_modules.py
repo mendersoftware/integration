@@ -13,15 +13,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+import subprocess
+import tempfile
+import shutil
+
 from fabric.api import *
 import pytest
-from ..helpers import Helpers
-from .common_update import *
-from ..MenderAPI import deploy, image
-from .mendertesting import MenderTesting
-from ..common_setup import *
-import shutil
+
+from .. import conftest
 from ..common import *
+from ..common_setup import standard_setup_one_docker_client_bootstrapped, \
+                           standard_setup_one_client_bootstrapped
+from ..common_docker import docker_compose_cmd, get_mender_clients
+from .common_update import common_update_procedure, update_image_successful
+from ..MenderAPI import deploy, logger
+from .mendertesting import MenderTesting
 
 class TestUpdateModules(MenderTesting):
     @MenderTesting.fast

@@ -13,20 +13,24 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
+import os
 import json
-import pytest
 import re
 import shutil
-import subprocess
 import tempfile
 import time
-from ..common_setup import *
-from ..helpers import Helpers
-from ..MenderAPI import deploy, image, logger
-from .common_update import *
-from .mendertesting import MenderTesting
+
+import pytest
+from fabric.api import *
+
+from .. import conftest
 from ..common import *
+from ..common_setup import standard_setup_one_client_bootstrapped
+from ..common_docker import get_mender_clients
+from .common_update import common_update_procedure, update_image_failed
+from ..helpers import Helpers
+from ..MenderAPI import deploy
+from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
     {

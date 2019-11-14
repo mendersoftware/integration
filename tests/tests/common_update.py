@@ -13,15 +13,17 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from ..common_docker import *
+import tempfile
+import random
+
+from fabric.api import *
+import pytest
+
+from .. import conftest
 from ..common import *
 from ..helpers import Helpers
 from ..MenderAPI import auth_v2, deploy, image, logger
-import random
-from fabric.api import *
-import tempfile
 from . import artifact_lock
-import pytest
 
 
 def common_update_procedure(install_image=None,
@@ -154,7 +156,6 @@ def update_image_failed(install_image="broken_update.ext4",
         The resulting upgrade will be considered a failure.
     """
 
-    devices_accepted = get_mender_clients()
     original_image_id = Helpers.yocto_id_installed_on_machine()
 
     previous_active_part = Helpers.get_active_partition()

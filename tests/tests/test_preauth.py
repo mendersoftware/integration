@@ -13,19 +13,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
-from .mendertesting import MenderTesting
-from ..common_setup import *
-from ..MenderAPI import auth_v2, inv
-import pytest
 import json
 import logging
-
+import time
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
 
-import time
+from fabric.api import *
+import pytest
+
+from ..common_setup import standard_setup_one_client, enterprise_no_client
+from ..common_docker import get_mender_clients, new_tenant_client, ssh_is_opened
+from .mendertesting import MenderTesting
+from ..MenderAPI import auth, auth_v2, inv
 
 
 class TestPreauthBase(MenderTesting):

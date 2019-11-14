@@ -15,12 +15,13 @@
 
 from fabric.api import *
 import pytest
-import time
+
+from .. import conftest
 from ..common import *
-from ..common_setup import *
-from ..helpers import Helpers
-from ..MenderAPI import auth_v2, deploy, image, logger
-from .common_update import update_image_successful, update_image_failed, common_update_procedure
+from ..common_setup import standard_setup_with_signed_artifact_client
+from ..common_docker import get_mender_clients
+from .common_update import update_image_successful, common_update_procedure
+from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
 @MenderTesting.fast

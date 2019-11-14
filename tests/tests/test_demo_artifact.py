@@ -17,14 +17,14 @@ import logging
 import os
 import signal
 import subprocess
+import time
 
 import pytest
-import requests
 
 from .. import conftest
-from ..common_docker import *
 from ..common_setup import running_custom_production_setup
-from ..MenderAPI import *
+from ..common_docker import stop_docker_compose
+from ..MenderAPI import authentication, deployments, DeviceAuthV2
 from .mendertesting import MenderTesting
 
 

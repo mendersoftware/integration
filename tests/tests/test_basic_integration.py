@@ -13,16 +13,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
-import pytest
-from ..common import *
-from ..common_setup import *
-from ..helpers import Helpers
-from .common_update import update_image_successful, update_image_failed
-from ..MenderAPI import deploy, image, inv
-from .mendertesting import MenderTesting
 import shutil
 import os
+
+from fabric.api import *
+import pytest
+
+from .. import conftest
+from ..common import *
+from ..common_setup import standard_setup_one_rofs_client_bootstrapped, \
+                           standard_setup_with_short_lived_token, setup_failover, \
+                           standard_setup_one_client_bootstrapped
+from ..common_docker import get_mender_clients
+from .common_update import update_image_successful, update_image_failed
+from ..MenderAPI import image, inv, logger
+from .mendertesting import MenderTesting
 
 class TestBasicIntegration(MenderTesting):
 

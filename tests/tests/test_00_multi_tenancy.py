@@ -13,15 +13,19 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import tempfile
+
 from fabric.api import *
 import pytest
+
+from .. import conftest
 from ..common import *
-from ..common_docker import *
-from ..common_setup import *
-from ..helpers import Helpers
-from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
+from ..common_setup import enterprise_no_client
+from ..common_docker import get_mender_clients, get_mender_client_by_container_name, \
+                            ssh_is_opened, new_tenant_client
 from .common_update import update_image_successful, update_image_failed, \
-                          common_update_procedure
+                           common_update_procedure
+from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
 from . import artifact_lock
 

@@ -155,7 +155,7 @@ if [[ $retval -ne 0 ]]; then
 fi
 
 USER='mender-demo@example.com'
-PASSWORD=$(base64 /dev/urandom | head -c 12)
+PASSWORD=$(hexdump -n 6 -e '"%X"' < /dev/urandom)
 
 
 RETRY_LIMIT=5

@@ -4,17 +4,17 @@ from .docker_compose_manager import DockerComposeDockerClientSetup
 from .docker_compose_manager import DockerComposeRofsClientSetup
 
 class ContainerManagerFactory:
-    def getStandardSetup(self): pass
-    def getDockerClientSetup(self): pass
-    def getRofsClientSetup(self): pass
+    def getStandardSetup(self, name, num_clients=1): pass
+    def getDockerClientSetup(self, name): pass
+    def getRofsClientSetup(self, name): pass
 
 class DockerComposeManagerFactory(ContainerManagerFactory):
-    def getStandardSetup(self, num_clients=1):
-        return DockerComposeStandardSetup(num_clients)
-    def getDockerClientSetup(self):
-        return DockerComposeDockerClientSetup()
-    def getRofsClientSetup(self):
-        return DockerComposeRofsClientSetup()
+    def getStandardSetup(self, name, num_clients=1):
+        return DockerComposeStandardSetup(name, num_clients)
+    def getDockerClientSetup(self, name):
+        return DockerComposeDockerClientSetup(name)
+    def getRofsClientSetup(self, name):
+        return DockerComposeRofsClientSetup(name)
 
 def get_factory(manager_id="docker-compose"):
     if manager_id == "docker-compose":

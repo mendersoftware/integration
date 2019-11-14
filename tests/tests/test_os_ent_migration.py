@@ -93,8 +93,8 @@ def initialize_os_setup():
     dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
     dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
 
-    users = [create_user("foo@tenant.com", "correcthorse", docker_prefix=docker_compose_instance),
-             create_user("bar@tenant.com", "correcthorse", docker_prefix=docker_compose_instance)]
+    users = [create_user("foo@tenant.com", "correcthorse", containers_namespace=docker_compose_instance),
+             create_user("bar@tenant.com", "correcthorse", containers_namespace=docker_compose_instance)]
 
     r = uadmm.call('POST',
                    useradm.URL_LOGIN,
@@ -138,7 +138,7 @@ def migrate_ent_setup():
 
     u = User('', 'baz@tenant.com', 'correcthorse')
 
-    cli = CliTenantadm(docker_prefix=docker_compose_instance)
+    cli = CliTenantadm(containers_namespace=docker_compose_instance)
     tid = cli.create_org('tenant', u.name, u.pwd)
     time.sleep(10)
 

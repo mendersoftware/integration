@@ -1,6 +1,7 @@
 
 import os
 import time
+import socket
 import subprocess
 import filelock
 import logging
@@ -37,6 +38,29 @@ class DockerComposeNamespace(DockerNamespace):
     ]
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
+    ]
+    LEGACY_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
+    ]
+    SIGNED_ARTIFACT_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml"
+    ]
+    SHORT_LIVED_TOKEN_FILES = [
+        COMPOSE_FILES_PATH + "/extra/expired-token-testing/docker-compose.short-token.yml"
+    ]
+    FAILOVER_SERVER_FILES = [
+        COMPOSE_FILES_PATH + "/extra/failover-testing/docker-compose.failover-server.yml"
+    ]
+    ENTERPRISE_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+    ]
+    SMTP_FILES = [
+        COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml",
+        COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
     def __init__(self, name):
@@ -88,11 +112,22 @@ class DockerComposeNamespace(DockerNamespace):
                     return output
 
                 except subprocess.CalledProcessError as e:
-                    print("failed to run docker-compose: error: %s, retrying..." % (e.output))
+                    logging.info("failed to run docker-compose: error: %s, retrying..." % (e.output))
                     time.sleep(count * 30)
                     continue
 
             raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
+
+    def wait_for_containers(self, expected_containers, defined_in):
+        for _ in range(60 * 5):
+            out = subprocess.check_output("docker-compose -p %s %s ps -q" % (self.name, "-f " + " -f ".join(defined_in)), shell=True)
+            if len(out.split()) == expected_containers:
+                time.sleep(60)
+                return
+            else:
+                time.sleep(1)
+
+        raise Exception("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, self.name))
 
     def start_docker_compose(self, clients=1):
         self.docker_compose_cmd("up -d")
@@ -135,5 +170,60 @@ class DockerComposeRofsClientSetup(DockerComposeNamespace):
         DockerComposeNamespace.__init__(self, name)
     def setup(self):
         self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.QEMU_CLIENT_ROFS_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeLegacyClientSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.LEGACY_CLIENT_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.SIGNED_ARTIFACT_CLIENT_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.SHORT_LIVED_TOKEN_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeFailoverServerSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.FAILOVER_SERVER_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeEnterpriseSetup(DockerComposeNamespace):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        if self.num_clients > 0:
+            raise NotImplementedError("Clients not implemented for Enterprise setup")
+        else:
+            self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.ENTERPRISE_FILES)
+            self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES)
+    def teardown(self):
+        self.stop_docker_compose()
+
+class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
+    def __init__(self, name):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        host_ip = get_host_ip()
+        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.ENTERPRISE_FILES+self.SMTP_FILES, env={"HOST_IP": host_ip})
+        self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES+self.SMTP_FILES)
     def teardown(self):
         self.stop_docker_compose()

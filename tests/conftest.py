@@ -177,14 +177,8 @@ def pytest_unconfigure(config):
         except:
             pass
 
-
-def pytest_runtest_teardown(item, nextitem):
-    if nextitem is None:
-        stop_docker_compose()
-
 def get_valid_image():
     return env.valid_image
-
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here

@@ -7,12 +7,7 @@ import logging
 import tempfile
 
 from . import log_files
-from .base import BaseContainerManagerNamespace
-
-# Temporary hack: assume the caller sets the variable to whatever is
-# used globally (ie.e conftest.docker_compose_instance)
-# This will eventually be the id of the namespace
-docker_compose_instance = "invalid"
+from .docker_manager import DockerNamespace
 
 # Global lock to sycronize calls to docker-compose
 docker_lock = filelock.FileLock("docker_lock")
@@ -24,7 +19,7 @@ def get_host_ip():
     s.close()
     return host_ip
 
-class DockerComposeNamespace(BaseContainerManagerNamespace):
+class DockerComposeNamespace(DockerNamespace):
 
     COMPOSE_FILES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -43,6 +38,9 @@ class DockerComposeNamespace(BaseContainerManagerNamespace):
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
     ]
+
+    def __init__(self, name):
+        DockerNamespace.__init__(self, name)
 
     def store_logs(self):
         tfile = tempfile.mktemp("mender_testing")
@@ -67,7 +65,7 @@ class DockerComposeNamespace(BaseContainerManagerNamespace):
                 files_args += " -f %s" % file
 
         with docker_lock:
-            cmd = "docker-compose -p %s %s %s" % (docker_compose_instance,
+            cmd = "docker-compose -p %s %s %s" % (self.name,
                                                 files_args,
                                                 arg_list)
 
@@ -105,16 +103,17 @@ class DockerComposeNamespace(BaseContainerManagerNamespace):
     def stop_docker_compose(self):
         with docker_lock:
             # Take down all docker instances in this namespace.
-            cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % docker_compose_instance
+            cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logging.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
-            cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % docker_compose_instance
+            cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % self.name
             logging.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
 class DockerComposeStandardSetup(DockerComposeNamespace):
-    def __init__(self, num_clients=1):
+    def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
+        DockerComposeNamespace.__init__(self, name)
     def setup(self):
         if self.num_clients > 0:
             self.start_docker_compose(self.num_clients)
@@ -124,12 +123,16 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
         self.stop_docker_compose()
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
     def setup(self):
         self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.DOCKER_CLIENT_FILES)
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeRofsClientSetup(DockerComposeNamespace):
+    def __init__(self, name, ):
+        DockerComposeNamespace.__init__(self, name)
     def setup(self):
         self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.QEMU_CLIENT_ROFS_FILES)
     def teardown(self):

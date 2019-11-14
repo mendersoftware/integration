@@ -21,7 +21,10 @@ from requests.auth import HTTPBasicAuth
 from . import logger
 from . import api_version
 from .requests_helpers import requests_retry
-from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILES_PATH
+from ..common_docker import get_mender_gateway
+
+from ..conftest import docker_compose_instance
+from testutils.infra.cli import CliUseradm, CliTenantadm
 
 class Authentication:
     auth_header = None
@@ -111,11 +114,8 @@ class Authentication:
         return self.auth_header
 
     def create_user(self, username, password, tenant_id=""):
-        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user ' \
-            '--username %s --password %s' % (username, password)
-        if tenant_id != "":
-            cmd += " --tenant-id %s" % tenant_id
-        docker_compose_cmd(cmd)
+        cli = CliUseradm(containers_namespace=docker_compose_instance)
+        uid = cli.create_user(username, password, tenant_id)
 
     def get_tenant_id(self):
         return self.current_tenant["tenant_id"]
@@ -136,17 +136,11 @@ class Authentication:
         return r
 
     def _create_org(self, name, username, password):
-        cmd = "-f " + os.path.join(
-            COMPOSE_FILES_PATH,
-            "docker-compose.enterprise.yml") \
-            + " exec -T mender-tenantadm /usr/bin/tenantadm create-org " \
-            + "--name %s --username %s --password %s" % (name,
-                                                         username,
-                                                         password)
-        return docker_compose_cmd(cmd)
+        cli = CliTenantadm(containers_namespace=docker_compose_instance)
+        tenant_id = cli.create_org(name, username, password)
+        return tenant_id
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml ' \
-            + 'exec -T mender-tenantadm /usr/bin/tenantadm' \
-            + ' get-tenant --id %s' % (tenant_id)
-        return docker_compose_cmd(cmd)
+        cli = CliTenantadm(containers_namespace=docker_compose_instance)
+        tenant = cli.get_tenant(tenant_id)
+        return tenant

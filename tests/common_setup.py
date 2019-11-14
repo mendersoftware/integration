@@ -26,10 +26,6 @@ from .common_docker import *
 from testutils.infra.container_manager import factory
 container_factory = factory.get_factory()
 
-# Temporary ugly hack...
-from testutils.infra.container_manager import docker_compose_manager
-docker_compose_manager.docker_compose_instance = conftest.docker_compose_instance
-
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):
         out = subprocess.check_output("docker-compose -p %s %s ps -q" % (conftest.docker_compose_instance, "-f " + " -f ".join(defined_in)), shell=True)
@@ -43,7 +39,7 @@ def wait_for_containers(expected_containers, defined_in):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
-    env = container_factory.getStandardSetup(1)
+    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 1)
     env.setup()
 
     ssh_is_opened()
@@ -53,7 +49,7 @@ def standard_setup_one_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped(request):
-    env = container_factory.getStandardSetup(1)
+    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 1)
     env.setup()
 
     ssh_is_opened()
@@ -64,7 +60,7 @@ def standard_setup_one_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_rofs_client_bootstrapped(request):
-    env = container_factory.getRofsClientSetup()
+    env = container_factory.getRofsClientSetup(conftest.docker_compose_instance)
     env.setup()
 
     ssh_is_opened()
@@ -75,7 +71,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_docker_client_bootstrapped(request):
-    env = container_factory.getDockerClientSetup()
+    env = container_factory.getDockerClientSetup(conftest.docker_compose_instance)
     env.setup()
 
     ssh_is_opened()
@@ -86,7 +82,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped(request):
-    env = container_factory.getStandardSetup(2)
+    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 2)
     env.setup()
 
     ssh_is_opened()
@@ -97,7 +93,7 @@ def standard_setup_two_clients_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_without_client(request):
-    env = container_factory.getStandardSetup(0)
+    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 0)
     env.setup()
 
     reset_mender_api()

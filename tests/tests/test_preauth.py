@@ -54,8 +54,10 @@ class TestPreauthBase(MenderTesting):
         dev_preauth = [d for d in devs if d['status'] == 'preauthorized']
         assert len(dev_preauth) == 1
         dev_preauth = dev_preauth[0]
-        assert dev_preauth['identity_data'] == preauth_iddata_str
-        assert dev_preauth['pubkey'] == preauth_key
+        logging.info("dev_prauth_map: " + str(dev_preauth))
+        assert dev_preauth['identity_data'] == preauth_iddata
+        assert len(dev_preauth['auth_sets']) == 1
+        assert dev_preauth['auth_sets'][0]['pubkey'] == preauth_key
 
         # make one of the existing devices the preauthorized device
         # by substituting id data and restarting
@@ -80,8 +82,9 @@ class TestPreauthBase(MenderTesting):
         dev_accepted = dev_accepted[0]
         logging.info("accepted device: " + str(dev_accepted))
 
-        assert dev_accepted['identity_data'] == preauth_iddata_str
-        assert dev_accepted['pubkey'] == preauth_key
+        assert dev_accepted['identity_data'] == preauth_iddata
+        assert len(dev_preauth['auth_sets']) == 1
+        assert dev_accepted['auth_sets'][0]['pubkey'] == preauth_key
 
         # verify device was issued a token
         res = execute(Client.have_authtoken, hosts=client)
@@ -154,7 +157,6 @@ UwIDAQAB
 
 
 class TestPreauth(TestPreauthBase):
-    @pytest.mark.skip(reason="there is a problem with this test: MEN-1797")
     @pytest.mark.usefixtures("standard_setup_one_client")
     def test_ok_preauth_and_bootstrap(self):
         self.do_test_ok_preauth_and_bootstrap()
@@ -169,7 +171,6 @@ class TestPreauth(TestPreauthBase):
 
 
 class TestPreauthEnterprise(TestPreauthBase):
-    @pytest.mark.skip(reason="there is a problem with this test: MEN-1797")
     @pytest.mark.usefixtures("enterprise_no_client")
     def test_ok_preauth_and_bootstrap(self):
         self.__create_tenant_and_container()

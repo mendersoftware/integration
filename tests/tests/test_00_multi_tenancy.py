@@ -100,6 +100,11 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
     @pytest.mark.usefixtures("enterprise_no_client")
     def test_artifacts_exclusive_to_user(self):
+        # extra long sleep to make sure all services ran their migrations
+        # maybe conductor fails because some services are still in a migration phase,
+        # and not serving the API yet?
+        time.sleep(30)
+
         users = [
             {"email": "foo1@foo1.com", "password": "hunter2hunter2", "username": "foo1"},
             {"email": "bar2@bar2.com", "password": "hunter2hunter2", "username": "bar2"},

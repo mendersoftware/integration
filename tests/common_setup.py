@@ -187,9 +187,6 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):
-    if conftest.is_integration_branch:
-        pytest.skip("Enterprise tests disabled on integration branches")
-
     stop_docker_compose()
     reset_mender_api()
 
@@ -212,9 +209,6 @@ def enterprise_no_client(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client_smtp(request):
-    if conftest.is_integration_branch:
-        pytest.skip("Enterprise tests disabled on integration branches")
-
     stop_docker_compose()
     reset_mender_api()
 

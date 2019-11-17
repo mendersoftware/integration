@@ -46,7 +46,6 @@ docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 inline_logs = False
-is_integration_branch = False
 machine_name = None
 
 try:
@@ -112,13 +111,6 @@ def pytest_configure(config):
     env.connection_attempts = 50
     env.eagerly_disconnect = True
     env.banner_timeout = 10
-
-    version = subprocess.check_output(["../extra/release_tool.py", "--version-of", "integration"])
-    if re.search("(^|/)[0-9]+\.[0-9]+\.[x0-9]+", version):
-        # Don't run enterprise tests for release branches.
-        # Has to do with tenantadm's release cycle (master only), but we're forced to skip the whole enterprise set.
-        global is_integration_branch
-        is_integration_branch = True
 
     MenderTesting.set_test_conditions(config)
 

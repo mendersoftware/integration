@@ -45,7 +45,6 @@ docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
-inline_logs = False
 machine_name = None
 
 try:
@@ -59,17 +58,13 @@ def pytest_addoption(parser):
     parser.addoption("--runfast", action="store_true", help="run fast tests")
 
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
-    parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
 
     parser.addoption("--machine-name", action="store", default="qemux86-64",
                      help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
 
 
 def pytest_configure(config):
-    global extra_files, inline_logs
     verify_sane_test_environment()
-
-    inline_logs = config.getoption("--inline-logs")
 
     global machine_name
     machine_name = config.getoption("--machine-name")

@@ -28,7 +28,7 @@ def standard_setup_one_client(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
 
     request.addfinalizer(env.teardown)
 
@@ -40,7 +40,7 @@ def standard_setup_one_client_bootstrapped(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth_v2.accept_devices(1)
 
     request.addfinalizer(env.teardown)
@@ -53,7 +53,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth_v2.accept_devices(1)
 
     request.addfinalizer(env.teardown)
@@ -66,7 +66,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth_v2.accept_devices(1)
 
     request.addfinalizer(env.teardown)
@@ -79,7 +79,7 @@ def standard_setup_two_clients_bootstrapped(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth_v2.accept_devices(2)
 
     request.addfinalizer(env.teardown)
@@ -91,7 +91,7 @@ def standard_setup_without_client(request):
     env = container_factory.getStandardSetup(conftest.docker_compose_instance, 0)
     env.setup()
 
-    reset_mender_api()
+    reset_mender_api(env)
 
     request.addfinalizer(env.teardown)
 
@@ -109,7 +109,7 @@ def setup_with_legacy_client(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth_v2.accept_devices(1)
 
     request.addfinalizer(env.teardown)
@@ -122,7 +122,7 @@ def standard_setup_with_signed_artifact_client(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
 
@@ -136,7 +136,7 @@ def standard_setup_with_short_lived_token(request):
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
-    reset_mender_api()
+    reset_mender_api(env)
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
 
@@ -155,7 +155,7 @@ def setup_failover(request):
     env = container_factory.getFailoverServerSetup(conftest.docker_compose_instance)
     env.setup()
 
-    reset_mender_api()
+    reset_mender_api(env)
     Helpers.ssh_is_opened(env.get_mender_clients())
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
@@ -168,7 +168,7 @@ def setup_failover(request):
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
-    reset_mender_api()
+    reset_mender_api(None)
 
     def fin():
         conftest.production_setup_lock.release()
@@ -182,7 +182,7 @@ def enterprise_no_client(request):
     env = container_factory.getEnterpriseSetup(conftest.docker_compose_instance, 0)
     env.setup()
 
-    reset_mender_api()
+    reset_mender_api(env)
 
     request.addfinalizer(env.teardown)
 
@@ -192,7 +192,7 @@ def enterprise_no_client(request):
 def enterprise_no_client_smtp(request):
     env = container_factory.getEnterpriseSMTPSetup(conftest.docker_compose_instance)
     env.setup()
-    reset_mender_api()
+    reset_mender_api(env)
 
     request.addfinalizer(env.teardown)
 

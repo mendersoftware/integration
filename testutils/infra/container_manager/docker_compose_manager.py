@@ -145,6 +145,108 @@ class DockerComposeNamespace(DockerNamespace):
             logging.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
+    def stop_docker_compose_exclude(self, exclude=[]):
+        """
+        Take down all docker instances in this namespace, except for 'exclude'd container names.
+        'exclude' doesn't need exact names, it's a verbatim grep regex.
+        """
+        with docker_lock:
+            cmd = "docker ps -aq -f name=%s  | xargs -r docker rm -fv" % self.name
+
+            # exclude containers by crude grep -v and awk'ing out the id
+            # that's because docker -f allows only simple comparisons, no negations/logical ops
+            if len(exclude) != 0:
+                cmd_excl = 'grep -vE "(' + " | ".join(exclude) + ')"'
+                cmd_id = "awk 'NR>1 {print $1}'"
+                cmd = "docker ps -a -f name=%s | %s | %s | xargs -r docker rm -fv" % (self.name, cmd_excl, cmd_id)
+
+            logging.info("running %s" % cmd)
+            subprocess.check_call(cmd, shell=True)
+
+            # if we're preserving some containers, don't destroy the network (will error out on exit)
+            if len(exclude) == 0:
+                cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % self.name
+                logging.info("running %s" % cmd)
+                subprocess.check_call(cmd, shell=True)
+
+    def restart_docker_compose(self, clients=1):
+        self.stop_docker_compose()
+        self.start_docker_compose(clients)
+
+    def docker_get_ip_of(self, service):
+        """Return a list of IP addresseses of `service`. `service` is the same name as
+        present in docker-compose files.
+        """
+        temp = "docker ps -q " \
+            "--filter label=com.docker.compose.project={project} " \
+            "--filter label=com.docker.compose.service={service} "
+        cmd = temp.format(project=self.name,
+                        service=service)
+
+        output = subprocess.check_output(cmd + \
+                                        "| xargs -r " \
+                                        "docker inspect --format='{{.NetworkSettings.Networks.%s_mender.IPAddress}}'" % \
+                                        self.name,
+                                        shell=True)
+
+        # Return as list of strings (Python 2/3 compatible)
+        if isinstance(output, bytes):
+            return output.decode().split()
+        return output.split()
+
+    def docker_get_docker_host_ip(self):
+        """Returns the IP of the host running the Docker containers. The IP will be
+        for the correct docker-compose instance.
+        """
+        temp = "docker ps -q " \
+            "--filter label=com.docker.compose.project={project} "
+        cmd = temp.format(project=self.name)
+
+        output = subprocess.check_output(cmd + \
+                                        "| head -n1 | xargs -r " \
+                                        "docker inspect --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'",
+                                        shell=True)
+        # Return as string (Python 2/3 compatible)
+        if isinstance(output, bytes):
+            return output.decode().split()[0]
+        return output.split()[0]
+
+    def get_mender_clients(self, service="mender-client"):
+        clients = [ip + ":8822" for ip in self.docker_get_ip_of(service)]
+        return clients
+
+    def get_mender_client_by_container_name(self, image_name):
+        cmd = "docker inspect -f \'{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}\' %s_%s" % (self.name, image_name)
+        output = subprocess.check_output(cmd, shell=True)
+        # Return as string (Python 2/3 compatible)
+        if isinstance(output, bytes):
+            return output.decode().strip() + ":8822"
+        return output.strip() + ":8822"
+
+    def get_mender_gateway(self, service="mender-api-gateway"):
+        gateway = self.docker_get_ip_of(service)
+
+        if len(gateway) != 1:
+            raise SystemExit("expected one instance of api-gateway running, but found: %d instance(s)" % len(gateway))
+
+        return gateway[0]
+
+    def get_mender_conductor(self):
+        conductor = self.docker_get_ip_of("mender-conductor")
+
+        if len(conductor) != 1:
+            raise SystemExit("expected one instance of mender-conductor running, but found: %d instance(s)" % len(conductor))
+
+        return conductor[0]
+
+    def new_tenant_client(self, name, tenant):
+        logging.info("creating client connected to tenant: " + tenant)
+        self.docker_compose_cmd("-f " + self.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml -f " + self.COMPOSE_FILES_PATH + \
+                        "/docker-compose.mt.client.yml run -d --name=%s_%s mender-client" %
+                        (self.name, name),
+                        env={"TENANT_TOKEN": "%s" % tenant})
+        time.sleep(45)
+
 class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients

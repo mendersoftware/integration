@@ -212,35 +212,6 @@ def get_mender_conductor():
 
     return conductor[0]
 
-
-def ssh_is_opened(host=None):
-    if not host:
-        execute(ssh_is_opened_impl, hosts=get_mender_clients())
-    else:
-        execute(ssh_is_opened_impl, hosts=host)
-
-
-@parallel
-def ssh_is_opened_impl(cmd="true", wait=60*60):
-    count = 0
-    sleeptime = 1
-
-    while count < wait:
-        try:
-            # no point in printing this with each test
-            with quiet():
-                return run(cmd)
-        except BaseException:
-            time.sleep(sleeptime)
-            count += sleeptime
-            sleeptime *= 2
-            continue
-        else:
-            break
-    else:
-        logger.fatal("Unable to connect to host: %s", env.host_string)
-
-
 def new_tenant_client(name, tenant):
     logging.info("creating client connected to tenant: " + tenant)
     docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml -f " + COMPOSE_FILES_PATH + \

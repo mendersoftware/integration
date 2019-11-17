@@ -125,6 +125,30 @@ class Helpers:
 
         return ip_to_device_id
 
+    @staticmethod
+    def ssh_is_opened(host):
+        @parallel
+        def ssh_is_opened_impl(cmd="true", wait=60*60):
+            count = 0
+            sleeptime = 1
+
+            while count < wait:
+                try:
+                    # no point in printing this with each test
+                    with quiet():
+                        return run(cmd)
+                except BaseException:
+                    time.sleep(sleeptime)
+                    count += sleeptime
+                    sleeptime *= 2
+                    continue
+                else:
+                    break
+            else:
+                logger.fatal("Unable to connect to host: %s", env.host_string)
+
+        execute(ssh_is_opened_impl, hosts=host)
+
     class RebootDetector:
         server = None
         client_ip = None

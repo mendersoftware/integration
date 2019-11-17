@@ -24,7 +24,6 @@ from ..common import *
 from ..common_setup import standard_setup_one_rofs_client_bootstrapped, \
                            standard_setup_with_short_lived_token, setup_failover, \
                            standard_setup_one_client_bootstrapped
-from ..common_docker import get_mender_clients
 from .common_update import update_image_successful, update_image_failed
 from ..MenderAPI import image, inv, logger
 from .mendertesting import MenderTesting
@@ -35,13 +34,15 @@ class TestBasicIntegration(MenderTesting):
     @MenderTesting.fast
     @pytest.mark.skipif(not os.path.exists("mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name),
                         reason="Thud branch and older from Yocto does not have R/O rootfs support")
-    @pytest.mark.usefixtures("standard_setup_one_rofs_client_bootstrapped")
-    def test_double_update_rofs(self):
+    def test_double_update_rofs(self, standard_setup_one_rofs_client_bootstrapped):
         """Upgrade a device with two consecutive R/O images"""
+
+        mender_clients = standard_setup_one_rofs_client_bootstrapped.get_mender_clients()
 
         if not env.host_string:
             execute(self.test_double_update_rofs,
-                    hosts=get_mender_clients())
+                    standard_setup_one_rofs_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         # Verify that partition is read-only as expected
@@ -55,20 +56,21 @@ class TestBasicIntegration(MenderTesting):
 
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
-    def test_update_jwt_expired(self):
-        """Upload a device with two consecutive upgrade images"""
+    def test_update_jwt_expired(self, standard_setup_with_short_lived_token):
+        """Update a device with a short lived JWT token"""
+
+        mender_clients = standard_setup_with_short_lived_token.get_mender_clients()
 
         if not env.host_string:
             execute(self.test_update_jwt_expired,
-                    hosts=get_mender_clients())
+                    standard_setup_with_short_lived_token,
+                    hosts=mender_clients)
             return
 
         update_image_successful(install_image=conftest.get_valid_image())
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("setup_failover")
-    def test_update_failover_server(self):
+    def test_update_failover_server(self, setup_failover):
         """
         Client is initially set up against server A, and then receives an update
         containing a multi-server configuration, with server B as primary and A
@@ -77,9 +79,13 @@ class TestBasicIntegration(MenderTesting):
         To create the necessary configuration I use a state script to modify the
         /etc/mender/mender.conf
         """
+
+        mender_clients = setup_failover.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_update_failover_server,
-                    hosts=get_mender_clients())
+                    setup_failover,
+                    hosts=mender_clients)
             return
 
         valid_image = conftest.get_valid_image()
@@ -102,38 +108,44 @@ class TestBasicIntegration(MenderTesting):
             os.remove(tmp_image)
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_failed_updated_and_valid_update(self):
+    def test_failed_updated_and_valid_update(self, standard_setup_one_client_bootstrapped):
         """Upload a device with a broken image, followed by a valid image"""
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
 
         if not env.host_string:
             execute(self.test_failed_updated_and_valid_update,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         update_image_failed()
         update_image_successful(install_image=conftest.get_valid_image())
 
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_update_no_compression(self):
+    def test_update_no_compression(self, standard_setup_one_client_bootstrapped):
         """Uploads an uncompressed artifact, and runs the whole udpate process."""
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
 
         if not env.host_string:
             execute(self.test_update_no_compression,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         update_image_successful(install_image=conftest.get_valid_image(), compression_type="none")
 
 
 
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_forced_update_check_from_client(self):
+    def test_forced_update_check_from_client(self, standard_setup_one_client_bootstrapped):
         """Upload a device with a broken image, followed by a valid image"""
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
 
         if not env.host_string:
             execute(self.test_forced_update_check_from_client,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         # Give the image a really large wait interval.
@@ -176,12 +188,15 @@ class TestBasicIntegration(MenderTesting):
                                 deployment_triggered_callback=deployment_triggered_callback)
 
     @pytest.mark.timeout(1000)
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_forced_inventory_update_from_client(self):
+    def test_forced_inventory_update_from_client(self, standard_setup_one_client_bootstrapped):
         """Forces an inventory update from an idling client."""
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_forced_inventory_update_from_client,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         # Give the image a really large wait interval.

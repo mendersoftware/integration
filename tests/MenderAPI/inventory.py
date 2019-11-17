@@ -16,8 +16,8 @@
 import requests
 
 from . import api_version
+from . import get_container_manager
 from .requests_helpers import requests_retry
-from ..common_docker import get_mender_gateway
 
 class Inventory():
     auth = None
@@ -31,7 +31,7 @@ class Inventory():
         pass
 
     def get_inv_base_path(self):
-        return "https://%s/api/management/%s/inventory/" % (get_mender_gateway(), api_version)
+        return "https://%s/api/management/%s/inventory/" % (get_container_manager().get_mender_gateway(), api_version)
 
     def get_devices(self, has_group=None):
         """get_devices API. has_group can be True/False/None string."""

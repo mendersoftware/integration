@@ -21,16 +21,15 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import enterprise_no_client
-from ..common_docker import get_mender_clients, get_mender_client_by_container_name, \
-                            ssh_is_opened, new_tenant_client
 from .common_update import update_image_successful, update_image_failed, \
                            common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
+from ..helpers import Helpers
 from . import artifact_lock
 
 class TestMultiTenancyEnterprise(MenderTesting):
-    def mender_log_contains_aborted_string(self, mender_client_container="mender-client"):
+    def mender_log_contains_aborted_string(self):
         expected_string = "deployment aborted at the backend"
 
         for _ in range(60*5):
@@ -43,29 +42,18 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         pytest.fail("deployment never aborted.")
 
-    def perform_update(self, mender_client_container="mender-client", fail=False):
-
-        if fail:
-            execute(update_image_failed,
-                    hosts=get_mender_client_by_container_name(mender_client_container))
-        else:
-            execute(update_image_successful,
-                    install_image=conftest.get_valid_image(),
-                    skip_reboot_verification=True,
-                    hosts=get_mender_client_by_container_name(mender_client_container))
-
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_token_validity(self):
+    def test_token_validity(self, enterprise_no_client):
         """ verify that only devices with valid tokens can bootstrap
             successfully to a multitenancy setup """
 
         wrong_token = "wrong-token"
 
         def wait_until_bootstrap_attempt():
+            mender_clients = enterprise_no_client.get_mender_clients()
             if not env.host_string:
                 return execute(wait_until_bootstrap_attempt,
-                               hosts=get_mender_clients())
-            ssh_is_opened()
+                               hosts=mender_clients)
+            Helpers.ssh_is_opened(mender_clients)
 
             for i in range(1, 20):
                     with settings(hide('everything'), warn_only=True):
@@ -77,9 +65,10 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         def set_correct_tenant_token(token):
             if not env.host_string:
+                mender_clients = enterprise_no_client.get_mender_clients()
                 return execute(set_correct_tenant_token,
                                token,
-                               hosts=get_mender_clients())
+                               hosts=mender_clients)
 
             run("sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token))
             run("systemctl restart mender")
@@ -89,7 +78,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         token = auth.current_tenant["tenant_token"]
 
         # create a new client with an incorrect token set
-        new_tenant_client("mender-client", wrong_token)
+        enterprise_no_client.new_tenant_client("mender-client", wrong_token)
 
         if wait_until_bootstrap_attempt():
             for _ in range(5):
@@ -102,8 +91,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         set_correct_tenant_token(token)
         auth_v2.get_devices(expected_devices=1)
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_artifacts_exclusive_to_user(self):
+    def test_artifacts_exclusive_to_user(self, enterprise_no_client):
         # extra long sleep to make sure all services ran their migrations
         # maybe conductor fails because some services are still in a migration phase,
         # and not serving the API yet?
@@ -133,8 +121,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             assert len(artifacts_for_user)
             assert artifacts_for_user[0]["name"] == user["email"]
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_clients_exclusive_to_user(self):
+    def test_clients_exclusive_to_user(self, enterprise_no_client):
         users = [
             {
               "email": "foo1@foo1.com",
@@ -158,7 +145,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             auth.set_tenant(user["username"], user["email"], user["password"])
 
             t = auth.current_tenant["tenant_token"]
-            new_tenant_client(user["container"], t)
+            enterprise_no_client.new_tenant_client(user["container"], t)
             auth_v2.accept_devices(1)
 
             # get the new devices client_id and setting it to the our test parameter
@@ -190,8 +177,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             else:
                 assert False, "decommissioned device still available in inventory"
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_multi_tenancy_deployment(self):
+    def test_multi_tenancy_deployment(self, enterprise_no_client):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
 
@@ -217,19 +203,26 @@ class TestMultiTenancyEnterprise(MenderTesting):
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
-            new_tenant_client(user["container"], t)
+            enterprise_no_client.new_tenant_client(user["container"], t)
             auth_v2.accept_devices(1)
 
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
 
             assert len(inv.get_devices()) == 1
-            self.perform_update(mender_client_container=user["container"],
-                                fail=user["fail"])
+
+            mender_clients = enterprise_no_client.get_mender_client_by_container_name(user["container"])
+            if user["fail"]:
+                execute(update_image_failed,
+                        hosts=mender_clients)
+            else:
+                execute(update_image_successful,
+                        install_image=conftest.get_valid_image(),
+                        skip_reboot_verification=True,
+                        hosts=mender_clients)
 
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_multi_tenancy_deployment_aborting(self):
+    def test_multi_tenancy_deployment_aborting(self, enterprise_no_client):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
 
@@ -247,7 +240,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
-            new_tenant_client(user["container"], t)
+            enterprise_no_client.new_tenant_client(user["container"], t)
             auth_v2.accept_devices(1)
 
         for user in users:
@@ -255,5 +248,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             deploy.abort(deployment_id)
             deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
+            mender_clients = enterprise_no_client.get_mender_client_by_container_name(user["container"])
+
             execute(self.mender_log_contains_aborted_string,
-                    hosts=get_mender_client_by_container_name(user["container"]))
+                    hosts=mender_clients)

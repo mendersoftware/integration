@@ -23,7 +23,6 @@ import pytest
 
 from .. import conftest
 from ..common_setup import setup_with_legacy_client
-from ..common_docker import get_mender_clients
 from .common_update import update_image_successful, common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy
@@ -53,7 +52,7 @@ exit 0
         return name
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_failure(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_failure(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -64,9 +63,12 @@ exit 0
             and this time the update should succeed.
         """
 
+        mender_clients = setup_with_legacy_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_migrate_from_legacy_mender_v1_failure,
-                    hosts=get_mender_clients(),
+                    setup_with_legacy_client,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -99,7 +101,7 @@ exit 0
                 version=2)
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_success(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_success(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -109,9 +111,12 @@ exit 0
             any traces in the database that are causing issues.
         """
 
+        mender_clients = setup_with_legacy_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_migrate_from_legacy_mender_v1_success,
-                    hosts=get_mender_clients(),
+                    setup_with_legacy_client,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 

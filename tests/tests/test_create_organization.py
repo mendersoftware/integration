@@ -24,14 +24,12 @@ import pytest
 import smtpd_mock
 from ..common import *
 from ..common_setup import enterprise_no_client_smtp
-from ..common_docker import get_mender_gateway
 from ..MenderAPI.requests_helpers import requests_retry
 from .mendertesting import MenderTesting
 from ..MenderAPI import api_version
 
 class TestCreateOrganizationEnterprise(MenderTesting):
-    @pytest.mark.usefixtures("enterprise_no_client_smtp")
-    def test_success(self):
+    def test_success(self, enterprise_no_client_smtp):
 
         logging.info("Starting TestCreateOrganization")
         smtp_mock = SMTPMock()
@@ -42,8 +40,10 @@ class TestCreateOrganizationEnterprise(MenderTesting):
 
         logging.info("TestCreateOrganization: making request")
 
+        mender_gateway = enterprise_no_client_smtp.get_mender_gateway()
+
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % mender_gateway, data=payload, verify=False)
 
         assert rsp.status_code == 202
 
@@ -60,29 +60,34 @@ class TestCreateOrganizationEnterprise(MenderTesting):
         smtp_mock.assert_called()
         logging.info("TestCreateOrganization: Assert ok.")
 
-        r = requests_retry().post("https://%s/api/management/%s/useradm/auth/login" % (get_mender_gateway(), api_version),
+        r = requests_retry().post("https://%s/api/management/%s/useradm/auth/login" % (mender_gateway, api_version),
                                   verify=False,
                                   auth=HTTPBasicAuth("some.user@example.com", "asdfqwer1234"))
         assert r.status_code == 200
 
     @pytest.mark.usefixtures("enterprise_no_client_smtp")
-    def test_duplicate_organization_name(self):
+    def test_duplicate_organization_name(self, enterprise_no_client_smtp):
+        mender_gateway = enterprise_no_client_smtp.get_mender_gateway()
+
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % mender_gateway, data=payload, verify=False)
         assert rsp.status_code == 202
+
         payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user2@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % mender_gateway, data=payload, verify=False)
         assert rsp.status_code == 202
 
     @pytest.mark.usefixtures("enterprise_no_client_smtp")
-    def test_duplicate_email(self):
+    def test_duplicate_email(self, enterprise_no_client_smtp):
+        mender_gateway = enterprise_no_client_smtp.get_mender_gateway()
+
         payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % mender_gateway, data=payload, verify=False)
         logging.debug("first request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 202
 
         payload = {"request_id": "123457", "organization": "tenant-foo2", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
-        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % get_mender_gateway(), data=payload, verify=False)
+        rsp = requests_retry().post("https://%s/api/management/v1/tenantadm/tenants" % mender_gateway, data=payload, verify=False)
         logging.debug("second request to tenant adm returned: ", rsp.text)
         assert rsp.status_code == 409
 

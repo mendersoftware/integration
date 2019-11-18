@@ -23,18 +23,18 @@ from fabric.api import *
 import pytest
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
-from ..common_docker import get_mender_clients, new_tenant_client, ssh_is_opened
+from ..helpers import Helpers
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, auth_v2, inv
 
 
 class TestPreauthBase(MenderTesting):
-    def do_test_ok_preauth_and_bootstrap(self):
+    def do_test_ok_preauth_and_bootstrap(self, container_manager):
         """
             Test the happy path from preauthorizing a device to a successful bootstrap.
             Verify that the device/auth set appear correctly in devauth API results.
         """
-        client = get_mender_clients()[0]
+        client = container_manager.get_mender_clients()[0]
 
         # we'll use the same pub key for the preauth'd device, so get it
         res = execute(Client.get_pub_key, hosts=client)
@@ -157,42 +157,36 @@ UwIDAQAB
 
 
 class TestPreauth(TestPreauthBase):
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_ok_preauth_and_bootstrap(self):
-        self.do_test_ok_preauth_and_bootstrap()
+    def test_ok_preauth_and_bootstrap(self, standard_setup_one_client):
+        self.do_test_ok_preauth_and_bootstrap(standard_setup_one_client)
 
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_ok_preauth_and_remove(self):
+    def test_ok_preauth_and_remove(self, standard_setup_one_client):
         self.do_test_ok_preauth_and_remove()
 
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_fail_preauth_existing(self):
+    def test_fail_preauth_existing(self, standard_setup_one_client):
         self.do_test_fail_preauth_existing()
 
 
 class TestPreauthEnterprise(TestPreauthBase):
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_ok_preauth_and_bootstrap(self):
-        self.__create_tenant_and_container()
-        self.do_test_ok_preauth_and_bootstrap()
+    def test_ok_preauth_and_bootstrap(self, enterprise_no_client):
+        self.__create_tenant_and_container(enterprise_no_client)
+        self.do_test_ok_preauth_and_bootstrap(enterprise_no_client)
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_ok_preauth_and_remove(self):
-        self.__create_tenant_and_container()
+    def test_ok_preauth_and_remove(self, enterprise_no_client):
+        self.__create_tenant_and_container(enterprise_no_client)
         self.do_test_ok_preauth_and_remove()
 
-    @pytest.mark.usefixtures("enterprise_no_client")
-    def test_fail_preauth_existing(self):
-        self.__create_tenant_and_container()
+    def test_fail_preauth_existing(self, enterprise_no_client):
+        self.__create_tenant_and_container(enterprise_no_client)
         self.do_test_fail_preauth_existing()
 
-    def __create_tenant_and_container(self):
+    def __create_tenant_and_container(self, container_manager):
         auth.new_tenant("admin", "admin@tenant.com", "hunter2hunter2")
         token = auth.current_tenant["tenant_token"]
 
-        new_tenant_client("tenant-container", token)
-        client = get_mender_clients()[0]
-        ssh_is_opened(client)
+        container_manager.new_tenant_client("tenant-container", token)
+        client = container_manager.get_mender_clients()[0]
+        Helpers.ssh_is_opened(client)
 
 class Client:
     """Wraps various actions on the client, performed via SSH (inside fabric.execute())."""

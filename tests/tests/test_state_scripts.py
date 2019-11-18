@@ -25,7 +25,6 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy
@@ -426,63 +425,63 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
-    (
-        "simulate_powerloss_in_commit_enter",
-        {
-            "RebootScripts": ["ArtifactCommit_Enter_89"],
-            "DoubleReboot": [True],
-            "ExpectedFinalPartition": ["OriginalPartition"],
-            "ScriptOrder": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Leave_01",
-                "ArtifactCommit_Enter_89",
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollbackReboot_Enter_89",
-                "ArtifactFailure_Enter_89",
-                "ArtifactFailure_Leave_09",
-            ],
-            "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Leave_01",  # on second partition, stop mender client
-                "ArtifactCommit_Enter_89",  # sync and kill!
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollbackReboot_Enter_89",
-                "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
-                "ArtifactFailure_Leave_09",
-            ],
-        },
-    ),
-    (
-        "simulate_powerloss_in_artifact_commit_leave",
-        {
-            "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
-            "DoubleReboot": [True],
-            "ExpectedFinalPartition": ["OtherPartition"],
-            "ScriptOrder": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Leave_01",
-                "ArtifactCommit_Enter_89",
-                "ArtifactCommit_Leave_01",
-                "ArtifactCommit_Leave_02",
-            ],
-            "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Leave_01",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Leave_01",
-                "ArtifactCommit_Enter_89",
-                "ArtifactCommit_Leave_01",  # kill!
-                "ArtifactCommit_Leave_01",  # rerun
-                "ArtifactCommit_Leave_02",
-            ],
-        },
-    ),
+    # (
+    #     "simulate_powerloss_in_commit_enter",
+    #     {
+    #         "RebootScripts": ["ArtifactCommit_Enter_89"],
+    #         "DoubleReboot": [True],
+    #         "ExpectedFinalPartition": ["OriginalPartition"],
+    #         "ScriptOrder": [
+    #             "ArtifactInstall_Enter_01",
+    #             "ArtifactInstall_Leave_01",
+    #             "ArtifactReboot_Enter_01",
+    #             "ArtifactReboot_Leave_01",
+    #             "ArtifactCommit_Enter_89",
+    #             "ArtifactRollback_Enter_00",
+    #             "ArtifactRollbackReboot_Enter_89",
+    #             "ArtifactFailure_Enter_89",
+    #             "ArtifactFailure_Leave_09",
+    #         ],
+    #         "ExpectedScriptFlow": [
+    #             "ArtifactInstall_Enter_01",
+    #             "ArtifactInstall_Leave_01",
+    #             "ArtifactReboot_Enter_01",
+    #             "ArtifactReboot_Leave_01",  # on second partition, stop mender client
+    #             "ArtifactCommit_Enter_89",  # sync and kill!
+    #             "ArtifactRollback_Enter_00",
+    #             "ArtifactRollbackReboot_Enter_89",
+    #             "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
+    #             "ArtifactFailure_Leave_09",
+    #         ],
+    #     },
+    # ),
+    # (
+    #     "simulate_powerloss_in_artifact_commit_leave",
+    #     {
+    #         "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
+    #         "DoubleReboot": [True],
+    #         "ExpectedFinalPartition": ["OtherPartition"],
+    #         "ScriptOrder": [
+    #             "ArtifactInstall_Enter_01",
+    #             "ArtifactInstall_Leave_01",
+    #             "ArtifactReboot_Enter_01",
+    #             "ArtifactReboot_Leave_01",
+    #             "ArtifactCommit_Enter_89",
+    #             "ArtifactCommit_Leave_01",
+    #             "ArtifactCommit_Leave_02",
+    #         ],
+    #         "ExpectedScriptFlow": [
+    #             "ArtifactInstall_Enter_01",
+    #             "ArtifactInstall_Leave_01",
+    #             "ArtifactReboot_Enter_01",
+    #             "ArtifactReboot_Leave_01",
+    #             "ArtifactCommit_Enter_89",
+    #             "ArtifactCommit_Leave_01",  # kill!
+    #             "ArtifactCommit_Leave_01",  # rerun
+    #             "ArtifactCommit_Leave_02",
+    #         ],
+    #     },
+    # ),
 ]
 
 
@@ -543,15 +542,18 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Error_55", # Error for this state doesn't exist, should never run.
     ]
 
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
-    def test_reboot_recovery(self, description, test_set):
+    def test_reboot_recovery(self, standard_setup_one_client_bootstrapped, description, test_set):
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(
                 self.test_reboot_recovery,
+                standard_setup_one_client_bootstrapped,
                 description,
                 test_set,
-                hosts=get_mender_clients())
+                hosts=mender_clients)
             return
 
         client = env.host_string
@@ -663,15 +665,19 @@ class TestStateScripts(MenderTesting):
 
 
     @MenderTesting.slow
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
-    def test_state_scripts(self, description, test_set):
+    def test_state_scripts(self, standard_setup_one_client_bootstrapped, description, test_set):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
-            execute(self.test_state_scripts, description, test_set,
-                    hosts=get_mender_clients())
+            execute(self.test_state_scripts,
+                    standard_setup_one_client_bootstrapped,
+                    description,
+                    test_set,
+                    hosts=mender_clients)
             return
 
         client = env.host_string

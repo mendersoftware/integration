@@ -21,7 +21,6 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_one_client, standard_setup_one_client_bootstrapped
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import auth_v2
@@ -33,15 +32,17 @@ class TestBootstrapping(MenderTesting):
                               reason="need --runslow option to run")
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_bootstrap(self):
+    def test_bootstrap(self, standard_setup_one_client):
         """Simply make sure we are able to bootstrap a device"""
 
-        execute(self.accept_devices, hosts=get_mender_clients())
+        mender_clients = standard_setup_one_client.get_mender_clients()
 
+        execute(self.accept_devices,
+                mender_clients,
+                hosts=mender_clients)
 
-    def accept_devices(self):
-        auth_v2.check_expected_status("pending", len(get_mender_clients()))
+    def accept_devices(self, mender_clients):
+        auth_v2.check_expected_status("pending", len(mender_clients))
 
         # iterate over devices and accept them
         for d in auth_v2.get_devices():
@@ -49,7 +50,7 @@ class TestBootstrapping(MenderTesting):
             logging.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
-        auth_v2.check_expected_status("accepted", len(get_mender_clients()))
+        auth_v2.check_expected_status("accepted", len(mender_clients))
 
         # make sure mender-store contains authtoken
         have_token()
@@ -59,11 +60,15 @@ class TestBootstrapping(MenderTesting):
             logging.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_reject_bootstrap(self):
+    def test_reject_bootstrap(self, standard_setup_one_client_bootstrapped):
         """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
-            execute(self.test_reject_bootstrap, hosts=get_mender_clients())
+            execute(self.test_reject_bootstrap,
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         # iterate over devices and reject them
@@ -71,7 +76,7 @@ class TestBootstrapping(MenderTesting):
             auth_v2.set_device_auth_set_status(device["id"], device["auth_sets"][0]["id"], "rejected")
             logging.info("Rejecting DeviceID: %s" % device["id"])
 
-        auth_v2.check_expected_status("rejected", len(get_mender_clients()))
+        auth_v2.check_expected_status("rejected", len(mender_clients))
 
         with Helpers.RebootDetector() as reboot:
             try:

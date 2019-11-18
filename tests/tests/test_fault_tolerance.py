@@ -26,7 +26,6 @@ from fabric.api import *
 from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure, update_image_failed
 from ..helpers import Helpers
 from ..MenderAPI import deploy
@@ -43,7 +42,6 @@ DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
     },
 ]
 
-@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFaultTolerance(MenderTesting):
 
     def wait_for_download_retry_attempts(self, search_string):
@@ -68,35 +66,43 @@ class TestFaultTolerance(MenderTesting):
         logging.info("Waiting for system to finish download")
 
     @MenderTesting.slow
-    def test_update_image_breaks_networking(self, install_image="core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name):
+    def test_update_image_breaks_networking(self, standard_setup_one_client_bootstrapped, install_image="core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name):
         """
             Install an image without systemd-networkd binary existing.
             The network will not function, mender will not be able to send any logs.
 
             The expected status is the update will rollback, and be considered a failure
         """
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_update_image_breaks_networking,
-                    hosts=get_mender_clients(),
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
         with Helpers.RebootDetector() as reboot:
             deployment_id, _ = common_update_procedure(install_image)
             reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
-            deploy.check_expected_statistics(deployment_id, "failure", len(get_mender_clients()))
+            deploy.check_expected_statistics(deployment_id, "failure", len(mender_clients))
 
     @MenderTesting.slow
-    def test_deployed_during_network_outage(self, install_image=conftest.get_valid_image()):
+    def test_deployed_during_network_outage(self, standard_setup_one_client_bootstrapped, install_image=conftest.get_valid_image()):
         """
             Install a valid upgrade image while there is no network availability on the device
             Re-establishing the network connectivity results in the upgrade to be triggered.
 
             Emulate a flaky network connection, and ensure that the deployment still succeeds.
         """
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_deployed_during_network_outage,
-                    hosts=get_mender_clients(),
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -112,23 +118,27 @@ class TestFaultTolerance(MenderTesting):
 
             logging.info("Network stabilized")
             reboot.verify_reboot_performed()
-            deploy.check_expected_statistics(deployment_id, "success", len(get_mender_clients()))
+            deploy.check_expected_statistics(deployment_id, "success", len(mender_clients))
 
         assert Helpers.yocto_id_installed_on_machine() == expected_yocto_id
 
     @MenderTesting.slow
     @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
-    def test_image_download_retry_timeout(self, test_set, install_image=conftest.get_valid_image()):
+    def test_image_download_retry_timeout(self, standard_setup_one_client_bootstrapped, test_set, install_image=conftest.get_valid_image()):
         """
             Install an update, and block storage connection when we detect it's
             being copied over to the inactive parition.
 
             The test should result in a successful download retry.
         """
+
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_image_download_retry_timeout,
+                    standard_setup_one_client_bootstrapped,
                     test_set,
-                    hosts=get_mender_clients(),
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -175,14 +185,17 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
     @MenderTesting.slow
-    def test_image_download_retry_hosts_broken(self, install_image=conftest.get_valid_image()):
+    def test_image_download_retry_hosts_broken(self, standard_setup_one_client_bootstrapped, install_image=conftest.get_valid_image()):
         """
             Block storage host (minio) by modifying the hosts file.
         """
 
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_image_download_retry_hosts_broken,
-                    hosts=get_mender_clients(),
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -203,14 +216,17 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
 
-    def test_rootfs_conf_missing_from_new_update(self):
+    def test_rootfs_conf_missing_from_new_update(self, standard_setup_one_client_bootstrapped):
         """Test that the client is able to reboot to roll back if module or rootfs
         config is missing from the new partition. This only works for cases where a
         reboot restores the state."""
 
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_rootfs_conf_missing_from_new_update,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         with settings(warn_only=True):

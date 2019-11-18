@@ -26,7 +26,6 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import running_custom_production_setup, standard_setup_with_short_lived_token
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
 
@@ -74,15 +73,17 @@ class TestSecurity(MenderTesting):
                              "--docker-compose-instance", conftest.docker_compose_instance])
 
 
-    @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
-    def test_token_token_expiration(self):
+    def test_token_token_expiration(self, standard_setup_with_short_lived_token):
         """ verify that an expired token is handled correctly (client gets a new, valid one)
             and that deployments are still recieved by the client
         """
 
+        mender_clients = standard_setup_with_short_lived_token.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_token_token_expiration,
-                    hosts=get_mender_clients())
+                    standard_setup_with_short_lived_token,
+                    hosts=mender_clients)
             return
 
         timeout_time = int(time.time()) + 60

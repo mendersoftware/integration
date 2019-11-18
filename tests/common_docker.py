@@ -46,17 +46,11 @@ logger = logging.getLogger("root")
 
 
 def store_logs():
-    inline_logs = conftest.inline_logs
-
-    if inline_logs:
-        docker_compose_cmd("logs -f &",
-                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-    else:
-        tfile = tempfile.mktemp("mender_testing")
-        docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
-                           env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-        logger.info("docker-compose log file stored here: %s" % tfile)
-        log_files.append(tfile)
+    tfile = tempfile.mktemp("mender_testing")
+    docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
+                        env={'COMPOSE_HTTP_TIMEOUT': '100000'})
+    logger.info("docker-compose log file stored here: %s" % tfile)
+    log_files.append(tfile)
 
 
 def docker_compose_cmd(arg_list, use_common_files=True, env=None):

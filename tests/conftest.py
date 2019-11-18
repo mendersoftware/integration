@@ -45,8 +45,6 @@ docker_compose_instance = "mender" + str(random.randint(0, 9999999))
 docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
-inline_logs = False
-is_integration_branch = False
 machine_name = None
 
 try:
@@ -56,31 +54,17 @@ except:
 
 
 def pytest_addoption(parser):
-    parser.addoption("--clients", action="store", default="localhost:8080",
-                     help="Comma-seperate mender hosts, example: 10.100.10.11:8822, 10.100.10.12:8822")
-    parser.addoption("--gateway", action="store", default="127.0.0.1:8080",
-                     help="Host of mender gateway")
-
-    parser.addoption("--api", action="store", default="0.1", help="API version used in HTTP requests")
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
 
     parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
-    parser.addoption("--inline-logs", action="store_true", help="Don't redirect docker-compose logs to a file")
-
-    parser.addoption("--mt-docker-compose-file", action="store", type=str, help="Docker-compose file that enables multi-tenancy (required for some tests)")
 
     parser.addoption("--machine-name", action="store", default="qemux86-64",
                      help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
 
 
 def pytest_configure(config):
-    global extra_files, inline_logs
     verify_sane_test_environment()
-
-    env.api_version = config.getoption("api")
-
-    inline_logs = config.getoption("--inline-logs")
 
     global machine_name
     machine_name = config.getoption("--machine-name")
@@ -112,13 +96,6 @@ def pytest_configure(config):
     env.connection_attempts = 50
     env.eagerly_disconnect = True
     env.banner_timeout = 10
-
-    version = subprocess.check_output(["../extra/release_tool.py", "--version-of", "integration"])
-    if re.search("(^|/)[0-9]+\.[0-9]+\.[x0-9]+", version):
-        # Don't run enterprise tests for release branches.
-        # Has to do with tenantadm's release cycle (master only), but we're forced to skip the whole enterprise set.
-        global is_integration_branch
-        is_integration_branch = True
 
     MenderTesting.set_test_conditions(config)
 

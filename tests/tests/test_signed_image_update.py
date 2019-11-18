@@ -19,7 +19,6 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_with_signed_artifact_client
-from ..common_docker import get_mender_clients
 from .common_update import update_image_successful, common_update_procedure
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
@@ -31,11 +30,14 @@ class TestSignedUpdates(MenderTesting):
         we will only test basic backend integration with signed images here.
     """
 
-    @pytest.mark.usefixtures("standard_setup_with_signed_artifact_client")
-    def test_signed_artifact_success(self):
+    def test_signed_artifact_success(self, standard_setup_with_signed_artifact_client):
+
+        mender_clients = standard_setup_with_signed_artifact_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_signed_artifact_success,
-                    hosts=get_mender_clients())
+                    standard_setup_with_signed_artifact_client,
+                    hosts=mender_clients)
             return
 
         update_image_successful(install_image=conftest.get_valid_image(), signed=True)
@@ -47,10 +49,13 @@ class TestSignedUpdates(MenderTesting):
             Notice that this test needs a fresh new version of the backend, since
             we installed a signed image earlier without a verification key in mender.conf
         """
+
+        mender_clients = standard_setup_with_signed_artifact_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_unsigned_artifact_fails_deployment,
                     standard_setup_with_signed_artifact_client,
-                    hosts=get_mender_clients())
+                    hosts=mender_clients)
             return
 
         deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())

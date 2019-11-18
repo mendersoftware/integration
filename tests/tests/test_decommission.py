@@ -19,7 +19,6 @@ from fabric.api import *
 import pytest
 
 from ..common_setup import standard_setup_one_client
-from ..common_docker import get_mender_clients, get_mender_conductor
 from .common_update import common_update_procedure
 from ..MenderAPI import inv, auth_v2, logger
 from .mendertesting import MenderTesting
@@ -36,15 +35,18 @@ class TestDeviceDecommissioning(MenderTesting):
         assert r.status_code == 404, "device [%s] not removed from deviceauth" % (device_id,)
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_client")
-    def test_device_decommissioning(self):
+    def test_device_decommissioning(self, standard_setup_one_client):
         """ Decommission a device successfully """
 
+        mender_clients = standard_setup_one_client.get_mender_clients()
+
         if not env.host_string:
-            execute(self.test_device_decommissioning, hosts=get_mender_clients())
+            execute(self.test_device_decommissioning,
+                    standard_setup_one_client,
+                    hosts=mender_clients)
             return
 
-        auth_v2.check_expected_status("pending", len(get_mender_clients()))
+        auth_v2.check_expected_status("pending", len(mender_clients))
         device = auth_v2.get_devices()[0]
         device_id = device["id"]
 
@@ -67,7 +69,7 @@ class TestDeviceDecommissioning(MenderTesting):
             assert False, "never got inventory"
 
         # get all completed decommission_device WFs for reference
-        c = Conductor(get_mender_conductor())
+        c = Conductor(standard_setup_one_client.get_mender_conductor())
         initial_wfs = c.get_decommission_device_wfs(device_id)
 
         # decommission actual device

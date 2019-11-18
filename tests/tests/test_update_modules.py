@@ -25,21 +25,22 @@ from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_one_docker_client_bootstrapped, \
                            standard_setup_one_client_bootstrapped
-from ..common_docker import docker_compose_cmd, get_mender_clients
 from .common_update import common_update_procedure, update_image_successful
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
 class TestUpdateModules(MenderTesting):
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_docker_client_bootstrapped")
-    def test_file_update_module(self):
+    def test_file_update_module(self, standard_setup_one_docker_client_bootstrapped):
         """Test the file based update module, first with a failed update, then
         a successful one."""
 
+        mender_clients = standard_setup_one_docker_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_file_update_module,
-                    hosts=get_mender_clients())
+                    standard_setup_one_docker_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         file_tree = tempfile.mkdtemp()
@@ -91,14 +92,16 @@ class TestUpdateModules(MenderTesting):
             shutil.rmtree(file_tree)
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_docker_client_bootstrapped")
-    def test_rootfs_image_rejected(self):
+    def test_rootfs_image_rejected(self, standard_setup_one_docker_client_bootstrapped):
         """Test that a rootfs-image update is rejected when such a setup isn't
         present."""
 
+        mender_clients = standard_setup_one_docker_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_rootfs_image_rejected,
-                    hosts=get_mender_clients())
+                    standard_setup_one_docker_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         file_tree = tempfile.mkdtemp()
@@ -121,21 +124,23 @@ class TestUpdateModules(MenderTesting):
             output = run("mender -show-artifact").strip()
             assert output == "original"
 
-            output = docker_compose_cmd("logs mender-client")
+            output = standard_setup_one_docker_client_bootstrapped.docker_compose_cmd("logs mender-client")
             assert "Cannot load handler for unknown Payload type 'rootfs-image'" in output
 
         finally:
             shutil.rmtree(file_tree)
 
     @MenderTesting.fast
-    @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-    def test_rootfs_update_module_success(self):
+    def test_rootfs_update_module_success(self, standard_setup_one_client_bootstrapped):
         """Test the rootfs-image-v2 update module, which does the same as the
         built-in rootfs-image type."""
 
+        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_rootfs_update_module_success,
-                    hosts=get_mender_clients())
+                    standard_setup_one_client_bootstrapped,
+                    hosts=mender_clients)
             return
 
         def make_artifact(artifact_file, artifact_id):

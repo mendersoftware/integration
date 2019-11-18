@@ -12,25 +12,24 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import pytest
-import logging
 import subprocess
-import requests
 import time
 import json
+import os
 
-from ..conftest import docker_compose_instance
+import requests
+import pytest
 
-from ..common_docker import *
-from .conductor import Conductor
-
-from testutils.common import create_user, make_accepted_device, Device, User, Tenant
+from testutils.common import create_user, make_accepted_device, User, Tenant
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliTenantadm
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
+from ..conftest import docker_compose_instance
+from ..common_docker import docker_compose_cmd, stop_docker_compose, stop_docker_compose_exclude, \
+                            get_mender_gateway, get_mender_conductor, COMPOSE_FILES_PATH
 
 @pytest.fixture(scope="class")
 def initial_os_setup():

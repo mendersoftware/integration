@@ -13,14 +13,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+import tempfile
+import logging
+import shutil
+
 from fabric.api import *
 import pytest
-from ..common_setup import *
+
+from .. import conftest
+from ..common_setup import setup_with_legacy_client
+from ..common_docker import get_mender_clients
+from .common_update import update_image_successful, common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy
-from .common_update import update_image_successful, common_update_procedure
 from .mendertesting import MenderTesting
-import shutil
 
 class TestDBMigration(MenderTesting):
 

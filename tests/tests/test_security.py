@@ -13,23 +13,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
-import pytest
-from ..common import *
-from ..common_docker import *
-from ..common_setup import *
-from ..helpers import Helpers
-from ..MenderAPI import auth, deploy, image, logger
-from .common_update import common_update_procedure
-from .mendertesting import MenderTesting
-import subprocess
 import sys
-sys.path.insert(0, '..')
-from .. import conftest
+import subprocess
 import contextlib
 import ssl
 import socket
 import time
+
+from fabric.api import *
+import pytest
+
+from .. import conftest
+from ..common import *
+from ..common_setup import running_custom_production_setup, standard_setup_with_short_lived_token
+from ..common_docker import get_mender_clients
+from .common_update import common_update_procedure
+from .mendertesting import MenderTesting
 
 class TestSecurity(MenderTesting):
 

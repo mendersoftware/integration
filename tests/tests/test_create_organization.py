@@ -13,21 +13,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
-from requests.auth import HTTPBasicAuth
-import pytest
-from ..common import *
-from ..common_docker import *
-from ..common_setup import *
-from ..MenderAPI.requests_helpers import requests_retry
-from .mendertesting import MenderTesting
-
 import time
-import requests
-import smtpd_mock
 from threading import Thread
 import asyncore
-from ..MenderAPI import *
+
+from requests.auth import HTTPBasicAuth
+from fabric.api import *
+import pytest
+
+import smtpd_mock
+from ..common import *
+from ..common_setup import enterprise_no_client_smtp
+from ..common_docker import get_mender_gateway
+from ..MenderAPI.requests_helpers import requests_retry
+from .mendertesting import MenderTesting
+from ..MenderAPI import api_version
 
 class TestCreateOrganizationEnterprise(MenderTesting):
     @pytest.mark.usefixtures("enterprise_no_client_smtp")

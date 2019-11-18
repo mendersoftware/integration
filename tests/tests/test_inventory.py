@@ -13,14 +13,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
 import json
+
+from fabric.api import *
 import pytest
-import time
+
+from .. import conftest
 from ..common import *
-from ..common_setup import *
-from ..helpers import Helpers
-from ..MenderAPI import auth_v2, deploy, image, inv
+from ..common_setup import standard_setup_one_client_bootstrapped
+from ..MenderAPI import auth_v2, inv
 from .mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")

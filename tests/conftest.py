@@ -128,6 +128,12 @@ def pytest_exception_interact(node, call, report):
         except:
             logger.info("Not able to print client systemd log")
 
+        # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
+        # to ignore the filter
+        output = subprocess.check_output('docker ps --filter "status=exited"', shell=True)
+        logger.info("Containers that exited during the test:")
+        for line in output.split('\n'):
+            logger.info(line)
 
 
 @pytest.mark.hookwrapper

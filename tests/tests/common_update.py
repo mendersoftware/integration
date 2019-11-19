@@ -82,7 +82,8 @@ def common_update_procedure(install_image=None,
 
     return deployment_id, artifact_id
 
-def update_image_successful(install_image=None,
+def update_image_successful(host_ip,
+                            install_image=None,
                             regenerate_image_id=True,
                             signed=False,
                             skip_reboot_verification=False,
@@ -103,7 +104,7 @@ def update_image_successful(install_image=None,
     """
 
     previous_inactive_part = Helpers.get_passive_partition()
-    with Helpers.RebootDetector() as reboot:
+    with Helpers.RebootDetector(host_ip) as reboot:
         deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                    regenerate_image_id,
                                                                    signed=signed,
@@ -115,7 +116,7 @@ def update_image_successful(install_image=None,
                                                                    version=version)
         reboot.verify_reboot_performed()
 
-    with Helpers.RebootDetector() as reboot:
+    with Helpers.RebootDetector(host_ip) as reboot:
         try:
             assert Helpers.get_active_partition() == previous_inactive_part
         except AssertionError:
@@ -146,7 +147,8 @@ def update_image_successful(install_image=None,
     return deployment_id
 
 
-def update_image_failed(install_image="broken_update.ext4",
+def update_image_failed(host_ip,
+                        install_image="broken_update.ext4",
                         make_artifact=None,
                         expected_mender_clients=1,
                         expected_log_message="Reboot to new update failed"):
@@ -159,7 +161,7 @@ def update_image_failed(install_image="broken_update.ext4",
     original_image_id = Helpers.yocto_id_installed_on_machine()
 
     previous_active_part = Helpers.get_active_partition()
-    with Helpers.RebootDetector() as reboot:
+    with Helpers.RebootDetector(host_ip) as reboot:
         deployment_id, _ = common_update_procedure(install_image,
                                                    make_artifact=make_artifact)
         # It will reboot twice. Once into the failed update, which the
@@ -172,7 +174,7 @@ def update_image_failed(install_image="broken_update.ext4",
         # *sure* we are in the correct partition.
         reboot.verify_reboot_performed(number_of_reboots=2)
 
-    with Helpers.RebootDetector() as reboot:
+    with Helpers.RebootDetector(host_ip) as reboot:
         assert Helpers.get_active_partition() == previous_active_part
 
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)

@@ -40,7 +40,8 @@ class TestFailures(MenderTesting):
                     install_image=install_image)
             return
 
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, expected_image_id = common_update_procedure(install_image, True)
             reboot.verify_reboot_performed()
 
@@ -64,7 +65,8 @@ class TestFailures(MenderTesting):
                     hosts=mender_clients)
             return
 
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image="large_image.dat")
             deploy.check_expected_statistics(deployment_id, "failure", len(mender_clients))
             reboot.verify_reboot_not_performed()

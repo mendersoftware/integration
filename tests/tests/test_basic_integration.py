@@ -48,10 +48,11 @@ class TestBasicIntegration(MenderTesting):
         # Verify that partition is read-only as expected
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        update_image_successful(install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        host_ip = standard_setup_one_rofs_client_bootstrapped.docker_get_docker_host_ip()
+        update_image_successful(host_ip, install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        update_image_successful(install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        update_image_successful(host_ip, install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
 
@@ -67,7 +68,8 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        update_image_successful(install_image=conftest.get_valid_image())
+        host_ip = standard_setup_with_short_lived_token.docker_get_docker_host_ip()
+        update_image_successful(host_ip, install_image=conftest.get_valid_image())
 
     @MenderTesting.fast
     def test_update_failover_server(self, setup_failover):
@@ -103,7 +105,8 @@ class TestBasicIntegration(MenderTesting):
             conf.pop("ServerURL")
             image.replace_mender_conf(tmp_image, conf)
 
-            update_image_successful(install_image=tmp_image)
+            host_ip = setup_failover.docker_get_docker_host_ip()
+            update_image_successful(host_ip, install_image=tmp_image)
         finally:
             os.remove(tmp_image)
 
@@ -119,8 +122,9 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        update_image_failed()
-        update_image_successful(install_image=conftest.get_valid_image())
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        update_image_failed(host_ip)
+        update_image_successful(host_ip, install_image=conftest.get_valid_image())
 
     def test_update_no_compression(self, standard_setup_one_client_bootstrapped):
         """Uploads an uncompressed artifact, and runs the whole udpate process."""
@@ -133,7 +137,8 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        update_image_successful(install_image=conftest.get_valid_image(), compression_type="none")
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        update_image_successful(host_ip, install_image=conftest.get_valid_image(), compression_type="none")
 
 
 
@@ -184,7 +189,10 @@ class TestBasicIntegration(MenderTesting):
                 pytest.fail("Forcing the update check failed")
             logger.info("mender client has forced an update check")
 
-        update_image_successful(install_image=conftest.get_valid_image(), pre_deployment_callback=deployment_callback,
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        update_image_successful(host_ip,
+                                install_image=conftest.get_valid_image(),
+                                pre_deployment_callback=deployment_callback,
                                 deployment_triggered_callback=deployment_triggered_callback)
 
     @pytest.mark.timeout(1000)

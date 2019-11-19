@@ -607,7 +607,8 @@ class TestStateScripts(MenderTesting):
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map([client])[client]
 
-        with Helpers.RebootDetector() as reboot_detector:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot_detector:
 
             deployment_id = common_update_procedure(
                 install_image=new_rootfs,

@@ -151,4 +151,5 @@ class TestUpdateModules(MenderTesting):
             subprocess.check_call(cmd, shell=True)
             return artifact_file
 
-        update_image_successful(make_artifact=make_artifact)
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        update_image_successful(host_ip, make_artifact=make_artifact)

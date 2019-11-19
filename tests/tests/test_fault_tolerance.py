@@ -83,7 +83,8 @@ class TestFaultTolerance(MenderTesting):
                     install_image=install_image)
             return
 
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
             reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
             deploy.check_expected_statistics(deployment_id, "failure", len(mender_clients))
@@ -107,7 +108,9 @@ class TestFaultTolerance(MenderTesting):
             return
 
         Helpers.gateway_connectivity(False)
-        with Helpers.RebootDetector() as reboot:
+
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
             time.sleep(60)
 
@@ -152,7 +155,8 @@ class TestFaultTolerance(MenderTesting):
 
         inactive_part = Helpers.get_passive_partition()
 
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             if test_set['blockAfterStart']:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(install_image)
@@ -202,7 +206,9 @@ class TestFaultTolerance(MenderTesting):
         inactive_part = Helpers.get_passive_partition()
 
         run("echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts")  # break s3 connectivity before triggering deployment
-        with Helpers.RebootDetector() as reboot:
+
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, new_yocto_id = common_update_procedure(install_image)
 
             self.wait_for_download_retry_attempts("update fetch failed")
@@ -260,7 +266,8 @@ class TestFaultTolerance(MenderTesting):
                 json.dump(conf, fd)
             put(os.path.basename(mender_conf), local_path=os.path.dirname(mender_conf), remote_path="/etc/mender")
 
-            update_image_failed(install_image=image_name,
+            host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+            update_image_failed(host_ip, install_image=image_name,
                                 expected_log_message="Unable to roll back with a stub module, but will try to reboot to restore state")
 
         finally:

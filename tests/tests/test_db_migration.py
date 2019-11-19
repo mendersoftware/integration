@@ -82,7 +82,8 @@ exit 0
         ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
 
         # first start with the failed update
-        with Helpers.RebootDetector() as reboot:
+        host_ip = setup_with_legacy_client.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image,
                                                        scripts=[ensure_persistent_conf,
                                                                 os.path.join(dirpath, "ArtifactCommit_Enter_01")],
@@ -96,6 +97,7 @@ exit 0
 
         # do the next update, this time succesfull
         execute(update_image_successful,
+                host_ip,
                 scripts=[ensure_persistent_conf],
                 install_image=install_image,
                 version=2)
@@ -135,13 +137,16 @@ exit 0
                     fd.write('#!/bin/sh\necho $(basename $0) >> %s\n' % test_log)
 
             # do the succesfull update twice
+            host_ip = setup_with_legacy_client.docker_get_docker_host_ip()
             execute(update_image_successful,
+                    host_ip,
                     install_image=install_image,
                     scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)
             assert run("cat %s" % test_log).strip() == "\n".join(scripts)
 
             execute(update_image_successful,
+                    host_ip,
                     install_image=install_image,
                     scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)

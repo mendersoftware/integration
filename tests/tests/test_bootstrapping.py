@@ -78,7 +78,8 @@ class TestBootstrapping(MenderTesting):
 
         auth_v2.check_expected_status("rejected", len(mender_clients))
 
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             try:
                 deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
             except AssertionError:

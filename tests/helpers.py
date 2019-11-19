@@ -27,7 +27,6 @@ import traceback
 import json
 from fabric.contrib.files import exists
 from . import conftest
-from .common_docker import *
 from .common import *
 
 from MenderAPI import auth_v2
@@ -52,7 +51,7 @@ class Helpers:
         except subprocess.CalledProcessError:
             pytest.fail("Unable to read: %s, is it a broken image?" % (filename))
 
-        except Exception, e:
+        except Exception as e:
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
     @classmethod
@@ -92,7 +91,7 @@ class Helpers:
                         logger.info("Disallowing network communication to %s" % h)
                         run("iptables -I INPUT 1 -s %s -j DROP" % gateway_ip)
                         run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip)
-        except Exception, e:
+        except Exception as e:
             logger.info("Exception while messing with network connectivity: " + e)
 
     @staticmethod
@@ -151,24 +150,22 @@ class Helpers:
 
     class RebootDetector:
         server = None
+        host_ip = None
         client_ip = None
         # This global one is used to increment each port used.
         port = 8181
 
-        def __init__(self, client_ip=None):
+        def __init__(self, host_ip, client_ip=None):
             self.port = Helpers.RebootDetector.port
             Helpers.RebootDetector.port += 1
+            self.host_ip = host_ip
             self.client_ip = client_ip
 
         def __enter__(self):
-            # The mender-reboot-detector service in the image will connect to the
-            # port we list here and tell us about startups and shutdowns.
-            ip = docker_get_docker_host_ip()
-
             def setup_client():
                 local_name = "test.mender-reboot-detector.txt.%s" % env.host_string
                 with open(local_name, "w") as fd:
-                    fd.write("%s:%d" % (ip, self.port))
+                    fd.write("%s:%d" % (self.host_ip, self.port))
                 try:
                     put(local_name, remote_path="/data/mender/test.mender-reboot-detector.txt")
                 finally:
@@ -183,7 +180,7 @@ class Helpers:
 
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server.bind((ip, self.port))
+            self.server.bind((self.host_ip, self.port))
             self.server.listen(1)
 
             return self

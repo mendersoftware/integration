@@ -51,7 +51,8 @@ class TestDeploymentAborting(MenderTesting):
         install_image=conftest.get_valid_image()
         expected_partition = Helpers.get_active_partition()
         expected_image_id = Helpers.yocto_id_installed_on_machine()
-        with Helpers.RebootDetector() as reboot:
+        host_ip = container_manager.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
             if abort_step is not None:
@@ -109,7 +110,8 @@ class TestDeploymentAborting(MenderTesting):
             return
 
         install_image = conftest.get_valid_image()
-        with Helpers.RebootDetector() as reboot:
+        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
 
             reboot.verify_reboot_performed()

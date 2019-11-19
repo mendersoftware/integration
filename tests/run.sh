@@ -5,9 +5,32 @@ DEFAULT_TESTS=tests/
 MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
+usage() {
+    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [<pytest-args>] [tests/<testfile.py>]"
+    echo
+    echo "    -h                               Display help"
+    echo "    --machine-name[=] <machine-name> Specify the machine to test"
+    echo "    --no-download                    Do not download the external dependencies"
+    echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
+    echo "    <pytest-args>                    Passes these arguments along to pytest"
+    echo "    tests/<testfile.py>              Name the test-file to run"
+    echo
+    echo "Any remaining arguments will be passed along to pytest."
+    echo
+    echo "Recognized Environment Variables:"
+    echo
+    echo "XDIST_PARALLEL_ARG                 The number of parallel jobs for pytest-xdist"
+    echo "SPECIFIC_INTEGRATION_TEST          The ability to pass <testname-regexp> to pytest -k"
+    exit 0
+}
+
 check_tests_arguments() {
     while [ -n "$1" ]; do
         case "$1" in
+            -h|--help)
+                set +x
+                usage
+                ;;
             --machine-name=*)
                 MACHINE_NAME="${1#--machine-name=}"
                 ;;
@@ -80,20 +103,9 @@ function get_requirements() {
     chmod +x downloaded-tools/mender-artifact
 
     if [ $? -ne 0 ]; then
-        echo "failed to download ext4 image" 
+        echo "failed to download ext4 image"
         exit 1
     fi
-
-   curl --fail "https://stress-client.s3-accelerate.amazonaws.com/release/mender-stress-test-client" \
-        -o downloaded-tools/mender-stress-test-client \
-        -z downloaded-tools/mender-stress-test-client
-
-    if [ $? -ne 0 ]; then
-        echo "failed to download mender-stress-test-client" 
-        exit 1
-    fi
-
-    chmod +x downloaded-tools/mender-stress-test-client
 
     export PATH=$PWD/downloaded-tools:$PATH
 
@@ -118,9 +130,6 @@ if [[ $1 == "--get-requirements" ]]; then
 fi
 
 dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
-
-# mender-stress-test-client is here
-export PATH=$PATH:~/go/bin/
 
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements
@@ -165,8 +174,6 @@ fi
 XDIST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
 MAX_FAIL_ARG="--maxfail=1"
 HTML_REPORT="--html=report.html --self-contained-html"
-UPGRADE_TEST_ARG=""
-SPECIFIC_INTEGRATION_TEST_ARG=""
 
 if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
     XDIST_ARGS=""

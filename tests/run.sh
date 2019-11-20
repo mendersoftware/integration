@@ -5,16 +5,15 @@ MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
 usage() {
-    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [<pytest-args>] [tests/<testfile.py>]"
+    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
     echo
     echo "    -h                               Display help"
     echo "    --machine-name[=] <machine-name> Specify the machine to test"
     echo "    --no-download                    Do not download the external dependencies"
     echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
+    echo "    --                               Seperates 'run.sh' arguments from pytest arguments"
     echo "    <pytest-args>                    Passes these arguments along to pytest"
     echo "    tests/<testfile.py>              Name the test-file to run"
-    echo
-    echo "Any remaining arguments will be passed along to pytest."
     echo
     echo "Recognized Environment Variables:"
     echo
@@ -23,32 +22,29 @@ usage() {
     exit 0
 }
 
-check_tests_arguments() {
-    while [ -n "$1" ]; do
-        case "$1" in
-            -h|--help)
-                set +x
-                usage
-                ;;
-            --machine-name=*)
-                MACHINE_NAME="${1#--machine-name=}"
-                ;;
-            --machine-name)
-                shift
-                MACHINE_NAME="$1"
-                ;;
-            --no-download)
-                DOWNLOAD_REQUIREMENTS=""
-                ;;
-        esac
-        shift
-    done
-}
-
-check_tests_arguments "$@"
-
-# Remove optional argument --no-download from the passthrough to py.test
-pass_args=$(echo $@ | sed -e "s/--no-download//")
+while [ -n "$1" ]; do
+    case "$1" in
+        -h|--help)
+            set +x
+            usage
+            ;;
+        --machine-name=*)
+            MACHINE_NAME="${1#--machine-name=}"
+            ;;
+        --machine-name)
+            shift
+            MACHINE_NAME="$1"
+            ;;
+        --no-download)
+            DOWNLOAD_REQUIREMENTS=""
+            ;;
+        -- )
+            shift
+            # Pass on the rest of the arguments un-touched to pytest
+            break ;;
+    esac
+    shift
+done
 
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
 
@@ -180,5 +176,5 @@ python2 -m pytest \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \
-    $pass_args \
+    "$@" \
     $SPECIFIC_INTEGRATION_TEST_FLAG "$SPECIFIC_INTEGRATION_TEST"

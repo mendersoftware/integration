@@ -10,6 +10,8 @@ services:
             mender:
                 aliases:
                     - minio.s3.docker.mender.io
+        environment:
+            MINIO_HTTP_TRACE: /dev/stdout
         command: server /export
 
     #

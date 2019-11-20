@@ -21,7 +21,7 @@ services:
     storage-proxy:
         build:
             context: .
-            dockerfile: Dockerfile-stap
+            dockerfile: Dockerfile-full
         privileged: true
         networks:
             mender:

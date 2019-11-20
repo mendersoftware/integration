@@ -1,0 +1,6 @@
+FROM openresty/openresty:1.13.6.2-2-bionic
+
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update && apt-get install -y bash vim wget build-essential zlib1g-dev elfutils libdw-dev gettext git linux-headers-5.0.0-1025-gcp linux-source-5.0.0 nginx-full
+RUN cp /usr/sbin/nginx /usr/local/openresty/nginx/sbin/nginx
+RUN sed -e 's/#error_log  logs\/error.log;/error_log  logs\/error.log debug;/' -i.b /usr/local/openresty/nginx/conf/nginx.conf && rm -f /usr/local/openresty/nginx/conf/nginx.conf.b

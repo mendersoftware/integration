@@ -1,7 +1,6 @@
 #!/bin/bash
 set -x -e
 
-DEFAULT_TESTS=tests/
 MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
@@ -40,10 +39,6 @@ check_tests_arguments() {
                 ;;
             --no-download)
                 DOWNLOAD_REQUIREMENTS=""
-                ;;
-            tests/*)
-                # Allow test files to be named on command line by removing ours.
-                DEFAULT_TESTS=
                 ;;
         esac
         shift
@@ -186,5 +181,4 @@ python2 -m pytest \
     --junitxml=results.xml \
     $HTML_REPORT \
     $pass_args \
-    $SPECIFIC_INTEGRATION_TEST_FLAG "$SPECIFIC_INTEGRATION_TEST" \
-    $DEFAULT_TESTS
+    $SPECIFIC_INTEGRATION_TEST_FLAG "$SPECIFIC_INTEGRATION_TEST"

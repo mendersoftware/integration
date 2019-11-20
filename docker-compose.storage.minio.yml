@@ -19,7 +19,10 @@ services:
     # rate & connection limiting
     #
     storage-proxy:
-        image: openresty/openresty:1.13.6.2-0-alpine
+        build:
+            context: .
+            dockerfile: Dockerfile-stap
+        privileged: true
         networks:
             mender:
                 aliases:

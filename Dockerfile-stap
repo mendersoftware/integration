@@ -1,0 +1,6 @@
+FROM openresty/openresty:1.13.6.2-2-bionic
+
+RUN apt-get update && apt-get install -y bash vim wget build-essential zlib1g-dev elfutils libdw-dev gettext git linux-headers-5.0.0-1025-gcp linux-source-5.0.0
+RUN wget https://sourceware.org/systemtap/ftp/releases/systemtap-4.2.tar.gz && tar zxvf systemtap-4.2.tar.gz && cd systemtap-4.2 && ./configure --prefix=/usr --disable-docs --disable-publican --disable-refdocs && make && make install
+RUN git clone https://github.com/openresty/openresty-systemtap-toolkit
+RUN cp /proc/kallsyms /boot/System.map-`uname -r`

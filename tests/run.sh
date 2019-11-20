@@ -172,7 +172,6 @@ fi
 python2 -m pytest \
     $XDIST_ARGS \
     $MAX_FAIL_ARG \
-    -s \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \

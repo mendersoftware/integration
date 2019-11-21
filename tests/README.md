@@ -143,13 +143,13 @@ $ ./run.sh
 Run only the Open-Source tests with
 
 ```bash
-$ SPECIFIC_INTEGRATION_TEST="not Enterprise" ./run.sh
+$ ./run.sh -- -k 'not Enterprise'
 ```
 
 And Enterprise only
 
 ```bash
-$ SPECIFIC_INTEGRATION_TEST="Enterprise" ./run.sh
+$  ./run.sh -- -k 'Enterprise'
 ```
 
 **NOTE**: This is dependent upon having a functioning Docker environment, and being

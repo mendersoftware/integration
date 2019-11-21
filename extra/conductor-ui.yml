@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 services:
     mender-conductor-ui:
         image: mendersoftware/conductor-ui:1.8.1

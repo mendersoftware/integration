@@ -1,6 +1,6 @@
 worker_processes  auto;
 
-error_log  /dev/stdout warn;
+error_log  /dev/stdout debug;
 pid        /var/run/nginx.pid;
 
 events {

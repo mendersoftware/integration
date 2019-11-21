@@ -21,7 +21,7 @@ services:
     storage-proxy:
         build:
             context: .
-            dockerfile: Dockerfile-full
+            dockerfile: Dockerfile-openresty-build
         privileged: true
         networks:
             mender:

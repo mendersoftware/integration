@@ -22,6 +22,7 @@ Compose these in e.g. test fixtures for the complete smoke test of your setup.
 
 import requests
 import logging
+import time
 
 def minio(ip):
     for check in ['live', 'ready']:
@@ -32,3 +33,21 @@ def minio(ip):
             raise RuntimeError(m)
         else:
             logging.info("'{}' check for minio ok".format(check))
+
+def deployments(ip):
+    for check in range(64):
+        try:
+                r = requests.get("http://{}:8080/api/management/v1/deployments/deployments".format(ip))
+                if r.status_code != 200:
+                     m = "'{}'/{} check for deployments returned with http {}".format(ip, check, r.status_code)
+                     logging.error(m)
+                     time.sleep(2)
+                     continue
+                else:
+                     logging.info("'{}'/{} check for deployments ok".format(ip, check))
+                     break
+        except Exception:
+                m = "'{}'/{} check for deployments returned with Exception".format(ip, check)
+                logging.error(m)
+                time.sleep(2)
+                continue

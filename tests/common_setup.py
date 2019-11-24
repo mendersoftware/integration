@@ -268,3 +268,5 @@ def get_host_ip():
 def smoke_test():
     ip = docker_get_ip_of('minio')
     smoke.minio(ip[0])
+    ip = docker_get_ip_of('mender-deployments')
+    smoke.deployments(ip[0])

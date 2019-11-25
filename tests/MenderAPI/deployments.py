@@ -44,6 +44,9 @@ class Deployments:
     def upload_image(self, filename, description="abc"):
         image_path_url = self.get_deployments_base_path() + "artifacts"
 
+        logger.info("Sleep 15 seconds to be sure minio is up and running...")
+        time.sleep(15)
+
         r = requests_retry().post(image_path_url,
                                   verify=False,
                                   headers=self.auth.get_auth_token(),

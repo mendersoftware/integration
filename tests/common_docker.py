@@ -81,6 +81,8 @@ def docker_compose_cmd(arg_list, use_common_files=True, env=None):
 
                 if "up -d" in arg_list:
                     store_logs()
+                    logger.info("sleep 15 seconds to wait for all containers to properly startup...")
+                    time.sleep(15)
 
                 # Return as string (Python 2/3 compatible)
                 if isinstance(output, bytes):

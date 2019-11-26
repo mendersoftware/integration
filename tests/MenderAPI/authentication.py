@@ -41,6 +41,7 @@ class Authentication:
         """
         self.reset()
         self.org_name = name
+        self.org_create = True
         self.username = username
         self.password = password
 
@@ -60,6 +61,7 @@ class Authentication:
         self.multitenancy = True
         self.reset_auth_token()
         self.org_name = org_name
+        self.org_create = True
         self.username = username
         self.password = password
         self.get_auth_token()
@@ -72,12 +74,12 @@ class Authentication:
         #             already (if not running xdist)
         r = self._do_login(self.username, self.password)
 
-        logger.info("Getting authentication token for user")
-        logger.info(self.org_name)
+        logger.info("Getting authentication token for user %s@%s"
+                    % (self.username, self.org_name))
 
         if create_new_user:
             if r.status_code is not 200:
-                if self.multitenancy:
+                if self.multitenancy and self.org_create:
                     tenant_id = self._create_org(self.org_name,
                                                  self.username,
                                                  self.password)
@@ -91,6 +93,7 @@ class Authentication:
                         "tenant_token": tenant_data_json["tenant_token"],
                         "name":         tenant_data_json["name"]
                     }
+                    self.org_create = False
 
                 else:
                     self.create_user(self.username, self.password)

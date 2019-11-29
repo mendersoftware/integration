@@ -75,7 +75,7 @@ class TestDemoArtifact(MenderTesting):
                 logging.info(line)
                 if exit_cond in line.strip():
                     if exit_cond == "Login password:":
-                        password = line[-13:-1]
+                        password = line.split(':')[-1].strip()
                         logging.info('The login password:')
                         logging.info(password)
                         self.auth.password = password

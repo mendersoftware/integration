@@ -461,7 +461,10 @@ def check_base_license(repopath):
         # Lose first line, which depends on copyright year.
         del license_lines[0]
 
-    assert license_lines == expected_lines, "%s doesn't have correct license text" % repopath
+    if license_lines != expected_lines:
+        # "All Rights Reserved" is also accepted for Enterprise licenses.
+        if license_lines[1] != "All Rights Reserved":
+            assert False, "%s doesn't have correct license text" % repopath
 
     # Now compare top lines, but omitting copyright year.
     expected_top_altered = re.sub("2[01][0-9][0-9]", "", expected_top)

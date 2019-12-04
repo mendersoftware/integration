@@ -1675,11 +1675,11 @@ def determine_version_to_include_in_release(state, repo):
     print()
     print_line()
 
-def do_release():
+def do_release(release_state_file):
     """Handles the interactive menu for doing a release."""
 
     global RELEASE_TOOL_STATE
-    RELEASE_TOOL_STATE = "release-state.yml"
+    RELEASE_TOOL_STATE = release_state_file
 
     if os.path.exists(RELEASE_TOOL_STATE):
         while True:
@@ -2141,6 +2141,8 @@ def main():
                         + "or container. TO-TYPE may additionally be docker_url. May return more than one result.")
     parser.add_argument("--release", action="store_true",
                         help="Start the release process (interactive)")
+    parser.add_argument("--release-state", dest="release_state_file",
+                        help="State file for releases, default is release-state.yml")
     parser.add_argument("--simulate-push", action="store_true",
                         help="Simulate (don't do) pushes")
     parser.add_argument("--select-test-suite", action="store_true",
@@ -2190,7 +2192,10 @@ def main():
     elif args.map_name:
         do_map_name(args)
     elif args.release:
-        do_release()
+        release_state_file="release-state.yml"
+        if args.release_state_file:
+            release_state_file = args.release_state_file
+        do_release(release_state_file)
     elif args.verify_integration_references:
         do_verify_integration_references(args, optional_too=args.all)
     elif args.select_test_suite:

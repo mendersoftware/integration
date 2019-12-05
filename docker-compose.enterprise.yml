@@ -34,7 +34,7 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
 
     mender-email-sender:
-        image: mendersoftware/email-sender:1.4.x
+        image: mendersoftware/email-sender:1.4.0
         extends:
             file: common.yml
             service: mender-base

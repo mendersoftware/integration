@@ -20,6 +20,6 @@ class MongoClient:
 
     def cleanup(self):
         dbs = self.client.database_names()
-        dbs = [d for d in dbs if d not in ['local', 'admin']]
+        dbs = [d for d in dbs if d not in ['local', 'admin', 'config']]
         for d in dbs:
             self.client.drop_database(d)

@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:1.8.x
+        image: mendersoftware/deployments:1.8.1
         extends:
             file: common.yml
             service: mender-base
@@ -18,7 +18,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:2.2.x
+        image: mendersoftware/gui:2.2.1
         extends:
             file: common.yml
             service: mender-base
@@ -35,7 +35,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:2.0.x
+        image: mendersoftware/api-gateway:2.0.0
         extends:
             file: common.yml
             service: mender-base
@@ -54,7 +54,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:2.1.x
+        image: mendersoftware/deviceauth:2.1.0
         extends:
             file: common.yml
             service: mender-base
@@ -68,7 +68,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:1.6.x
+        image: mendersoftware/inventory:1.6.0
         extends:
             file: common.yml
             service: mender-base
@@ -81,7 +81,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:1.9.x
+        image: mendersoftware/useradm:1.9.1
         extends:
             file: common.yml
             service: mender-base
@@ -105,7 +105,7 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor:1.5.x
+        image: mendersoftware/mender-conductor:1.5.0
         depends_on:
             - mender-elasticsearch
             - mender-redis

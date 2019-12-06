@@ -50,7 +50,7 @@ PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
 # Whether we are using GitLab
-USE_GITLAB = False
+USE_GITLAB = True
 
 class Component:
     COMPONENT_MAPS = None
@@ -162,7 +162,7 @@ class Component:
         return self.COMPONENT_MAPS[self.type][self.name]['release_component']
 
 
-# A map from git repo name to build parameter name in Jenkins.
+# A map from git repo name to build parameter name in CI scripts.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "mender-conductor": "MENDER_CONDUCTOR_REV",
@@ -1269,9 +1269,9 @@ def do_license_generation(state, tag_avail):
         print_line()
         print("Will need to fetch the GUI licences from its container. Do you want to:")
         print("1) Build container manually")
-        print("   Use this when you have not built anything in Jenkins yet")
+        print("   Use this when you have not built anything in CI yet")
         print("2) Fetch container from dockerhub")
-        print("   Use this when you have built in Jenkins")
+        print("   Use this when you have built in CI")
         reply = ask("? ")
 
         if reply == "1":
@@ -1753,7 +1753,7 @@ def do_release(release_state_file):
             print("  O) Move from beta build tags to final build tags")
         print("  R) Refresh all repositories from upstream (git fetch)")
         print("  T) Generate and push new build tags")
-        print("  B) Trigger new Jenkins build using current tags")
+        print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
         print('  D) Update ":%s" and/or ":latest" Docker tags to current release' % minor_version)
@@ -1918,7 +1918,7 @@ def figure_out_checked_out_revision(state, repo_git):
         # Not a branch, fall through to below.
         pass
 
-    # We are not on a branch. Or maybe we are on a branch, but Jenkins
+    # We are not on a branch. Or maybe we are on a branch, but CI
     # checked out the SHA anyway.
     ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
 
@@ -2175,9 +2175,9 @@ def main():
         global DRY_RUN
         DRY_RUN = True
     assert args.ci_server in ["jenkins", "gitlab"], "%s is not a valid CI server!" % args.ci_server
-    if args.ci_server == "gitlab":
+    if args.ci_server == "jenkins":
         global USE_GITLAB
-        USE_GITLAB = True
+        USE_GITLAB = False
 
     if args.version_of is not None:
         do_version_of(args)

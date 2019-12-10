@@ -362,7 +362,7 @@ def make_devs_with_authsets(user, tenant_token=''):
     for i in range(2):
         dev = make_preauthd_device_with_pending(utoken, num_pending=2, tenant_token=tenant_token)
         devices.append(dev)
-
+    devices.sort(key=lambda dev: dev.id)
     return devices
 
 @pytest.yield_fixture(scope="function")

@@ -22,7 +22,6 @@ else:
 
 import logging
 import requests
-from .common_docker import stop_docker_compose
 import random
 import filelock
 import uuid
@@ -58,8 +57,6 @@ except:
 def pytest_addoption(parser):
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
-
-    parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
 
     parser.addoption("--machine-name", action="store", default="qemux86-64",
                      help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
@@ -168,9 +165,6 @@ def pytest_runtest_makereport(item, call):
         report.extra = extra
 
 def pytest_unconfigure(config):
-    if not config.getoption("--no-teardown"):
-        stop_docker_compose()
-
     for log in log_files:
         try:
             os.remove(log)

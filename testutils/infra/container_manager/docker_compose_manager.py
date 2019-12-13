@@ -13,13 +13,6 @@ from .docker_manager import DockerNamespace
 # Global lock to sycronize calls to docker-compose
 docker_lock = filelock.FileLock("docker_lock")
 
-def get_host_ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    host_ip = s.getsockname()[0]
-    s.close()
-    return host_ip
-
 class DockerComposeNamespace(DockerNamespace):
 
     COMPOSE_FILES_PATH = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
@@ -324,7 +317,7 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
     def __init__(self, name):
         DockerComposeNamespace.__init__(self, name)
     def setup(self):
-        host_ip = get_host_ip()
+        host_ip = socket.gethostbyname(socket.gethostname())
         self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.ENTERPRISE_FILES+self.SMTP_FILES, env={"HOST_IP": host_ip})
         self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES+self.SMTP_FILES)
     def teardown(self):

@@ -46,7 +46,7 @@ class DeviceAuthV2():
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_auth_v2_base_path() + "devices"
         devices = None
-        max_wait = 60*60
+        max_wait = 10*60
         starttime = time.time()
         sleeptime = 5
 

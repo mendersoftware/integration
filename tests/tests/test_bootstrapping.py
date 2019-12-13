@@ -28,9 +28,6 @@ from .mendertesting import MenderTesting
 
 
 class TestBootstrapping(MenderTesting):
-    slow = pytest.mark.skipif(not pytest.config.getoption("--runslow"),
-                              reason="need --runslow option to run")
-
     @MenderTesting.fast
     def test_bootstrap(self, standard_setup_one_client):
         """Simply make sure we are able to bootstrap a device"""

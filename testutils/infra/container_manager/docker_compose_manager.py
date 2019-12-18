@@ -322,3 +322,11 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
         self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES+self.SMTP_FILES)
     def teardown(self):
         self.stop_docker_compose()
+
+class DockerComposeNoneSetup(DockerComposeNamespace):
+    def __init__(self, name):
+        DockerComposeNamespace.__init__(self, name)
+    def setup(self):
+        pass
+    def teardown(self):
+        self.stop_docker_compose()

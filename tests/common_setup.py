@@ -168,14 +168,17 @@ def setup_failover(request):
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
-    reset_mender_api(None)
+    env = container_factory.getNoneSetup(conftest.docker_compose_instance)
+
+    reset_mender_api(env)
 
     def fin():
+        env.teardown()
         conftest.production_setup_lock.release()
 
     request.addfinalizer(fin)
 
-    return None
+    return env
 
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):

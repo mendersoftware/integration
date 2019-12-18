@@ -8,6 +8,7 @@ from .docker_compose_manager import DockerComposeShortLivedTokenSetup
 from .docker_compose_manager import DockerComposeFailoverServerSetup
 from .docker_compose_manager import DockerComposeEnterpriseSetup
 from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
+from .docker_compose_manager import DockerComposeNoneSetup
 
 class ContainerManagerFactory:
     def getStandardSetup(self, name, num_clients=1): pass
@@ -19,6 +20,7 @@ class ContainerManagerFactory:
     def getFailoverServerSetup(self, name): pass
     def getEnterpriseSetup(self, name, num_clients=0): pass
     def getEnterpriseSMTPSetup(self, name): pass
+    def getNoneSetup(self, name): pass
 
 class DockerComposeManagerFactory(ContainerManagerFactory):
     def getStandardSetup(self, name, num_clients=1):
@@ -39,6 +41,8 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
         return DockerComposeEnterpriseSetup(name, num_clients)
     def getEnterpriseSMTPSetup(self, name):
         return DockerComposeEnterpriseSMTPSetup(name)
+    def getNoneSetup(self, name):
+        return DockerComposeNoneSetup(name)
 
 def get_factory(manager_id="docker-compose"):
     if manager_id == "docker-compose":

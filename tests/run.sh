@@ -148,16 +148,16 @@ debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-$MACHIN
 
 dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
-XDIST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
-MAX_FAIL_ARG="--maxfail=1"
+# Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
+EXTRA_TEST_ARGS=
 HTML_REPORT="--html=report.html --self-contained-html"
 
 if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
-    XDIST_ARGS=""
+    EXTRA_TEST_ARGS="--maxfail=1"
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
     # run all tests when running in parallel
-    MAX_FAIL_ARG=""
+    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
 fi
 
 if ! pip2 list|grep -e pytest-html >/dev/null 2>&1; then
@@ -170,8 +170,7 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
 fi
 
 python2 -m pytest \
-    $XDIST_ARGS \
-    $MAX_FAIL_ARG \
+    $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \

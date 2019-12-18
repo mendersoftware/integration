@@ -28,70 +28,63 @@ import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
 from ..conftest import docker_compose_instance
-# from ..common_docker import docker_compose_cmd, stop_docker_compose, stop_docker_compose_exclude, \
-#                             get_mender_gateway, get_mender_conductor, COMPOSE_FILES_PATH
+from ..common_setup import standard_setup_without_client
 
-@pytest.fixture(scope="class")
-def initial_os_setup():
+@pytest.fixture(scope="function")
+def initial_os_setup(standard_setup_without_client):
     """ Start the minimum OS setup, create some uses and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
+    ensure_conductor_ready(standard_setup_without_client.get_mender_conductor(), 60, 'provision_device')
 
-    stop_docker_compose()
+    standard_setup_without_client.init_data = initialize_os_setup(standard_setup_without_client)
 
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
-                       use_common_files=False)
-    ensure_conductor_ready(60, 'provision_device')
+    return standard_setup_without_client
 
-    init_data = initialize_os_setup()
-
-    return init_data
-
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def initial_enterprise_setup(initial_os_setup):
     """
         Start ENT for the first time (no tenant yet).
     """
-    stop_docker_compose_exclude(['mender-mongo'])
+    initial_os_setup.stop_docker_compose_exclude(['mender-mongo'])
 
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
+    initial_os_setup.docker_compose_cmd("-f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
+                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
                        use_common_files=False)
 
     return initial_os_setup
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def migrated_enterprise_setup(initial_enterprise_setup):
     """
         Create an org (tenant + user), restart with default tenant token.
         The ENT setup is ready for tests.
         Return {"os_devs": [...], "os_users": [...], "tenant": <Tenant>}
     """
-    ent_data = migrate_ent_setup()
+    ent_data = migrate_ent_setup(initial_enterprise_setup)
 
     # preserve the user/tenant created before restart
-    stop_docker_compose_exclude(['mender-mongo'])
+    initial_enterprise_setup.stop_docker_compose_exclude(['mender-mongo'])
 
-    docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml \
-                        -f " + COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d --no-recreate",
+    initial_enterprise_setup.docker_compose_cmd("-f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.yml \
+                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
+                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
+                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml \
+                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d --no-recreate",
                        use_common_files=False)
 
-    return dict(ent_data.items() + initial_enterprise_setup.items())
+    initial_enterprise_setup.init_data = dict(ent_data.items() + initial_enterprise_setup.init_data.items())
+    return initial_enterprise_setup
 
-def initialize_os_setup():
+def initialize_os_setup(env):
     """ Seed the OS setup with all operational data - users and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
-    uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
-    dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
-    dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
+    uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(env.get_mender_gateway()))
+    dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(env.get_mender_gateway()))
+    dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(env.get_mender_gateway()))
 
     users = [create_user("foo@tenant.com", "correcthorse", containers_namespace=docker_compose_instance),
              create_user("bar@tenant.com", "correcthorse", containers_namespace=docker_compose_instance)]
@@ -125,11 +118,11 @@ def initialize_os_setup():
 
     return {"os_devs": devs, "os_users": users}
 
-def migrate_ent_setup():
+def migrate_ent_setup(env):
     """ Migrate the ENT setup - create a tenant and user via create-org,
         substitute default token env in the ent. testing layer.
     """
-    ensure_conductor_ready(60, 'create_organization')
+    ensure_conductor_ready(env.get_mender_conductor(), 60, 'create_organization')
 
     # extra long sleep to make sure all services ran their migrations
     # maybe conductor fails because some services are still in a migration phase,
@@ -148,9 +141,9 @@ def migrate_ent_setup():
     ttoken = tenant['tenant_token']
 
     sed = "sed 's/$DEFAULT_TENANT_TOKEN/{}/' ".format(ttoken) + \
-          os.path.join(COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml.template") + \
+          os.path.join(env.COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml.template") + \
           " > " + \
-          os.path.join(COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml")
+          os.path.join(env.COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml")
 
     subprocess.check_call(sed, shell=True)
 
@@ -159,33 +152,33 @@ def migrate_ent_setup():
 
     return {"tenant": t}
 
-@pytest.mark.skip(reason="Deal with these later...")
 @pytest.mark.usefixtures("migrated_enterprise_setup")
 class TestEntMigration:
-    def test_users_ok(self, migrated_enterprise_setup):
-        uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
+    def test_users_and_devs_ok(self, migrated_enterprise_setup):
+        mender_gateway = migrated_enterprise_setup.get_mender_gateway()
+        uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(mender_gateway))
 
         # os users can't log in
-        for u in migrated_enterprise_setup["os_users"]:
+        for u in migrated_enterprise_setup.init_data["os_users"]:
             r = uadmm.call('POST', useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 401
 
         # but enterprise user can
-        ent_user = migrated_enterprise_setup["tenant"].users[0]
+        ent_user = migrated_enterprise_setup.init_data["tenant"].users[0]
         r = uadmm.call('POST',
                        useradm.URL_LOGIN,
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
 
-    def test_devs_ok(self, migrated_enterprise_setup):
-        uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
-        dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
-        dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
-        depld = ApiClient('https://{}/api/devices/v1/deployments'.format(get_mender_gateway()))
+        mender_gateway = migrated_enterprise_setup.get_mender_gateway()
+        uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(mender_gateway))
+        dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(mender_gateway))
+        dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(mender_gateway))
+        depld = ApiClient('https://{}/api/devices/v1/deployments'.format(mender_gateway))
 
         # current dev tokens don't work right off the bat
         # the deviceauth db is empty
-        for d in migrated_enterprise_setup["os_devs"]:
+        for d in migrated_enterprise_setup.init_data["os_devs"]:
             resp = depld.with_auth(d.token).call(
                 'GET',
                 deployments.URL_NEXT,
@@ -196,14 +189,14 @@ class TestEntMigration:
 
         # but even despite the 'dummy' tenant token
         # os devices can get into the deviceauth db for acceptance
-        ent_user = migrated_enterprise_setup["tenant"].users[0]
+        ent_user = migrated_enterprise_setup.init_data["tenant"].users[0]
         r = uadmm.call('POST',
                        useradm.URL_LOGIN,
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
         utoken=r.text
 
-        for d in migrated_enterprise_setup["os_devs"]:
+        for d in migrated_enterprise_setup.init_data["os_devs"]:
             body, sighdr = deviceauth_v1.auth_req(
                                 d.id_data,
                                 d.authsets[0].pubkey,
@@ -223,15 +216,14 @@ class TestEntMigration:
                                           path_params={'id': d.id})
 
         assert r.status_code == 200
-        assert len(r.json()) == len(migrated_enterprise_setup["os_devs"])
+        assert len(r.json()) == len(migrated_enterprise_setup.init_data["os_devs"])
 
-def ensure_conductor_ready(max_time=120, wfname='create_organization'):
+def ensure_conductor_ready(ip, max_time=120, wfname='create_organization'):
     """
     Wait on:
     - conductor api being up, not refusing conns
     - a particular workflow being available.
     """
-    ip = get_mender_conductor()
     for i in range(max_time):
         try:
             r = requests.get("http://{}:8080/api/metadata/workflow/{}".format(ip, wfname))

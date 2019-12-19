@@ -48,7 +48,7 @@ class TestBasicIntegration(MenderTesting):
         # Verify that partition is read-only as expected
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        host_ip = standard_setup_one_rofs_client_bootstrapped.docker_get_docker_host_ip()
+        host_ip = standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
         update_image_successful(host_ip, install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
@@ -68,7 +68,7 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        host_ip = standard_setup_with_short_lived_token.docker_get_docker_host_ip()
+        host_ip = standard_setup_with_short_lived_token.get_virtual_network_host_ip()
         update_image_successful(host_ip, install_image=conftest.get_valid_image())
 
     @MenderTesting.fast
@@ -105,7 +105,7 @@ class TestBasicIntegration(MenderTesting):
             conf.pop("ServerURL")
             image.replace_mender_conf(tmp_image, conf)
 
-            host_ip = setup_failover.docker_get_docker_host_ip()
+            host_ip = setup_failover.get_virtual_network_host_ip()
             update_image_successful(host_ip, install_image=tmp_image)
         finally:
             os.remove(tmp_image)
@@ -122,7 +122,7 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         update_image_failed(host_ip)
         update_image_successful(host_ip, install_image=conftest.get_valid_image())
 
@@ -137,7 +137,7 @@ class TestBasicIntegration(MenderTesting):
                     hosts=mender_clients)
             return
 
-        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         update_image_successful(host_ip, install_image=conftest.get_valid_image(), compression_type="none")
 
 
@@ -189,7 +189,7 @@ class TestBasicIntegration(MenderTesting):
                 pytest.fail("Forcing the update check failed")
             logger.info("mender client has forced an update check")
 
-        host_ip = standard_setup_one_client_bootstrapped.docker_get_docker_host_ip()
+        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         update_image_successful(host_ip,
                                 install_image=conftest.get_valid_image(),
                                 pre_deployment_callback=deployment_callback,

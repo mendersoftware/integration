@@ -56,7 +56,7 @@ def initial_enterprise_setup(initial_os_setup):
     """
         Start ENT for the first time (no tenant yet).
     """
-    initial_os_setup.stop_docker_compose_exclude(['mender-mongo'])
+    initial_os_setup.teardown_exclude(['mender-mongo'])
 
     # Create a new env reusing the same namespace
     ent_no_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)
@@ -74,7 +74,7 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     ent_data = migrate_ent_setup(initial_enterprise_setup)
 
     # preserve the user/tenant created before restart
-    initial_enterprise_setup.stop_docker_compose_exclude(['mender-mongo'])
+    initial_enterprise_setup.teardown_exclude(['mender-mongo'])
 
     # Create a new env reusing the same namespace
     ent_with_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)

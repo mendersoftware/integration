@@ -1,4 +1,16 @@
-
+# Copyright 2019 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        https://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 import os
 import time
 import socket
@@ -67,7 +79,7 @@ class DockerComposeNamespace(DockerNamespace):
     def docker_compose_files(self):
         return self.BASE_FILES + self.extra_files
 
-    def store_logs(self):
+    def _store_logs(self):
         tfile = tempfile.mktemp("mender_testing")
         self._docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
                         env={'COMPOSE_HTTP_TIMEOUT': '100000'})
@@ -75,9 +87,9 @@ class DockerComposeNamespace(DockerNamespace):
         log_files.append(tfile)
 
     def _docker_compose_cmd(self, arg_list, env=None):
-        """
-            start a specific docker-compose setup, and retry a few times due to:
-            - https://github.com/opencontainers/runc/issues/1326
+        """Run docker-compose command using self.docker_compose_files
+
+        It will retry a few times due to https://github.com/opencontainers/runc/issues/1326
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
@@ -97,7 +109,7 @@ class DockerComposeNamespace(DockerNamespace):
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
 
                     if "up -d" in arg_list:
-                        self.store_logs()
+                        self._store_logs()
 
                     # Return as string (Python 2/3 compatible)
                     if isinstance(output, bytes):
@@ -111,7 +123,7 @@ class DockerComposeNamespace(DockerNamespace):
 
             raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
-    def wait_for_containers(self, expected_containers):
+    def _wait_for_containers(self, expected_containers):
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
         for _ in range(60 * 5):
             out = subprocess.check_output("docker-compose -p %s %s ps -q" % (self.name, files_args), shell=True)
@@ -123,7 +135,7 @@ class DockerComposeNamespace(DockerNamespace):
 
         raise Exception("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, self.name))
 
-    def stop_docker_compose(self):
+    def _stop_docker_compose(self):
         with docker_lock:
             # Take down all docker instances in this namespace.
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
@@ -133,7 +145,13 @@ class DockerComposeNamespace(DockerNamespace):
             logging.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
-    def stop_docker_compose_exclude(self, exclude=[]):
+    def setup(self):
+        self._docker_compose_cmd("up -d")
+
+    def teardown(self):
+        self._stop_docker_compose()
+
+    def teardown_exclude(self, exclude=[]):
         """
         Take down all docker instances in this namespace, except for 'exclude'd container names.
         'exclude' doesn't need exact names, it's a verbatim grep regex.
@@ -157,11 +175,7 @@ class DockerComposeNamespace(DockerNamespace):
                 logging.info("running %s" % cmd)
                 subprocess.check_call(cmd, shell=True)
 
-    def restart_docker_compose(self, clients=1):
-        self.stop_docker_compose()
-        self.start_docker_compose(clients)
-
-    def docker_get_ip_of(self, service):
+    def get_ip_of_service(self, service):
         """Return a list of IP addresseses of `service`. `service` is the same name as
         present in docker-compose files.
         """
@@ -186,10 +200,8 @@ class DockerComposeNamespace(DockerNamespace):
         """Return logs of service"""
         return self._docker_compose_cmd("logs %s" % service)
 
-    def docker_get_docker_host_ip(self):
-        """Returns the IP of the host running the Docker containers. The IP will be
-        for the correct docker-compose instance.
-        """
+    def get_virtual_network_host_ip(self):
+        """Returns the IP of the host running the Docker containers"""
         temp = "docker ps -q " \
             "--filter label=com.docker.compose.project={project} "
         cmd = temp.format(project=self.name)
@@ -203,8 +215,9 @@ class DockerComposeNamespace(DockerNamespace):
             return output.decode().split()[0]
         return output.split()[0]
 
-    def get_mender_clients(self, service="mender-client"):
-        clients = [ip + ":8822" for ip in self.docker_get_ip_of(service)]
+    def get_mender_clients(self):
+        """Returns IP address(es) of mender-client cotainer(s)"""
+        clients = [ip + ":8822" for ip in self.get_ip_of_service("mender-client")]
         return clients
 
     def get_mender_client_by_container_name(self, image_name):
@@ -215,8 +228,9 @@ class DockerComposeNamespace(DockerNamespace):
             return output.decode().strip() + ":8822"
         return output.strip() + ":8822"
 
-    def get_mender_gateway(self, service="mender-api-gateway"):
-        gateway = self.docker_get_ip_of(service)
+    def get_mender_gateway(self):
+        """Returns IP address of mender-api-gateway service"""
+        gateway = self.get_ip_of_service("mender-api-gateway")
 
         if len(gateway) != 1:
             raise SystemExit("expected one instance of api-gateway running, but found: %d instance(s)" % len(gateway))
@@ -224,7 +238,8 @@ class DockerComposeNamespace(DockerNamespace):
         return gateway[0]
 
     def get_mender_conductor(self):
-        conductor = self.docker_get_ip_of("mender-conductor")
+        """Returns IP address of mender-conductor service"""
+        conductor = self.get_ip_of_service("mender-conductor")
 
         if len(conductor) != 1:
             raise SystemExit("expected one instance of mender-conductor running, but found: %d instance(s)" % len(conductor))
@@ -242,56 +257,30 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
         self._docker_compose_cmd("up -d")
         if self.num_clients > 1:
                 self._docker_compose_cmd("scale mender-client=%d" % self.num_clients)
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.DOCKER_CLIENT_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeRofsClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeLegacyClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.LEGACY_CLIENT_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.SIGNED_ARTIFACT_CLIENT_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.SHORT_LIVED_TOKEN_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeFailoverServerSetup(DockerComposeNamespace):
     def __init__(self, name, ):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.FAILOVER_SERVER_FILES)
-    def setup(self):
-        self._docker_compose_cmd("up -d")
-    def teardown(self):
-        self.stop_docker_compose()
 
 class DockerComposeEnterpriseSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=0):
@@ -305,9 +294,7 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
-        self.wait_for_containers(15)
-    def teardown(self):
-        self.stop_docker_compose()
+        self._wait_for_containers(15)
 
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
@@ -323,14 +310,10 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
     def setup(self):
         host_ip = socket.gethostbyname(socket.gethostname())
         self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
-        self.wait_for_containers(15)
-    def teardown(self):
-        self.stop_docker_compose()
+        self._wait_for_containers(15)
 
 class DockerComposeNoneSetup(DockerComposeNamespace):
     def __init__(self, name):
         DockerComposeNamespace.__init__(self, name)
     def setup(self):
         pass
-    def teardown(self):
-        self.stop_docker_compose()

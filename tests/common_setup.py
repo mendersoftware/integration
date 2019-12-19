@@ -146,12 +146,6 @@ def standard_setup_with_short_lived_token(request):
 
 @pytest.fixture(scope="function")
 def setup_failover(request):
-    """
-    Setup with two servers and one client.
-    First server (A) behaves as usual, whereas the second server (B) should
-    not expect any clients. Client is initially set up against server A.
-    In docker all microservices for B has a suffix "-2"
-    """
     env = container_factory.getFailoverServerSetup(conftest.docker_compose_instance)
     env.setup()
 

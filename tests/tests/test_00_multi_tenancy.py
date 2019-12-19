@@ -212,7 +212,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             assert len(inv.get_devices()) == 1
 
             mender_clients = enterprise_no_client.get_mender_client_by_container_name(user["container"])
-            host_ip = enterprise_no_client.docker_get_docker_host_ip()
+            host_ip = enterprise_no_client.get_virtual_network_host_ip()
             if user["fail"]:
                 execute(update_image_failed,
                         host_ip,

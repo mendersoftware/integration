@@ -157,7 +157,7 @@ if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
     # run all tests when running in parallel
-    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_PARALLEL_ARG:-auto}}"
+    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
 fi
 
 if ! pip2 list|grep -e pytest-html >/dev/null 2>&1; then

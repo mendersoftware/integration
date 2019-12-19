@@ -27,36 +27,44 @@ import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
+from testutils.infra.container_manager import factory
 from ..conftest import docker_compose_instance
-from ..common_setup import standard_setup_without_client
 
-@pytest.fixture(scope="function")
-def initial_os_setup(standard_setup_without_client):
+# This test requires special manipulation of containers, so it will use
+# directly the factory to prepare fixtures instead of common_setup
+container_factory = factory.get_factory()
+
+@pytest.fixture(scope="class")
+def initial_os_setup(request):
     """ Start the minimum OS setup, create some uses and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
-    ensure_conductor_ready(standard_setup_without_client.get_mender_conductor(), 60, 'provision_device')
+    os_env = container_factory.getStandardSetup(docker_compose_instance, 0)
+    os_env.setup()
+    ensure_conductor_ready(os_env.get_mender_conductor(), 60, 'provision_device')
 
-    standard_setup_without_client.init_data = initialize_os_setup(standard_setup_without_client)
+    os_env.init_data = initialize_os_setup(os_env)
 
-    return standard_setup_without_client
+    # We will later re-create other environments, but this one (or any, really) will be
+    # enough for the teardown if we keep using the same namespace.
+    request.addfinalizer(os_env.teardown)
 
-@pytest.fixture(scope="function")
+    return os_env
+
+@pytest.fixture(scope="class")
 def initial_enterprise_setup(initial_os_setup):
     """
         Start ENT for the first time (no tenant yet).
     """
     initial_os_setup.stop_docker_compose_exclude(['mender-mongo'])
 
-    initial_os_setup.docker_compose_cmd("-f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
-                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + initial_os_setup.COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d",
-                       use_common_files=False)
+    # Create a new env reusing the same namespace
+    ent_no_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)
+    ent_no_tenant_env.setup()
 
     return initial_os_setup
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="class")
 def migrated_enterprise_setup(initial_enterprise_setup):
     """
         Create an org (tenant + user), restart with default tenant token.
@@ -68,12 +76,9 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     # preserve the user/tenant created before restart
     initial_enterprise_setup.stop_docker_compose_exclude(['mender-mongo'])
 
-    initial_enterprise_setup.docker_compose_cmd("-f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.yml \
-                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml \
-                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.yml \
-                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml \
-                        -f " + initial_enterprise_setup.COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml up -d --no-recreate",
-                       use_common_files=False)
+    # Create a new env reusing the same namespace
+    ent_with_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)
+    ent_with_tenant_env.setup(recreate=False, env={"DEFAULT_TENANT_TOKEN": "%s" % ent_data["tenant"].tenant_token})
 
     initial_enterprise_setup.init_data = dict(ent_data.items() + initial_enterprise_setup.init_data.items())
     return initial_enterprise_setup
@@ -140,13 +145,6 @@ def migrate_ent_setup(env):
     tenant = json.loads(tenant)
     ttoken = tenant['tenant_token']
 
-    sed = "sed 's/$DEFAULT_TENANT_TOKEN/{}/' ".format(ttoken) + \
-          os.path.join(env.COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml.template") + \
-          " > " + \
-          os.path.join(env.COMPOSE_FILES_PATH, "docker-compose.testing.enterprise.yml")
-
-    subprocess.check_call(sed, shell=True)
-
     t = Tenant('tenant', tid, ttoken)
     t.users.append(u)
 
@@ -154,7 +152,7 @@ def migrate_ent_setup(env):
 
 @pytest.mark.usefixtures("migrated_enterprise_setup")
 class TestEntMigration:
-    def test_users_and_devs_ok(self, migrated_enterprise_setup):
+    def test_users_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()
         uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(mender_gateway))
 
@@ -170,6 +168,7 @@ class TestEntMigration:
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
 
+    def test_devs_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()
         uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(mender_gateway))
         dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(mender_gateway))

@@ -124,7 +124,7 @@ class TestUpdateModules(MenderTesting):
             output = run("mender -show-artifact").strip()
             assert output == "original"
 
-            output = standard_setup_one_docker_client_bootstrapped.docker_compose_cmd("logs mender-client")
+            output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service("mender-client")
             assert "Cannot load handler for unknown Payload type 'rootfs-image'" in output
 
         finally:

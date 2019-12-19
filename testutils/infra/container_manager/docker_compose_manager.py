@@ -6,6 +6,7 @@ import subprocess
 import filelock
 import logging
 import tempfile
+import copy
 
 from . import log_files
 from .docker_manager import DockerNamespace
@@ -46,40 +47,39 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/failover-testing/docker-compose.failover-server.yml"
     ]
     ENTERPRISE_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
         COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml",
+    ]
+    MT_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
     SMTP_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml",
         COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
-    def __init__(self, name):
+    def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
+        self.extra_files = copy.copy(extra_files)
+
+    @property
+    def docker_compose_files(self):
+        return self.BASE_FILES + self.extra_files
 
     def store_logs(self):
         tfile = tempfile.mktemp("mender_testing")
-        self.docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
+        self._docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
                         env={'COMPOSE_HTTP_TIMEOUT': '100000'})
         logging.info("docker-compose log file stored here: %s" % tfile)
         log_files.append(tfile)
 
-    def docker_compose_cmd(self, arg_list, use_common_files=True, env=None, file_list=[]):
+    def _docker_compose_cmd(self, arg_list, env=None):
         """
             start a specific docker-compose setup, and retry a few times due to:
             - https://github.com/opencontainers/runc/issues/1326
         """
-        files_args = ""
-
-        if use_common_files:
-            for file in self.BASE_FILES + self.QEMU_CLIENT_FILES:
-                files_args += " -f %s" % file
-
-        if len(file_list) > 0:
-            for file in file_list:
-                files_args += " -f %s" % file
+        files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
         with docker_lock:
             cmd = "docker-compose -p %s %s %s" % (self.name,
@@ -111,9 +111,10 @@ class DockerComposeNamespace(DockerNamespace):
 
             raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
-    def wait_for_containers(self, expected_containers, defined_in):
+    def wait_for_containers(self, expected_containers):
+        files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
         for _ in range(60 * 5):
-            out = subprocess.check_output("docker-compose -p %s %s ps -q" % (self.name, "-f " + " -f ".join(defined_in)), shell=True)
+            out = subprocess.check_output("docker-compose -p %s %s ps -q" % (self.name, files_args), shell=True)
             if len(out.split()) == expected_containers:
                 time.sleep(60)
                 return
@@ -121,12 +122,6 @@ class DockerComposeNamespace(DockerNamespace):
                 time.sleep(1)
 
         raise Exception("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, self.name))
-
-    def start_docker_compose(self, clients=1):
-        self.docker_compose_cmd("up -d")
-
-        if clients > 1:
-            self.docker_compose_cmd("scale mender-client=%d" % clients)
 
     def stop_docker_compose(self):
         with docker_lock:
@@ -187,6 +182,10 @@ class DockerComposeNamespace(DockerNamespace):
             return output.decode().split()
         return output.split()
 
+    def get_logs_of_service(self, service):
+        """Return logs of service"""
+        return self._docker_compose_cmd("logs %s" % service)
+
     def docker_get_docker_host_ip(self):
         """Returns the IP of the host running the Docker containers. The IP will be
         for the correct docker-compose instance.
@@ -232,94 +231,99 @@ class DockerComposeNamespace(DockerNamespace):
 
         return conductor[0]
 
-    def new_tenant_client(self, name, tenant):
-        logging.info("creating client connected to tenant: " + tenant)
-        self.docker_compose_cmd("-f " + self.COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml -f " + self.COMPOSE_FILES_PATH + \
-                        "/docker-compose.mt.client.yml run -d --name=%s_%s mender-client" %
-                        (self.name, name),
-                        env={"TENANT_TOKEN": "%s" % tenant})
-        time.sleep(45)
-
 class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
-        DockerComposeNamespace.__init__(self, name)
-    def setup(self):
-        if self.num_clients > 0:
-            self.start_docker_compose(self.num_clients)
+        if self.num_clients == 0:
+            DockerComposeNamespace.__init__(self, name)
         else:
-            self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES)
+            DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES)
+    def setup(self):
+        self._docker_compose_cmd("up -d")
+        if self.num_clients > 1:
+                self._docker_compose_cmd("scale mender-client=%d" % self.num_clients)
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.DOCKER_CLIENT_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.DOCKER_CLIENT_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeRofsClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.QEMU_CLIENT_ROFS_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeLegacyClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.LEGACY_CLIENT_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.BASE_FILES+self.LEGACY_CLIENT_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.SIGNED_ARTIFACT_CLIENT_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.SIGNED_ARTIFACT_CLIENT_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.SHORT_LIVED_TOKEN_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.SHORT_LIVED_TOKEN_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeFailoverServerSetup(DockerComposeNamespace):
     def __init__(self, name, ):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES+self.FAILOVER_SERVER_FILES)
     def setup(self):
-        self.docker_compose_cmd("up -d", use_common_files=True, file_list=self.FAILOVER_SERVER_FILES)
+        self._docker_compose_cmd("up -d")
     def teardown(self):
         self.stop_docker_compose()
 
 class DockerComposeEnterpriseSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
-        DockerComposeNamespace.__init__(self, name)
-    def setup(self):
         if self.num_clients > 0:
-            raise NotImplementedError("Clients not implemented for Enterprise setup")
+            raise NotImplementedError("Clients not implemented on setup time, use new_tenant_client")
         else:
-            self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.ENTERPRISE_FILES)
-            self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES)
+            DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES)
+    def setup(self, recreate=True, env=None):
+        cmd = "up -d"
+        if not recreate:
+            cmd += " --no-recreate"
+        self._docker_compose_cmd(cmd, env=env)
+        self.wait_for_containers(15)
     def teardown(self):
         self.stop_docker_compose()
 
+    def new_tenant_client(self, name, tenant):
+        if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_CLIENT_FILES
+        logging.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd("run -d --name=%s_%s mender-client" % (self.name, name),
+                                env={"TENANT_TOKEN": "%s" % tenant})
+        time.sleep(45)
+
 class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
     def __init__(self, name):
-        DockerComposeNamespace.__init__(self, name)
+        DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES+self.SMTP_FILES)
     def setup(self):
         host_ip = socket.gethostbyname(socket.gethostname())
-        self.docker_compose_cmd("up -d", use_common_files=False, file_list=self.ENTERPRISE_FILES+self.SMTP_FILES, env={"HOST_IP": host_ip})
-        self.wait_for_containers(15, defined_in=self.ENTERPRISE_FILES+self.SMTP_FILES)
+        self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
+        self.wait_for_containers(15)
     def teardown(self):
         self.stop_docker_compose()
 

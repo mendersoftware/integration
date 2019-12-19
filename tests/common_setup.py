@@ -198,7 +198,7 @@ def enterprise_no_client(request):
                        use_common_files=False)
 
     # wait a bit for the backend to start
-    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
+    wait_for_containers(16, [COMPOSE_FILES_PATH + "/docker-compose.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml"])
 
@@ -224,7 +224,7 @@ def enterprise_no_client_smtp(request):
                        use_common_files=False, env={"HOST_IP": host_ip})
 
     # wait a bit for the backend to start
-    wait_for_containers(15, [COMPOSE_FILES_PATH + "/docker-compose.yml",
+    wait_for_containers(16, [COMPOSE_FILES_PATH + "/docker-compose.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
                              COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml"])
 

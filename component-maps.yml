@@ -114,6 +114,13 @@ git:
     - mender-useradm
     release_component: true
 
+  workflows:
+    docker_image:
+    - workflows
+    docker_container:
+    - mender-workflows-server
+    release_component: true
+
 docker_image:
   deployments:
     git:
@@ -227,6 +234,13 @@ docker_image:
     - mender-useradm
     release_component: true
 
+  workflows:
+    git:
+    - workflows
+    docker_container:
+    - mender-workflows-server
+    release_component: true
+
 docker_container:
   mender-deployments:
     git:
@@ -311,4 +325,11 @@ docker_container:
     docker_image:
     - useradm
     - useradm-enterprise
+    release_component: true
+
+  mender-workflows-server:
+    git:
+    - workflows
+    docker_image:
+    - workflows
     release_component: true

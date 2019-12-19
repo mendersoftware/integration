@@ -91,6 +91,19 @@ services:
         depends_on:
             - mender-mongo
 
+    #
+    # mender-workflows
+    #
+    mender-workflows-server:
+        image: mendersoftware/workflows:master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+
     mender-mongo:
         image: mongo:3.6
         extends:
@@ -104,6 +117,7 @@ services:
                     - mongo-device-auth
                     - mongo-inventory
                     - mongo-useradm
+                    - mongo-workflows
 
     mender-conductor:
         image: mendersoftware/mender-conductor:master

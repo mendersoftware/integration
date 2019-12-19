@@ -21,7 +21,6 @@ import time
 
 import pytest
 
-from .. import conftest
 from ..common_setup import running_custom_production_setup
 from ..MenderAPI import authentication, deployments, DeviceAuthV2
 from .mendertesting import MenderTesting
@@ -38,7 +37,7 @@ class TestDemoArtifact(MenderTesting):
     deploy = deployments.Deployments(auth, authv2)
 
     @pytest.fixture(scope="function")
-    def run_demo_script(self, request, exit_cond="Login password:"):
+    def run_demo_script(self, running_custom_production_setup, exit_cond="Login password:"):
         """Simple fixture which returns a function which runs 'demo up'.
 
         :param exit_cond
@@ -53,11 +52,11 @@ class TestDemoArtifact(MenderTesting):
         def run_demo_script_up(exit_cond=exit_cond):
             test_env = os.environ.copy()
             test_env[
-                'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
+                'DOCKER_COMPOSE_PROJECT_NAME'] = running_custom_production_setup.name
             proc = subprocess.Popen(
                 [
                     './demo', '--client', '-p',
-                    conftest.docker_compose_instance, 'up'
+                    running_custom_production_setup.name, 'up'
                 ],
                 cwd="..",
                 stdin=subprocess.PIPE,
@@ -78,35 +77,36 @@ class TestDemoArtifact(MenderTesting):
                     break
             return proc
 
-        return run_demo_script_up
+        running_custom_production_setup.run_demo_script_up = run_demo_script_up
+        return running_custom_production_setup
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
     @pytest.mark.timeout(3000)
-    def test_demo_artifact(self, running_custom_production_setup, run_demo_script):
+    def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
 
-        running_custom_production_setup.teardown()
+        run_demo_script.teardown()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_upload")
         logging.info("--------------------------------------------------")
-        self.demo_artifact_upload(run_demo_script)
-        running_custom_production_setup.teardown()
+        self.demo_artifact_upload(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_installation")
         logging.info("--------------------------------------------------")
-        self.demo_artifact_installation(run_demo_script)
-        running_custom_production_setup.teardown()
+        self.demo_artifact_installation(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_up_down_up")
         logging.info("--------------------------------------------------")
-        self.demo_up_down_up(run_demo_script)
-        running_custom_production_setup.teardown()
+        self.demo_up_down_up(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
     def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):

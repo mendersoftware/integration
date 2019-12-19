@@ -28,7 +28,6 @@ import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
 from testutils.infra.container_manager import factory
-from ..conftest import docker_compose_instance
 
 # This test requires special manipulation of containers, so it will use
 # directly the factory to prepare fixtures instead of common_setup
@@ -39,7 +38,7 @@ def initial_os_setup(request):
     """ Start the minimum OS setup, create some uses and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
-    os_env = container_factory.getStandardSetup(docker_compose_instance, 0)
+    os_env = container_factory.getStandardSetup(num_clients=0)
     os_env.setup()
     ensure_conductor_ready(os_env.get_mender_conductor(), 60, 'provision_device')
 
@@ -59,7 +58,7 @@ def initial_enterprise_setup(initial_os_setup):
     initial_os_setup.teardown_exclude(['mender-mongo'])
 
     # Create a new env reusing the same namespace
-    ent_no_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)
+    ent_no_tenant_env = container_factory.getEnterpriseSetup(initial_os_setup.name, num_clients=0)
     ent_no_tenant_env.setup()
 
     return initial_os_setup
@@ -77,7 +76,7 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     initial_enterprise_setup.teardown_exclude(['mender-mongo'])
 
     # Create a new env reusing the same namespace
-    ent_with_tenant_env = container_factory.getEnterpriseSetup(docker_compose_instance, 0)
+    ent_with_tenant_env = container_factory.getEnterpriseSetup(initial_enterprise_setup.name, num_clients=0)
     ent_with_tenant_env.setup(recreate=False, env={"DEFAULT_TENANT_TOKEN": "%s" % ent_data["tenant"].tenant_token})
 
     initial_enterprise_setup.init_data = dict(ent_data.items() + initial_enterprise_setup.init_data.items())
@@ -91,8 +90,8 @@ def initialize_os_setup(env):
     dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(env.get_mender_gateway()))
     dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(env.get_mender_gateway()))
 
-    users = [create_user("foo@tenant.com", "correcthorse", containers_namespace=docker_compose_instance),
-             create_user("bar@tenant.com", "correcthorse", containers_namespace=docker_compose_instance)]
+    users = [create_user("foo@tenant.com", "correcthorse", containers_namespace=env.name),
+             create_user("bar@tenant.com", "correcthorse", containers_namespace=env.name)]
 
     r = uadmm.call('POST',
                    useradm.URL_LOGIN,
@@ -136,7 +135,7 @@ def migrate_ent_setup(env):
 
     u = User('', 'baz@tenant.com', 'correcthorse')
 
-    cli = CliTenantadm(containers_namespace=docker_compose_instance)
+    cli = CliTenantadm(containers_namespace=env.name)
     tid = cli.create_org('tenant', u.name, u.pwd)
     time.sleep(10)
 

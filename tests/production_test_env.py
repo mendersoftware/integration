@@ -20,9 +20,6 @@ parser.add_argument('--start', dest='start', action='store_true',
 parser.add_argument('--kill', dest='kill', action='store_true',
                     help='destroy production environment')
 
-parser.add_argument('--test-deployment', dest='deploy', action='store_true',
-                    help='start testing upgrade test procedure (used for upgrade testing)')
-
 parser.add_argument('--docker-compose-instance', required=True,
                     help='The docker-compose instance to use (project name)')
 
@@ -32,7 +29,7 @@ if len(sys.argv) == 1:
 
 args = parser.parse_args()
 
-conftest.docker_compose_instance = args.docker_compose_instance
+docker_compose_project = args.docker_compose_instance
 
 def fill_production_template():
 
@@ -72,7 +69,7 @@ if args.start:
 
     # start docker-compose
     ret = subprocess.call(["docker-compose",
-                           "-p", conftest.docker_compose_instance,
+                           "-p", docker_compose_project,
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
                            "-f", "./production-testing-env.yml",
@@ -81,28 +78,5 @@ if args.start:
 
     assert ret == 0, "failed to start docker-compose"
 
-if args.deploy:
-    # create account for management api
-    auth.get_auth_token()
-
-    # wait for 10 devices to be available
-    devices = auth_v2.get_devices(10)
-    assert len(devices) == 10
-
-    # accept all devices
-    for d in devices:
-        auth_v2.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
-
-    # make sure artifact tool in current workdir is being used
-    os.environ["PATH"] = os.path.dirname(os.path.realpath(__file__)) + "/downloaded-tools" + os.pathsep + os.environ["PATH"]
-
-    # perform upgrade
-    devices_to_update = list(set([device["id"] for device in auth_v2.get_devices_status("accepted", expected_devices=10)]))
-    deployment_id, artifact_id = common_update.common_update_procedure("core-image-full-cmdline-%s.ext4" % machine_name, device_type="test", devices=devices_to_update)
-
-    print("deployment_id=%s" % deployment_id)
-    print("artifact_id=%s" % artifact_id)
-    print("devices=%d" % len(devices))
-
 if args.kill:
-    subprocess.call(["docker-compose", "-p", conftest.docker_compose_instance, "down", "-v", "--remove-orphans"])
+    subprocess.call(["docker-compose", "-p", docker_compose_project, "down", "-v", "--remove-orphans"])

@@ -13,11 +13,20 @@
 #    limitations under the License.
 """define base class and it interface"""
 
+import random
+
 class BaseContainerManagerNamespace:
     """Base class to define a containers namespace
     """
 
-    def __init__(self, name):
+    def __init__(self, name=None):
+        """Creates instance
+
+        name is the namespace id (project in docker-compose terms).
+        If it is None, it will randomly generated
+        """
+        if name is None:
+            name = "mender" + str(random.randint(0, 9999999))
         self.name = name
 
     def setup(self):

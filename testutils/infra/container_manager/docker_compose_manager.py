@@ -71,6 +71,9 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
+    NUM_SERVICES_OPENSOURCE = 12
+    NUM_SERVICES_ENTERPRISE = 15
+
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
         self.extra_files = copy.copy(extra_files)
@@ -294,7 +297,7 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
-        self._wait_for_containers(15)
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
@@ -310,7 +313,7 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
     def setup(self):
         host_ip = socket.gethostbyname(socket.gethostname())
         self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
-        self._wait_for_containers(15)
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
 class DockerComposeNoneSetup(DockerComposeNamespace):
     def __init__(self, name):

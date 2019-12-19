@@ -24,7 +24,7 @@ container_factory = factory.get_factory()
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
-    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 1)
+    env = container_factory.getStandardSetup(num_clients=1)
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -36,7 +36,7 @@ def standard_setup_one_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped(request):
-    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 1)
+    env = container_factory.getStandardSetup(num_clients=1)
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -49,7 +49,7 @@ def standard_setup_one_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_rofs_client_bootstrapped(request):
-    env = container_factory.getRofsClientSetup(conftest.docker_compose_instance)
+    env = container_factory.getRofsClientSetup()
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -62,7 +62,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_docker_client_bootstrapped(request):
-    env = container_factory.getDockerClientSetup(conftest.docker_compose_instance)
+    env = container_factory.getDockerClientSetup()
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -75,7 +75,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped(request):
-    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 2)
+    env = container_factory.getStandardSetup(num_clients=2)
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -88,7 +88,7 @@ def standard_setup_two_clients_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_without_client(request):
-    env = container_factory.getStandardSetup(conftest.docker_compose_instance, 0)
+    env = container_factory.getStandardSetup(num_clients=0)
     env.setup()
 
     reset_mender_api(env)
@@ -105,7 +105,7 @@ def setup_with_legacy_client(request):
         pytest.skip("Test only works with qemux86-64, and this is %s"
                     % conftest.machine_name)
 
-    env = container_factory.getLegacyClientSetup(conftest.docker_compose_instance)
+    env = container_factory.getLegacyClientSetup()
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -118,7 +118,7 @@ def setup_with_legacy_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):
-    env = container_factory.getSignedArtifactClientSetup(conftest.docker_compose_instance)
+    env = container_factory.getSignedArtifactClientSetup()
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -132,7 +132,7 @@ def standard_setup_with_signed_artifact_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_with_short_lived_token(request):
-    env = container_factory.getShortLivedTokenSetup(conftest.docker_compose_instance)
+    env = container_factory.getShortLivedTokenSetup()
     env.setup()
 
     Helpers.ssh_is_opened(env.get_mender_clients())
@@ -146,7 +146,7 @@ def standard_setup_with_short_lived_token(request):
 
 @pytest.fixture(scope="function")
 def setup_failover(request):
-    env = container_factory.getFailoverServerSetup(conftest.docker_compose_instance)
+    env = container_factory.getFailoverServerSetup()
     env.setup()
 
     reset_mender_api(env)
@@ -162,7 +162,7 @@ def setup_failover(request):
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
-    env = container_factory.getNoneSetup(conftest.docker_compose_instance)
+    env = container_factory.getNoneSetup()
 
     reset_mender_api(env)
 
@@ -176,7 +176,7 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):
-    env = container_factory.getEnterpriseSetup(conftest.docker_compose_instance, 0)
+    env = container_factory.getEnterpriseSetup(num_clients=0)
     env.setup()
 
     reset_mender_api(env)
@@ -187,7 +187,7 @@ def enterprise_no_client(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client_smtp(request):
-    env = container_factory.getEnterpriseSMTPSetup(conftest.docker_compose_instance)
+    env = container_factory.getEnterpriseSMTPSetup()
     env.setup()
     reset_mender_api(env)
 

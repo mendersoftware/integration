@@ -22,7 +22,6 @@ else:
 
 import logging
 import requests
-import random
 import filelock
 import uuid
 import subprocess
@@ -41,9 +40,6 @@ logging.getLogger("filelock").setLevel(logging.INFO)
 logger = log.setup_custom_logger("root", "master")
 logging.getLogger().setLevel(logging.INFO)
 
-docker_compose_instance = "mender" + str(random.randint(0, 9999999))
-
-docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 machine_name = None

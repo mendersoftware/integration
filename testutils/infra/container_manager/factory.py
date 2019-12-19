@@ -25,34 +25,34 @@ from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
 from .docker_compose_manager import DockerComposeNoneSetup
 
 class ContainerManagerFactory:
-    def getStandardSetup(self, name, num_clients=1):
+    def getStandardSetup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
 
         The num_clients define how many QEMU Mender clients will be spawn.
         """
         pass
 
-    def getDockerClientSetup(self, name):
+    def getDockerClientSetup(self, name=None):
         """Standard setup with one Docker client instead of QEMU one"""
         pass
 
-    def getRofsClientSetup(self, name):
+    def getRofsClientSetup(self, name=None):
         """Standard setup with one QEMU Read-Only FS client instead of standard R/W"""
         pass
 
-    def getLegacyClientSetup(self, name):
+    def getLegacyClientSetup(self, name=None):
         """Setup with one Mender client v1.7"""
         pass
 
-    def getSignedArtifactClientSetup(self, name):
+    def getSignedArtifactClientSetup(self, name=None):
         """Standard setup with pre-installed verification key in the client"""
         pass
 
-    def getShortLivedTokenSetup(self, name):
+    def getShortLivedTokenSetup(self, name=None):
         """Standard setup on which deviceauth has a short lived token (expire timeout = 0)"""
         pass
 
-    def getFailoverServerSetup(self, name):
+    def getFailoverServerSetup(self, name=None):
         """Setup with two servers and one client.
 
         First server (A) behaves as usual, whereas the second server (B) should
@@ -60,15 +60,15 @@ class ContainerManagerFactory:
         """
         pass
 
-    def getEnterpriseSetup(self, name, num_clients=0):
+    def getEnterpriseSetup(self, name=None, num_clients=0):
         """Setup with enterprise versions for the applicable services"""
         pass
 
-    def getEnterpriseSMTPSetup(self, name):
+    def getEnterpriseSMTPSetup(self, name=None):
         """Enterprise setup with SMTP enabled"""
         pass
 
-    def getNoneSetup(self, name):
+    def getNoneSetup(self, name=None):
         """A noop setup for tests that use custom setups
 
         It only implements teardown() for these tests to still have a way
@@ -77,25 +77,25 @@ class ContainerManagerFactory:
         pass
 
 class DockerComposeManagerFactory(ContainerManagerFactory):
-    def getStandardSetup(self, name, num_clients=1):
+    def getStandardSetup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
-    def getDockerClientSetup(self, name):
+    def getDockerClientSetup(self, name=None):
         return DockerComposeDockerClientSetup(name)
-    def getRofsClientSetup(self, name):
+    def getRofsClientSetup(self, name=None):
         return DockerComposeRofsClientSetup(name)
-    def getLegacyClientSetup(self, name):
+    def getLegacyClientSetup(self, name=None):
         return DockerComposeLegacyClientSetup(name)
-    def getSignedArtifactClientSetup(self, name):
+    def getSignedArtifactClientSetup(self, name=None):
         return DockerComposeSignedArtifactClientSetup(name)
-    def getShortLivedTokenSetup(self, name):
+    def getShortLivedTokenSetup(self, name=None):
         return DockerComposeShortLivedTokenSetup(name)
-    def getFailoverServerSetup(self, name):
+    def getFailoverServerSetup(self, name=None):
         return DockerComposeFailoverServerSetup(name)
-    def getEnterpriseSetup(self, name, num_clients=0):
+    def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
-    def getEnterpriseSMTPSetup(self, name):
+    def getEnterpriseSMTPSetup(self, name=None):
         return DockerComposeEnterpriseSMTPSetup(name)
-    def getNoneSetup(self, name):
+    def getNoneSetup(self, name=None):
         return DockerComposeNoneSetup(name)
 
 def get_factory(manager_id="docker-compose"):

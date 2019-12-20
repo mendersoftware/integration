@@ -6,7 +6,7 @@ services:
         image: registry.mender.io/mendersoftware/deployments-enterprise:master
 
     mender-conductor:
-        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:master
+        image: mendersoftware/mender-conductor-enterprise:2.11.0-es6
 
     # add services
     mender-tenantadm:

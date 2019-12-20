@@ -87,7 +87,7 @@ class TestDemoArtifact(MenderTesting):
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
-    @pytest.mark.timeout(3000)
+    @pytest.mark.timeout(30000)
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
@@ -117,6 +117,7 @@ class TestDemoArtifact(MenderTesting):
 
     def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):
         proc = run_demo_script(exit_cond)
+        time.sleep(64)
         arts = self.deploy.get_artifacts()
         try:
             assert len(arts) == 1

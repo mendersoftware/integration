@@ -106,7 +106,9 @@ services:
                     - mongo-useradm
 
     mender-conductor:
-        image: mendersoftware/mender-conductor:master
+        environment:
+            - CONDUCTOR_JAVA_OPTS=-Xms1024m -Xmx2048m
+        image: mendersoftware/mender-conductor:2.11.0-es6
         depends_on:
             - mender-elasticsearch
             - mender-redis
@@ -117,7 +119,11 @@ services:
             - mender
 
     mender-elasticsearch:
-        image: elasticsearch:5-alpine
+        environment:
+            - ES_NETWORK_HOST=0.0.0.0
+            - ES_JAVA_OPTS=-Xms1024m -Xmx2048m
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.8.5
+#         image: elasticsearch:5-alpine
         extends:
             file: common.yml
             service: mender-base

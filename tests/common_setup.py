@@ -30,7 +30,7 @@ def wait_for_containers(expected_containers, defined_in):
             time.sleep(60)
             return
         else:
-            time.sleep(1)
+            time.sleep(64)
 
     pytest.fail("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, conftest.docker_compose_instance))
 

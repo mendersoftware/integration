@@ -75,14 +75,14 @@ services:
 
     mender-conductor:
         environment:
-            - CONDUCTOR_JAVA_OPTS=-Xms128m -Xmx128m
+            - CONDUCTOR_JAVA_OPTS=-Xms1024m -Xmx2048m
         ports:
             - "8080:8080"
 
     mender-elasticsearch:
         environment:
             - ES_NETWORK_HOST=0.0.0.0
-            - ES_JAVA_OPTS=-Xms0m -Xmx100m
+            - ES_JAVA_OPTS=-Xms1024m -Xmx2048m
         volumes:
             - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 

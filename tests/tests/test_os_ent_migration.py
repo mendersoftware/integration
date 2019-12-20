@@ -239,6 +239,6 @@ def ensure_conductor_ready(max_time=120, wfname='create_organization'):
         except requests.ConnectionError:
             pass
 
-        time.sleep(1)
+        time.sleep(15)
 
     raise RuntimeError('waiting for conductor timed out')

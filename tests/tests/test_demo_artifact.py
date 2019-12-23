@@ -59,6 +59,7 @@ class TestDemoArtifact(MenderTesting):
             test_env = os.environ.copy()
             test_env[
                 'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
+            test_env['COMPOSE_HTTP_TIMEOUT'] = '512'
             proc = subprocess.Popen(
                 [
                     './demo', '--client', '-p',
@@ -70,7 +71,7 @@ class TestDemoArtifact(MenderTesting):
                 env=test_env)
             logging.info('Started the demo script')
             password = ""
-            time.sleep(60)
+            time.sleep(255)
             for line in iter(proc.stdout.readline, ''):
                 logging.info(line)
                 if exit_cond in line.strip():
@@ -117,7 +118,6 @@ class TestDemoArtifact(MenderTesting):
 
     def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):
         proc = run_demo_script(exit_cond)
-        time.sleep(64)
         arts = self.deploy.get_artifacts()
         try:
             assert len(arts) == 1

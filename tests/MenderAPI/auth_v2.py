@@ -94,7 +94,7 @@ class DeviceAuthV2():
         assert r.status_code == requests.status_codes.codes.no_content
 
     def check_expected_status(self, status, expected_value, max_wait=60*60, polling_frequency=1):
-        timeout = time.time() + max_wait
+        timeout = time.time() + 4*max_wait
         seen = set()
 
         while time.time() <= timeout:
@@ -125,7 +125,7 @@ class DeviceAuthV2():
             self.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
 
         # block until devices are actually accepted
-        timeout = time.time() + 30
+        timeout = time.time() + 512
         while time.time() <= timeout:
             time.sleep(1)
             if len(self.get_devices_status(status="accepted", expected_devices=expected_devices)) == expected_devices:

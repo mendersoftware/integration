@@ -51,7 +51,7 @@ class TestDeviceDecommissioning(MenderTesting):
         auth_v2.set_device_auth_set_status(device_id, device["auth_sets"][0]["id"], "accepted")
 
         # wait until inventory is populated
-        timeout = time.time() + (60 * 5)
+        timeout = time.time() + 1024
 
         while time.time() < timeout:
             inventoryJSON = inv.get_devices()
@@ -74,14 +74,14 @@ class TestDeviceDecommissioning(MenderTesting):
         auth_v2.decommission(device_id)
 
         # check that the workflow completed successfully
-        timeout = time.time() + (60 * 5)
+        timeout = time.time() + 1024
         while time.time() < timeout:
             wfs = c.get_decommission_device_wfs(device_id)
             if wfs['totalHits'] == initial_wfs['totalHits'] + 1:
                 break
             else:
                 logger.info("waiting for decommission_device workflow...")
-                time.sleep(.5)
+                time.sleep(5)
         else:
             assert False, "decommission_device workflow didn't complete for [%s]" % (device_id,)
 

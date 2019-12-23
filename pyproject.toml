@@ -1,0 +1,3 @@
+# Simple configuration for the Black Python code formatter
+[tool.black]
+target-version = ['py38']

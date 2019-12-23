@@ -36,6 +36,11 @@ class ApiClient:
         url = self.__subst_path_params(url, path_params)
         return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
 
+    def post(self, url, path_params={}, body=None, data=None):
+        url = self.__make_url(url)
+        url = self.__subst_path_params(url, path_params)
+        return requests.request('POST', url, json=body, data=data)
+
     def __make_url(self, path):
         return os.path.join(self.base_url,
                             path if not path.startswith("/") else path[1:])

@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
 
 URL = 'http://mender-tenantadm:8080/api'
 URL_INTERNAL = URL + '/internal/v1/tenantadm'
+URL_MGMT = URL + '/management/v1/tenantadm'
 
 URL_INTERNAL_SUSPEND = '/tenants/{tid}/status'
 URL_INTERNAL_TENANTS = '/tenants'
+URL_MGMT_TENANTS = '/tenants'
 
 def req_status(status):
     return {'status': status}

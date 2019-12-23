@@ -4,7 +4,7 @@ services:
     mender-email-sender:
         environment:
             - CONDUCTOR=http://mender-conductor:8080
-            - SMTP_ADDRESS=${HOST_IP}:4444
+            - SMTP_ADDRESS=mender-backend-tests-runner:4444
             - EMAIL_SENDER=The Mender Team <contact@mender.io>
             - DEMO=false
 

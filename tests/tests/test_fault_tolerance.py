@@ -49,7 +49,7 @@ class TestFaultTolerance(MenderTesting):
     def wait_for_download_retry_attempts(self, search_string):
         """ Block until logs contain messages related to failed downlaod attempts """
 
-        timeout_time = int(time.time()) + (60 * 10)
+        timeout_time = int(time.time()) + (60 * 32)
 
         while int(time.time()) < timeout_time:
             with quiet():

@@ -29,7 +29,7 @@ else:
 # environment if we don't have to.
 SETUP_TYPE = None
 
-HAVE_TOKEN_TIMEOUT = 60 * 5
+HAVE_TOKEN_TIMEOUT = 60 * 15
 MENDER_STORE = '/data/mender/mender-store'
 
 
@@ -86,7 +86,7 @@ def run(cmd, *args, **kw):
     # Use shorter timeout to get a faster cycle. Not recommended though, since
     # in a heavily loaded environment, QEMU might be quite slow to use the
     # connection.
-    with settings(timeout=60, abort_exception=Exception):
+    with settings(timeout=512, abort_exception=Exception):
         while True:
             try:
                 import fabric.api

@@ -176,7 +176,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             # wait until inventory is populated
             auth.set_tenant(user["username"], user["email"], user["password"])
             auth_v2.decommission(user["client_id"])
-            timeout = time.time() + (60 * 5)
+            timeout = time.time() + (60 * 32)
             device_id = user["device_id"]
             while time.time() < timeout:
                     newAdmissions = auth_v2.get_devices()[0]
@@ -186,7 +186,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
                         break
                     else:
                         logger.info("device [%s] found in inventory..." % (device_id))
-                    time.sleep(.5)
+                    time.sleep(4)
             else:
                 assert False, "decommissioned device still available in inventory"
 

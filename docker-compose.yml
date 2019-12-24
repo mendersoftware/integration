@@ -45,11 +45,23 @@ services:
         # critical - otherwise nginx may not detect
         # these servers and exits with 'upstream server not found'
         depends_on:
-            - mender-device-auth
-            - mender-deployments
             - mender-gui
-            - mender-useradm
-            - mender-inventory
+
+        depends_on:
+            mender-deployments:
+                condition: service_healthy
+
+        depends_on:
+            mender-useradm:
+                condition: service_healthy
+
+        depends_on:
+            mender-inventory:
+                condition: service_healthy
+
+        depends_on:
+            mender-device-auth:
+                condition: service_healthy
 
     #
     # mender-device-auth

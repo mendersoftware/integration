@@ -34,7 +34,11 @@ class ApiClient:
     def call(self, method, url, body=None, path_params={}, qs_params={}, headers={}, auth=None, files=None):
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
-        return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
+        try:
+            return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
+        except Exception:
+            time.sleep(8)
+            return self.call(method, url, body, path_params, qs_params, headers, auth, files)
 
     def __make_url(self, path):
         return os.path.join(self.base_url,

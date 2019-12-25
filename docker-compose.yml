@@ -45,7 +45,7 @@ services:
         # critical - otherwise nginx may not detect
         # these servers and exits with 'upstream server not found'
         depends_on:
-            - mender-gui
+            mender-gui: service_healthy
 
         depends_on:
             mender-deployments:

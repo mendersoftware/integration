@@ -71,13 +71,17 @@ if args.start:
     fill_production_template()
 
     # start docker-compose
+    timeoutenv=os.environ.copy()
+    timeoutenv["COMPOSE_HTTP_TIMEOUT"]="1024"
+    timeoutenv["DOCKER_CLIENT_TIMEOUT"]="1024"
     ret = subprocess.call(["docker-compose",
                            "-p", conftest.docker_compose_instance,
                            "-f", "docker-compose.yml",
                            "-f", "docker-compose.storage.minio.yml",
                            "-f", "./production-testing-env.yml",
                            "up", "-d"],
-                          cwd="../")
+                          cwd="../",
+                          env=timeoutenv)
 
     assert ret == 0, "failed to start docker-compose"
 

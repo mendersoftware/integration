@@ -13,6 +13,7 @@
 #    limitations under the License.
 import os.path
 
+import time
 import requests
 
 GATEWAY_URL='https://mender-api-gateway'

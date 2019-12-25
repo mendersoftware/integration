@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+export DOCKER_CLIENT_TIMEOUT=1024
+export COMPOSE_HTTP_TIMEOUT=1024
+
 COMPOSE_CMD="docker-compose -p gui-tests \
              -f ${INTEGRATION_PATH}/docker-compose.yml \
              -f ${INTEGRATION_PATH}/docker-compose.client.yml

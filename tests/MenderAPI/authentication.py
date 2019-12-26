@@ -101,7 +101,7 @@ class Authentication:
             # It might take some time for create_org to propagate the new user.
             # Retry login for a minute.
             try_number=0
-            for i in range(1024):
+            for i in range(256):
                 time.sleep(8)
                 r = self._do_login(self.username, self.password)
                 logger.info("try number "+str(try_number)+" response: "+str(r.status_code))

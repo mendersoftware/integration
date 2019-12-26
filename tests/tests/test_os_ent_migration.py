@@ -30,6 +30,7 @@ import testutils.api.useradm as useradm
 from ..conftest import docker_compose_instance
 from ..common_docker import docker_compose_cmd, stop_docker_compose, stop_docker_compose_exclude, \
                             get_mender_gateway, get_mender_conductor, COMPOSE_FILES_PATH
+from ..MenderAPI import logger
 
 @pytest.fixture(scope="class")
 def initial_os_setup():
@@ -197,16 +198,19 @@ class TestEntMigration:
         # current dev tokens don't work right off the bat
         # the deviceauth db is empty
         for d in migrated_enterprise_setup["os_devs"]:
+            logger.info("depth: %d calling: %s token: %s" % (depth,deployments.URL_NEXT,d.token))
             resp = depld.with_auth(d.token).call(
                 'GET',
                 deployments.URL_NEXT,
                 qs_params={"artifact_name": 'foo',
                            "device_type"  : 'bar'})
+            logger.info("depth: %d %s token: %s rc=%d." % (depth,deployments.URL_NEXT,d.token,resp.status_code))
             if depth>255:
                 break
             if resp.status_code == 404:
                 time.sleep(8)
                 self.test_devs_ok(migrated_enterprise_setup, depth+1)
+            logger.info("depth: %d %s token: %s rc=%d returning." % (depth,deployments.URL_NEXT,d.token,resp.status_code))
 
             assert resp.status_code == 401
 

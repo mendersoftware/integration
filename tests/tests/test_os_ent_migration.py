@@ -189,7 +189,7 @@ class TestEntMigration:
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
 
-    def test_devs_ok(self, migrated_enterprise_setup, depth=0):
+    def test_devs_ok(self, migrated_enterprise_setup):
         uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
         dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
         dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
@@ -198,21 +198,20 @@ class TestEntMigration:
         # current dev tokens don't work right off the bat
         # the deviceauth db is empty
         for d in migrated_enterprise_setup["os_devs"]:
-            logger.info("%s depth: %d calling: %s token: %s" % (get_docker_compose_instance(), depth,deployments.URL_NEXT,d.token))
-            resp = depld.with_auth(d.token).call(
-                'GET',
-                deployments.URL_NEXT,
-                qs_params={"artifact_name": 'foo',
-                           "device_type"  : 'bar'})
-            logger.info("%s depth: %d %s token: %s rc=%d." % (get_docker_compose_instance(), depth,deployments.URL_NEXT,d.token,resp.status_code))
-            if depth>255:
-                break
-            if resp.status_code == 404:
-                time.sleep(8)
-                self.test_devs_ok(migrated_enterprise_setup, depth+1)
-            logger.info("%s depth: %d %s token: %s rc=%d returning." % (get_docker_compose_instance(), depth,deployments.URL_NEXT,d.token,resp.status_code))
+            for try_number in range(255):
+                logger.info("%s: attempt number %d devid %s calling: %s token: %s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,d.token))
+                resp = depld.with_auth(d.token).call(
+                    'GET',
+                    deployments.URL_NEXT,
+                    qs_params={"artifact_name": 'foo',
+                               "device_type"  : 'bar'})
+                logger.info("%s: attempt number %d devid %s calling %s rc=%d token=%s." % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
+                if resp.status_code != 404:
+                    logger.info("%s: attempt number %d devid %s again %s token: %s rc=%d returning." % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,d.token,resp.status_code))
+                    time.sleep(8)
+                    continue
 
-            assert resp.status_code == 401
+                assert resp.status_code == 401
 
         # but even despite the 'dummy' tenant token
         # os devices can get into the deviceauth db for acceptance

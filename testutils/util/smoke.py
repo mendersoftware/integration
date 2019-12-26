@@ -34,7 +34,10 @@ def minio(ip):
         else:
             logging.info("'{}' check for minio ok".format(check))
 
-def deployments(ip):
+def deployments(ip,prefix):
+    logging.info("waiting for containers to be in good health.")
+    out=run("./wait-for-all %s" % prefix)
+    logging.info(out)
     for check in range(256):
         try:
                 r = requests.get("http://{}:8080/api/management/v1/deployments/deployments".format(ip))

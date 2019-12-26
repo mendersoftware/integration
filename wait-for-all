@@ -1,0 +1,16 @@
+#!/bin/bash
+
+prefix="$1"
+
+MAX_TRIES=512
+for c in deployments useradm inventory device-auth; do
+ container_name="${prefix}_mender-${c}_1";
+ echo "`date` waiting for $container_name to be in good health.";
+ until [ "`docker inspect -f {{.State.Health.Status}} $container_name`" == "healthy" ]; do
+  let MAX_TRIES--;
+  [ $MAX_TRIES -le 1 ] && exit 1;
+  sleep 4;
+ done;
+ echo "`date` $container_name healthy";
+done
+

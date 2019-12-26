@@ -33,6 +33,7 @@ def wait_for_containers(expected_containers, defined_in):
         else:
             time.sleep(64)
 
+    out=subprocess.check_output("./wait-for-all %s" % get_docker_compose_instance(), shell=True)
     pytest.fail("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, conftest.docker_compose_instance))
 
 @pytest.fixture(scope="function")
@@ -55,7 +56,7 @@ def standard_setup_one_client_bootstrapped():
     restart_docker_compose()
     reset_mender_api()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(1)
 
@@ -71,7 +72,7 @@ def standard_setup_one_rofs_client_bootstrapped():
 
     auth.reset_auth_token()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(1)
 
@@ -89,7 +90,7 @@ def standard_setup_one_docker_client_bootstrapped():
 
     ssh_is_opened()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
@@ -99,7 +100,7 @@ def standard_setup_two_clients_bootstrapped():
     restart_docker_compose(2)
     reset_mender_api()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(2)
 
@@ -113,7 +114,7 @@ def standard_setup_without_client():
                         -f " + COMPOSE_FILES_PATH + "/docker-compose.testing.yml up -d",
                        use_common_files=False)
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
 @pytest.fixture(scope="function")
 def setup_with_legacy_client():
@@ -135,7 +136,7 @@ def setup_with_legacy_client():
 
     ssh_is_opened()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(1)
 
@@ -149,7 +150,7 @@ def standard_setup_with_signed_artifact_client(request):
     ssh_is_opened()
     auth.reset_auth_token()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(1)
 
@@ -169,7 +170,7 @@ def standard_setup_with_short_lived_token():
     ssh_is_opened()
     auth.reset_auth_token()
 
-    smoke_test()
+    smoke_test(get_docker_compose_instance())
 
     auth_v2.accept_devices(1)
 
@@ -265,8 +266,8 @@ def get_host_ip():
     s.close()
     return host_ip
 
-def smoke_test():
+def smoke_test(prefix):
     ip = docker_get_ip_of('minio')
     smoke.minio(ip[0])
     ip = docker_get_ip_of('mender-deployments')
-    smoke.deployments(ip[0])
+    smoke.deployments(ip[0],prefix)

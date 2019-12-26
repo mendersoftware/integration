@@ -21,7 +21,7 @@ from requests.auth import HTTPBasicAuth
 from . import logger
 from . import api_version
 from .requests_helpers import requests_retry
-from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILES_PATH
+from ..common_docker import docker_compose_cmd, get_docker_compose_instance, get_mender_gateway, COMPOSE_FILES_PATH
 
 class Authentication:
     auth_header = None
@@ -104,7 +104,7 @@ class Authentication:
             for i in range(256):
                 time.sleep(8)
                 r = self._do_login(self.username, self.password)
-                logger.info("try number "+str(try_number)+" response: "+str(r.status_code))
+                logger.info(" "+get_docker_compose_instance()+" try number "+str(try_number)+" response: "+str(r.status_code))
                 if r.status_code == 200:
                     break
                 try_number=try_number+1

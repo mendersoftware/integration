@@ -52,6 +52,8 @@ def store_logs():
     logger.info("docker-compose log file stored here: %s" % tfile)
     log_files.append(tfile)
 
+def get_docker_compose_instance():
+    return conftest.docker_compose_instance
 
 def docker_compose_cmd(arg_list, use_common_files=True, env=None):
     """

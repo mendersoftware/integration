@@ -35,13 +35,13 @@ def minio(ip):
             logging.info("'{}' check for minio ok".format(check))
 
 def deployments(ip):
-    for check in range(64):
+    for check in range(1024):
         try:
                 r = requests.get("http://{}:8080/api/management/v1/deployments/deployments".format(ip))
                 if r.status_code != 200:
                      m = "'{}'/{} check for deployments returned with http {}".format(ip, check, r.status_code)
                      logging.error(m)
-                     time.sleep(2)
+                     time.sleep(8)
                      continue
                 else:
                      logging.info("'{}'/{} check for deployments ok".format(ip, check))
@@ -49,5 +49,5 @@ def deployments(ip):
         except Exception:
                 m = "'{}'/{} check for deployments returned with Exception".format(ip, check)
                 logging.error(m)
-                time.sleep(2)
+                time.sleep(8)
                 continue

@@ -93,8 +93,20 @@ def initialize_os_setup():
     dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
     dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
 
-    users = [create_user("foo@tenant.com", "correcthorse", docker_prefix=docker_compose_instance),
-             create_user("bar@tenant.com", "correcthorse", docker_prefix=docker_compose_instance)]
+    # ensure_useradm_ready(512)
+    # users = [create_user("foo@tenant.com", "correcthorse", docker_prefix=docker_compose_instance),
+    #          create_user("bar@tenant.com", "correcthorse", docker_prefix=docker_compose_instance)]
+
+    cmd = 'exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s' % ("foo@tenant.com", "correcthorse")
+    uid=docker_compose_cmd(cmd)
+    u0 = User(uid, "foo@tenant.com", "correcthorse")
+
+    cmd = 'exec -T mender-useradm /usr/bin/useradm create-user --username %s --password %s' % ("bar@tenant.com", "correcthorse")
+    uid=docker_compose_cmd(cmd)
+    u1 = User(uid, "bar@tenant.com", "correcthorse")
+ 
+    users = [u0, u1]
+    time.sleep(30)
 
     r = uadmm.call('POST',
                    useradm.URL_LOGIN,

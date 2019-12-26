@@ -188,7 +188,7 @@ class TestEntMigration:
                        auth=(ent_user.name, ent_user.pwd))
         assert r.status_code == 200
 
-    def test_devs_ok(self, migrated_enterprise_setup):
+    def test_devs_ok(self, migrated_enterprise_setup, depth=0):
         uadmm = ApiClient('https://{}/api/management/v1/useradm'.format(get_mender_gateway()))
         dauthd = ApiClient('https://{}/api/devices/v1/authentication'.format(get_mender_gateway()))
         dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
@@ -202,6 +202,11 @@ class TestEntMigration:
                 deployments.URL_NEXT,
                 qs_params={"artifact_name": 'foo',
                            "device_type"  : 'bar'})
+            if depth>255:
+                break
+            if resp.status_code == 404:
+                time.sleep(8)
+                self.test_devs_ok(migrated_enterprise_setup, depth+1)
 
             assert resp.status_code == 401
 

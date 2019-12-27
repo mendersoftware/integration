@@ -23,6 +23,7 @@ Compose these in e.g. test fixtures for the complete smoke test of your setup.
 import requests
 import logging
 import time
+import subprocess
 
 def minio(ip):
     for check in ['live', 'ready']:
@@ -36,7 +37,7 @@ def minio(ip):
 
 def deployments(ip,prefix):
     logging.info("waiting for containers to be in good health.")
-    out=run("./wait-for-all %s" % prefix)
+    out=subprocess.check_output("./wait-for-all %s" % prefix, shell=True)
     logging.info(out)
     for check in range(256):
         try:

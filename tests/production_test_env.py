@@ -82,6 +82,7 @@ if args.start:
                            "up", "-d"],
                           cwd="../",
                           env=timeoutenv)
+    out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
 
     assert ret == 0, "failed to start docker-compose"
 

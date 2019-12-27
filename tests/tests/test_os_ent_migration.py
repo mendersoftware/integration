@@ -205,13 +205,15 @@ class TestEntMigration:
                     deployments.URL_NEXT,
                     qs_params={"artifact_name": 'foo',
                                "device_type"  : 'bar'})
-                logger.info("%s: attempt number %d devid %s calling %s rc=%d token=%s." % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
-                if resp.status_code != 404:
-                    logger.info("%s: attempt number %d devid %s again %s token: %s rc=%d returning." % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,d.token,resp.status_code))
+                logger.info("%s: attempt number %d devid %s calling %s rc=%d token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
+                if resp.status_code == 404:
+                    logger.info("%s: attempt number %d devid %s again %s rc=%d returning. token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
                     time.sleep(8)
                     continue
+                else:
+                    break
 
-                assert resp.status_code == 401
+            assert resp.status_code == 401
 
         # but even despite the 'dummy' tenant token
         # os devices can get into the deviceauth db for acceptance

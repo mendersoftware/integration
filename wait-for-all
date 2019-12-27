@@ -4,13 +4,13 @@ prefix="$1"
 
 [ "${prefix}" != "" ] || { echo "`date` empty prefix; exit; "; exit 0; }
 MAX_TRIES=128
-for c in deployments useradm inventory device-auth; do
+for c in api-gateway deployments useradm inventory device-auth; do
  container_name="${prefix}_mender-${c}_1";
  echo "`date` waiting for $container_name to be in good health.";
  until [ "`docker inspect -f {{.State.Health.Status}} $container_name`" == "healthy" ]; do
   let MAX_TRIES--;
   [ $MAX_TRIES -le 1 ] && exit 1;
-  sleep 2;
+  sleep 60;
  done;
  echo "`date` $container_name healthy";
 done

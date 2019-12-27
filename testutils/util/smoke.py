@@ -36,8 +36,8 @@ def minio(ip):
             logging.info("'{}' check for minio ok".format(check))
 
 def deployments(ip,prefix):
-    logging.info("waiting for containers to be in good health.")
-    out = subprocess.check_output(["/builds/Northern.tech/Mender/integration/wait-for-all", prefix], shell=True)
+    logging.info("waiting for containers to be in good health; prefix '%s'." % prefix)
+    out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % prefix, shell=True)
     logging.info(out)
     for check in range(256):
         try:

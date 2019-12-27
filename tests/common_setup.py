@@ -23,6 +23,7 @@ from .MenderAPI import auth, auth_v2, reset_mender_api
 from .common import *
 from .common_docker import *
 import testutils.util.smoke as smoke
+import logging
 
 def wait_for_containers(expected_containers, defined_in):
     for _ in range(60 * 5):
@@ -33,7 +34,8 @@ def wait_for_containers(expected_containers, defined_in):
         else:
             time.sleep(64)
 
-    out = subprocess.check_output(["/builds/Northern.tech/Mender/integration/wait-for-all", get_docker_compose_instance()], shell=True)
+    logging.info("common_setup: waiting for containers to be in good health; prefix '%s'." % get_docker_compose_instance())
+    out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % get_docker_compose_instance(), shell=True)
     pytest.fail("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, conftest.docker_compose_instance))
 
 @pytest.fixture(scope="function")

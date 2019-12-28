@@ -6,6 +6,7 @@ prefix="$1"
 MAX_TRIES=128
 for c in minio api-gateway deployments useradm inventory device-auth; do
  container_name="${prefix}_mender-${c}_1";
+ [ "${c}" == "minio" ] && container_name="${prefix}_${c}_1";
  echo "`date` waiting for $container_name to be in good health.";
  until [ "`docker inspect -f {{.State.Health.Status}} $container_name`" == "healthy" ]; do
   let MAX_TRIES--;

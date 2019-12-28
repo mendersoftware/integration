@@ -64,8 +64,8 @@ if args.start:
 
     # add keys for production environment
     if not os.path.exists("../keys-generated"):
-        ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "localhost",
-                                                 "CERT_STORAGE_CN": "localhost"},
+        ret = subprocess.call(["./keygen"], env={"CERT_API_CN": "s3.docker.mender.io",
+                                                 "CERT_STORAGE_CN": "s3.docker.mender.io"},
                               cwd="../")
         assert ret == 0, "failed to generate keys"
     fill_production_template()

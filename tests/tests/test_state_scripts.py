@@ -630,9 +630,9 @@ class TestStateScripts(MenderTesting):
                 # wait until the last script has been run
                 logger.debug("waint until the last script has been run")
                 script_logs = ""
-                timeout = time.time() + 60*60
+                timeout = time.time() + 4*60*60
                 while timeout >= time.time():
-                    time.sleep(3)
+                    time.sleep(128)
                     script_logs = run("cat /data/test_state_scripts.log")
                     if test_set.get("ExpectedScriptFlow")[-1] in script_logs:
                         break
@@ -669,6 +669,8 @@ class TestStateScripts(MenderTesting):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
+        logging.info("test_state_scripts is about to wait-for-all")
+        out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
         if not env.host_string:
             execute(self.test_state_scripts, description, test_set,
                     hosts=get_mender_clients())
@@ -783,7 +785,7 @@ class TestStateScripts(MenderTesting):
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
                 starttime = time.time()
-                while starttime + 60*60 >= time.time():
+                while starttime + 4*60*60 >= time.time():
                     with settings(warn_only=True):
                         result = run("grep Error /data/test_state_scripts.log")
                         if result.succeeded:
@@ -801,7 +803,7 @@ class TestStateScripts(MenderTesting):
 
             # Always give the client a little bit of time to settle in the base
             # state after an update.
-            time.sleep(10)
+            time.sleep(128)
 
             output = run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split('\n'))

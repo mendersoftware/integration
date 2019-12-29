@@ -15,6 +15,7 @@
 
 import tempfile
 import random
+import time
 
 from fabric.api import *
 import pytest
@@ -77,6 +78,7 @@ def common_update_procedure(install_image=None,
 
     deployment_triggered_callback()
     # wait until deployment is in correct state
+    time.sleep(255)
     if verify_status:
         deploy.check_expected_status("inprogress", deployment_id)
 

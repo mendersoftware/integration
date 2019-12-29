@@ -19,6 +19,7 @@ import re
 import shutil
 import tempfile
 import time
+import subprocess
 
 import pytest
 from fabric.api import *
@@ -125,6 +126,8 @@ class TestFaultTolerance(MenderTesting):
 
             The test should result in a successful download retry.
         """
+        logging.info("test_image_download_retry_timeout is about to wait-for-all")
+        out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
         if not env.host_string:
             execute(self.test_image_download_retry_timeout,
                     test_set,
@@ -146,8 +149,8 @@ class TestFaultTolerance(MenderTesting):
             if test_set['blockAfterStart']:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(install_image)
-                for _ in range(60):
-                    time.sleep(0.5)
+                for _ in range(128):
+                    time.sleep(5)
                     with quiet():
                         # make sure we are writing to the inactive partition
                         output = run("fuser -mv %s" % (inactive_part))

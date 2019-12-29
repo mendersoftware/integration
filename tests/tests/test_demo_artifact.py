@@ -82,6 +82,8 @@ class TestDemoArtifact(MenderTesting):
                         self.auth.password = password
                         assert len(password) == 12
                     break
+            logging.info('run_demo_script_up is about to wait-for-all')
+            out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
             return proc
 
         return run_demo_script_up

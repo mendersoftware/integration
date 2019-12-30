@@ -41,7 +41,7 @@ class Conductor:
             'q': query,
         }
 
-        rsp = requests_retry().get(self.addr+self.API_WF_SEARCH, params=qs)
+        rsp = requests_retry().get(self.addr+self.API_WF_SEARCH, timeout=512, params=qs)
         rsp.raise_for_status()
         return rsp.json()
 

@@ -169,6 +169,8 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
 
+echo "`date` ./tests/run.sh: running: python2 -m pytest $XDIST_ARGS $MAX_FAIL_ARG --verbose --junitxml=results.xml $HTML_REPORT \"$@\" $SPECIFIC_INTEGRATION_TEST_FLAG \"$SPECIFIC_INTEGRATION_TEST\""
+
 python2 -m pytest \
     $XDIST_ARGS \
     $MAX_FAIL_ARG \

@@ -44,7 +44,7 @@ class Deployments:
     def upload_image(self, filename, description="abc"):
         image_path_url = self.get_deployments_base_path() + "artifacts"
 
-        r = requests_retry().post(image_path_url,
+        r = requests_retry().post(image_path_url, timeout=512,
                                   verify=False,
                                   headers=self.auth.get_auth_token(),
                                   files=(
@@ -67,7 +67,7 @@ class Deployments:
         headers = {'Content-Type': 'application/json'}
         headers.update(self.auth.get_auth_token())
 
-        r = requests_retry().post(deployments_path_url, headers=headers,
+        r = requests_retry().post(deployments_path_url, timeout=512, headers=headers,
                                   data=json.dumps(trigger_data), verify=False)
 
         logger.debug("triggering deployment with: " + json.dumps(trigger_data))
@@ -81,7 +81,7 @@ class Deployments:
 
     def get_logs(self, device, deployment_id, expected_status=200):
         deployments_logs_url = self.get_deployments_base_path() + "deployments/%s/devices/%s/log" % (deployment_id, device)
-        r = requests_retry().get(deployments_logs_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(deployments_logs_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == expected_status
 
         logger.info("Logs contain " + str(r.text))
@@ -93,14 +93,14 @@ class Deployments:
         if status:
             deployments_status_url += "?status=%s" % (status)
 
-        r = requests_retry().get(deployments_status_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(deployments_status_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
 
         assert r.status_code == requests.status_codes.codes.ok
         return json.loads(r.text)
 
     def get_statistics(self, deployment_id):
         deployments_statistics_url = self.get_deployments_base_path() + "deployments/%s/statistics" % (deployment_id)
-        r = requests_retry().get(deployments_statistics_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(deployments_statistics_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
 
         try:
@@ -162,41 +162,41 @@ class Deployments:
 
     def get_deployment_overview(self, deployment_id):
         deployments_overview_url = self.get_deployments_base_path() + "deployments/%s/devices" % (deployment_id)
-        r = requests_retry().get(deployments_overview_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(deployments_overview_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
     def get_deployment(self, deployment_id):
         deployments_url = self.get_deployments_base_path() + "deployments/%s" % (deployment_id)
-        r = requests_retry().get(deployments_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(deployments_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
     def get_artifact_details(self, artifact_id):
         artifact_url = self.get_deployments_base_path() + "artifacts/%s" % (artifact_id)
-        r = requests_retry().get(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().get(artifact_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
     def delete_artifact(self, artifact_id):
         artifact_url = self.get_deployments_base_path() + "artifacts/%s" % (artifact_id)
-        r = requests_retry().delete(artifact_url, headers=self.auth.get_auth_token(), verify=False)
+        r = requests_retry().delete(artifact_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.no_content
 
     def get_artifacts(self, auth_create_new_user=True):
         artifact_url = self.get_deployments_base_path() + "artifacts"
-        r = requests_retry().get(artifact_url, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
+        r = requests_retry().get(artifact_url, timeout=512, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
         return r.json()
 
     def abort(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
-        r = requests_retry().put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
+        r = requests_retry().put(deployment_abort_url, timeout=512, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
         time.sleep(5)
         assert r.status_code == requests.status_codes.codes.no_content
 
     def abort_finished_deployment(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
-        r = requests_retry().put(deployment_abort_url, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
+        r = requests_retry().put(deployment_abort_url, timeout=512, verify=False, headers=self.auth.get_auth_token(), json={"status": "aborted"})
         time.sleep(5)
         assert r.status_code == requests.status_codes.codes.unprocessable_entity

@@ -127,11 +127,17 @@ class Authentication:
         self.auth_header = None
 
     def _do_login(self, username, password):
-        r = requests_retry().post(
-            "https://%s/api/management/%s/useradm/auth/login" %
-            (get_mender_gateway(), api_version),
-            verify=False,
-            auth=HTTPBasicAuth(username, password))
+        for check in range(256):
+            try:
+                r = requests_retry().post(
+                    "https://%s/api/management/%s/useradm/auth/login" %
+                    (get_mender_gateway(), api_version),timeout=512,
+                    verify=False,
+                    auth=HTTPBasicAuth(username, password))
+                break;
+            except Exception:
+             time.sleep(15)
+             continue
         assert r.status_code == 200 or r.status_code == 401
 
         if r.status_code == 200:

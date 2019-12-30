@@ -39,7 +39,7 @@ class DeviceAuthV2():
 
     def get_device(self, device_id):
         url = self.get_auth_v2_base_path() + device_id
-        return requests_retry().get(url, verify=False, headers=self.auth.get_auth_token())
+        return requests_retry().get(url, timeout=512, verify=False, headers=self.auth.get_auth_token())
 
     def get_devices(self, expected_devices=1):
         return self.get_devices_status(expected_devices=expected_devices)
@@ -58,7 +58,7 @@ class DeviceAuthV2():
             # Linear backoff
             sleeptime += 5
             logger.info("getting all devices from: %s" % (device_status_path))
-            devices = requests_retry().get(device_status_path, headers=self.auth.get_auth_token(), verify=False)
+            devices = requests_retry().get(device_status_path, timeout=512, headers=self.auth.get_auth_token(), verify=False)
             if devices.status_code == requests.status_codes.codes.ok and len(devices.json()) == expected_devices:
                 got_devices = True
                 break
@@ -87,7 +87,7 @@ class DeviceAuthV2():
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        r = requests_retry().put(self.get_auth_v2_base_path() + "devices/%s/auth/%s/status" % (device_id, auth_set_id),
+        r = requests_retry().put(self.get_auth_v2_base_path() + "devices/%s/auth/%s/status" % (device_id, auth_set_id), timeout=512,
                                  verify=False,
                                  headers=headers,
                                  data=json.dumps({"status": status}))
@@ -142,7 +142,7 @@ class DeviceAuthV2():
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        return requests_retry().post(path, data=json.dumps(req), headers=headers, verify=False)
+        return requests_retry().post(path, timeout=512, data=json.dumps(req), headers=headers, verify=False)
 
     def delete_auth_set(self, did, aid):
         path = "https://%s/api/management/v2/devauth/devices/%s/auth/%s" % (get_mender_gateway(), did, aid)
@@ -150,11 +150,11 @@ class DeviceAuthV2():
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        return requests_retry().delete(path, headers=headers, verify=False)
+        return requests_retry().delete(path, timeout=512, headers=headers, verify=False)
 
     def decommission(self, deviceID, expected_http_code=204):
         decommission_path_url = self.get_auth_v2_base_path() + "devices/" + str(deviceID)
-        r = requests_retry().delete(decommission_path_url,
+        r = requests_retry().delete(decommission_path_url, timeout=512,
                                     verify=False,
                                     headers=self.auth.get_auth_token())
         assert r.status_code == expected_http_code

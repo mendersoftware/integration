@@ -5,6 +5,7 @@
 tags
 
 /release-state.yml
+/mender-demo-artifact.mender
 
 /docker-compose.testing.yml
 /docker-compose.testing.enterprise.yml

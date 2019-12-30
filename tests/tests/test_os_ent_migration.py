@@ -184,9 +184,18 @@ class TestEntMigration:
 
         # but enterprise user can
         ent_user = migrated_enterprise_setup["tenant"].users[0]
-        r = uadmm.call('POST',
-                       useradm.URL_LOGIN,
-                       auth=(ent_user.name, ent_user.pwd))
+
+        for try_number in range(255):
+            logger.info("%s: attempt number %d l:%s calling: %s" % (get_docker_compose_instance(),try_number,ent_user.name,useradm.URL_LOGIN))
+            r = uadmm.call('POST',
+                           useradm.URL_LOGIN,
+                           auth=(ent_user.name, ent_user.pwd))
+            if r.status_code != 200:
+                logger.info("%s: attempt number %d l:%s called: %s rc=%d" % (get_docker_compose_instance(),try_number,ent_user.name,useradm.URL_LOGIN,r.status_code))
+                time.sleep(15)
+                continue
+            else:
+                break
         assert r.status_code == 200
 
     def test_devs_ok(self, migrated_enterprise_setup):

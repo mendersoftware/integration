@@ -36,7 +36,7 @@ class ApiClient:
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
         try:
-            return requests.request(method, url, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
+            return requests.request(method, url, timeout=512, json=body, params=qs_params, headers=self.__make_headers(headers), auth=auth, verify=False, files=files)
         except Exception:
             time.sleep(8)
             return self.call(method, url, body, path_params, qs_params, headers, auth, files)

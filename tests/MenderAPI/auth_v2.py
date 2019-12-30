@@ -23,6 +23,7 @@ from .requests_helpers import requests_retry
 
 from ..common_docker import get_mender_gateway
 from ..common_docker import get_mender_clients
+from ..common_docker import get_docker_compose_instance
 
 class DeviceAuthV2():
 
@@ -48,27 +49,29 @@ class DeviceAuthV2():
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_auth_v2_base_path() + "devices"
         devices = None
-        max_wait = 60*60
+        max_wait = 678
         starttime = time.time()
-        sleeptime = 5
+        sleeptime = 512
 
+        logger.info("%s get_devices_status starts" % (get_docker_compose_instance()))
         got_devices = False
         while starttime + max_wait >= time.time():
             time.sleep(sleeptime)
             # Linear backoff
             sleeptime += 5
-            logger.info("getting all devices from: %s" % (device_status_path))
+            logger.info("%s get_devices_status getting all devices from: %s" % (get_docker_compose_instance(), device_status_path))
             devices = requests_retry().get(device_status_path, timeout=512, headers=self.auth.get_auth_token(), verify=False)
+            logger.info("%s get_devices_status GET %s rc=%d" % (get_docker_compose_instance(),device_status_path,devices.status_code))
             if devices.status_code == requests.status_codes.codes.ok and len(devices.json()) == expected_devices:
                 got_devices = True
                 break
             else:
                 if devices is not None and getattr(devices, "text"):
-                    logger.info("fail to get devices (payload: %s), will try for at least %d more seconds"
-                                % (devices.text, starttime + max_wait - time.time()))
+                    logger.info("%s get_devices_status fail to get devices (payload: %s), will try for at least %d more seconds"
+                                % (get_docker_compose_instance(), devices.text, starttime + max_wait - time.time()))
                 else:
-                    logger.info("failed to get devices, will try for at least %d more seconds"
-                                % (starttime + max_wait - time.time()))
+                    logger.info("%s get_devices_status failed to get devices, will try for at least %d more seconds"
+                                % (get_docker_compose_instance(), starttime + max_wait - time.time()))
 
         assert got_devices, "Not able to get devices"
 
@@ -84,6 +87,7 @@ class DeviceAuthV2():
         return matching
 
     def set_device_auth_set_status(self, device_id, auth_set_id, status):
+        logger.info("%s set_device_auth_set_status starting" % get_docker_compose_instance())
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
@@ -91,6 +95,7 @@ class DeviceAuthV2():
                                  verify=False,
                                  headers=headers,
                                  data=json.dumps({"status": status}))
+        logger.info("%s set_device_auth_set_status called PUT devices/%s/auth/%s/status rc=%d" % (get_docker_compose_instance(),device_id, auth_set_id,r.status_code))
         assert r.status_code == requests.status_codes.codes.no_content
 
     def check_expected_status(self, status, expected_value, max_wait=60*60, polling_frequency=1):
@@ -117,24 +122,31 @@ class DeviceAuthV2():
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))
 
     def accept_devices(self, expected_devices):
-        if len(self.get_devices_status("accepted", expected_devices=expected_devices)) == len(get_mender_clients()):
+        len0=len(self.get_devices_status("accepted", expected_devices=expected_devices))
+        len1=len(get_mender_clients())
+        logger.info("%s accept_devices starts len self.get_devices_status %d len get_mender_clients()=%d" % (get_docker_compose_instance(),len0,len1))
+        if len0 == len1:
+            logger.info("%s accept_devices lens eq returning" % (get_docker_compose_instance()))
             return
 
         # iterate over devices and accept them
         for d in self.get_devices(expected_devices=expected_devices):
+            logger.info("%s accept_devices calling set_device_auth_set_status(%s,%s,accepted)" % (get_docker_compose_instance(),d["id"], d["auth_sets"][0]["id"]))
             self.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
 
         # block until devices are actually accepted
-        timeout = time.time() + 512
+        timeout = time.time() + 256
         while time.time() <= timeout:
-            time.sleep(1)
-            if len(self.get_devices_status(status="accepted", expected_devices=expected_devices)) == expected_devices:
+            ltrial=len(self.get_devices_status(status="accepted", expected_devices=expected_devices))
+            logger.info("%s accept_devices waiting for devices to be accepted ltrial %d exp %d" % (get_docker_compose_instance(),ltrial,expected_devices))
+            time.sleep(64)
+            if ltrial == expected_devices:
                 break
 
         if time.time() > timeout:
-            pytest.fail("wasn't able to accept device after 30 seconds")
+            pytest.fail("%s accept_devices wasn't able to accept device after 30 seconds" % get_docker_compose_instance())
 
-        logger.info("Successfully bootstrap all clients")
+        logger.info("%s accept_devices Successfully bootstrap all clients" % (get_docker_compose_instance()))
 
     def preauth(self, device_identity, pubkey):
         path = "https://%s/api/management/v2/devauth/devices" % (get_mender_gateway())

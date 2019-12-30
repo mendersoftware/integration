@@ -147,14 +147,12 @@ def standard_setup_with_signed_artifact_client(request):
     stop_docker_compose()
     reset_mender_api()
 
-    time.sleep(128)
     docker_compose_cmd("-f " + COMPOSE_FILES_PATH + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml up -d")
 
     ssh_is_opened()
     auth.reset_auth_token()
 
     smoke_test(get_docker_compose_instance())
-    time.sleep(128)
 
     auth_v2.accept_devices(1)
 

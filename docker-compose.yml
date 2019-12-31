@@ -117,7 +117,7 @@ services:
                     - mongo-inventory
                     - mongo-useradm
         tmpfs:
-            - /
+            - /data
 
     mender-conductor:
         environment:

@@ -51,7 +51,7 @@ class DeviceAuthV2():
         devices = None
         max_wait = 678
         starttime = time.time()
-        sleeptime = 512
+        sleeptime = 8
 
         logger.info("%s get_devices_status starts" % (get_docker_compose_instance()))
         got_devices = False
@@ -118,7 +118,7 @@ class DeviceAuthV2():
             else:
                 return
 
-        if time.time() > timeout:
+        if count != expected_value:
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))
 
     def accept_devices(self, expected_devices):
@@ -135,16 +135,16 @@ class DeviceAuthV2():
             self.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
 
         # block until devices are actually accepted
-        timeout = time.time() + 256
+        timeout = time.time() + 512
         while time.time() <= timeout:
             ltrial=len(self.get_devices_status(status="accepted", expected_devices=expected_devices))
             logger.info("%s accept_devices waiting for devices to be accepted ltrial %d exp %d" % (get_docker_compose_instance(),ltrial,expected_devices))
-            time.sleep(64)
             if ltrial == expected_devices:
                 break
+            time.sleep(8)
 
-        if time.time() > timeout:
-            pytest.fail("%s accept_devices wasn't able to accept device after 30 seconds" % get_docker_compose_instance())
+        if ltrial != expected_devices:
+            pytest.fail("%s accept_devices wasn't able to accept device after %d seconds" % (get_docker_compose_instance(),timeout))
 
         logger.info("%s accept_devices Successfully bootstrap all clients" % (get_docker_compose_instance()))
 

@@ -53,7 +53,7 @@ class DeviceAuthV2():
         starttime = time.time()
         sleeptime = 8
 
-        logger.info("%s get_devices_status starts" % (get_docker_compose_instance()))
+        logger.info("%s get_devices_status starts exp:%d" % (get_docker_compose_instance(),expected_devices))
         got_devices = False
         while starttime + max_wait >= time.time():
             time.sleep(sleeptime)
@@ -64,14 +64,17 @@ class DeviceAuthV2():
             logger.info("%s get_devices_status GET %s rc=%d" % (get_docker_compose_instance(),device_status_path,devices.status_code))
             if devices.status_code == requests.status_codes.codes.ok and len(devices.json()) == expected_devices:
                 got_devices = True
+                logger.info("%s get_devices_status got devices (payload: %s;rc=%d)"
+                            % (get_docker_compose_instance(), devices.text, devices.status_code))
+
                 break
             else:
                 if devices is not None and getattr(devices, "text"):
-                    logger.info("%s get_devices_status fail to get devices (payload: %s), will try for at least %d more seconds"
-                                % (get_docker_compose_instance(), devices.text, starttime + max_wait - time.time()))
+                    logger.info("%s get_devices_status fail to get devices (payload: %s;rc=%d), will try for at least %d more seconds"
+                                % (get_docker_compose_instance(), devices.text, devices.status_code, starttime + max_wait - time.time()))
                 else:
-                    logger.info("%s get_devices_status failed to get devices, will try for at least %d more seconds"
-                                % (get_docker_compose_instance(), starttime + max_wait - time.time()))
+                    logger.info("%s get_devices_status failed to get devices rc=%d, will try for at least %d more seconds"
+                                % (get_docker_compose_instance(), devices.status_code, starttime + max_wait - time.time()))
 
         assert got_devices, "Not able to get devices"
 

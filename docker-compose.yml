@@ -116,6 +116,8 @@ services:
                     - mongo-device-auth
                     - mongo-inventory
                     - mongo-useradm
+        tmpfs:
+            - /
 
     mender-conductor:
         environment:

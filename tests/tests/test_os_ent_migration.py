@@ -153,7 +153,7 @@ def migrate_ent_setup():
 
     cli = CliTenantadm(docker_prefix=docker_compose_instance)
     tid = cli.create_org('tenant', u.name, u.pwd)
-    time.sleep(10)
+    time.sleep(512)
 
     tenant = cli.get_tenant(tid)
 
@@ -204,24 +204,27 @@ class TestEntMigration:
         dauthm = ApiClient('https://{}/api/management/v2/devauth'.format(get_mender_gateway()))
         depld = ApiClient('https://{}/api/devices/v1/deployments'.format(get_mender_gateway()))
 
+        logger.info("%s test_devs_ok starting " % (get_docker_compose_instance()))
         # current dev tokens don't work right off the bat
         # the deviceauth db is empty
         for d in migrated_enterprise_setup["os_devs"]:
             for try_number in range(255):
-                logger.info("%s: attempt number %d devid %s calling: %s token: %s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,d.token))
+                logger.info("%s test_devs_ok attempt number %d devid %s calling: %s token: %s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,d.token))
                 resp = depld.with_auth(d.token).call(
                     'GET',
                     deployments.URL_NEXT,
                     qs_params={"artifact_name": 'foo',
                                "device_type"  : 'bar'})
-                logger.info("%s: attempt number %d devid %s calling %s rc=%d token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
+                logger.info("%s test_devs_ok attempt number %d devid %s calling %s rc=%d token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
                 if resp.status_code == 404:
-                    logger.info("%s: attempt number %d devid %s again %s rc=%d returning. token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
+                    logger.info("%s: attempt number %d devid %s again %s rc=%d token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
                     time.sleep(8)
                     continue
                 else:
+                    logger.info("%s: attempt number %d devid %s returing %s rc=%d token=%s" % (get_docker_compose_instance(),try_number,json.dumps(d.id_data),deployments.URL_NEXT,resp.status_code,d.token))
                     break
 
+            logger.info("%s test_devs_ok returning" % get_docker_compose_instance())
             assert resp.status_code == 401
 
         # but even despite the 'dummy' tenant token

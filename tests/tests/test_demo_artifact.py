@@ -133,7 +133,7 @@ class TestDemoArtifact(MenderTesting):
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
-        artifacts = self.deploy.get_artifacts(auth_create_new_user=False) # User should be created by the demo script.
+        artifacts = self.deploy.get_artifacts(auth_create_new_user=False,expected_count=1) # User should be created by the demo script.
         assert len(artifacts) == 1
         artifact_name = artifacts[0]['name']
 

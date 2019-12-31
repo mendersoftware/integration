@@ -24,6 +24,7 @@ from . import logger
 from . import api_version
 from .requests_helpers import requests_retry
 from ..common_docker import get_mender_gateway
+from ..common_docker import get_docker_compose_instance
 
 class Deployments:
     # track the last statistic for a deployment id
@@ -183,11 +184,28 @@ class Deployments:
         r = requests_retry().delete(artifact_url, timeout=512, headers=self.auth.get_auth_token(), verify=False)
         assert r.status_code == requests.status_codes.codes.no_content
 
-    def get_artifacts(self, auth_create_new_user=True):
+    def get_artifacts(self, auth_create_new_user=True, expected_count=0):
+        logging.info("%s: get_artifacts starting" % get_docker_compose_instance())
         artifact_url = self.get_deployments_base_path() + "artifacts"
         r = requests_retry().get(artifact_url, timeout=512, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
         assert r.status_code == requests.status_codes.codes.ok
-        return r.json()
+        rc=r.json()
+        max_tries=128
+        while expected_count>0:
+            if max_tries<1:
+                break
+            r = requests_retry().get(artifact_url, timeout=512, headers=self.auth.get_auth_token(auth_create_new_user), verify=False)
+            logging.info("%s: get_artifacts (%d) expected_count=%d rc=%d" % (get_docker_compose_instance(),max_tries,expected_count,r.status_code))
+            assert r.status_code == requests.status_codes.codes.ok
+            rc=r.json()
+            if len(rc) == expected_count:
+                break
+            else:
+                time.sleep(8)
+                max_tries=max_tries-1
+ 
+        logging.info("%s: get_artifacts (%d) returning %d artifacts." % (get_docker_compose_instance(),max_tries,len(rc)))
+        return rc
 
     def abort(self, deployment_id):
         deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)

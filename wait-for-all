@@ -6,12 +6,12 @@ prefix="$1"
 for c in conductor minio api-gateway deployments useradm inventory device-auth; do
  container_name="${prefix}_mender-${c}_1";
  [ "${c}" == "minio" ] && container_name="${prefix}_${c}_1";
- MAX_TRIES=128
+ MAX_TRIES=16
  until [ "`docker inspect -f {{.State.Health.Status}} $container_name`" == "healthy" ]; do
   echo "`date` (${MAX_TRIES}) waiting for $container_name to be in good health.";
   let MAX_TRIES--;
   [ $MAX_TRIES -le 1 ] && exit 1;
-  sleep 60;
+  sleep 1;
  done;
  echo "`date` $container_name healthy";
 done

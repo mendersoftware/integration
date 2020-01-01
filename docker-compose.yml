@@ -131,6 +131,8 @@ services:
             service: mender-base
         networks:
             - mender
+        tmpfs:
+            - /data
 
     mender-elasticsearch:
         environment:
@@ -143,6 +145,8 @@ services:
             service: mender-base
         networks:
             - mender
+        tmpfs:
+            - /usr/share/elasticsearch
 
     mender-redis:
         image: redis:5-alpine3.8

@@ -108,7 +108,7 @@ def stop_docker_compose():
          cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % conftest.docker_compose_instance
          logger.info("%s stop_docker_compose running %s" % (conftest.docker_compose_instance,cmd))
          subprocess.check_call(cmd, shell=True)
-         cmd="docker ps -a | grep %s" % conftest.docker_compose_instance
+         cmd="docker ps -a | grep %s || true" % conftest.docker_compose_instance
          for try_number in range(4):
              logger.info("%s stop_docker_compose running %s did all containers exit?" % (conftest.docker_compose_instance,cmd))
              out = subprocess.check_output(cmd, shell=True)
@@ -135,7 +135,7 @@ def stop_docker_compose_exclude(exclude=[]):
 
         logger.info("running %s" % cmd)
         subprocess.check_call(cmd, shell=True)
-        cmd="docker ps -a | grep %s" % conftest.docker_compose_instance
+        cmd="docker ps -a | grep %s || true" % conftest.docker_compose_instance
         for try_number in range(4):
             logger.info("%s stop_docker_compose_exclude running %s did containers exit?" % (conftest.docker_compose_instance,cmd))
             out = subprocess.check_output(cmd, shell=True)

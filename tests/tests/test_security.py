@@ -40,26 +40,29 @@ class TestSecurity(MenderTesting):
         # start production environment
         subprocess.call(["./production_test_env.py", "--start",
                          "--docker-compose-instance", conftest.docker_compose_instance])
-
+        logging.info("test_ssl_only %s sleeping waiting for startup." % conftest.docker_compose_instance)
+        time.sleep(128)
         try:
 
             # get all exposed ports from docker
 
-            for _ in range(3):
+            for _ in range(64):
                 exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat"
                                                         % conftest.docker_compose_instance,
                                                         shell=True)
 
+                logging.info("test_ssl_only %s trying to connect to: %s." % (conftest.docker_compose_instance,exposed_hosts))
                 try:
                     for host in exposed_hosts.split():
                         with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:
-                            logging.info("%s: connect to host with TLS" % host)
+                            logging.info("test_ssl_only %s %s: connect to host with TLS" % (conftest.docker_compose_instance, host))
                             host, port = host.split(":")
                             sock.connect((host, int(port)))
                             done = True
                 except:
-                    sleep_time *= 2
+                    sleep_time += 2
                     time.sleep(sleep_time)
+                    logging.info("test_ssl_only %s next attempt" % conftest.docker_compose_instance)
                     continue
 
                 if done:

@@ -112,9 +112,12 @@ def stop_docker_compose():
          for try_number in range(4):
              logger.info("%s stop_docker_compose running %s did all containers exit?" % (conftest.docker_compose_instance,cmd))
              out = subprocess.check_output(cmd, shell=True)
-             logger.info("%s out:" % conftest.docker_compose_instance)
+             if len(out)<1:
+                 logger.info("%s stop_docker_compose out all clear" % conftest.docker_compose_instance)
+                 break;
+             logger.info("%s stop_docker_compose out:" % conftest.docker_compose_instance)
              logger.info(out)
-             logger.info("%s :out" % conftest.docker_compose_instance)
+             logger.info("%s stop_docker_compose :out" % conftest.docker_compose_instance)
              time.sleep(8)
 
 def stop_docker_compose_exclude(exclude=[]):
@@ -139,9 +142,12 @@ def stop_docker_compose_exclude(exclude=[]):
         for try_number in range(4):
             logger.info("%s stop_docker_compose_exclude running %s did containers exit?" % (conftest.docker_compose_instance,cmd))
             out = subprocess.check_output(cmd, shell=True)
-            logger.info("%s out:" % conftest.docker_compose_instance)
+            if len(out)<1:
+                logger.info("%s stop_docker_compose_exclude out all clear" % conftest.docker_compose_instance)
+                break;
+            logger.info("%s stop_docker_compose_exclude out:" % conftest.docker_compose_instance)
             logger.info(out)
-            logger.info("%s :out" % conftest.docker_compose_instance)
+            logger.info("%s stop_docker_compose_exclude :out" % conftest.docker_compose_instance)
             time.sleep(8)
 
         # if we're preserving some containers, don't destroy the network (will error out on exit)

@@ -41,7 +41,7 @@ class TestSecurity(MenderTesting):
         subprocess.call(["./production_test_env.py", "--start",
                          "--docker-compose-instance", conftest.docker_compose_instance])
         logging.info("test_ssl_only %s sleeping waiting for startup." % conftest.docker_compose_instance)
-        time.sleep(128)
+        time.sleep(8)
         try:
 
             # get all exposed ports from docker

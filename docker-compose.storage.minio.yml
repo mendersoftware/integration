@@ -26,6 +26,3 @@ services:
             mender:
                 aliases:
                     - s3.docker.mender.io
-        depends_on:
-            minio:
-                condition: service_healthy

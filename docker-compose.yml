@@ -13,7 +13,6 @@ services:
             - mender
         depends_on:
             - mender-mongo
-            - storage-proxy
 
     #
     # mender-gui

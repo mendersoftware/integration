@@ -71,7 +71,22 @@ class TestDemoArtifact(MenderTesting):
                 stdout=subprocess.PIPE,
                 env=test_env)
             logging.info("run_demo_script_up %s waiting for demo script to be up" % conftest.docker_compose_instance)
-            # out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
+            for max_tries in range(4):
+                out = subprocess.check_output("docker ps -a | grep %s" % conftest.docker_compose_instance, shell=True)
+                logging.info("run_demo_script_up %s (%d) docker ps: {{{" % (conftest.docker_compose_instance,max_tries))
+                logging.info(out)
+                logging.info("run_demo_script_up %s (%d) docker ps }}}" % (conftest.docker_compose_instance,max_tries))
+                out = subprocess.check_output("docker inspect %s_storage-proxy_1" % conftest.docker_compose_instance, shell=True)
+                logging.info("run_demo_script_up %s (%d) docker inspect %s_storage-proxy_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
+                logging.info(out)
+                logging.info("run_demo_script_up %s (%d) docker inspect %s_storage-proxy_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
+                out = subprocess.check_output("docker logs %s_storage-proxy_1" % conftest.docker_compose_instance, shell=True)
+                logging.info("run_demo_script_up %s (%d) docker logs %s_storage-proxy_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
+                logging.info(out)
+                logging.info("run_demo_script_up %s (%d) docker logs %s_storage-proxy_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
+                time.sleep(1)
+ 
+            out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
             logging.info("run_demo_script_up %s Started the demo script" % conftest.docker_compose_instance)
             password = ""
             for line in iter(proc.stdout.readline, ''):
@@ -93,7 +108,7 @@ class TestDemoArtifact(MenderTesting):
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
-    @pytest.mark.timeout(30000)
+    @pytest.mark.timeout(678)
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""

@@ -86,6 +86,7 @@ class TestDemoArtifact(MenderTesting):
                 logging.info("run_demo_script_up %s (%d) docker logs %s_storage-proxy_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
                 time.sleep(1)
  
+            logging.info("run_demo_script_up %s wait-for-all" % conftest.docker_compose_instance)
             out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
             logging.info("run_demo_script_up %s Started the demo script" % conftest.docker_compose_instance)
             password = ""
@@ -108,7 +109,7 @@ class TestDemoArtifact(MenderTesting):
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
-    @pytest.mark.timeout(678)
+    @pytest.mark.timeout(1024)
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""

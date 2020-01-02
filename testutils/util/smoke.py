@@ -39,19 +39,19 @@ def deployments(ip,prefix):
     logging.info("waiting for containers to be in good health; prefix '%s'." % prefix)
     out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % prefix, shell=True)
     logging.info(out)
-    for check in range(256):
-        try:
-                r = requests.get("http://{}:8080/api/management/v1/deployments/deployments".format(ip))
-                if r.status_code != 200:
-                     m = "'{}'/{} check for deployments returned with http {}".format(ip, check, r.status_code)
-                     logging.error(m)
-                     time.sleep(8)
-                     continue
-                else:
-                     logging.info("'{}'/{} check for deployments ok".format(ip, check))
-                     break
-        except Exception:
-                m = "'{}'/{} check for deployments returned with Exception".format(ip, check)
-                logging.error(m)
-                time.sleep(8)
-                continue
+#     for check in range(256):
+#         try:
+#                 r = requests.get("http://{}:8080/api/management/v1/deployments/deployments".format(ip))
+#                 if r.status_code != 200:
+#                      m = "'{}'/{} check for deployments returned with http {}".format(ip, check, r.status_code)
+#                     logging.error(m)
+#                      time.sleep(8)
+#                     continue
+#                 else:
+#                      logging.info("'{}'/{} check for deployments ok".format(ip, check))
+#                      break
+#         except Exception:
+#                 m = "'{}'/{} check for deployments returned with Exception".format(ip, check)
+#                 logging.error(m)
+#                 time.sleep(8)
+#                 continue

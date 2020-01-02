@@ -21,3 +21,8 @@ update.mender
 # folders for local testing dependencies
 node_modules
 venv
+
+keys-generated
+mender-demo-artifact.mender
+production-testing-env.yml
+

@@ -63,7 +63,7 @@ services:
     storage-proxy:
         ports:
             # outside port mapping for artifact storage (note that storage-proxy listens on port 9000)
-            - "9000:9000"
+            - "9000"
         networks:
             mender:
                 aliases:

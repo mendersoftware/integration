@@ -59,7 +59,8 @@ class TestDemoArtifact(MenderTesting):
             test_env = os.environ.copy()
             test_env[
                 'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
-            test_env['COMPOSE_HTTP_TIMEOUT'] = '512'
+            test_env['COMPOSE_HTTP_TIMEOUT'] = "1024"
+            test_env["DOCKER_CLIENT_TIMEOUT"]= "1024"
             proc = subprocess.Popen(
                 [
                     './demo', '--client', '-p',
@@ -69,12 +70,16 @@ class TestDemoArtifact(MenderTesting):
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 env=test_env)
-            logging.info('Started the demo script')
+            logging.info("run_demo_script_up %s waiting for demo script to be up" % conftest.docker_compose_instance)
+            # out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
+            logging.info("run_demo_script_up %s Started the demo script" % conftest.docker_compose_instance)
             password = ""
-            time.sleep(255)
             for line in iter(proc.stdout.readline, ''):
                 logging.info(line)
                 if exit_cond in line.strip():
+                    if "Encountered errors while bringing up the project" in exit_cond:
+                        logging.info("run_demo_script_up %s failed to start" % conftest.docker_compose_instance)
+                        pytest.fail("run_demo_script_up %s failed to start 'Encountered errors while bringing up the project'" % conftest.docker_compose_instance)
                     if exit_cond == "Login password:":
                         password = line.split(':')[-1].strip()
                         logging.info('The login password:')

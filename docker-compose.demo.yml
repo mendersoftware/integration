@@ -30,7 +30,7 @@ services:
 
     storage-proxy:
         ports:
-            - "9000:9000"
+            - 9000
         networks:
             mender:
                 aliases:

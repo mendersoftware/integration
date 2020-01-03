@@ -1,18 +1,20 @@
 #!/bin/bash
 
 prefix="$1"
+sleep_interval=${2:-"2"}
 
 [ "${prefix}" != "" ] || { echo "`date` empty prefix; exit; "; exit 0; }
+echo "`date` $prefix $0 $* starting."
 for c in conductor minio api-gateway deployments useradm inventory device-auth; do
  container_name="${prefix}_mender-${c}_1";
  [ "${c}" == "minio" ] && container_name="${prefix}_${c}_1";
  MAX_TRIES=256
  until [ "`docker inspect -f {{.State.Health.Status}} $container_name`" == "healthy" ]; do
-  echo "`date` (${MAX_TRIES}) waiting for $container_name to be in good health.";
+  echo "`date` $prefix (${MAX_TRIES}) waiting for $container_name to be in good health.";
   let MAX_TRIES--;
-  [ $MAX_TRIES -le 1 ] && exit 1;
-  sleep 2;
+  [ $MAX_TRIES -le 1 ] && { echo "`date` $prefix $container_name still unhealthy after $MAX_TRIES * $sleep_interval s"; docker logs $container_name; exit 1; }
+  sleep $sleep_interval;
  done;
- echo "`date` $container_name healthy";
+ echo "`date` $prefix $container_name healthy";
 done
 

@@ -18,6 +18,7 @@ import os
 import signal
 import subprocess
 import time
+import random
 
 import pytest
 
@@ -71,23 +72,26 @@ class TestDemoArtifact(MenderTesting):
                 stdout=subprocess.PIPE,
                 env=test_env)
             logging.info("run_demo_script_up %s waiting for demo script to be up" % conftest.docker_compose_instance)
-            for max_tries in range(4):
-                out = subprocess.check_output("docker ps -a | grep %s || true" % conftest.docker_compose_instance, shell=True)
+            random.seed()
+            log_file="/tmp/tmpmanual%s%s%d_testing" % ( conftest.docker_compose_instance, time.time(), random.randint(1024,65536))
+            for max_tries in range(8):
+                time.sleep(32)
+                out = subprocess.check_output("echo %s docker_ps_0 | tee -a %s; docker ps -a | grep %s | tee -a %s || true; echo %s docker_ps_1 | tee -a %s;" % (conftest.docker_compose_instance, log_file, conftest.docker_compose_instance, log_file, conftest.docker_compose_instance, log_file), shell=True)
                 logging.info("run_demo_script_up %s (%d) docker ps: {{{" % (conftest.docker_compose_instance,max_tries))
                 logging.info(out)
                 logging.info("run_demo_script_up %s (%d) docker ps }}}" % (conftest.docker_compose_instance,max_tries))
-                out = subprocess.check_output("docker inspect %s_storage-proxy_1 || true" % conftest.docker_compose_instance, shell=True)
-                logging.info("run_demo_script_up %s (%d) docker inspect %s_storage-proxy_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
-                logging.info(out)
-                logging.info("run_demo_script_up %s (%d) docker inspect %s_storage-proxy_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
-                out = subprocess.check_output("docker logs %s_storage-proxy_1 || true" % conftest.docker_compose_instance, shell=True)
-                logging.info("run_demo_script_up %s (%d) docker logs %s_storage-proxy_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
-                logging.info(out)
-                logging.info("run_demo_script_up %s (%d) docker logs %s_storage-proxy_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance))
-                time.sleep(1)
+                for c in ["storage-proxy","conductor","minio","api-gateway","deployments","useradm","inventory","device-auth"]:
+                    out = subprocess.check_output("echo %s docker_inspect_0 | tee -a %s; docker inspect %s_%s_1 | tee -a %s || true; echo %s docker_inspect_1 | tee -a %s;" % (conftest.docker_compose_instance,log_file,conftest.docker_compose_instance,c,log_file,conftest.docker_compose_instance,log_file), shell=True)
+                    logging.info("run_demo_script_up %s (%d) docker inspect %s_%s_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance, c))
+                    logging.info(out)
+                    logging.info("run_demo_script_up %s (%d) docker inspect %s_%s_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance,c))
+                    out = subprocess.check_output("echo %s docker_logs_0 | tee -a %s; docker logs %s_%s_1 | tee -a %s || true; echo %s docker_logs_1 | tee -a %s;" % (conftest.docker_compose_instance,log_file,conftest.docker_compose_instance,c,log_file,conftest.docker_compose_instance,log_file), shell=True)
+                    logging.info("run_demo_script_up %s (%d) docker logs %s_%s_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance,c))
+                    logging.info(out)
+                    logging.info("run_demo_script_up %s (%d) docker logs %s_%s_1 }}}" % ( conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance,c))
  
             logging.info("run_demo_script_up %s wait-for-all" % conftest.docker_compose_instance)
-            out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s" % conftest.docker_compose_instance, shell=True)
+            out = subprocess.check_output("/builds/Northern.tech/Mender/integration/wait-for-all %s 4 | tee -a %s" % (conftest.docker_compose_instance,log_file), shell=True)
             logging.info("run_demo_script_up %s Started the demo script" % conftest.docker_compose_instance)
             password = ""
             for line in iter(proc.stdout.readline, ''):

@@ -81,6 +81,8 @@ class TestDemoArtifact(MenderTesting):
                 logging.info(out)
                 logging.info("run_demo_script_up %s (%d) docker ps }}}" % (conftest.docker_compose_instance,max_tries))
                 for c in ["storage-proxy","conductor","minio","api-gateway","deployments","useradm","inventory","device-auth"]:
+                    if c != "minio" and c != "storage-proxy":
+                        c="mender-"+c
                     out = subprocess.check_output("echo %s docker_inspect_0 | tee -a %s; docker inspect %s_%s_1 | tee -a %s || true; echo %s docker_inspect_1 | tee -a %s;" % (conftest.docker_compose_instance,log_file,conftest.docker_compose_instance,c,log_file,conftest.docker_compose_instance,log_file), shell=True)
                     logging.info("run_demo_script_up %s (%d) docker inspect %s_%s_1: {{{" % (conftest.docker_compose_instance, max_tries, conftest.docker_compose_instance, c))
                     logging.info(out)

@@ -113,20 +113,12 @@ services:
             MINIO_ACCESS_KEY:
             # secret
             MINIO_SECRET_KEY:
-        volumes:
-            # mounts a docker volume named `mender-artifacts` as /export directory
-            - mender-artifacts:/export:rw
 
-    mender-mongo:
-        volumes:
-            - mender-db:/data/db:rw
     mender-elasticsearch:
         volumes:
-            - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
             - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
     mender-redis:
         volumes:
-            - mender-redis-db:/var/lib/redis:rw
             - ./conductor/redis/redis.conf:/etc/redis/redis.conf
             - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
         entrypoint: /redis/entrypoint.sh

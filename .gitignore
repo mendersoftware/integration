@@ -26,3 +26,4 @@ keys-generated
 mender-demo-artifact.mender
 production-testing-env.yml
 
+*.swp

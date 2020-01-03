@@ -115,7 +115,7 @@ class TestDemoArtifact(MenderTesting):
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
-    @pytest.mark.timeout(2048)
+    @pytest.mark.timeout(4096)
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""

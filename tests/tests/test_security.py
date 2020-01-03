@@ -32,7 +32,7 @@ from .mendertesting import MenderTesting
 
 class TestSecurity(MenderTesting):
 
-    @pytest.mark.timeout(1024)
+    @pytest.mark.timeout(2048)
     @pytest.mark.usefixtures("running_custom_production_setup")
     def test_ssl_only(self):
         """ make sure we are not exposing any non-ssl connections in production environment """

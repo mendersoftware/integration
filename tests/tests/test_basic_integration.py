@@ -175,7 +175,7 @@ class TestBasicIntegration(MenderTesting):
         update_image_successful(install_image=conftest.get_valid_image(), pre_deployment_callback=deployment_callback,
                                 deployment_triggered_callback=deployment_triggered_callback)
 
-    @pytest.mark.timeout(1024)
+    @pytest.mark.timeout(2048)
     @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
     def test_forced_inventory_update_from_client(self):
         """Forces an inventory update from an idling client."""

@@ -13,6 +13,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - storage-proxy
 
     #
     # mender-gui
@@ -130,8 +131,6 @@ services:
             service: mender-base
         networks:
             - mender
-        tmpfs:
-            - /data
 
     mender-elasticsearch:
         environment:
@@ -154,6 +153,10 @@ services:
             service: mender-base
         networks:
             - mender
+        tmpfs:
+            - /data
+
+
 
 networks:
     mender:

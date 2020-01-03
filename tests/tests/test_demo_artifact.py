@@ -72,7 +72,7 @@ class TestDemoArtifact(MenderTesting):
                 env=test_env)
             logging.info("run_demo_script_up %s waiting for demo script to be up" % conftest.docker_compose_instance)
             for max_tries in range(4):
-                out = subprocess.check_output("docker ps -a | grep %s || true" % conftest.docker_compose_instance, shell=True)
+                out = subprocess.check_output("docker ps -a | grep %s" % conftest.docker_compose_instance, shell=True)
                 logging.info("run_demo_script_up %s (%d) docker ps: {{{" % (conftest.docker_compose_instance,max_tries))
                 logging.info(out)
                 logging.info("run_demo_script_up %s (%d) docker ps }}}" % (conftest.docker_compose_instance,max_tries))

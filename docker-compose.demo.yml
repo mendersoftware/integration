@@ -94,4 +94,4 @@ services:
         entrypoint: /redis/entrypoint.sh
 
     mender-workflows-server:
-        command: /usr/bin/workflows --config /etc/workflows/config.yaml server --automigrate
+        command: server --automigrate

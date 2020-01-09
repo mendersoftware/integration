@@ -19,6 +19,9 @@
 version: '2.1'
 services:
 
+    mender-workflows-server:
+        command: server --automigrate
+
     mender-useradm:
         command: server --automigrate
         volumes:

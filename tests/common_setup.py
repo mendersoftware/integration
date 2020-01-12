@@ -162,7 +162,7 @@ def setup_failover(request):
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
-    env = container_factory.getNoneSetup()
+    env = container_factory.getCustomSetup()
 
     reset_mender_api(env)
 

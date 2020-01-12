@@ -315,7 +315,7 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
         self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
         self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
-class DockerComposeNoneSetup(DockerComposeNamespace):
+class DockerComposeCustomSetup(DockerComposeNamespace):
     def __init__(self, name):
         DockerComposeNamespace.__init__(self, name)
     def setup(self):

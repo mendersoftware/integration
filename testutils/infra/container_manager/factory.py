@@ -22,7 +22,7 @@ from .docker_compose_manager import DockerComposeShortLivedTokenSetup
 from .docker_compose_manager import DockerComposeFailoverServerSetup
 from .docker_compose_manager import DockerComposeEnterpriseSetup
 from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
-from .docker_compose_manager import DockerComposeNoneSetup
+from .docker_compose_manager import DockerComposeCustomSetup
 
 class ContainerManagerFactory:
     def getStandardSetup(self, name=None, num_clients=1):
@@ -68,7 +68,7 @@ class ContainerManagerFactory:
         """Enterprise setup with SMTP enabled"""
         pass
 
-    def getNoneSetup(self, name=None):
+    def getCustomSetup(self, name=None):
         """A noop setup for tests that use custom setups
 
         It only implements teardown() for these tests to still have a way
@@ -95,8 +95,8 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
         return DockerComposeEnterpriseSetup(name, num_clients)
     def getEnterpriseSMTPSetup(self, name=None):
         return DockerComposeEnterpriseSMTPSetup(name)
-    def getNoneSetup(self, name=None):
-        return DockerComposeNoneSetup(name)
+    def getCustomSetup(self, name=None):
+        return DockerComposeCustomSetup(name)
 
 def get_factory(manager_id="docker-compose"):
     if manager_id == "docker-compose":

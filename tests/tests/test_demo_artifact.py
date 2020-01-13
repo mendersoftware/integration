@@ -21,14 +21,11 @@ import time
 
 import pytest
 
-from .. import conftest
 from ..common_setup import running_custom_production_setup
-# from ..common_docker import stop_docker_compose
 from ..MenderAPI import authentication, deployments, DeviceAuthV2
 from .mendertesting import MenderTesting
 
 
-@pytest.mark.skip(reason="Deal with these later...")
 class TestDemoArtifact(MenderTesting):
     """A simple class for testing the demo-Artifact upload."""
 
@@ -40,10 +37,8 @@ class TestDemoArtifact(MenderTesting):
     deploy = deployments.Deployments(auth, authv2)
 
     @pytest.fixture(scope="function")
-    def run_demo_script(self, request, exit_cond="Login password:"):
+    def run_demo_script(self, running_custom_production_setup, exit_cond="Login password:"):
         """Simple fixture which returns a function which runs 'demo up'.
-        Afterwards the fixture brings down the docker-compose environment,
-        so that each invocation run keeps the environment clean
 
         :param exit_cond
 
@@ -54,16 +49,14 @@ class TestDemoArtifact(MenderTesting):
                to have a timeout.
         """
 
-        request.addfinalizer(stop_docker_compose)
-
         def run_demo_script_up(exit_cond=exit_cond):
             test_env = os.environ.copy()
             test_env[
-                'DOCKER_COMPOSE_PROJECT_NAME'] = conftest.docker_compose_instance
+                'DOCKER_COMPOSE_PROJECT_NAME'] = running_custom_production_setup.name
             proc = subprocess.Popen(
                 [
                     './demo', '--client', '-p',
-                    conftest.docker_compose_instance, 'up'
+                    running_custom_production_setup.name, 'up'
                 ],
                 cwd="..",
                 stdin=subprocess.PIPE,
@@ -84,36 +77,36 @@ class TestDemoArtifact(MenderTesting):
                     break
             return proc
 
-        return run_demo_script_up
+        running_custom_production_setup.run_demo_script_up = run_demo_script_up
+        return running_custom_production_setup
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
     @pytest.mark.timeout(3000)
-    @pytest.mark.usefixtures("running_custom_production_setup")
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
 
-        stop_docker_compose()
+        run_demo_script.teardown()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_upload")
         logging.info("--------------------------------------------------")
-        self.demo_artifact_upload(run_demo_script)
-        stop_docker_compose()
+        self.demo_artifact_upload(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_artifact_installation")
         logging.info("--------------------------------------------------")
-        self.demo_artifact_installation(run_demo_script)
-        stop_docker_compose()
+        self.demo_artifact_installation(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
         logging.info("--------------------------------------------------")
         logging.info("Running test_demo_up_down_up")
         logging.info("--------------------------------------------------")
-        self.demo_up_down_up(run_demo_script)
-        stop_docker_compose()
+        self.demo_up_down_up(run_demo_script.run_demo_script_up)
+        run_demo_script.teardown()
         self.auth.reset_auth_token()
 
     def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):
@@ -153,7 +146,7 @@ class TestDemoArtifact(MenderTesting):
         # Run the deployment.
         deployment_id = self.deploy.trigger_deployment(
             name="Demo artifact deployment",
-            artifact_name=artifacts[0]['name'],
+            artifact_name=artifact_name,
             devices=devices)
 
         # Verify the deployment

@@ -40,7 +40,7 @@ class TestSignedUpdates(MenderTesting):
                     hosts=mender_clients)
             return
 
-        host_ip = standard_setup_with_signed_artifact_client.docker_get_docker_host_ip()
+        host_ip = standard_setup_with_signed_artifact_client.get_virtual_network_host_ip()
         update_image_successful(host_ip, install_image=conftest.get_valid_image(), signed=True)
 
     @pytest.mark.parametrize("standard_setup_with_signed_artifact_client", ["force_new"], indirect=True)

@@ -122,7 +122,7 @@ class TestGrouping(MenderTesting):
         inv.put_device_in_group(id_alpha, "Update")
 
         reboot = { alpha: None, bravo: None }
-        host_ip = standard_setup_two_clients_bootstrapped.docker_get_docker_host_ip()
+        host_ip = standard_setup_two_clients_bootstrapped.get_virtual_network_host_ip()
         with Helpers.RebootDetector(host_ip, alpha) as reboot[alpha], Helpers.RebootDetector(host_ip, bravo) as reboot[bravo]:
 
             deployment_id, expected_image_id = common_update_procedure(conftest.get_valid_image(),

@@ -22,8 +22,8 @@ import pytest
 
 from . import logger
 from . import api_version
+from . import get_container_manager
 from .requests_helpers import requests_retry
-from ..common_docker import get_mender_gateway
 
 class Deployments:
     # track the last statistic for a deployment id
@@ -39,7 +39,7 @@ class Deployments:
         self.last_statistic = Deployments.last_statistic
 
     def get_deployments_base_path(self):
-        return "https://%s/api/management/%s/deployments/" % (get_mender_gateway(), api_version)
+        return "https://%s/api/management/%s/deployments/" % (get_container_manager().get_mender_gateway(), api_version)
 
     def upload_image(self, filename, description="abc"):
         image_path_url = self.get_deployments_base_path() + "artifacts"

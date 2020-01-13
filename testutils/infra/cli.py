@@ -12,20 +12,26 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import testutils.infra.docker as docker
+from testutils.infra.container_manager.docker_manager import DockerNamespace
 
-class CliUseradm:
-    def __init__(self, docker_prefix=None):
-        filt = ['mender-useradm']
-        if docker_prefix is not None:
-            filt.append(docker_prefix)
+class BaseCli:
+    def __init__(self, microservice, containers_namespace, container_manager):
+        if container_manager is None:
+            self.container_manager = DockerNamespace(containers_namespace)
+        else:
+            self.container_manager = container_manager
 
-        self.cid = docker.getid(filt)
+        base_filter = microservice + "_1"
+        self.cid = self.container_manager.getid([base_filter])
+
+class CliUseradm(BaseCli):
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        BaseCli.__init__(self, "mender-useradm", containers_namespace, container_manager)
 
         # is it an open useradm, or useradm-enterprise?
         for path in ['/usr/bin/useradm', '/usr/bin/useradm-enterprise']:
             try:
-                docker.execute(self.cid, [path, '--version'])
+                self.container_manager.execute(self.cid, [path, '--version'])
                 self.path=path
             except:
                 continue
@@ -43,7 +49,7 @@ class CliUseradm:
         if tenant_id != '':
             cmd += ['--tenant-id', tenant_id]
 
-        uid=docker.execute(self.cid, cmd)
+        uid = self.container_manager.execute(self.cid, cmd)
         return uid
 
 
@@ -54,16 +60,12 @@ class CliUseradm:
         if tenant_id is not None:
             cmd.extend(['--tenant', tenant_id])
 
-        docker.execute(self.cid, cmd)
+        self.container_manager.execute(self.cid, cmd)
 
 
-class CliTenantadm:
-    def __init__(self, docker_prefix=None):
-        filt = ['mender-tenantadm']
-        if docker_prefix is not None:
-            filt.append(docker_prefix)
-
-        self.cid = docker.getid(filt)
+class CliTenantadm(BaseCli):
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        BaseCli.__init__(self, "mender-tenantadm", containers_namespace, container_manager)
 
     def create_org(self, name, username, password):
         cmd = ['/usr/bin/tenantadm',
@@ -72,7 +74,7 @@ class CliTenantadm:
                '--username', username,
                '--password', password]
 
-        tid = docker.execute(self.cid, cmd)
+        tid = self.container_manager.execute(self.cid, cmd)
         return tid
 
     def get_tenant(self, tid):
@@ -80,22 +82,18 @@ class CliTenantadm:
                'get-tenant',
                '--id', tid]
 
-        tenant = docker.execute(self.cid, cmd)
+        tenant = self.container_manager.execute(self.cid, cmd)
         return tenant
 
     def migrate(self):
         cmd = ['usr/bin/tenantadm',
                'migrate']
 
-        docker.execute(self.cid, cmd)
+        self.container_manager.execute(self.cid, cmd)
 
-class CliDeviceauth:
-    def __init__(self, docker_prefix=None):
-        filt = ['mender-device-auth']
-        if docker_prefix is not None:
-            filt.append(docker_prefix)
-
-        self.cid = docker.getid(filt)
+class CliDeviceauth(BaseCli):
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        BaseCli.__init__(self, "mender-device-auth", containers_namespace, container_manager)
 
     def migrate(self, tenant_id=None):
         cmd = ['usr/bin/deviceauth',
@@ -104,7 +102,7 @@ class CliDeviceauth:
         if tenant_id is not None:
             cmd.extend(['--tenant', tenant_id])
 
-        docker.execute(self.cid, cmd)
+        self.container_manager.execute(self.cid, cmd)
 
     def add_default_tenant_token(self, tenant_token):
         """
@@ -116,8 +114,8 @@ class CliDeviceauth:
 
         # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml')
         cmd = ['/bin/sed', '-i', '$adefault_tenant_token: {}'.format(tenant_token), '/etc/deviceauth/config.yaml']
-        docker.execute(self.cid, cmd)
+        self.container_manager.execute(self.cid, cmd)
 
         # Restart the container, so that it is picked up by the device-auth service on startup
-        docker.cmd(self.cid, 'stop')
-        docker.cmd(self.cid, 'start')
+        self.container_manager.cmd(self.cid, 'stop')
+        self.container_manager.cmd(self.cid, 'start')

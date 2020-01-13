@@ -19,10 +19,8 @@ import requests
 import pytest
 
 from . import logger
+from . import get_container_manager
 from .requests_helpers import requests_retry
-
-from ..common_docker import get_mender_gateway
-from ..common_docker import get_mender_clients
 
 class DeviceAuthV2():
 
@@ -35,7 +33,7 @@ class DeviceAuthV2():
         pass
 
     def get_auth_v2_base_path(self):
-        return "https://%s/api/management/v2/devauth/" % (get_mender_gateway())
+        return "https://%s/api/management/v2/devauth/" % (get_container_manager().get_mender_gateway())
 
     def get_device(self, device_id):
         url = self.get_auth_v2_base_path() + device_id
@@ -48,7 +46,7 @@ class DeviceAuthV2():
     def get_devices_status(self, status=None, expected_devices=1):
         device_status_path = self.get_auth_v2_base_path() + "devices"
         devices = None
-        max_wait = 60*60
+        max_wait = 10*60
         starttime = time.time()
         sleeptime = 5
 
@@ -117,7 +115,7 @@ class DeviceAuthV2():
             pytest.fail("Never found: %s:%s, only seen: %s" % (status, expected_value, str(seen)))
 
     def accept_devices(self, expected_devices):
-        if len(self.get_devices_status("accepted", expected_devices=expected_devices)) == len(get_mender_clients()):
+        if len(self.get_devices_status("accepted", expected_devices=expected_devices)) == len(get_container_manager().get_mender_clients()):
             return
 
         # iterate over devices and accept them
@@ -137,7 +135,7 @@ class DeviceAuthV2():
         logger.info("Successfully bootstrap all clients")
 
     def preauth(self, device_identity, pubkey):
-        path = "https://%s/api/management/v2/devauth/devices" % (get_mender_gateway())
+        path = "https://%s/api/management/v2/devauth/devices" % (get_container_manager().get_mender_gateway())
         req = {'identity_data': device_identity, 'pubkey': pubkey}
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
@@ -145,7 +143,7 @@ class DeviceAuthV2():
         return requests_retry().post(path, data=json.dumps(req), headers=headers, verify=False)
 
     def delete_auth_set(self, did, aid):
-        path = "https://%s/api/management/v2/devauth/devices/%s/auth/%s" % (get_mender_gateway(), did, aid)
+        path = "https://%s/api/management/v2/devauth/devices/%s/auth/%s" % (get_container_manager().get_mender_gateway(), did, aid)
 
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())

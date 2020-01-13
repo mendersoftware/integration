@@ -23,7 +23,6 @@ import pytest
 
 from .. import conftest
 from ..common_setup import setup_with_legacy_client
-from ..common_docker import get_mender_clients
 from .common_update import update_image_successful, common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy
@@ -53,7 +52,7 @@ exit 0
         return name
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_failure(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_failure(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -64,9 +63,12 @@ exit 0
             and this time the update should succeed.
         """
 
+        mender_clients = setup_with_legacy_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_migrate_from_legacy_mender_v1_failure,
-                    hosts=get_mender_clients(),
+                    setup_with_legacy_client,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -80,7 +82,8 @@ exit 0
         ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
 
         # first start with the failed update
-        with Helpers.RebootDetector() as reboot:
+        host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
+        with Helpers.RebootDetector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image,
                                                        scripts=[ensure_persistent_conf,
                                                                 os.path.join(dirpath, "ArtifactCommit_Enter_01")],
@@ -94,12 +97,13 @@ exit 0
 
         # do the next update, this time succesfull
         execute(update_image_successful,
+                host_ip,
                 scripts=[ensure_persistent_conf],
                 install_image=install_image,
                 version=2)
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_success(self, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_success(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -109,9 +113,12 @@ exit 0
             any traces in the database that are causing issues.
         """
 
+        mender_clients = setup_with_legacy_client.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_migrate_from_legacy_mender_v1_success,
-                    hosts=get_mender_clients(),
+                    setup_with_legacy_client,
+                    hosts=mender_clients,
                     install_image=install_image)
             return
 
@@ -130,13 +137,16 @@ exit 0
                     fd.write('#!/bin/sh\necho $(basename $0) >> %s\n' % test_log)
 
             # do the succesfull update twice
+            host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
             execute(update_image_successful,
+                    host_ip,
                     install_image=install_image,
                     scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)
             assert run("cat %s" % test_log).strip() == "\n".join(scripts)
 
             execute(update_image_successful,
+                    host_ip,
                     install_image=install_image,
                     scripts=[ensure_persistent_conf] + scripts_paths,
                     version=2)

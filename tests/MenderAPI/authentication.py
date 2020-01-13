@@ -20,8 +20,10 @@ from requests.auth import HTTPBasicAuth
 
 from . import logger
 from . import api_version
+from . import get_container_manager
 from .requests_helpers import requests_retry
-from ..common_docker import docker_compose_cmd, get_mender_gateway, COMPOSE_FILES_PATH
+
+from testutils.infra.cli import CliUseradm, CliTenantadm
 
 class Authentication:
     auth_header = None
@@ -111,11 +113,9 @@ class Authentication:
         return self.auth_header
 
     def create_user(self, username, password, tenant_id=""):
-        cmd = 'exec -T mender-useradm /usr/bin/useradm create-user ' \
-            '--username %s --password %s' % (username, password)
-        if tenant_id != "":
-            cmd += " --tenant-id %s" % tenant_id
-        docker_compose_cmd(cmd)
+        namespace = get_container_manager().name
+        cli = CliUseradm(containers_namespace=namespace)
+        uid = cli.create_user(username, password, tenant_id)
 
     def get_tenant_id(self):
         return self.current_tenant["tenant_id"]
@@ -126,7 +126,7 @@ class Authentication:
     def _do_login(self, username, password):
         r = requests_retry().post(
             "https://%s/api/management/%s/useradm/auth/login" %
-            (get_mender_gateway(), api_version),
+            (get_container_manager().get_mender_gateway(), api_version),
             verify=False,
             auth=HTTPBasicAuth(username, password))
         assert r.status_code == 200 or r.status_code == 401
@@ -136,17 +136,13 @@ class Authentication:
         return r
 
     def _create_org(self, name, username, password):
-        cmd = "-f " + os.path.join(
-            COMPOSE_FILES_PATH,
-            "docker-compose.enterprise.yml") \
-            + " exec -T mender-tenantadm /usr/bin/tenantadm create-org " \
-            + "--name %s --username %s --password %s" % (name,
-                                                         username,
-                                                         password)
-        return docker_compose_cmd(cmd)
+        namespace = get_container_manager().name
+        cli = CliTenantadm(containers_namespace=namespace)
+        tenant_id = cli.create_org(name, username, password)
+        return tenant_id
 
     def _get_tenant_data(self, tenant_id):
-        cmd = '-f ' + COMPOSE_FILES_PATH + '/docker-compose.enterprise.yml ' \
-            + 'exec -T mender-tenantadm /usr/bin/tenantadm' \
-            + ' get-tenant --id %s' % (tenant_id)
-        return docker_compose_cmd(cmd)
+        namespace = get_container_manager().name
+        cli = CliTenantadm(containers_namespace=namespace)
+        tenant = cli.get_tenant(tenant_id)
+        return tenant

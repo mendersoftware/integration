@@ -26,20 +26,18 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import running_custom_production_setup, standard_setup_with_short_lived_token
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
 
 class TestSecurity(MenderTesting):
 
-    @pytest.mark.usefixtures("running_custom_production_setup")
-    def test_ssl_only(self):
+    def test_ssl_only(self, running_custom_production_setup):
         """ make sure we are not exposing any non-ssl connections in production environment """
         done = False
         sleep_time = 2
         # start production environment
         subprocess.call(["./production_test_env.py", "--start",
-                         "--docker-compose-instance", conftest.docker_compose_instance])
+                         "--docker-compose-instance", running_custom_production_setup.name])
 
         try:
 
@@ -47,7 +45,7 @@ class TestSecurity(MenderTesting):
 
             for _ in range(3):
                 exposed_hosts = subprocess.check_output("docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat"
-                                                        % conftest.docker_compose_instance,
+                                                        % running_custom_production_setup.name,
                                                         shell=True)
 
                 try:
@@ -71,18 +69,20 @@ class TestSecurity(MenderTesting):
         finally:
             # tear down production env
             subprocess.call(["./production_test_env.py", "--kill",
-                             "--docker-compose-instance", conftest.docker_compose_instance])
+                             "--docker-compose-instance", running_custom_production_setup.name])
 
 
-    @pytest.mark.usefixtures("standard_setup_with_short_lived_token")
-    def test_token_token_expiration(self):
+    def test_token_token_expiration(self, standard_setup_with_short_lived_token):
         """ verify that an expired token is handled correctly (client gets a new, valid one)
             and that deployments are still recieved by the client
         """
 
+        mender_clients = standard_setup_with_short_lived_token.get_mender_clients()
+
         if not env.host_string:
             execute(self.test_token_token_expiration,
-                    hosts=get_mender_clients())
+                    standard_setup_with_short_lived_token,
+                    hosts=mender_clients)
             return
 
         timeout_time = int(time.time()) + 60

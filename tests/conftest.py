@@ -22,8 +22,6 @@ else:
 
 import logging
 import requests
-from .common_docker import stop_docker_compose, log_files
-import random
 import filelock
 import uuid
 import subprocess
@@ -33,16 +31,15 @@ import pytest
 import distutils.spawn
 from . import log
 from .tests.mendertesting import MenderTesting
+from testutils.infra.container_manager import log_files
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("filelock").setLevel(logging.INFO)
 logger = log.setup_custom_logger("root", "master")
+logging.getLogger().setLevel(logging.INFO)
 
-docker_compose_instance = "mender" + str(random.randint(0, 9999999))
-
-docker_lock = filelock.FileLock("docker_lock")
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 machine_name = None
@@ -56,8 +53,6 @@ except:
 def pytest_addoption(parser):
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
-
-    parser.addoption("--no-teardown", action="store_true", help="Don't tear down environment after tests are run")
 
     parser.addoption("--machine-name", action="store", default="qemux86-64",
                      help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
@@ -166,23 +161,14 @@ def pytest_runtest_makereport(item, call):
         report.extra = extra
 
 def pytest_unconfigure(config):
-    if not config.getoption("--no-teardown"):
-        stop_docker_compose()
-
     for log in log_files:
         try:
             os.remove(log)
         except:
             pass
 
-
-def pytest_runtest_teardown(item, nextitem):
-    if nextitem is None:
-        stop_docker_compose()
-
 def get_valid_image():
     return env.valid_image
-
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here

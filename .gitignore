@@ -8,7 +8,6 @@ tags
 /mender-demo-artifact.mender
 
 /docker-compose.testing.yml
-/docker-compose.testing.enterprise.yml
 
 __pycache__
 .cache

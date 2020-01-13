@@ -19,14 +19,12 @@ import pytest
 from .. import conftest
 from ..common import *
 from ..common_setup import standard_setup_two_clients_bootstrapped
-from ..common_docker import get_mender_clients
 from .common_update import common_update_procedure
 from ..MenderAPI import inv, deploy
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 
 @MenderTesting.fast
-@pytest.mark.usefixtures("standard_setup_two_clients_bootstrapped")
 class TestGrouping(MenderTesting):
     def validate_group_responses(self, device_map):
         """Checks whether the device_map corresponds to the server's view of
@@ -60,7 +58,7 @@ class TestGrouping(MenderTesting):
         for device in device_map:
             assert(inv.get_device_group(device)['group'] == device_map[device])
 
-    def test_basic_groups(self):
+    def test_basic_groups(self, standard_setup_two_clients_bootstrapped):
         """Tests various group operations."""
 
         devices = [device['id'] for device in inv.get_devices()]
@@ -92,7 +90,7 @@ class TestGrouping(MenderTesting):
         self.validate_group_responses({alpha: None, bravo: None})
 
 
-    def test_update_device_group(self):
+    def test_update_device_group(self, standard_setup_two_clients_bootstrapped):
         """
             Perform a successful upgrade on one group of devices, and assert that:
             * deployment status/logs are correct.
@@ -107,7 +105,7 @@ class TestGrouping(MenderTesting):
         # each group, hence a lot of separate execute() calls for each. We aim
         # to update the group alpha, not beta.
 
-        clients = get_mender_clients()
+        clients = standard_setup_two_clients_bootstrapped.get_mender_clients()
         assert(len(clients) == 2)
         alpha = clients[0]
         bravo = clients[1]
@@ -124,7 +122,8 @@ class TestGrouping(MenderTesting):
         inv.put_device_in_group(id_alpha, "Update")
 
         reboot = { alpha: None, bravo: None }
-        with Helpers.RebootDetector(alpha) as reboot[alpha], Helpers.RebootDetector(bravo) as reboot[bravo]:
+        host_ip = standard_setup_two_clients_bootstrapped.get_virtual_network_host_ip()
+        with Helpers.RebootDetector(host_ip, alpha) as reboot[alpha], Helpers.RebootDetector(host_ip, bravo) as reboot[bravo]:
 
             deployment_id, expected_image_id = common_update_procedure(conftest.get_valid_image(),
                                                                        devices=[id_alpha])

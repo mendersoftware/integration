@@ -115,8 +115,8 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     return Authset(aset['id'], api_dev['id'], id_data, pubkey, privkey, 'pending')
 
 
-def create_user(name, pwd, tid="", docker_prefix=None):
-    cli = CliUseradm(docker_prefix)
+def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
+    cli = CliUseradm(containers_namespace)
 
     uid = cli.create_user(name, pwd, tid)
 

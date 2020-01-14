@@ -425,63 +425,63 @@ REBOOT_TEST_SET = [
             ],
         },
     ),
-    # (
-    #     "simulate_powerloss_in_commit_enter",
-    #     {
-    #         "RebootScripts": ["ArtifactCommit_Enter_89"],
-    #         "DoubleReboot": [True],
-    #         "ExpectedFinalPartition": ["OriginalPartition"],
-    #         "ScriptOrder": [
-    #             "ArtifactInstall_Enter_01",
-    #             "ArtifactInstall_Leave_01",
-    #             "ArtifactReboot_Enter_01",
-    #             "ArtifactReboot_Leave_01",
-    #             "ArtifactCommit_Enter_89",
-    #             "ArtifactRollback_Enter_00",
-    #             "ArtifactRollbackReboot_Enter_89",
-    #             "ArtifactFailure_Enter_89",
-    #             "ArtifactFailure_Leave_09",
-    #         ],
-    #         "ExpectedScriptFlow": [
-    #             "ArtifactInstall_Enter_01",
-    #             "ArtifactInstall_Leave_01",
-    #             "ArtifactReboot_Enter_01",
-    #             "ArtifactReboot_Leave_01",  # on second partition, stop mender client
-    #             "ArtifactCommit_Enter_89",  # sync and kill!
-    #             "ArtifactRollback_Enter_00",
-    #             "ArtifactRollbackReboot_Enter_89",
-    #             "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
-    #             "ArtifactFailure_Leave_09",
-    #         ],
-    #     },
-    # ),
-    # (
-    #     "simulate_powerloss_in_artifact_commit_leave",
-    #     {
-    #         "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
-    #         "DoubleReboot": [True],
-    #         "ExpectedFinalPartition": ["OtherPartition"],
-    #         "ScriptOrder": [
-    #             "ArtifactInstall_Enter_01",
-    #             "ArtifactInstall_Leave_01",
-    #             "ArtifactReboot_Enter_01",
-    #             "ArtifactReboot_Leave_01",
-    #             "ArtifactCommit_Enter_89",
-    #             "ArtifactCommit_Leave_01",
-    #             "ArtifactCommit_Leave_02",
-    #         ],
-    #         "ExpectedScriptFlow": [
-    #             "ArtifactInstall_Enter_01",
-    #             "ArtifactInstall_Leave_01",
-    #             "ArtifactReboot_Enter_01",
-    #             "ArtifactReboot_Leave_01",
-    #             "ArtifactCommit_Enter_89",
-    #             "ArtifactCommit_Leave_01",  # kill!
-    #             "ArtifactCommit_Leave_01",  # rerun
-    #             "ArtifactCommit_Leave_02",
-    #         ],
-    #     },
-    # ),
+    (
+        "simulate_powerloss_in_commit_enter",
+        {
+            "RebootScripts": ["ArtifactCommit_Enter_89"],
+            "DoubleReboot": [True],
+            "ExpectedFinalPartition": ["OriginalPartition"],
+            "ScriptOrder": [
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Leave_01",
+                "ArtifactCommit_Enter_89",
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollbackReboot_Enter_89",
+                "ArtifactFailure_Enter_89",
+                "ArtifactFailure_Leave_09",
+            ],
+            "ExpectedScriptFlow": [
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Leave_01",  # on second partition, stop mender client
+                "ArtifactCommit_Enter_89",  # sync and kill!
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollbackReboot_Enter_89",
+                "ArtifactFailure_Enter_89",  # run failure scripts on the committed (old) partition
+                "ArtifactFailure_Leave_09",
+            ],
+        },
+    ),
+    (
+        "simulate_powerloss_in_artifact_commit_leave",
+        {
+            "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
+            "DoubleReboot": [True],
+            "ExpectedFinalPartition": ["OtherPartition"],
+            "ScriptOrder": [
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Leave_01",
+                "ArtifactCommit_Enter_89",
+                "ArtifactCommit_Leave_01",
+                "ArtifactCommit_Leave_02",
+            ],
+            "ExpectedScriptFlow": [
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Leave_01",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Leave_01",
+                "ArtifactCommit_Enter_89",
+                "ArtifactCommit_Leave_01",  # kill!
+                "ArtifactCommit_Leave_01",  # rerun
+                "ArtifactCommit_Leave_02",
+            ],
+        },
+    ),
 ]
 
 

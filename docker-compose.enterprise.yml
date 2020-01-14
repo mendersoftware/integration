@@ -7,6 +7,9 @@ services:
 
     mender-conductor:
         image: registry.mender.io/mendersoftware/mender-conductor-enterprise:master
+        volumes:
+            - ./tests/mender-conductor-enterprise/server/workflows/create_organization.json:/srv/workflows/create_organization.json
+            - ./tests/mender-conductor-enterprise/server/workflows/suspend_tenant.json:/srv/workflows/suspend_tenant.json
 
     # add services
     mender-tenantadm:

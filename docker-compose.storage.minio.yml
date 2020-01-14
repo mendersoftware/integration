@@ -13,6 +13,8 @@ services:
         environment:
             MINIO_HTTP_TRACE: /dev/stdout
         command: server /export
+        tmpfs:
+            - /export
 
     #
     # storage backend proxy used in conjunction with minio, applies

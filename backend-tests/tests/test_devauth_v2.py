@@ -914,7 +914,7 @@ class TestAuthsetMgmtBase:
                 assert r.status_code == 401
 
             # device should also be provisioned in inventory
-            time.sleep(1)
+            time.sleep(8)
             self.verify_dev_provisioned(dev, utoken)
 
     def do_test_put_status_reject(self, devs_authsets, user, tenant_token=''):

@@ -11,3 +11,7 @@ services:
         stdin_open: true
         tty: true
         privileged: true
+        tmpfs:
+            - /data
+            - /tmp
+            - /mnt

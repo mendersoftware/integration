@@ -7,3 +7,7 @@ services:
     mender-client:
         ports:
             - "85:85"
+        tmpfs:
+            - /data
+            - /tmp
+            - /mnt

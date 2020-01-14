@@ -1,0 +1,64 @@
+{
+    "name": "suspend_tenant",
+    "description": "Suspend tenant account.",
+    "version": 1,
+    "tasks": [
+        {
+            "name": "fork_join",
+            "taskReferenceName": "forkx",
+            "type": "FORK_JOIN",
+            "forkTasks": [
+                [
+                    {
+                        "name": "delete_tokens_deviceauth",
+                        "taskReferenceName": "delete_tokens_deviceauth",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-device-auth:8080/api/internal/v1/devauth/tokens?tenant_id=${workflow.input.tenant_id}",
+                                "method": "DELETE",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ],
+                [
+                    {
+                        "name": "delete_tokens_useradm",
+                        "taskReferenceName": "delete_tokens_useradm",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-useradm:8080/api/internal/v1/useradm/tokens?tenant_id=${workflow.input.tenant_id}",
+                                "method": "DELETE",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ]
+            ]
+        },
+        {
+            "name": "join",
+            "taskReferenceName": "joinx",
+            "type": "JOIN",
+            "joinOn": [
+                "delete_tokens_deviceauth",
+                "delete_tokens_useradm"
+            ]
+        }
+    ],
+    "inputParameters":[
+        "request_id",
+        "tenant_id"
+    ],
+    "schemaVersion": 2
+}

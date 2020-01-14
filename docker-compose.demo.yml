@@ -82,7 +82,7 @@ services:
     mender-elasticsearch:
         environment:
             - ES_NETWORK_HOST=0.0.0.0
-            - ES_JAVA_OPTS=-Xms0m -Xmx100m
+            - ES_JAVA_OPTS=-Xms768m -Xmx1152m
         volumes:
             - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
 

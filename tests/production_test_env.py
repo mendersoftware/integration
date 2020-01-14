@@ -34,6 +34,7 @@ docker_compose_project = args.docker_compose_instance
 def fill_production_template():
 
     # copy production environment yml file
+    subprocess.check_output(["patch", "-p0", "production/config/prod.yml.template", "tests/prod.yml.template.patch"], cwd="../")
     subprocess.check_output(["cp", "production/config/prod.yml.template", "production-testing-env.yml"], cwd="../")
     subprocess.check_output("sed -i 's,/production/,/,g' ../production-testing-env.yml", shell=True)
     subprocess.check_output("sed -i 's/ALLOWED_HOSTS: my-gateway-dns-name/ALLOWED_HOSTS: ~./' ../production-testing-env.yml", shell=True)

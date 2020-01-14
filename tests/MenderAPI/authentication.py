@@ -101,12 +101,15 @@ class Authentication:
                     self.create_user(self.username, self.password)
 
             # It might take some time for create_org to propagate the new user.
-            # Retry login for a minute.
-            for i in range(60):
+            # Retry login for some time.
+            try_number=0
+            for i in range(256):
+                time.sleep(8)
                 r = self._do_login(self.username, self.password)
+                logger.info("get_auth_token "+get_container_manager().name+" try_number="+str(try_number)+" response: "+str(r.status_code))
                 if r.status_code == 200:
                     break
-                time.sleep(1)
+                try_number=try_number+1
             assert r.status_code == 200
 
         logger.info("Using Authorization headers: " + str(r.text))

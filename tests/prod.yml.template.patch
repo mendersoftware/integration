@@ -1,0 +1,32 @@
+--- /Users/merlin/master/integration/production/config/prod.yml.template	2020-01-14 16:45:53.000000000 +0100
++++ production/config/prod.yml.template	2020-01-16 07:46:53.000000000 +0100
+@@ -66,7 +66,7 @@
+     storage-proxy:
+         ports:
+             # outside port mapping for artifact storage (note that storage-proxy listens on port 9000)
+-            - "9000:9000"
++            - "9000"
+         networks:
+             mender:
+                 aliases:
+@@ -116,20 +116,12 @@
+             MINIO_ACCESS_KEY:
+             # secret
+             MINIO_SECRET_KEY:
+-        volumes:
+-            # mounts a docker volume named `mender-artifacts` as /export directory
+-            - mender-artifacts:/export:rw
+ 
+-    mender-mongo:
+-        volumes:
+-            - mender-db:/data/db:rw
+     mender-elasticsearch:
+         volumes:
+-            - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
+             - ./conductor/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+     mender-redis:
+         volumes:
+-            - mender-redis-db:/var/lib/redis:rw
+             - ./conductor/redis/redis.conf:/etc/redis/redis.conf
+             - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
+         entrypoint: /redis/entrypoint.sh

@@ -1,0 +1,152 @@
+{
+    "name": "create_organization",
+    "description": "Create tenant organization",
+    "version": 7,
+    "tasks": [
+        {
+            "name": "fork_join",
+            "taskReferenceName": "forkx",
+            "type": "FORK_JOIN",
+            "forkTasks": [
+                [
+                    {
+                        "name": "create_tenant",
+                        "taskReferenceName": "create_tenant_deviceauth",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-device-auth:8080/api/internal/v1/devauth/tenants",
+                                "method": "POST",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "body": {
+                                    "tenant_id": "${workflow.input.tenant_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ],
+                [
+                    {
+                        "name": "create_tenant",
+                        "taskReferenceName": "create_tenant_deployments",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-deployments:8080/api/internal/v1/deployments/tenants",
+                                "method": "POST",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "body": {
+                                    "tenant_id": "${workflow.input.tenant_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ],
+                [
+                    {
+                        "name": "create_tenant",
+                        "taskReferenceName": "create_tenant_inventory",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-inventory:8080/api/internal/v1/inventory/tenants",
+                                "method": "POST",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "body": {
+                                    "tenant_id": "${workflow.input.tenant_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ],
+                [
+                    {
+                        "name": "create_tenant",
+                        "taskReferenceName": "create_tenant_useradm",
+                        "inputParameters": {
+                            "http_request": {
+                                "uri": "http://mender-useradm:8080/api/internal/v1/useradm/tenants",
+                                "method": "POST",
+                                "headers": {
+                                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                                },
+                                "body": {
+                                    "tenant_id": "${workflow.input.tenant_id}"
+                                },
+                                "connectionTimeOut":"480000",
+                                "readTimeOut":"480000"
+                            }
+                        },
+                        "type": "HTTP"
+                    }
+                ]
+            ]
+        },
+        {
+            "name": "join",
+            "taskReferenceName": "joinx",
+            "type": "JOIN",
+            "joinOn": [
+                "create_tenant_deviceauth",
+                "create_tenant_deployments",
+                "create_tenant_inventory",
+                "create_tenant_useradm"
+            ]
+        },
+        {
+            "name": "create_tenant",
+            "taskReferenceName": "create_user",
+            "inputParameters": {
+                "http_request": {
+                    "uri": "http://mender-useradm:8080/api/internal/v1/useradm/tenants/${workflow.input.tenant_id}/users",
+                    "method": "POST",
+                    "headers": {
+                        "X-MEN-RequestID": "${workflow.input.request_id}"
+                    },
+                    "body": {
+                        "email": "${workflow.input.email}",
+                        "password_hash": "${workflow.input.password}",
+                        "propagate": false
+                    },
+                    "connectionTimeOut":"480000",
+                    "readTimeOut":"480000"
+                }
+            },
+            "type": "HTTP"
+        },
+        {
+            "name": "organization_created",
+            "taskReferenceName": "organization_created",
+            "inputParameters": {
+                "sink": "conductor",
+                "ref_flow": "${workflow.input.ref_flow}",
+                "request_id": "${workflow.input.request_id}",
+                "tenant_id": "${workflow.input.tenant_id}",
+                "email": "${workflow.input.email}",
+                "organization": "${workflow.input.organization}"
+            },
+            "sink": "conductor",
+            "type": "EVENT"
+        }
+    ],
+    "inputParameters":[
+        "request_id",
+        "tenant_id",
+        "organization",
+        "email",
+        "password"
+    ],
+    "schemaVersion": 2
+}

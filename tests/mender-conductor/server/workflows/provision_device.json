@@ -1,0 +1,46 @@
+{
+    "name": "provision_device",
+    "description": "Provision device.",
+    "version": 1,
+    "tasks": [
+        {
+            "name": "create_device_inventory",
+            "taskReferenceName": "create_device_inventory",
+            "inputParameters": {
+                "http_request": {
+                    "uri": "http://mender-inventory:8080/api/internal/v1/inventory/devices",
+                    "method": "POST",
+                    "contentType": "application/json",
+                    "body": "${workflow.input.device}",
+                    "headers": {
+                        "X-MEN-RequestID": "${workflow.input.request_id}",
+                        "Authorization": "${workflow.input.authorization}"
+                    },
+                    "connectionTimeOut":"480000",
+                    "readTimeOut":"480000"
+                }
+            },
+            "type": "HTTP"
+        },
+        {
+            "name": "device_accepted",
+            "taskReferenceName": "device_accepted",
+            "inputParameters": {
+                "sink": "conductor",
+                "ref_flow": "${workflow.input.ref_flow}",
+                "request_id": "${workflow.input.request_id}",
+                "authorization": "${workflow.input.authorization}",
+                "device": "${workflow.input.device}"
+            },
+            "sink": "conductor",
+            "type": "EVENT",
+            "startDelay": 0
+        }
+    ],
+    "inputParameters":[
+        "request_id",
+        "authorization",
+        "device"
+    ],
+    "schemaVersion": 2
+}

@@ -118,6 +118,8 @@ services:
                     - mongo-inventory
                     - mongo-useradm
                     - mongo-workflows
+        tmpfs:
+            - /data
 
     mender-conductor:
         image: mendersoftware/mender-conductor:master
@@ -129,14 +131,22 @@ services:
             service: mender-base
         networks:
             - mender
+        volumes:
+            - ./tests/mender-conductor/server/config/config.properties:/app/config/config.properties
+            - ./tests/mender-conductor/server/workflows/decommission_device.json:/srv/workflows/decommission_device.json
+            - ./tests/mender-conductor/server/workflows/provision_device.json:/srv/workflows/provision_device.json
 
     mender-elasticsearch:
-        image: elasticsearch:5-alpine
+        environment:
+            - ES_JAVA_OPTS=-Xms768m -Xmx1152m
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.8.5
         extends:
             file: common.yml
             service: mender-base
         networks:
             - mender
+        tmpfs:
+            - /usr/share/elasticsearch/data
 
     mender-redis:
         image: redis:5-alpine3.8
@@ -145,6 +155,8 @@ services:
             service: mender-base
         networks:
             - mender
+        tmpfs:
+            - /data
 
 networks:
     mender:

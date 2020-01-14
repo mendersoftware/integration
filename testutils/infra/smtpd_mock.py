@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -29,5 +29,5 @@ class SMTPServerMock(smtpd.SMTPServer):
         self.messages = []
         smtpd.SMTPServer.__init__(self, *args, **kwargs)
 
-    def process_message(self, peer, mailfrom, rcpttos, data):
+    def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         self.messages.append(Message(peer, mailfrom, rcpttos, data))

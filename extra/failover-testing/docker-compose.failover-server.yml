@@ -57,7 +57,6 @@ services:
         # these servers and exits with 'upstream server not found'
         depends_on:
             - mender-device-auth-2
-            - mender-device-adm-2
             - mender-deployments-2
             - mender-gui-2
             - mender-useradm-2
@@ -87,20 +86,6 @@ services:
         command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
-
-    #
-    # mender-device-adm
-    #
-    mender-device-adm-2:
-        image: mendersoftware/deviceadm:master
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender-failover
-        depends_on:
-            - mender-mongo-2
-        command: server --automigrate
 
     #
     # mender-inventory
@@ -133,7 +118,7 @@ services:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
 
     mender-mongo-2:
-        image: mongo:3.4
+        image: mongo:3.6
         extends:
             file: common.yml
             service: mender-base
@@ -141,7 +126,6 @@ services:
             mender-failover:
                 aliases:
                     - mongo-deployments
-                    - mongo-device-adm
                     - mongo-device-auth
                     - mongo-inventory
                     - mongo-useradm
@@ -162,7 +146,7 @@ services:
             - CONFIG_PROP=config.properties
 
     mender-elasticsearch-2:
-        image: mendersoftware/elasticsearch:2.4
+        image: elasticsearch:5-alpine
         extends:
             file: common.yml
             service: mender-base
@@ -170,7 +154,7 @@ services:
             - mender-failover
 
     mender-redis-2:
-        image: redis:3.2.11-alpine
+        image: redis:5-alpine3.8
         extends:
             file: common.yml
             service: mender-base
@@ -191,7 +175,7 @@ services:
 
     # Start a new minio and storage backend service on failover network
     minio-2:
-        image: mendersoftware/minio:RELEASE.2016-12-13T17-19-42Z
+        image: minio/minio:RELEASE.2018-09-25T21-34-43Z
         networks:
             mender-failover:
                 aliases:
@@ -202,7 +186,7 @@ services:
             MINIO_SECRET_KEY: minio123
 
     storage-proxy-2:
-        image: mendersoftware/openresty:1.11.2.2-alpine
+        image: openresty/openresty:1.13.6.2-0-alpine
 
         networks:
             mender-failover:

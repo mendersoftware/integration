@@ -96,18 +96,18 @@ class DockerComposeNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        with docker_lock:
-            cmd = "docker-compose -p %s %s %s" % (self.name,
-                                                files_args,
-                                                arg_list)
+        cmd = "docker-compose -p %s %s %s" % (self.name,
+                                            files_args,
+                                            arg_list)
 
-            logging.info("running with: %s" % cmd)
+        logging.info("running with: %s" % cmd)
 
-            penv = dict(os.environ)
-            if env:
-                penv.update(env)
+        penv = dict(os.environ)
+        if env:
+            penv.update(env)
 
-            for count in range(5):
+        for count in range(1, 6):
+            with docker_lock:
                 try:
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
 
@@ -120,11 +120,13 @@ class DockerComposeNamespace(DockerNamespace):
                     return output
 
                 except subprocess.CalledProcessError as e:
-                    logging.info("failed to run docker-compose: error: %s, retrying..." % (e.output))
-                    time.sleep(count * 30)
-                    continue
+                    logging.info("failed to run docker-compose: error follows:\n%s" % (e.output))
+                    self._stop_docker_compose()
 
-            raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
+            logging.info("sleeping %d seconds and retrying" % (count * 30))
+            time.sleep(count * 30)
+
+        raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 
     def _wait_for_containers(self, expected_containers):
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])

@@ -26,11 +26,13 @@ import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 from testutils.infra.cli import CliTenantadm
 
-@pytest.yield_fixture(scope='function')
+
+@pytest.yield_fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     tenantadm_cli = CliTenantadm()
     tenantadm_cli.migrate()
     yield clean_mongo
+
 
 class TestCreateOrganizationEnterprise:
     def test_success(self, clean_migrated_mongo):
@@ -44,7 +46,13 @@ class TestCreateOrganizationEnterprise:
         thread.daemon = True
         thread.start()
 
-        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {
+            "request_id": "123456",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+        }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
 
@@ -59,34 +67,59 @@ class TestCreateOrganizationEnterprise:
         smtp_mock.assert_called()
         logging.info("TestCreateOrganizationEnterprise: Assert ok.")
 
-        r = uc.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=("some.user@example.com", "asdfqwer1234"))
+        r = uc.call(
+            "POST", useradm.URL_LOGIN, auth=("some.user@example.com", "asdfqwer1234")
+        )
         assert r.status_code == 200
 
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
-        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {
+            "request_id": "123456",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+        }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
-        payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user1@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {
+            "request_id": "123457",
+            "organization": "tenant-foo",
+            "email": "some.user1@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+        }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
     def test_duplicate_email(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
-        payload = {"request_id": "123456", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {
+            "request_id": "123456",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+        }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
-        payload = {"request_id": "123457", "organization": "tenant-foo", "email":"some.user@example.com", "password": "asdfqwer1234", "g-recaptcha-response": "foobar"}
+        payload = {
+            "request_id": "123457",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+        }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
 
+
 class SMTPMock:
     def start(self):
-        self.server = SMTPServerMock(('0.0.0.0', 4444), None, enable_SMTPUTF8=True)
+        self.server = SMTPServerMock(("0.0.0.0", 4444), None, enable_SMTPUTF8=True)
         asyncore.loop()
 
     def stop(self):

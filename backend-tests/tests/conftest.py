@@ -16,6 +16,7 @@ import urllib3
 import pytest
 
 from requests.packages import urllib3
+
 urllib3.disable_warnings()
 
 # See https://docs.pytest.org/en/latest/writing_plugins.html#assertion-rewriting

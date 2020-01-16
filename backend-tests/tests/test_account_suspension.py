@@ -24,20 +24,28 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 from testutils.infra.cli import CliTenantadm, CliUseradm
 import testutils.util.crypto
-from testutils.common import User, Device, Tenant, \
-        create_org, create_random_authset, get_device_by_id_data, \
-        change_authset_status
+from testutils.common import (
+    User,
+    Device,
+    Tenant,
+    create_org,
+    create_random_authset,
+    get_device_by_id_data,
+    change_authset_status,
+)
+
 
 @pytest.yield_fixture(scope="function")
 def tenants(clean_mongo):
     tenants = []
 
-    for n in ['tenant1', 'tenant2']:
-        username = "user@"+n+".com"
+    for n in ["tenant1", "tenant2"]:
+        username = "user@" + n + ".com"
         password = "correcthorse"
         tenants.append(create_org(n, username, password))
 
     yield tenants
+
 
 @pytest.fixture(scope="function")
 def tenants_users_devices(tenants, mongo):
@@ -46,9 +54,7 @@ def tenants_users_devices(tenants, mongo):
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     for t in tenants:
         user = t.users[0]
-        r = uc.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=(user.name, user.pwd))
+        r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
@@ -60,6 +66,7 @@ def tenants_users_devices(tenants, mongo):
 
     yield tenants
 
+
 class TestAccountSuspensionEnterprise:
     def test_user_cannot_log_in(self, tenants):
         tc = ApiClient(tenantadm.URL_INTERNAL)
@@ -67,41 +74,35 @@ class TestAccountSuspensionEnterprise:
         uc = ApiClient(useradm.URL_MGMT)
 
         for u in tenants[0].users:
-            r = uc.call('POST',
-                        useradm.URL_LOGIN,
-                        auth=(u.name, u.pwd))
+            r = uc.call("POST", useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 200
 
         # tenant's users can log in
         for u in tenants[0].users:
-            r = uc.call('POST',
-                        useradm.URL_LOGIN,
-                        auth=(u.name, u.pwd))
+            r = uc.call("POST", useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 200
 
-        assert r.status_code==200
+        assert r.status_code == 200
 
         # suspend tenant
-        r = tc.call('PUT',
-                tenantadm.URL_INTERNAL_SUSPEND,
-                tenantadm.req_status('suspended'),
-                path_params={'tid': tenants[0].id})
+        r = tc.call(
+            "PUT",
+            tenantadm.URL_INTERNAL_SUSPEND,
+            tenantadm.req_status("suspended"),
+            path_params={"tid": tenants[0].id},
+        )
         assert r.status_code == 200
 
         time.sleep(10)
 
         # none of tenant's users can log in
         for u in tenants[0].users:
-            r = uc.call('POST',
-                        useradm.URL_LOGIN,
-                        auth=(u.name, u.pwd))
+            r = uc.call("POST", useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 401
 
         # but other users still can
         for u in tenants[1].users:
-            r = uc.call('POST',
-                        useradm.URL_LOGIN,
-                        auth=(u.name, u.pwd))
+            r = uc.call("POST", useradm.URL_LOGIN, auth=(u.name, u.pwd))
             assert r.status_code == 200
 
     def test_authenticated_user_is_rejected(self, tenants):
@@ -112,28 +113,28 @@ class TestAccountSuspensionEnterprise:
         u = tenants[0].users[0]
 
         # log in
-        r = uc.call('POST',
-                     useradm.URL_LOGIN,
-                     auth=(u.name, u.pwd))
+        r = uc.call("POST", useradm.URL_LOGIN, auth=(u.name, u.pwd))
         assert r.status_code == 200
 
         token = r.text
 
         # check can access an api
-        r = dc.with_auth(token).call('GET', deviceauth_v2.URL_DEVICES)
+        r = dc.with_auth(token).call("GET", deviceauth_v2.URL_DEVICES)
         assert r.status_code == 200
 
         # suspend tenant
-        r = tc.call('PUT',
-                tenantadm.URL_INTERNAL_SUSPEND,
-                tenantadm.req_status('suspended'),
-                path_params={'tid': tenants[0].id})
+        r = tc.call(
+            "PUT",
+            tenantadm.URL_INTERNAL_SUSPEND,
+            tenantadm.req_status("suspended"),
+            path_params={"tid": tenants[0].id},
+        )
         assert r.status_code == 200
 
         time.sleep(10)
 
         # check token is rejected
-        r = dc.with_auth(token).call('GET', deviceauth_v2.URL_DEVICES)
+        r = dc.with_auth(token).call("GET", deviceauth_v2.URL_DEVICES)
         assert r.status_code == 401
 
     def test_accepted_dev_cant_authenticate(self, tenants_users_devices):
@@ -146,37 +147,36 @@ class TestAccountSuspensionEnterprise:
         device = tenants_users_devices[0].devices[0]
         user = tenants_users_devices[0].users[0]
 
-        r = uc.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=(user.name, user.pwd))
+        r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
         aset = device.authsets[0]
-        change_authset_status(devauthm, aset.did, aset.id, 'accepted', utoken)
+        change_authset_status(devauthm, aset.did, aset.id, "accepted", utoken)
 
         # suspend
-        r = tc.call('PUT',
-                tenantadm.URL_INTERNAL_SUSPEND,
-                tenantadm.req_status('suspended'),
-                path_params={'tid': tenants_users_devices[0].id})
+        r = tc.call(
+            "PUT",
+            tenantadm.URL_INTERNAL_SUSPEND,
+            tenantadm.req_status("suspended"),
+            path_params={"tid": tenants_users_devices[0].id},
+        )
         assert r.status_code == 200
 
         time.sleep(10)
 
         # try requesting auth
-        body, sighdr = deviceauth.auth_req(aset.id_data,
-                                           aset.pubkey,
-                                           aset.privkey,
-                                           tenants_users_devices[0].tenant_token)
+        body, sighdr = deviceauth.auth_req(
+            aset.id_data,
+            aset.pubkey,
+            aset.privkey,
+            tenants_users_devices[0].tenant_token,
+        )
 
-        r = dacd.call('POST',
-                      deviceauth.URL_AUTH_REQS,
-                      body,
-                      headers=sighdr)
+        r = dacd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
         assert r.status_code == 401
-        assert r.json()['error'] == 'Account suspended'
+        assert r.json()["error"] == "Account suspended"
 
     def test_authenticated_dev_is_rejected(self, tenants_users_devices):
         dacd = ApiClient(deviceauth.URL_DEVICES)
@@ -188,47 +188,48 @@ class TestAccountSuspensionEnterprise:
         # accept a dev
         user = tenants_users_devices[0].users[0]
 
-        r = uc.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=(user.name, user.pwd))
+        r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
         aset = tenants_users_devices[0].devices[0].authsets[0]
-        change_authset_status(devauthm, aset.did, aset.id, 'accepted', utoken)
+        change_authset_status(devauthm, aset.did, aset.id, "accepted", utoken)
 
         # request auth
-        body, sighdr = deviceauth.auth_req(aset.id_data,
-                                           aset.pubkey,
-                                           aset.privkey,
-                                           tenants_users_devices[0].tenant_token)
+        body, sighdr = deviceauth.auth_req(
+            aset.id_data,
+            aset.pubkey,
+            aset.privkey,
+            tenants_users_devices[0].tenant_token,
+        )
 
-        r = dacd.call('POST',
-                      deviceauth.URL_AUTH_REQS,
-                      body,
-                      headers=sighdr)
+        r = dacd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
         assert r.status_code == 200
         dtoken = r.text
 
         # check device can access APIs
-        r = dc.with_auth(dtoken).call('GET',
-                                      deployments.URL_NEXT,
-                                      qs_params={'device_type': 'foo',
-                                                 'artifact_name': 'bar'})
+        r = dc.with_auth(dtoken).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={"device_type": "foo", "artifact_name": "bar"},
+        )
         assert r.status_code == 204
 
         # suspend
-        r = tc.call('PUT',
-                tenantadm.URL_INTERNAL_SUSPEND,
-                tenantadm.req_status('suspended'),
-                path_params={'tid': tenants_users_devices[0].id})
+        r = tc.call(
+            "PUT",
+            tenantadm.URL_INTERNAL_SUSPEND,
+            tenantadm.req_status("suspended"),
+            path_params={"tid": tenants_users_devices[0].id},
+        )
         assert r.status_code == 200
 
         time.sleep(10)
 
         # check device is rejected
-        r = dc.with_auth(dtoken).call('GET',
-                                      deployments.URL_NEXT,
-                                      qs_params={'device_type': 'foo',
-                                                 'artifact_name': 'bar'})
+        r = dc.with_auth(dtoken).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={"device_type": "foo", "artifact_name": "bar"},
+        )
         assert r.status_code == 401

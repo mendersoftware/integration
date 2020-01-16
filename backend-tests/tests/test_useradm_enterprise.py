@@ -16,7 +16,7 @@ import random
 import time
 import base64
 import io
-from urllib import parse 
+from urllib import parse
 
 from PIL import Image
 from pyzbar.pyzbar import decode
@@ -27,21 +27,22 @@ from testutils.common import mongo, clean_mongo
 from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
-from testutils.common import User, Tenant, \
-    create_org, create_user
+from testutils.common import User, Tenant, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
-@pytest.yield_fixture(scope='function')
+
+@pytest.yield_fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     useradm_cli = CliUseradm()
     tenantadm_cli = CliTenantadm()
 
-    for t in ['tenant1', 'tenant2']:
+    for t in ["tenant1", "tenant2"]:
         useradm_cli.migrate(t)
         tenantadm_cli.migrate()
 
     yield clean_mongo
+
 
 @pytest.yield_fixture(scope="function")
 def tenants_users(clean_migrated_mongo):
@@ -50,38 +51,32 @@ def tenants_users(clean_migrated_mongo):
     cli = CliTenantadm()
     api = ApiClient(tenantadm.URL_INTERNAL)
 
-    for n in ['tenant1', 'tenant2']:
-        username = "user%d@%s.com" # user[12]@tenant[12].com
+    for n in ["tenant1", "tenant2"]:
+        username = "user%d@%s.com"  # user[12]@tenant[12].com
         password = "correcthorse"
         # Create tenant with two users
         tenant = create_org(n, username % (1, n), "123password")
-        tenant.users.append(create_user(username % (2, n),
-                                        password,
-                                        tenant.id))
+        tenant.users.append(create_user(username % (2, n), password, tenant.id))
         tenants.append(tenant)
 
     yield tenants
+
 
 class Test2FAEnterprise:
     def _login(self, user, totp=None):
         body = {}
         if totp is not None:
-            body = {'token2fa': totp}
+            body = {"token2fa": totp}
 
-        r = uadm.call('POST',
-                      useradm.URL_LOGIN,
-                      auth=(user.name, user.pwd),
-                      body=body)
+        r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd), body=body)
         return r
 
     def _toggle_tfa(self, utoken, on=True):
-        body = {'2fa': 'enabled'}
+        body = {"2fa": "enabled"}
         if not on:
-            body = {'2fa': 'disabled'}
+            body = {"2fa": "disabled"}
 
-        r = uadm.with_auth(utoken).call('POST',
-                                        useradm.URL_SETTINGS,
-                                        body)
+        r = uadm.with_auth(utoken).call("POST", useradm.URL_SETTINGS, body)
         assert r.status_code == 201
 
     def _qr_dec(self, qr_b64):
@@ -95,7 +90,7 @@ class Test2FAEnterprise:
 
         qs = parse.urlsplit(dec.data).query
 
-        secret_b32=parse.parse_qs(qs)[b'secret'][0]
+        secret_b32 = parse.parse_qs(qs)[b"secret"][0]
 
         return secret_b32
 
@@ -108,7 +103,7 @@ class Test2FAEnterprise:
         user_2fa_tok = r.text
 
         # enable tfa for 1 user, straight login doesn't work anymore
-        self._toggle_tfa(user_2fa_tok, on=True) 
+        self._toggle_tfa(user_2fa_tok, on=True)
         r = self._login(user_2fa)
         assert r.status_code == 401
 
@@ -121,21 +116,19 @@ class Test2FAEnterprise:
             assert r.status_code == 200
 
         # grab qr code, extract token, calc TOTP
-        r = uadm.with_auth(user_2fa_tok).call('GET',
-                                              useradm.URL_2FAQR)
+        r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
 
-        assert r.status_code==200
+        assert r.status_code == 200
 
-
-        secret = self._qr_dec(r.json()['qr'])
+        secret = self._qr_dec(r.json()["qr"])
         totp = pyotp.TOTP(secret)
         tok = totp.now()
 
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
-        assert r.status_code==200
+        assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, on=False) 
+        self._toggle_tfa(user_2fa_tok, on=False)
         r = self._login(user_2fa)
-        assert r.status_code==200
+        assert r.status_code == 200

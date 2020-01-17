@@ -14,7 +14,6 @@
 #    limitations under the License.
 
 import time
-import logging
 
 from platform import python_version
 if python_version().startswith('2'):
@@ -29,7 +28,6 @@ else:
 # environment if we don't have to.
 SETUP_TYPE = None
 
-HAVE_TOKEN_TIMEOUT = 60 * 5
 MENDER_STORE = '/data/mender/mender-store'
 
 
@@ -112,19 +110,3 @@ def run(cmd, *args, **kw):
 # to be changed later.
 def sudo(*args, **kw):
     run(*args, **kw)
-
-
-def have_token():
-    """ Make sure the MENDER_STORE file exists after sometime, else fail test """
-
-    sleepsec = 0
-    while sleepsec < HAVE_TOKEN_TIMEOUT:
-        try:
-            run('strings {} | grep authtoken'.format(MENDER_STORE))
-            return
-        except Exception:
-            sleepsec += 5
-            time.sleep(5)
-            logging.info("waiting for mender-store file, sleepsec: %d" % sleepsec)
-
-    assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"

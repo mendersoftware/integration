@@ -123,8 +123,9 @@ class DockerComposeNamespace(DockerNamespace):
                     logging.info("failed to run docker-compose: error follows:\n%s" % (e.output))
                     self._stop_docker_compose()
 
-            logging.info("sleeping %d seconds and retrying" % (count * 30))
-            time.sleep(count * 30)
+            if count < 5:
+                logging.info("sleeping %d seconds and retrying" % (count * 30))
+                time.sleep(count * 30)
 
         raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
 

@@ -49,8 +49,19 @@ class TestBootstrapping(MenderTesting):
         # make sure all devices are accepted
         auth_v2.check_expected_status("accepted", len(mender_clients))
 
-        # make sure mender-store contains authtoken
-        have_token()
+        # make sure mender-store contains authtoken after sometime, else fail test
+        HAVE_TOKEN_TIMEOUT = 60 * 5
+        sleepsec = 0
+        while sleepsec < HAVE_TOKEN_TIMEOUT:
+            try:
+                run('strings {} | grep authtoken'.format(MENDER_STORE))
+                return
+            except Exception:
+                sleepsec += 5
+                time.sleep(5)
+                logging.info("waiting for mender-store file, sleepsec: %d" % sleepsec)
+
+        assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"
 
         # print all device ids
         for device in auth_v2.get_devices_status("accepted"):

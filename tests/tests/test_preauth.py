@@ -14,7 +14,6 @@
 #    limitations under the License.
 
 import json
-import logging
 import time
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -25,7 +24,7 @@ import pytest
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from ..helpers import Helpers
 from .mendertesting import MenderTesting
-from ..MenderAPI import auth, auth_v2, inv
+from ..MenderAPI import auth, auth_v2, inv, logger
 
 
 class TestPreauthBase(MenderTesting):
@@ -54,7 +53,7 @@ class TestPreauthBase(MenderTesting):
         dev_preauth = [d for d in devs if d['status'] == 'preauthorized']
         assert len(dev_preauth) == 1
         dev_preauth = dev_preauth[0]
-        logging.info("dev_prauth_map: " + str(dev_preauth))
+        logger.info("dev_prauth_map: " + str(dev_preauth))
         assert dev_preauth['identity_data'] == preauth_iddata
         assert len(dev_preauth['auth_sets']) == 1
         assert dev_preauth['auth_sets'][0]['pubkey'] == preauth_key
@@ -72,15 +71,15 @@ class TestPreauthBase(MenderTesting):
                 break
 
 
-        logging.info("devices: " + str(dev_accepted))
+        logger.info("devices: " + str(dev_accepted))
         dev_accepted = [d for d in dev_accepted if d['status'] == 'accepted']
-        logging.info("accepted devices: " + str(dev_accepted))
+        logger.info("accepted devices: " + str(dev_accepted))
 
         execute(Client.get_logs, hosts=client)
 
         assert len(dev_accepted) == 1, "looks like the device was never accepted"
         dev_accepted = dev_accepted[0]
-        logging.info("accepted device: " + str(dev_accepted))
+        logger.info("accepted device: " + str(dev_accepted))
 
         assert dev_accepted['identity_data'] == preauth_iddata
         assert len(dev_preauth['auth_sets']) == 1
@@ -203,7 +202,7 @@ class Client:
     @staticmethod
     def get_logs():
         output_from_journalctl = run("journalctl -u mender -l")
-        logging.info(output_from_journalctl)
+        logger.info(output_from_journalctl)
 
     @staticmethod
     def get_pub_key():
@@ -249,11 +248,11 @@ class Client:
                 return out != ''
             except:
                 output_from_journalctl = run("journalctl -u mender -l")
-                logging.info("Logs from client: " + output_from_journalctl)
+                logger.info("Logs from client: " + output_from_journalctl)
 
                 time.sleep(10)
                 sleepsec += 10
-                logging.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
+                logger.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
 
         assert sleepsec <= Client.MENDER_STORE_TIMEOUT, "timeout for mender-store file exceeded"
 
@@ -266,7 +265,7 @@ class Client:
             except:
                 time.sleep(10)
                 sleepsec += 10
-                logging.info("waiting for key gen, sleepsec: {}".format(sleepsec))
+                logger.info("waiting for key gen, sleepsec: {}".format(sleepsec))
             else:
                 time.sleep(5)
                 break

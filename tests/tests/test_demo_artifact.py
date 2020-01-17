@@ -13,7 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import logging
 import os
 import signal
 import subprocess
@@ -22,7 +21,7 @@ import time
 import pytest
 
 from ..common_setup import running_custom_production_setup
-from ..MenderAPI import authentication, deployments, DeviceAuthV2
+from ..MenderAPI import authentication, deployments, DeviceAuthV2, logger
 from .mendertesting import MenderTesting
 
 
@@ -62,16 +61,16 @@ class TestDemoArtifact(MenderTesting):
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 env=test_env)
-            logging.info('Started the demo script')
+            logger.info('Started the demo script')
             password = ""
             time.sleep(60)
             for line in iter(proc.stdout.readline, ''):
-                logging.info(line)
+                logger.info(line)
                 if exit_cond in line.strip():
                     if exit_cond == "Login password:":
                         password = line.split(':')[-1].strip()
-                        logging.info('The login password:')
-                        logging.info(password)
+                        logger.info('The login password:')
+                        logger.info(password)
                         self.auth.password = password
                         assert len(password) == 12
                     break
@@ -88,23 +87,23 @@ class TestDemoArtifact(MenderTesting):
 
         run_demo_script.teardown()
 
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_artifact_upload")
-        logging.info("--------------------------------------------------")
+        logger.info("--------------------------------------------------")
+        logger.info("Running test_demo_artifact_upload")
+        logger.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script.run_demo_script_up)
         run_demo_script.teardown()
         self.auth.reset_auth_token()
 
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_artifact_installation")
-        logging.info("--------------------------------------------------")
+        logger.info("--------------------------------------------------")
+        logger.info("Running test_demo_artifact_installation")
+        logger.info("--------------------------------------------------")
         self.demo_artifact_installation(run_demo_script.run_demo_script_up)
         run_demo_script.teardown()
         self.auth.reset_auth_token()
 
-        logging.info("--------------------------------------------------")
-        logging.info("Running test_demo_up_down_up")
-        logging.info("--------------------------------------------------")
+        logger.info("--------------------------------------------------")
+        logger.info("Running test_demo_up_down_up")
+        logger.info("--------------------------------------------------")
         self.demo_up_down_up(run_demo_script.run_demo_script_up)
         run_demo_script.teardown()
         self.auth.reset_auth_token()
@@ -115,7 +114,7 @@ class TestDemoArtifact(MenderTesting):
         try:
             assert len(arts) == 1
         except:
-            logging.error(str(arts))
+            logger.error(str(arts))
             raise
         assert "mender-demo-artifact" in arts[0]['name']
         # Bring down the demo script
@@ -161,4 +160,4 @@ class TestDemoArtifact(MenderTesting):
         # Verify that the demo user is still present, when bringing
         # the environment up a second time
         self.demo_artifact_upload(run_demo_script, exit_cond="The user already exists")
-        logging.info('Finished')
+        logger.info('Finished')

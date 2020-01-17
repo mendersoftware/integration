@@ -16,7 +16,6 @@
 import time
 import json
 import os
-import logging
 import requests
 import pytest
 
@@ -71,7 +70,7 @@ class Deployments:
                                   data=json.dumps(trigger_data), verify=False)
 
         logger.debug("triggering deployment with: " + json.dumps(trigger_data))
-        logging.info("deployment returned: " + r.text)
+        logger.info("deployment returned: " + r.text)
         assert r.status_code == requests.status_codes.codes.created
 
         deployment_id = str(r.headers['Location'].split("/")[-1])

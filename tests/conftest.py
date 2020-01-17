@@ -95,13 +95,25 @@ def pytest_configure(config):
     MenderTesting.set_test_conditions(config)
 
 
-def pytest_runtest_setup(item):
-    logger = log.setup_custom_logger("root", item.name)
-    logger.info("%s is starting.... " % item.name)
+# If we have xdist installed, the testlogger fixture will include the thread id
+try:
+    import xdist
+    @pytest.fixture(scope="function", autouse=True)
+    def testlogger(request, worker_id):
+        test_name = request.node.name
+        logger = log.setup_custom_logger("root", test_name, worker_id)
+        logger.info("%s is starting.... " % test_name)
+except ImportError:
+    @pytest.fixture(scope="function", autouse=True)
+    def testlogger(request):
+        test_name = request.node.name
+        logger = log.setup_custom_logger("root", test_name, None)
+        logger.info("%s is starting.... " % test_name)
+
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
-        logging.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
+        logger.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
         for log in log_files:
             logger.info("printing content of : %s" % log)
             logger.info("Running with PID: %d, PPID: %d" % (os.getpid(), os.getppid()))

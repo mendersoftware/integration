@@ -28,6 +28,7 @@ from ..common import *
 from ..common_setup import running_custom_production_setup, standard_setup_with_short_lived_token
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
+from ..MenderAPI import logger
 
 class TestSecurity(MenderTesting):
 
@@ -51,7 +52,7 @@ class TestSecurity(MenderTesting):
                 try:
                     for host in exposed_hosts.split():
                         with contextlib.closing(ssl.wrap_socket(socket.socket())) as sock:
-                            logging.info("%s: connect to host with TLS" % host)
+                            logger.info("%s: connect to host with TLS" % host)
                             host, port = host.split(":")
                             sock.connect((host, int(port)))
                             done = True
@@ -92,7 +93,7 @@ class TestSecurity(MenderTesting):
                 time.sleep(1)
 
             if output.return_code == 0:
-                logging.info("mender logs indicate new authorization data available")
+                logger.info("mender logs indicate new authorization data available")
                 break
 
         if timeout_time <= int(time.time()):

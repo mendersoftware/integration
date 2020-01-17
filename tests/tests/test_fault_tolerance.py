@@ -28,7 +28,7 @@ from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure, update_image_failed
 from ..helpers import Helpers
-from ..MenderAPI import deploy
+from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
@@ -55,7 +55,7 @@ class TestFaultTolerance(MenderTesting):
                              % re.escape(search_string))
                 time.sleep(2)
                 if int(output) >= 2:  # check that some retries have occured
-                    logging.info("Looks like the download was retried 2 times, restoring download functionality")
+                    logger.info("Looks like the download was retried 2 times, restoring download functionality")
                     break
 
         if timeout_time <= int(time.time()):
@@ -63,7 +63,7 @@ class TestFaultTolerance(MenderTesting):
 
         # make sure that retries happen after 2 minutes have passed
         assert timeout_time - int(time.time()) >= 2 * 60, "Ooops, looks like the retry happend within less than 5 minutes"
-        logging.info("Waiting for system to finish download")
+        logger.info("Waiting for system to finish download")
 
     @MenderTesting.slow
     def test_update_image_breaks_networking(self, standard_setup_one_client_bootstrapped, install_image="core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name):
@@ -119,7 +119,7 @@ class TestFaultTolerance(MenderTesting):
                 Helpers.gateway_connectivity(i % 2 == 0)
             Helpers.gateway_connectivity(True)
 
-            logging.info("Network stabilized")
+            logger.info("Network stabilized")
             reboot.verify_reboot_performed()
             deploy.check_expected_statistics(deployment_id, "success", len(mender_clients))
 

@@ -23,6 +23,8 @@ import copy
 from . import log_files
 from .docker_manager import DockerNamespace
 
+logger = logging.getLogger("root")
+
 # Global lock to sycronize calls to docker-compose
 docker_lock = filelock.FileLock("docker_lock")
 
@@ -86,7 +88,7 @@ class DockerComposeNamespace(DockerNamespace):
         tfile = tempfile.mktemp("mender_testing")
         self._docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
                         env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-        logging.info("docker-compose log file stored here: %s" % tfile)
+        logger.info("docker-compose log file stored here: %s" % tfile)
         log_files.append(tfile)
 
     def _docker_compose_cmd(self, arg_list, env=None):
@@ -100,7 +102,7 @@ class DockerComposeNamespace(DockerNamespace):
                                             files_args,
                                             arg_list)
 
-        logging.info("running with: %s" % cmd)
+        logger.info("running with: %s" % cmd)
 
         penv = dict(os.environ)
         if env:
@@ -120,11 +122,11 @@ class DockerComposeNamespace(DockerNamespace):
                     return output
 
                 except subprocess.CalledProcessError as e:
-                    logging.info("failed to run docker-compose: error follows:\n%s" % (e.output))
+                    logger.info("failed to run docker-compose: error follows:\n%s" % (e.output))
                     self._stop_docker_compose()
 
             if count < 5:
-                logging.info("sleeping %d seconds and retrying" % (count * 30))
+                logger.info("sleeping %d seconds and retrying" % (count * 30))
                 time.sleep(count * 30)
 
         raise Exception("failed to start docker-compose (called: %s): exit code: %d, output: %s" % (e.cmd, e.returncode, e.output))
@@ -145,10 +147,10 @@ class DockerComposeNamespace(DockerNamespace):
         with docker_lock:
             # Take down all docker instances in this namespace.
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
-            logging.info("running %s" % cmd)
+            logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
             cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % self.name
-            logging.info("running %s" % cmd)
+            logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
     def setup(self):
@@ -172,13 +174,13 @@ class DockerComposeNamespace(DockerNamespace):
                 cmd_id = "awk 'NR>1 {print $1}'"
                 cmd = "docker ps -a -f name=%s | %s | %s | xargs -r docker rm -fv" % (self.name, cmd_excl, cmd_id)
 
-            logging.info("running %s" % cmd)
+            logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
             # if we're preserving some containers, don't destroy the network (will error out on exit)
             if len(exclude) == 0:
                 cmd = "docker network list -q -f name=%s | xargs -r docker network rm" % self.name
-                logging.info("running %s" % cmd)
+                logger.info("running %s" % cmd)
                 subprocess.check_call(cmd, shell=True)
 
     def get_ip_of_service(self, service):
@@ -305,7 +307,7 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
             self.extra_files += self.MT_CLIENT_FILES
-        logging.info("creating client connected to tenant: " + tenant)
+        logger.info("creating client connected to tenant: " + tenant)
         self._docker_compose_cmd("run -d --name=%s_%s mender-client" % (self.name, name),
                                 env={"TENANT_TOKEN": "%s" % tenant})
         time.sleep(45)

@@ -121,6 +121,13 @@ git:
     - mender-workflows-server
     release_component: true
 
+  create-artifact-worker:
+    docker_image:
+    - create-artifact-worker
+    docker_container:
+    - mender-create-artifact-worker
+    release_component: true
+
 docker_image:
   deployments:
     git:
@@ -241,6 +248,13 @@ docker_image:
     - mender-workflows-server
     release_component: true
 
+  create-artifact-worker:
+    git:
+    - create-artifact-worker
+    docker_container:
+    - mender-create-artifact-worker
+    release_component: true
+
 docker_container:
   mender-deployments:
     git:
@@ -332,4 +346,11 @@ docker_container:
     - workflows
     docker_image:
     - workflows
+    release_component: true
+
+  mender-create-artifact-worker:
+    git:
+    - create-artifact-worker
+    docker_image:
+    - create-artifact-worker
     release_component: true

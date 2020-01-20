@@ -71,8 +71,8 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
-    NUM_SERVICES_OPENSOURCE = 12
-    NUM_SERVICES_ENTERPRISE = 16
+    NUM_SERVICES_OPENSOURCE = 13
+    NUM_SERVICES_ENTERPRISE = 17
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)

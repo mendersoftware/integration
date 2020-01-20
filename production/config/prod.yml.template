@@ -22,6 +22,9 @@ services:
     mender-workflows-server:
         command: server --automigrate
 
+    mender-create-artifact-worker:
+        command: --automigrate
+
     mender-useradm:
         command: server --automigrate
         volumes:

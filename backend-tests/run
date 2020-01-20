@@ -140,7 +140,7 @@ copy_test_reports_if_args() {
 }
 
 cleanup(){
-    [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down && $COMPOSE_CMD rm || true
+    [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down -v --remove-orphans && $COMPOSE_CMD rm || true
 }
 
 parse_args "$@"

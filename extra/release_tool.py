@@ -176,6 +176,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",
     "workflows": "WORKFLOWS_REV",
+    "create-artifact-worker": "CREATE_ARTIFACT_WORKER_REV",
 
     "mender": "MENDER_REV",
     "mender-artifact": "MENDER_ARTIFACT_REV",

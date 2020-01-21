@@ -99,6 +99,23 @@ services:
         extends:
             file: common.yml
             service: mender-base
+        environment:
+            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+
+    #
+    # mender-create-artifact-worker
+    #
+    mender-create-artifact-worker:
+        image: mendersoftware/create-artifact-worker:master
+        extends:
+            file: common.yml
+            service: mender-base
+        environment:
+            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
         networks:
             - mender
         depends_on:

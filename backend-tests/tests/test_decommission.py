@@ -23,7 +23,6 @@ import testutils.api.deviceauth as deviceauth
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
-import testutils.infra.conductor as conductor
 from testutils.infra.cli import CliTenantadm, CliUseradm, CliDeviceauth
 from testutils.common import Device, create_org, create_random_authset, \
         change_authset_status, create_user
@@ -169,10 +168,6 @@ class TestDeviceDecomissioningBase:
                                     payload)
         assert r.status_code == 200
 
-        # get all decommission_device WFs for reference
-        query = conductor.workflow_by_name_query(conductor.DECOMMISSIONING_DEVICE_WORKFLOW_NAME)
-        initial_wfs = conductor.get_workflows(params=query)
-
         # decommission
         r = devauthm.with_auth(utoken).call('DELETE',
                           deviceauth_v2.URL_DEVICE.format(id=aset.did))
@@ -184,24 +179,9 @@ class TestDeviceDecomissioningBase:
                                                  'artifact_name': 'bar'})
         assert r.status_code == 401
 
-        # check that the device decommissioning workflow completed successfully
-        timeout = time.time() + (60 * 5)
-        while time.time() < timeout:
-            wfs = conductor.get_workflows(params=query)
-            if wfs['totalHits'] == initial_wfs['totalHits'] + 1:
-                workflow = wfs['results'][0]
-                workflow_input = conductor.parse_workflow_input(workflow['input'])
-                devId = workflow_input['device_id']
-                if workflow['status'] == "COMPLETED" and devId == aset.did:
-                    logger.debug("decommission device workflow completed")
-                    break
-            logger.debug("waiting for decommission device workflow...")
-            time.sleep(1)
-        else:
-            assert False, "decommission device workflow didn't complete for [%s]" % (aset.did,)
-
         # check device gone from inventory
-        timeout = time.time() + 60
+        # this may take some time because it's done as an async job (conductor workflow)
+        timeout = time.time() + (60 * 3)
         while time.time() < timeout:
             r = inventorym.with_auth(utoken).call('GET',
                                             inventory.URL_DEVICE,

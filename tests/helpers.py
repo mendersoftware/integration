@@ -31,7 +31,7 @@ from .common import *
 
 from MenderAPI import auth_v2
 
-logger = logging.getLogger("root")
+logger = logging.getLogger()
 
 class FabricFatalException(BaseException):
     pass

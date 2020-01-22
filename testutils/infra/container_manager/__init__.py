@@ -12,6 +12,3 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 """container_manager module encapsulates interactios with container orchestrators"""
-
-# Global list of log files
-log_files = []

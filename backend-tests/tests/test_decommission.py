@@ -24,14 +24,20 @@ import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 from testutils.infra.cli import CliTenantadm, CliUseradm, CliDeviceauth
-from testutils.common import Device, create_org, create_random_authset, \
-        change_authset_status, create_user
+from testutils.common import (
+    Device,
+    create_org,
+    create_random_authset,
+    change_authset_status,
+    create_user,
+)
 
-logging.basicConfig(format='%(asctime)s %(message)s')
-logger = logging.getLogger('test_decomission')
+logging.basicConfig(format="%(asctime)s %(message)s")
+logger = logging.getLogger("test_decomission")
 logger.setLevel(logging.INFO)
 
-@pytest.yield_fixture(scope='function')
+
+@pytest.yield_fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
@@ -41,21 +47,24 @@ def clean_migrated_mongo(clean_mongo):
 
     yield clean_mongo
 
-@pytest.yield_fixture(scope='function')
+
+@pytest.yield_fixture(scope="function")
 def clean_migrated_mongo_mt(clean_mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
     tenantadm_cli = CliTenantadm()
-    for t in ['tenant1', 'tenant2']:
+    for t in ["tenant1", "tenant2"]:
         deviceauth_cli.migrate(t)
         useradm_cli.migrate(t)
         tenantadm_cli.migrate()
 
     yield clean_mongo
 
+
 @pytest.yield_fixture(scope="function")
 def user(clean_migrated_mongo):
-    yield create_user('user-foo@acme.com', 'correcthorse')
+    yield create_user("user-foo@acme.com", "correcthorse")
+
 
 @pytest.yield_fixture(scope="function")
 def devices(clean_migrated_mongo, user):
@@ -63,9 +72,7 @@ def devices(clean_migrated_mongo, user):
     devauthm = ApiClient(deviceauth_v2.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
-    r = useradmm.call('POST',
-                useradm.URL_LOGIN,
-                auth=(user.name, user.pwd))
+    r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
     utoken = r.text
 
@@ -79,16 +86,18 @@ def devices(clean_migrated_mongo, user):
 
     yield devices
 
+
 @pytest.yield_fixture(scope="function")
 def tenants(clean_migrated_mongo_mt):
     tenants = []
 
-    for n in ['tenant1', 'tenant2']:
-        username = "user@"+n+".com"
+    for n in ["tenant1", "tenant2"]:
+        username = "user@" + n + ".com"
         password = "correcthorse"
         tenants.append(create_org(n, username, password))
 
     yield tenants
+
 
 @pytest.fixture(scope="function")
 def tenants_users_devices(tenants, clean_migrated_mongo_mt):
@@ -97,9 +106,7 @@ def tenants_users_devices(tenants, clean_migrated_mongo_mt):
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     for t in tenants:
         user = t.users[0]
-        r = useradmm.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=(user.name, user.pwd))
+        r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
@@ -111,6 +118,7 @@ def tenants_users_devices(tenants, clean_migrated_mongo_mt):
 
     yield tenants
 
+
 class TestDeviceDecomissioningBase:
     def do_test_ok(self, user, device, tenant_token=None):
         devauthd = ApiClient(deviceauth.URL_DEVICES)
@@ -120,34 +128,28 @@ class TestDeviceDecomissioningBase:
         inventoryd = ApiClient(inventory.URL_DEV)
         inventorym = ApiClient(inventory.URL_MGMT)
 
-        r = useradmm.call('POST',
-                    useradm.URL_LOGIN,
-                    auth=(user.name, user.pwd))
+        r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
         aset = device.authsets[0]
-        change_authset_status(devauthm, aset.did, aset.id, 'accepted', utoken)
+        change_authset_status(devauthm, aset.did, aset.id, "accepted", utoken)
 
         # request auth
-        body, sighdr = deviceauth.auth_req(aset.id_data,
-                                           aset.pubkey,
-                                           aset.privkey,
-                                           tenant_token)
+        body, sighdr = deviceauth.auth_req(
+            aset.id_data, aset.pubkey, aset.privkey, tenant_token
+        )
 
-        r = devauthd.call('POST',
-                      deviceauth.URL_AUTH_REQS,
-                      body,
-                      headers=sighdr)
+        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
         assert r.status_code == 200
         dtoken = r.text
 
         # wait for the device provisioning workflow to do its job
         timeout = time.time() + 60
         while time.time() < timeout:
-            r = inventorym.with_auth(utoken).call('GET',
-                                            inventory.URL_DEVICE,
-                                            path_params={'id': aset.did})
+            r = inventorym.with_auth(utoken).call(
+                "GET", inventory.URL_DEVICE, path_params={"id": aset.did}
+            )
             if r.status_code == 200:
                 break
             else:
@@ -157,35 +159,32 @@ class TestDeviceDecomissioningBase:
             assert False, "device not added to the inventory"
 
         # check if the device can access API by patching device inventory
-        payload = [
-                {
-                    "name": "mac",
-                    "value": "foo"
-                }
-        ]
-        r = inventoryd.with_auth(dtoken).call('PATCH',
-                                    inventory.URL_DEVICE_ATTRIBUTES,
-                                    payload)
+        payload = [{"name": "mac", "value": "foo"}]
+        r = inventoryd.with_auth(dtoken).call(
+            "PATCH", inventory.URL_DEVICE_ATTRIBUTES, payload
+        )
         assert r.status_code == 200
 
         # decommission
-        r = devauthm.with_auth(utoken).call('DELETE',
-                          deviceauth_v2.URL_DEVICE.format(id=aset.did))
+        r = devauthm.with_auth(utoken).call(
+            "DELETE", deviceauth_v2.URL_DEVICE.format(id=aset.did)
+        )
 
         # check device is rejected
-        r = deploymentsd.with_auth(dtoken).call('GET',
-                                      deployments.URL_NEXT,
-                                      qs_params={'device_type': 'foo',
-                                                 'artifact_name': 'bar'})
+        r = deploymentsd.with_auth(dtoken).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={"device_type": "foo", "artifact_name": "bar"},
+        )
         assert r.status_code == 401
 
         # check device gone from inventory
         # this may take some time because it's done as an async job (conductor workflow)
         timeout = time.time() + (60 * 3)
         while time.time() < timeout:
-            r = inventorym.with_auth(utoken).call('GET',
-                                            inventory.URL_DEVICE,
-                                            path_params={'id': aset.did})
+            r = inventorym.with_auth(utoken).call(
+                "GET", inventory.URL_DEVICE, path_params={"id": aset.did}
+            )
             if r.status_code == 404:
                 break
             else:
@@ -197,8 +196,9 @@ class TestDeviceDecomissioningBase:
         # check device gone from deviceauth
         timeout = time.time() + 60
         while time.time() < timeout:
-            r = devauthm.with_auth(utoken).call('GET',
-                              deviceauth_v2.URL_DEVICE.format(id=aset.did))
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth_v2.URL_DEVICE.format(id=aset.did)
+            )
             if r.status_code == 404:
                 break
             else:
@@ -207,14 +207,18 @@ class TestDeviceDecomissioningBase:
         else:
             assert False, "device not removed from the deviceauth"
 
+
 class TestDeviceDecomissioning(TestDeviceDecomissioningBase):
     def test_ok(self, user, devices):
         self.do_test_ok(user, devices[0])
 
+
 class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
     def test_ok(self, tenants_users_devices):
         t = tenants_users_devices[0]
-        self.do_test_ok(user=t.users[0], device=t.devices[0], tenant_token=t.tenant_token)
+        self.do_test_ok(
+            user=t.users[0], device=t.devices[0], tenant_token=t.tenant_token
+        )
 
         t1 = tenants_users_devices[1]
         self.verify_devices_unmodified(t1.users[0], t1.devices)
@@ -223,18 +227,15 @@ class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
         devauthm = ApiClient(deviceauth_v2.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
 
-        r = useradmm.call('POST',
-                          useradm.URL_LOGIN,
-                          auth=(user.name, user.pwd))
+        r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
 
         utoken = r.text
 
-        r = devauthm.with_auth(utoken).call('GET',
-                                            deviceauth_v2.URL_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
         assert len(api_devs) == len(in_devices)
         for ad in api_devs:
-            assert ad['status'] == 'pending'
+            assert ad["status"] == "pending"

@@ -98,3 +98,5 @@ services:
 
     mender-create-artifact-worker:
         command: --automigrate
+        environment:
+            - CREATE_ARTIFACT_SKIPVERIFY=1

@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -22,3 +22,5 @@ URL_STATUS = '/device/deployments/{id}/status'
 URL_DEPLOYMENTS           = '/deployments'
 URL_DEPLOYMENTS_ID        = '/deployments/{id}'
 URL_DEPLOYMENTS_ARTIFACTS = '/artifacts'
+URL_DEPLOYMENTS_ARTIFACTS_GET = '/artifacts/{id}'
+URL_DEPLOYMENTS_ARTIFACTS_GENERATE = '/artifacts/generate'

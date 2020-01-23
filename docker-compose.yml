@@ -116,6 +116,10 @@ services:
         extends:
             file: common.yml
             service: mender-base
+        environment:
+            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
+            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
+            - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:
             - mender
         depends_on:

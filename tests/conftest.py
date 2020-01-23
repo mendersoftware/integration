@@ -92,19 +92,25 @@ def pytest_configure(config):
 
     MenderTesting.set_test_conditions(config)
 
+def unique_test_name(request):
+    """Generate unique test names by prepending the class to the method name"""
+    if request.node.cls is not None:
+        return request.node.cls.__name__ + "__" + request.node.name
+    else:
+        return request.node.name
 
 # If we have xdist installed, the testlogger fixture will include the thread id
 try:
     import xdist
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request, worker_id):
-        test_name = request.node.name
+        test_name = unique_test_name(request)
         log.setup_test_logger(test_name, worker_id)
         logger.info("%s is starting.... " % test_name)
 except ImportError:
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request):
-        test_name = request.node.name
+        test_name = unique_test_name(request)
         log.setup_test_logger(test_name)
         logger.info("%s is starting.... " % test_name)
 

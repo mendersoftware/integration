@@ -142,6 +142,9 @@ def create_org(name, username, password):
             break
         time.sleep(1)
 
+    if rsp.status_code != 200:
+        raise ValueError("User could not log in within one minute after organization has been created.")
+
     user_token = rsp.text
     rsp = api.with_auth(user_token).call(
         "GET",

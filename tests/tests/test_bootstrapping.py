@@ -23,7 +23,7 @@ from ..common import *
 from ..common_setup import standard_setup_one_client, standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
 from ..helpers import Helpers
-from ..MenderAPI import auth_v2
+from ..MenderAPI import auth_v2, logger
 from .mendertesting import MenderTesting
 
 
@@ -44,17 +44,28 @@ class TestBootstrapping(MenderTesting):
         # iterate over devices and accept them
         for d in auth_v2.get_devices():
             auth_v2.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
-            logging.info("Accepting DeviceID: %s" % d["id"])
+            logger.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
         auth_v2.check_expected_status("accepted", len(mender_clients))
 
-        # make sure mender-store contains authtoken
-        have_token()
+        # make sure mender-store contains authtoken after sometime, else fail test
+        HAVE_TOKEN_TIMEOUT = 60 * 5
+        sleepsec = 0
+        while sleepsec < HAVE_TOKEN_TIMEOUT:
+            try:
+                run('strings {} | grep authtoken'.format(MENDER_STORE))
+                return
+            except Exception:
+                sleepsec += 5
+                time.sleep(5)
+                logger.info("waiting for mender-store file, sleepsec: %d" % sleepsec)
+
+        assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"
 
         # print all device ids
         for device in auth_v2.get_devices_status("accepted"):
-            logging.info("Accepted DeviceID: %s" % device["id"])
+            logger.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
     def test_reject_bootstrap(self, standard_setup_one_client_bootstrapped):
@@ -71,7 +82,7 @@ class TestBootstrapping(MenderTesting):
         # iterate over devices and reject them
         for device in auth_v2.get_devices():
             auth_v2.set_device_auth_set_status(device["id"], device["auth_sets"][0]["id"], "rejected")
-            logging.info("Rejecting DeviceID: %s" % device["id"])
+            logger.info("Rejecting DeviceID: %s" % device["id"])
 
         auth_v2.check_expected_status("rejected", len(mender_clients))
 
@@ -80,7 +91,7 @@ class TestBootstrapping(MenderTesting):
             try:
                 deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
             except AssertionError:
-                logging.info("Failed to deploy upgrade to rejected device.")
+                logger.info("Failed to deploy upgrade to rejected device.")
                 reboot.verify_reboot_not_performed()
 
             else:

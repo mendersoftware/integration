@@ -15,7 +15,6 @@
 
 import os
 import tempfile
-import logging
 import shutil
 
 from fabric.api import *
@@ -25,7 +24,7 @@ from .. import conftest
 from ..common_setup import setup_with_legacy_client
 from .common_update import update_image_successful, common_update_procedure
 from ..helpers import Helpers
-from ..MenderAPI import deploy
+from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
 class TestDBMigration(MenderTesting):
@@ -89,7 +88,7 @@ exit 0
                                                                 os.path.join(dirpath, "ArtifactCommit_Enter_01")],
                                                        version=2)
 
-            logging.info("waiting for system to reboot twice")
+            logger.info("waiting for system to reboot twice")
             reboot.verify_reboot_performed(number_of_reboots=2)
 
             assert Helpers.get_active_partition() == active_part

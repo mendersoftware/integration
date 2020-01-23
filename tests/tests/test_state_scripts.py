@@ -13,7 +13,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import logging
 import shutil
 import time
 import os
@@ -27,10 +26,8 @@ from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
 from ..helpers import Helpers
-from ..MenderAPI import deploy
+from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
-
-logger = logging.getLogger("root")
 
 TEST_SETS = [
     (

@@ -95,13 +95,25 @@ def pytest_configure(config):
     MenderTesting.set_test_conditions(config)
 
 
-def pytest_runtest_setup(item):
-    logger = log.setup_custom_logger("root", item.name)
-    logger.info("%s is starting.... " % item.name)
+# If we have xdist installed, the testlogger fixture will include the thread id
+try:
+    import xdist
+    @pytest.fixture(scope="function", autouse=True)
+    def testlogger(request, worker_id):
+        test_name = request.node.name
+        logger = log.setup_custom_logger("root", test_name, worker_id)
+        logger.info("%s is starting.... " % test_name)
+except ImportError:
+    @pytest.fixture(scope="function", autouse=True)
+    def testlogger(request):
+        test_name = request.node.name
+        logger = log.setup_custom_logger("root", test_name, None)
+        logger.info("%s is starting.... " % test_name)
+
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
-        logging.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
+        logger.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
         for log in log_files:
             logger.info("printing content of : %s" % log)
             logger.info("Running with PID: %d, PPID: %d" % (os.getpid(), os.getppid()))
@@ -129,36 +141,6 @@ def pytest_exception_interact(node, call, report):
         logger.info("Containers that exited during the test:")
         for line in output.split('\n'):
             logger.info(line)
-
-
-@pytest.mark.hookwrapper
-def pytest_runtest_makereport(item, call):
-    pytest_html = item.config.pluginmanager.getplugin('html')
-    if pytest_html is None:
-        yield
-        return
-    outcome = yield
-    report = outcome.get_result()
-    extra = getattr(report, 'extra', [])
-    if report.failed:
-        url = ""
-        if os.getenv("UPLOAD_BACKEND_LOGS_ON_FAIL", False):
-            if len(log_files) > 0:
-                # we already have s3cmd configured on our build machine, so use it directly
-                s3_object_name = str(uuid.uuid4()) + ".log"
-                ret = subprocess.call("s3cmd put %s s3://mender-backend-logs/%s" % (log_files[-1], s3_object_name), shell=True)
-                if int(ret) == 0:
-                    url = "https://s3-eu-west-1.amazonaws.com/mender-backend-logs/" + s3_object_name
-                else:
-                    logger.warn("uploading backend logs failed.")
-            else:
-                logger.warn("no log files found, did the backend actually start?")
-        else:
-            logger.warn("not uploading backend log files because UPLOAD_BACKEND_LOGS_ON_FAIL not set")
-
-        # always add url to report
-        extra.append(pytest_html.extras.url(url))
-        report.extra = extra
 
 def pytest_unconfigure(config):
     for log in log_files:

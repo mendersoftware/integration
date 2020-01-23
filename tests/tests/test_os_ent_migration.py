@@ -39,14 +39,13 @@ def initial_os_setup(request):
         Return {"os_devs": [...], "os_users": [...]}
     """
     os_env = container_factory.getStandardSetup(num_clients=0)
-    os_env.setup()
-    ensure_conductor_ready(os_env.get_mender_conductor(), 60, 'provision_device')
-
-    os_env.init_data = initialize_os_setup(os_env)
-
     # We will later re-create other environments, but this one (or any, really) will be
     # enough for the teardown if we keep using the same namespace.
     request.addfinalizer(os_env.teardown)
+
+    os_env.setup()
+    ensure_conductor_ready(os_env.get_mender_conductor(), 60, 'provision_device')
+    os_env.init_data = initialize_os_setup(os_env)
 
     return os_env
 

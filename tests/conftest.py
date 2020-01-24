@@ -31,14 +31,12 @@ import pytest
 import distutils.spawn
 from . import log
 from .tests.mendertesting import MenderTesting
-from testutils.infra.container_manager import log_files
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("filelock").setLevel(logging.INFO)
-logger = log.setup_custom_logger("root", "master")
-logging.getLogger().setLevel(logging.INFO)
+logger = logging.getLogger()
 
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
@@ -94,33 +92,32 @@ def pytest_configure(config):
 
     MenderTesting.set_test_conditions(config)
 
+def unique_test_name(request):
+    """Generate unique test names by prepending the class to the method name"""
+    if request.node.cls is not None:
+        return request.node.cls.__name__ + "__" + request.node.name
+    else:
+        return request.node.name
 
 # If we have xdist installed, the testlogger fixture will include the thread id
 try:
     import xdist
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request, worker_id):
-        test_name = request.node.name
-        logger = log.setup_custom_logger("root", test_name, worker_id)
+        test_name = unique_test_name(request)
+        log.setup_test_logger(test_name, worker_id)
         logger.info("%s is starting.... " % test_name)
 except ImportError:
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request):
-        test_name = request.node.name
-        logger = log.setup_custom_logger("root", test_name, None)
+        test_name = unique_test_name(request)
+        log.setup_test_logger(test_name)
         logger.info("%s is starting.... " % test_name)
 
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
         logger.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
-        for log in log_files:
-            logger.info("printing content of : %s" % log)
-            logger.info("Running with PID: %d, PPID: %d" % (os.getpid(), os.getppid()))
-            with open(log) as f:
-                for line in f.readlines():
-                    logger.info("%s: %s" % (log, line))
-
         try:
             logger.info("Printing client deployment log, if possible:")
             output = execute(run, "cat /data/mender/deployment*.log || true", hosts=get_mender_clients())
@@ -141,13 +138,6 @@ def pytest_exception_interact(node, call, report):
         logger.info("Containers that exited during the test:")
         for line in output.split('\n'):
             logger.info(line)
-
-def pytest_unconfigure(config):
-    for log in log_files:
-        try:
-            os.remove(log)
-        except:
-            pass
 
 def get_valid_image():
     return env.valid_image

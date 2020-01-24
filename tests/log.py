@@ -1,22 +1,64 @@
+import os
 import logging
+import unicodedata
+import re
 
-def setup_custom_logger(name, testname, worker_id=None):
-    log_format = "%(asctime)s [%(levelname)s]: >> %(message)s"
+TEST_LOGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mender_test_logs")
 
-    logging.basicConfig(format=log_format, level=logging.INFO)
-    logger = logging.getLogger(name)
+# Default logger deafult level to DEBUG
+logging.getLogger().setLevel(logging.DEBUG)
 
-    for h in list(logger.handlers):
-        logger.removeHandler(h)
+def setup_test_logger(test_name, worker_id=None):
+    """Sets the default test logger
 
-    consoleHandler = logging.StreamHandler()
-    logFormatter = logging.Formatter(log_format)
+    The  logger contains two handlers:
+    - An INFO level console handler
+    - A DEBUG level file handler, with a filename being an slug of the test name
+    """
+
+    # Get the default logger and remove previous handlers
+    logger = logging.getLogger()
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+
+    # Define format. For console logging, prepend the test name
+    base_log_format = "%(asctime)s [%(levelname)s]: >> %(message)s"
     if worker_id is not None:
-        logFormatter._fmt = "[{}] {} --".format(worker_id, testname) + logFormatter._fmt
+        console_log_format = "[{}] {} -- {}".format(worker_id, test_name, base_log_format)
     else:
-        logFormatter._fmt = testname + " -- " + logFormatter._fmt
-    consoleHandler.setFormatter(logFormatter)
-    logger.addHandler(consoleHandler)
-    logging.getLogger(name).addHandler(consoleHandler)
-    logger.propagate = False
-    return logger
+        console_log_format = "{} -- {}".format(test_name, base_log_format)
+
+    # Add console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter(console_log_format)
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # Add file handler
+    if not os.path.exists(TEST_LOGS_PATH):
+        os.makedirs(TEST_LOGS_PATH)
+    filename = os.path.join(TEST_LOGS_PATH, slugify(test_name) + ".log")
+    file_handler = logging.FileHandler(filename)
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(base_log_format)
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
+
+
+_re_slugify_pass1_sub = re.compile(r'[^\w\s-]').sub
+_re_slugify_pass2_sub = re.compile(r'[-\s]+').sub
+
+def slugify(value):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to hyphens.
+
+    Inspired by Django framework:
+    https://github.com/django/django/blob/3.0.2/django/utils/text.py#L393
+    """
+
+    value = unicode(value)
+    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+    value = _re_slugify_pass1_sub('', value).strip().lower()
+    return _re_slugify_pass2_sub('-', value)

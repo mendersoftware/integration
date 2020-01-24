@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import os
+import re
 import time
 import socket
 import subprocess
@@ -20,7 +21,6 @@ import logging
 import tempfile
 import copy
 
-from . import log_files
 from .docker_manager import DockerNamespace
 
 logger = logging.getLogger("root")
@@ -84,13 +84,6 @@ class DockerComposeNamespace(DockerNamespace):
     def docker_compose_files(self):
         return self.BASE_FILES + self.extra_files
 
-    def _store_logs(self):
-        tfile = tempfile.mktemp("mender_testing")
-        self._docker_compose_cmd("logs -f --no-color > %s 2>&1 &" % tfile,
-                        env={'COMPOSE_HTTP_TIMEOUT': '100000'})
-        logger.info("docker-compose log file stored here: %s" % tfile)
-        log_files.append(tfile)
-
     def _docker_compose_cmd(self, arg_list, env=None):
         """Run docker-compose command using self.docker_compose_files
 
@@ -113,12 +106,9 @@ class DockerComposeNamespace(DockerNamespace):
                 try:
                     output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True, env=penv)
 
-                    if "up -d" in arg_list:
-                        self._store_logs()
-
                     # Return as string (Python 2/3 compatible)
                     if isinstance(output, bytes):
-                        return output.decode()
+                        return output.decode('utf-8')
                     return output
 
                 except subprocess.CalledProcessError as e:
@@ -153,10 +143,17 @@ class DockerComposeNamespace(DockerNamespace):
             logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
 
+    _re_newlines_sub = re.compile(r'[\r\n]*').sub
+    def _debug_log_containers_logs(self):
+        logs = self._docker_compose_cmd("logs --no-color")
+        for line in logs.split('\n'):
+            logger.debug(self._re_newlines_sub('', line))
+
     def setup(self):
         self._docker_compose_cmd("up -d")
 
     def teardown(self):
+        self._debug_log_containers_logs()
         self._stop_docker_compose()
 
     def teardown_exclude(self, exclude=[]):

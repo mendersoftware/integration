@@ -2,7 +2,7 @@ import os
 import logging
 
 api_version = os.getenv("MENDER_API_VERSION", "v1")
-logger = logging.getLogger('root')
+logger = logging.getLogger()
 
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning

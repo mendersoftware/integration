@@ -19,7 +19,7 @@ class MongoClient:
         self.client = PyMongoClient(addr)
 
     def cleanup(self):
-        dbs = self.client.database_names()
+        dbs = self.client.list_database_names()
         dbs = [d for d in dbs if d not in ['local', 'admin', 'config']]
         for d in dbs:
             self.client.drop_database(d)

@@ -99,8 +99,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
         networks:
             - mender
         depends_on:
@@ -114,8 +112,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
         networks:
             - mender
         depends_on:

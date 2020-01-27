@@ -1040,11 +1040,10 @@ class TestPhasedRolloutConcurrencyEnterprise:
                                 (map(lambda sc: sc == s, status_codes))
                             )
                         # Check that all requests received an empty response
-                        assert (
-                            status_code_map[204] == len(status_codes),
+                        assert status_code_map[204] == len(status_codes), (
                             "Expected empty response (204) during inactive "
                             + "phase, but received the following status "
-                            + "code frequencies: %s" % status_code_map,
+                            + "code frequencies: %s" % status_code_map
                         )
                         now = datetime.utcnow()
                 # Sleep the last 500ms to let the next phase start

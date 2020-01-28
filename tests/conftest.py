@@ -117,7 +117,7 @@ except ImportError:
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
-        logger.error("Test %s failed with exception:\n%s" % (str(node), call.excinfo.getrepr()))
+        logger.error("Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr()))
         try:
             logger.info("Printing client deployment log, if possible:")
             output = execute(run, "cat /data/mender/deployment*.log || true", hosts=get_mender_clients())

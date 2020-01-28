@@ -129,10 +129,10 @@ def create_org(name, username, password):
     tenant_id = cli.create_org(name, username, password)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
     api = ApiClient(useradm.URL_MGMT)
-    # Try log in every second for 1 minute.
+    # Try log in every second for 3 minutes.
     # - There usually is a slight delay (in order of ms) for propagating
     #   the created user to the db.
-    for i in range(60):
+    for i in range(3*60):
         rsp = api.call(
             "POST",
             useradm.URL_LOGIN,

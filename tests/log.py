@@ -2,8 +2,16 @@ import os
 import logging
 import unicodedata
 import re
+import errno
 
 TEST_LOGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mender_test_logs")
+
+# Create dir if does not exist
+try:
+    os.makedirs(TEST_LOGS_PATH)
+except OSError as e:
+    if e.errno != errno.EEXIST:
+        raise
 
 # Default logger deafult level to DEBUG
 logging.getLogger().setLevel(logging.DEBUG)
@@ -36,8 +44,6 @@ def setup_test_logger(test_name, worker_id=None):
     logger.addHandler(console_handler)
 
     # Add file handler
-    if not os.path.exists(TEST_LOGS_PATH):
-        os.makedirs(TEST_LOGS_PATH)
     filename = os.path.join(TEST_LOGS_PATH, slugify(test_name) + ".log")
     file_handler = logging.FileHandler(filename)
     file_handler.setLevel(logging.DEBUG)

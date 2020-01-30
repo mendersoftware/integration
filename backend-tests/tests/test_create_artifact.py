@@ -21,14 +21,11 @@ from json import dumps
 
 from testutils.api.client import ApiClient
 from testutils.api import deployments, useradm
-from testutils.common import create_org, mongo, clean_mongo
+from testutils.common import create_org, create_user, mongo, clean_mongo
 
 
-class TestCreateArtifactEnterprise:
-    def test_create_artifact(self, mongo, clean_mongo):
-        tenant, username, password = "test.mender.io", "user@test.mender.io", "secret"
-        tenant = create_org(tenant, username, password)
-
+class TestCreateArtifactBase:
+    def run_create_artifact_test(self, username, password):
         r = ApiClient(useradm.URL_MGMT).call(
             "POST", useradm.URL_LOGIN, auth=(username, password)
         )
@@ -59,7 +56,7 @@ class TestCreateArtifactEnterprise:
                     "type": (None, "single_file"),
                     "args": (
                         None,
-                        dumps({"filename": "run.sh", "dest_dir": "/tests",}),
+                        dumps({"filename": "run.sh", "dest_dir": "/tests"}),
                     ),
                     "file": (
                         filename,
@@ -99,3 +96,21 @@ class TestCreateArtifactEnterprise:
         assert artifact["size"] > 0
         assert artifact["id"] is not None
         assert artifact["modified"] is not None
+
+
+class TestCreateArtifactEnterprise(TestCreateArtifactBase):
+    def test_create_artifact(self, mongo, clean_mongo):
+        tenant, username, password = (
+            "test.mender.io",
+            "some.user@example.com",
+            "secretsecret",
+        )
+        create_org(tenant, username, password)
+        self.run_create_artifact_test(username, password)
+
+
+class TestCreateArtifactOpenSource(TestCreateArtifactBase):
+    def test_create_artifact(self, mongo, clean_mongo):
+        username, password = "some.user@example.com", "secretsecret"
+        create_user(username, password)
+        self.run_create_artifact_test(username, password)

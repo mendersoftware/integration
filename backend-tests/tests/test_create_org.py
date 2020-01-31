@@ -67,10 +67,23 @@ class TestCreateOrganizationEnterprise:
         smtp_mock.assert_called()
         logging.info("TestCreateOrganizationEnterprise: Assert ok.")
 
-        r = uc.call(
-            "POST", useradm.URL_LOGIN, auth=("some.user@example.com", "asdfqwer1234")
-        )
-        assert r.status_code == 200
+        # Try log in every second for 3 minutes.
+        # - There usually is a slight delay (in order of ms) for propagating
+        #   the created user to the db.
+        for i in range(3 * 60):
+            rsp = uc.call(
+                "POST",
+                useradm.URL_LOGIN,
+                auth=("some.user@example.com", "asdfqwer1234"),
+            )
+            if rsp.status_code == 200:
+                break
+            time.sleep(1)
+
+        if rsp.status_code != 200:
+            raise ValueError(
+                "User could not log in within three minutes after organization has been created."
+            )
 
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)

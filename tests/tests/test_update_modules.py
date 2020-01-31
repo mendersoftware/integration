@@ -125,7 +125,7 @@ class TestUpdateModules(MenderTesting):
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service("mender-client")
-            assert "Cannot load handler for unknown Payload type 'rootfs-image'" in output
+            assert "Artifact Payload type 'rootfs-image' is not supported by this Mender Client" in output
 
         finally:
             shutil.rmtree(file_tree)

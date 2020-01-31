@@ -57,7 +57,7 @@ class TestCreateOrganizationEnterprise:
         assert r.status_code == 202
 
         for i in range(60 * 5):
-            if len(smtp_mock.server.messages) > 0:
+            if len(smtp_mock.filtered_messages) > 0:
                 break
             time.sleep(1)
 
@@ -138,9 +138,17 @@ class SMTPMock:
     def stop(self):
         self.server.close()
 
+    @property
+    def filtered_messages(self):
+        return tuple(
+            filter(
+                lambda m: m.rcpttos[0] == "some.user@example.com", self.server.messages
+            )
+        )
+
     def assert_called(self):
-        assert len(self.server.messages) == 1
-        m = self.server.messages[0]
+        assert len(self.filtered_messages) == 1
+        m = self.filtered_messages[0]
         assert m.mailfrom == "contact@mender.io"
         assert m.rcpttos[0] == "some.user@example.com"
 

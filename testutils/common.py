@@ -141,7 +141,7 @@ def create_org(name, username, password):
 
     if rsp.status_code != 200:
         raise ValueError(
-            "User could not log in within one minute after organization has been created."
+            "User could not log in within three minutes after organization has been created."
         )
 
     user_token = rsp.text

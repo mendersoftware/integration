@@ -146,7 +146,7 @@ services:
             - CONFIG_PROP=config.properties
 
     mender-elasticsearch-2:
-        image: elasticsearch:5-alpine
+        image: elasticsearch:6.8.6
         extends:
             file: common.yml
             service: mender-base

@@ -201,19 +201,17 @@ how to modify it.
 
 ### Enabling non-SSL access
 
-For debugging purposes, it may be useful to temporarily enable non-SSL access.
-API Gateway configuration enables plain HTTP on port 80, however the port is not
-published by default, thus it remains inaccessible from the outside. For
-convenience, an overlay compose file is provided that publishes port 80 of API
-Gateway to port 8090 on current host. The overlay file has to be explicitly
-included when setting up the environment like this:
+For debugging purposes or when using third party SSL reverse proxy, it may be useful to enable non-SSL access.  
+API Gateway configuration enables plain HTTP on port 80 when setting the `SSL` environment variable to `'false'`.  
+The nginx configuration will only be changed on container creation. If you previously ran with SSL, delete and re-create the container.  
+An example compose file can be included like this:
 
 ```
-docker-compose ... -f docker-compose.no-ssl.yml ...
+./demo -f docker-compose.no-ssl.yml up
 ```
 
 **NOTE** make sure that plain HTTP port is not published in production
-deployment.
+deployment. Use a reverse proxy for example.
 
 ## Demo client
 

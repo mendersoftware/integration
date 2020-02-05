@@ -123,6 +123,12 @@ fi
 
 MENDER_SERVER_URI="https://localhost"
 
+# use http when providing no-ssl config
+if [[ "$@" == *"-f docker-compose.no-ssl.yml"* ]]
+then
+    MENDER_SERVER_URI="http://localhost"
+fi
+
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
     retval=$(docker-compose \

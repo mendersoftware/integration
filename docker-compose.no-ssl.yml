@@ -3,7 +3,9 @@ services:
 
     mender-api-gateway:
         ports:
-            - "8090:80"
+            - "80:80"
+        environment:
+            SSL: "false"
 
     mender-deployments:
         environment:

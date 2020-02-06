@@ -1280,7 +1280,7 @@ def do_license_generation(state, tag_avail):
             gui_tag = "mendersoftware/gui:tmp"
             for tmpdir in tmpdirs:
                 if os.path.basename(tmpdir) == "gui":
-                    query_execute_list([["docker", "build", "-t", gui_tag, tmpdir]])
+                    query_execute_list([["docker", "build", "-t", gui_tag, "-f", os.path.join(tmpdir, "Dockerfile.disclaimer"), tmpdir]])
                     break
         elif reply == "2":
             gui_tag = "mendersoftware/gui:%s" % tag_or_followed_branch("gui")
@@ -1289,9 +1289,8 @@ def do_license_generation(state, tag_avail):
             return
 
         executed = query_execute_list([
-            ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag],
-            ["docker", "cp", "release_tool_gui_licenses:/var/www/mender-gui/dist/disclaimer.txt", "gui-licenses.txt"],
-            ["docker", "rm", "-f", "release_tool_gui_licenses"],
+            ["docker", "run", "--rm", "--entrypoint", "/bin/sh", "-v", os.getcwd() + ":/extract", gui_tag,
+            "-c", "cp disclaimer.txt /extract/gui-licenses.txt"]
         ])
         if not executed:
             return

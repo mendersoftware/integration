@@ -55,7 +55,7 @@ def tenants_users(clean_migrated_mongo):
         username = "user%d@%s.com"  # user[12]@tenant[12].com
         password = "correcthorse"
         # Create tenant with two users
-        tenant = create_org(n, username % (1, n), "123password")
+        tenant = create_org(n, username % (1, n), "123password", plan="enterprise")
         tenant.users.append(create_user(username % (2, n), password, tenant.id))
         tenants.append(tenant)
 

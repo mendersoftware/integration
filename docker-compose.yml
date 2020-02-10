@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:1.9.x
+        image: mendersoftware/deployments:1.9.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -19,7 +19,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:2.3.x
+        image: mendersoftware/gui:2.3.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -36,7 +36,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:2.1.x
+        image: mendersoftware/api-gateway:2.1.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -55,7 +55,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:2.2.x
+        image: mendersoftware/deviceauth:2.2.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -69,7 +69,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:1.7.x
+        image: mendersoftware/inventory:1.7.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -82,7 +82,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:1.10.x
+        image: mendersoftware/useradm:1.10.0b1
         extends:
             file: common.yml
             service: mender-base
@@ -95,7 +95,7 @@ services:
     # mender-workflows
     #
     mender-workflows-server:
-        image: mendersoftware/workflows:1.0.x
+        image: mendersoftware/workflows:1.0.0b1
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -110,7 +110,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:1.0.x
+        image: mendersoftware/create-artifact-worker:1.0.0b1
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -141,7 +141,7 @@ services:
                     - mongo-workflows
 
     mender-conductor:
-        image: mendersoftware/mender-conductor:1.6.x
+        image: mendersoftware/mender-conductor:1.6.0b1
         depends_on:
             - mender-elasticsearch
             - mender-redis

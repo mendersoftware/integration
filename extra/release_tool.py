@@ -1289,8 +1289,8 @@ def do_license_generation(state, tag_avail):
             return
 
         executed = query_execute_list([
-            ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag],
-            ["docker", "cp", "release_tool_gui_licenses:disclaimer.txt", "gui-licenses.txt"],
+            ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag, "/bin/sh", "-c", "while true; do sleep 1; done"],
+            ["docker", "cp", "release_tool_gui_licenses:/usr/src/app/disclaimer.txt", "gui-licenses.txt"],
             ["docker", "rm", "-f", "release_tool_gui_licenses"],
         ])
         if not executed:

@@ -1268,25 +1268,11 @@ def do_license_generation(state, tag_avail):
                                    "--called-from-release-tool", "--dir", os.path.dirname(tmpdirs[0])],
                                   stdout=fd)
 
-        print_line()
-        print("Will need to fetch the GUI licences from its container. Do you want to:")
-        print("1) Build container manually")
-        print("   Use this when you have not built anything in CI yet")
-        print("2) Fetch container from dockerhub")
-        print("   Use this when you have built in CI")
-        reply = ask("? ")
-
-        if reply == "1":
-            gui_tag = "mendersoftware/gui:tmp"
-            for tmpdir in tmpdirs:
-                if os.path.basename(tmpdir) == "gui":
-                    query_execute_list([["docker", "build", "-t", gui_tag, "-f", os.path.join(tmpdir, "Dockerfile.disclaimer"), tmpdir]])
-                    break
-        elif reply == "2":
-            gui_tag = "mendersoftware/gui:%s" % tag_or_followed_branch("gui")
-            query_execute_list([["docker", "pull", gui_tag]])
-        else:
-            return
+        gui_tag = "mendersoftware/gui:tmp"
+        for tmpdir in tmpdirs:
+            if os.path.basename(tmpdir) == "gui":
+                query_execute_list([["docker", "build", "-t", gui_tag, "-f", os.path.join(tmpdir, "Dockerfile.disclaimer"), tmpdir]])
+                break
 
         executed = query_execute_list([
             ["docker", "run", "-d", "--name", "release_tool_gui_licenses", gui_tag, "/bin/sh", "-c", "while true; do sleep 1; done"],

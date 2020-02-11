@@ -46,17 +46,6 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
             DEMO: "true"
 
-    # add service aliases
-    mender-mongo:
-        networks:
-            mender:
-                aliases:
-                    - mongo-tenantadm
-                    - mongo-deployments
-                    - mongo-device-auth
-                    - mongo-inventory
-                    - mongo-useradm
-
     # configure the rest
     mender-device-auth:
         environment:

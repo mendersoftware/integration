@@ -111,7 +111,7 @@ def upload_image(filename, auth_token, description="abc"):
 
 
 def create_tenant_test_setup(
-    user_name, tenant_name, nr_deployments=3, nr_devices=100, plan="opensource"
+    user_name, tenant_name, nr_deployments=3, nr_devices=100, plan="os"
 ):
     """
     Creates a tenant, and a user belonging to the tenant
@@ -590,7 +590,7 @@ def setup_devices_and_management(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
-    tenant = create_org("acme", "bugs@bunny.org", "correcthorse")
+    tenant = create_org("acme", "bugs@bunny.org", "correcthorse", plan="enterprise")
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth_v1.URL_DEVICES)

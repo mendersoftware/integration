@@ -67,7 +67,7 @@ class CliTenantadm(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
         BaseCli.__init__(self, "mender-tenantadm", containers_namespace, container_manager)
 
-    def create_org(self, name, username, password, plan='opensource'):
+    def create_org(self, name, username, password, plan='os'):
         cmd = ['/usr/bin/tenantadm',
                'create-org',
                '--name', name,

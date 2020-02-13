@@ -124,7 +124,7 @@ def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
     return User(uid, name, pwd)
 
 
-def create_org(name, username, password, plan="opensource"):
+def create_org(name, username, password, plan="os"):
     cli = CliTenantadm()
     user_id = None
     tenant_id = cli.create_org(name, username, password, plan=plan)

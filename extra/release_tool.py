@@ -234,7 +234,7 @@ def get_value_from_password_storage(server, key):
         output = subprocess.check_output(["pass", "find", server]).decode()
         count = 0
         for line in output.split('\n'):
-            if line.startswith("Search terms: "):
+            if line.lower().startswith("search terms: ") or line == "":
                 continue
             count += 1
         if count == 0:

@@ -344,6 +344,15 @@ Signed-off-by: Joe Average <joe@average.com>'
 
 ################################################################################
 
+git commit --allow-empty -m 'Commit with no changelog N70
+
+Changelog: None
+This line should not generate a changelog entry N71
+
+Signed-off-by: Hacker'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"

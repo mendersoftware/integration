@@ -164,6 +164,8 @@ for repo in repos:
                     log_entry = title
                 elif re.match("^Commit[ .]*$", match.group(1), re.IGNORECASE):
                     log_entry_commit = True
+                elif re.match("^None[ .]*$", match.group(1), re.IGNORECASE):
+                    log_entry_commit = False
                 else:
                     log_entry_local = True
                     log_entry = match.group(1)

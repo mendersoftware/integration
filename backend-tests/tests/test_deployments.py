@@ -23,6 +23,7 @@ from testutils.common import (
     Authset,
     Tenant,
     create_org,
+    create_user,
     create_authset,
     change_authset_status,
     clean_mongo,
@@ -586,7 +587,38 @@ class TestDeploymentsEndpointEnterprise(object):
                 assert exp[k] == rsp[k]
 
 
-def setup_devices_and_management(nr_devices=100):
+def setup_devices_and_management_st(nr_devices=100):
+    """
+    Sets up user creates authorized devices.
+    """
+    user = create_user("bugs@bunny.org", "correcthorse")
+    useradmm = ApiClient(useradm.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    invm = ApiClient(inventory.URL_MGMT)
+    api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
+    # log in user
+    r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+    assert r.status_code == 200
+    utoken = r.text
+    # Upload a dummy artifact to the server
+    upload_image("/tests/test-artifact.mender", utoken)
+    # prepare accepted devices
+    devs = make_accepted_devices(utoken, devauthd, nr_devices)
+    # wait for devices to be provisioned
+    time.sleep(3)
+
+    # Check that the number of devices were created
+    r = invm.with_auth(utoken).call(
+        "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
+    )
+    assert r.status_code == 200
+    api_devs = r.json()
+    assert len(api_devs) == nr_devices
+
+    return user, utoken, devs
+
+
+def setup_devices_and_management_mt(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
@@ -654,7 +686,7 @@ def try_update(
 
 class TestDeploymentsEnterprise(object):
     def test_regular_deployment(self, clean_mongo):
-        user, tenant, utoken, devs = setup_devices_and_management()
+        user, tenant, utoken, devs = setup_devices_and_management_mt()
 
         api_mgmt_dep = ApiClient(deployments.URL_MGMT)
 
@@ -798,7 +830,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         """
         Phased equivalent of a regular deployment.
         """
-        user, tenant, utoken, devs = setup_devices_and_management()
+        user, tenant, utoken, devs = setup_devices_and_management_mt()
 
         deployment_req = {
             "name": "phased-regular-deployment",
@@ -812,7 +844,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         """
         Uses a single phase with a delayed start-time.
         """
-        user, tenant, utoken, devs = setup_devices_and_management()
+        user, tenant, utoken, devs = setup_devices_and_management_mt()
 
         deployment_req = {
             "name": "phased-delayed-deployment",
@@ -832,7 +864,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         """
         Two phases, with batch_size and start_ts specified for both phases.
         """
-        user, tenant, utoken, devs = setup_devices_and_management()
+        user, tenant, utoken, devs = setup_devices_and_management_mt()
         deployment_req = {
             "name": "two-fully-spec-deployments",
             "artifact_name": "deployments-phase-testing",
@@ -858,7 +890,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         """
         Three phases; with no start_ts in first and no batch_size in third.
         """
-        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+        user, tenant, utoken, devs = setup_devices_and_management_mt(nr_devices=101)
 
         deployment_req = {
             "name": "three-phased-deployments",
@@ -893,7 +925,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         the server returns 400, with an appropriate error message.
         """
 
-        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+        user, tenant, utoken, devs = setup_devices_and_management_mt(nr_devices=101)
 
         deployment_req = {
             "name": "empty-batch-test",
@@ -935,7 +967,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
         Tests that phase counts and statistics are updated correctly
         when there are no applicable artifact for the devices.
         """
-        user, tenant, utoken, devs = setup_devices_and_management(nr_devices=101)
+        user, tenant, utoken, devs = setup_devices_and_management_mt(nr_devices=101)
 
         for dev in devs:
             dev.device_type = "pranked_exclamation-mark"
@@ -1091,7 +1123,7 @@ class TestPhasedRolloutConcurrencyEnterprise:
         Two phases where devices perform requests in parallel to stress
         the backends capability of handling parallel requests.
         """
-        user, tenant, utoken, devs = setup_devices_and_management()
+        user, tenant, utoken, devs = setup_devices_and_management_mt()
         deployment_req = {
             "name": "two-fully-spec-deployments",
             "artifact_name": "deployments-phase-testing",
@@ -1107,3 +1139,289 @@ class TestPhasedRolloutConcurrencyEnterprise:
             ],
         }
         self.try_concurrent_phased_updates(deployment_req, devs, utoken)
+
+
+# test status update
+
+
+class StatusVerifier:
+    def __init__(self, deploymentsm, deploymentsd):
+        self.deploymentsm = deploymentsm
+        self.deploymentsd = deploymentsd
+
+    def status_update_and_verify(
+        self,
+        device_id,
+        device_token,
+        deployment_id,
+        user_token,
+        status_update,
+        device_deployment_status,
+        deployment_status,
+        status_update_error_code=204,
+        substate_update="",
+        substate="",
+    ):
+
+        body = {"status": status_update}
+        if substate_update != "":
+            body = {"status": status_update, "substate": substate_update}
+
+        # Update device status upon successful request
+        resp = self.deploymentsd.with_auth(device_token).call(
+            "PUT", deployments.URL_STATUS.format(id=deployment_id), body=body,
+        )
+        assert resp.status_code == status_update_error_code
+
+        self.status_verify(
+            deployment_id=deployment_id,
+            user_token=user_token,
+            device_id=device_id,
+            device_deployment_status=device_deployment_status,
+            deployment_status=deployment_status,
+            substate=substate,
+        )
+
+    def status_verify(
+        self,
+        deployment_id,
+        user_token,
+        device_id="",
+        device_deployment_status="",
+        deployment_status="",
+        substate="",
+    ):
+
+        if device_deployment_status != "":
+            resp = self.deploymentsm.with_auth(user_token).call(
+                "GET", deployments.URL_DEPLOYMENTS_DEVICES.format(id=deployment_id)
+            )
+            resp.status_code == 200
+
+            devices = resp.json()
+
+            for device in devices:
+                if device["id"] == device_id:
+                    assert device["status"] == device_deployment_status
+
+                    if substate != "":
+                        assert device["substate"] == substate
+
+        if deployment_status != "":
+            resp = self.deploymentsm.with_auth(user_token).call(
+                "GET", deployments.URL_DEPLOYMENTS.format(id=deployment_id)
+            )
+            resp.status_code == 200
+            assert resp.json()[0]["status"] == deployment_status
+
+
+class TestDeploymentsStatusUpdateBase:
+    def do_test_deployment_status_update(self, clean_mongo, user_token, devs):
+        """
+        deployment with four devices
+        requires five devices (last one won't be part of the deployment
+        """
+
+        deploymentsm = ApiClient(deployments.URL_MGMT)
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+
+        status_verifier = StatusVerifier(deploymentsm, deploymentsd)
+
+        # Make deployment request
+        deployment_req = {
+            "name": "phased-deployment",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs[:-1]],
+        }
+        resp = deploymentsm.with_auth(user_token).call(
+            "POST", deployments.URL_DEPLOYMENTS, deployment_req
+        )
+        assert resp.status_code == 201
+
+        # Store the location from the GET /deployments/{id} request
+        deployment_id = os.path.basename(resp.headers["Location"])
+
+        # Verify that the deployment is in "pending" state
+        status_verifier.status_verify(
+            deployment_id=deployment_id,
+            user_token=user_token,
+            deployment_status="pending",
+        )
+
+        default_artifact_name = "bugs-bunny"
+        default_device_type = "qemux86-64"
+
+        # Try to retrieve next update and assert expected status code
+        resp = deploymentsd.with_auth(devs[0].token).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={
+                "artifact_name": getattr(
+                    devs[0], "artifact_name", default_artifact_name
+                ),
+                "device_type": getattr(devs[0], "device_type", default_device_type),
+            },
+        )
+        assert resp.status_code == 200
+
+        # Try to retrieve next update for the device that already has the artifact
+        resp = deploymentsd.with_auth(devs[1].token).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={
+                "artifact_name": "deployments-phase-testing",
+                "device_type": getattr(devs[1], "device_type", default_device_type),
+            },
+        )
+        assert resp.status_code == 204
+        status_verifier.status_verify(
+            deployment_id=deployment_id,
+            user_token=user_token,
+            device_id=devs[1].id,
+            device_deployment_status="already-installed",
+            deployment_status="inprogress",
+        )
+
+        # Try to retrieve next update for the device with incompatible device type
+        resp = deploymentsd.with_auth(devs[2].token).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={
+                "artifact_name": getattr(
+                    devs[2], "artifact_name", default_artifact_name
+                ),
+                "device_type": "foo",
+            },
+        )
+        assert resp.status_code == 204
+        status_verifier.status_verify(
+            deployment_id=deployment_id,
+            user_token=user_token,
+            device_id=devs[2].id,
+            device_deployment_status="noartifact",
+            deployment_status="inprogress",
+        )
+
+        # device not part of the deployment
+        status_verifier.status_update_and_verify(
+            device_id=devs[4].id,
+            device_token=devs[4].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="installing",
+            device_deployment_status="does-not-matter",
+            deployment_status="inprogress",
+            status_update_error_code=500,
+        )
+
+        # wrong status
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="foo",
+            device_deployment_status="pending",
+            deployment_status="inprogress",
+            status_update_error_code=400,
+        )
+        # device deployment: pending -> downloading
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="downloading",
+            device_deployment_status="downloading",
+            deployment_status="inprogress",
+        )
+        # devs[0] deployment: downloading -> installing
+        # substate: "" -> "foo"
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="installing",
+            device_deployment_status="installing",
+            deployment_status="inprogress",
+            substate_update="foo",
+            substate="foo",
+        )
+        # devs[0] deployment: installing -> downloading
+        """
+        note that until the device deployment is finished
+        transition to any of valid statuses is correct
+        """
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="downloading",
+            device_deployment_status="downloading",
+            deployment_status="inprogress",
+            substate="foo",
+        )
+        # devs[0] deployment: downloading -> rebooting
+        # substate: "foo" -> "bar"
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="rebooting",
+            device_deployment_status="rebooting",
+            deployment_status="inprogress",
+            substate_update="bar",
+            substate="bar",
+        )
+        # devs[0] deployment: rebooting -> success
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="success",
+            device_deployment_status="success",
+            deployment_status="inprogress",
+            substate="bar",
+        )
+        # devs[0] deployment already finished
+        status_verifier.status_update_and_verify(
+            device_id=devs[0].id,
+            device_token=devs[0].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="pending",
+            device_deployment_status="success",
+            deployment_status="inprogress",
+            status_update_error_code=400,
+            substate="bar",
+        )
+
+        # second device
+
+        # device deployment: pending -> failure
+        # deployment: inprogress -> finished
+        status_verifier.status_update_and_verify(
+            device_id=devs[3].id,
+            device_token=devs[3].token,
+            deployment_id=deployment_id,
+            user_token=user_token,
+            status_update="failure",
+            device_deployment_status="failure",
+            deployment_status="finished",
+        )
+
+
+class TestDeploymentsStatusUpdate(TestDeploymentsStatusUpdateBase):
+    def test_deployment_status_update(self, clean_mongo):
+        _user, user_token, devs = setup_devices_and_management_st(5)
+        self.do_test_deployment_status_update(clean_mongo, user_token, devs)
+
+
+class TestDeploymentsStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
+    def test_deployment_status_update(self, clean_mongo):
+        _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
+        self.do_test_deployment_status_update(clean_mongo, user_token, devs)

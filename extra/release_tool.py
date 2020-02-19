@@ -223,6 +223,9 @@ def get_value_from_password_storage(server, key):
     else:
         keys = key
 
+    # Regex to extract the alphanumeric key from the tree output
+    pass_tree_re = re.compile(r".* (?:\x1b\[[\d;]*m)?([\w\d\.]+).*")
+
     try:
         # Remove https prefix.
         if server.startswith("https://"):
@@ -233,16 +236,19 @@ def get_value_from_password_storage(server, key):
 
         output = subprocess.check_output(["pass", "find", server]).decode()
         count = 0
+        server_path = []
         for line in output.split('\n'):
-            if line.startswith("Search terms: "):
+            if line.lower().startswith("search terms: ") or line == "":
                 continue
+            server_path.append(re.match(pass_tree_re, line).group(1))
             count += 1
         if count == 0:
             return
 
-        print("Attempting to fetch credentials from 'pass'...")
+        server_path_str = "/".join(server_path)
+        print("Attempting to fetch credentials from 'pass' %s..." % (server_path_str))
 
-        output = subprocess.check_output(["pass", "show", server]).decode()
+        output = subprocess.check_output(["pass", "show", server_path_str]).decode()
         line_no = 0
         for line in output.split('\n'):
             line_no += 1

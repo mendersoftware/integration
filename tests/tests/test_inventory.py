@@ -50,6 +50,9 @@ class TestInventory(MenderTesting):
 
                         attrs = device['attributes']
 
+                        # Extract name and value only, to make tests more resilient
+                        attrs = [{"name": x.get('name'), "value": x.get('value')} for x in attrs]
+
                         # Check individual attributes.
                         network_interfaces = [elem for elem in attrs if elem['name'] == "network_interfaces"]
                         assert len(network_interfaces) == 1

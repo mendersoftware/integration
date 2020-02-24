@@ -46,22 +46,22 @@ services:
 ```
         |
         |
-        |        +-----------------------+           +-------------------------+
-   port |        |                       |           |                         |
-    443 | <----> |  API Gateway          |      +--->|  Device Authentication  |
-        |        |  (mender-api-gateway) |<-----|    |  (mender-device-auth)   |
-        |        +-----------------------+      |    +-------------------------+
-        |                                       +--->|  Inventory              |
-        |                                       |    |  (mender-inventory)     |
-        |                                       |    +-------------------------+
-        |                                       |    |                         |
-        |                                       +--->|  User Administration    |
-        |                                       |    |  (mender-useradm)       |
-        |                                       |    +-------------------------+
-        |                                       +--->|                         |
-        |                                            |  Deployments            |
-        |              +---------------------------->|  (mender-deployments)   |
-        |              |                             +-------------------------+
+   port |        +-----------------------+           +----------------------------------+
+    443 | <----> |  API Gateway          |      +--->|  Device Authentication           |
+        |        |  (mender-api-gateway) |<-----|    |  (mender-device-auth)            | <---+
+        |        +-----------------------+      |    +----------------------------------+     |
+        |                                       +--->|  Inventory                       |     |
+        |                                       |    |  (mender-inventory)              | <---+
+        |                                       |    +----------------------------------+     |     +----------------------------+
+        |                                       +--->|  User Administration             |     +---> |  Workflows Server          |
+        |                                       |    |  (mender-useradm)                | <---+     |  (mender-workflows-server) |
+        |                                       |    +----------------------------------+     |     +----------------------------+
+        |                                       +--->|  Create Artifact Worker          |     |
+        |                                       |    |  (mender-create-artifact-worker) | <---+
+        |                                       |    +----------------------------------+     |
+        |                                       +--->|  Deployments                     |     |
+        |              +---------------------------->|  (mender-deployments)            | <---+
+        |              |                             +----------------------------------+
         |              |
         |              |
         |              v

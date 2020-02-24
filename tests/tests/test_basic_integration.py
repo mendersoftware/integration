@@ -35,7 +35,7 @@ class TestBasicIntegration(MenderTesting):
     @pytest.mark.skipif(not os.path.exists("mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name),
                         reason="Thud branch and older from Yocto does not have R/O rootfs support")
     def test_double_update_rofs(self, standard_setup_one_rofs_client_bootstrapped):
-        """Upgrade a device with two consecutive R/O images"""
+        """Upgrade a device with two consecutive R/O images using different compression algorithms"""
 
         mender_clients = standard_setup_one_rofs_client_bootstrapped.get_mender_clients()
 
@@ -49,10 +49,14 @@ class TestBasicIntegration(MenderTesting):
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
         host_ip = standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
-        update_image_successful(host_ip, install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        update_image_successful(host_ip,
+                                install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name,
+                                compression_type="gzip")
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        update_image_successful(host_ip, install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name)
+        update_image_successful(host_ip,
+                                install_image="mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name,
+                                compression_type="lzma")
         run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
 

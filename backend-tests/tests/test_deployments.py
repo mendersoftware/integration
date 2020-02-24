@@ -110,13 +110,15 @@ def upload_image(filename, auth_token, description="abc"):
     assert r.status_code == 201
 
 
-def create_tenant_test_setup(user_name, tenant_name, nr_deployments=3, nr_devices=100):
+def create_tenant_test_setup(
+    user_name, tenant_name, nr_deployments=3, nr_devices=100, plan="os"
+):
     """
     Creates a tenant, and a user belonging to the tenant
     with 'nr_deployments', and 'nr_devices'
     """
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
-    tenant = create_org(tenant_name, user_name, "correcthorse")
+    tenant = create_org(tenant_name, user_name, "correcthorse", plan=plan)
     user = tenant.users[0]
     r = ApiClient(useradm.URL_MGMT).call(
         "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
@@ -145,15 +147,15 @@ def create_tenant_test_setup(user_name, tenant_name, nr_deployments=3, nr_device
 
 @pytest.fixture(scope="function")
 def setup_deployments_enterprise_test(
-    clean_mongo, existing_deployments=3, nr_devices=100
+    clean_mongo, existing_deployments=3, nr_devices=100, plan="enterprise"
 ):
     """
     Creates two tenants, with one user each, where each user has three deployments,
     and a hundred devices each.
     """
-    tenant1 = create_tenant_test_setup("bugs@bunny.org", "acme")
+    tenant1 = create_tenant_test_setup("bugs@bunny.org", "acme", plan=plan)
     # Add a second tenant to make sure that the functionality does not interfere with other tenants
-    tenant2 = create_tenant_test_setup("road@runner.org", "indiedev")
+    tenant2 = create_tenant_test_setup("road@runner.org", "indiedev", plan=plan)
     # Create 'existing_deployments' predefined deployments to act as noise for the server to handle
     # for both users
     return tenant1, tenant2
@@ -588,7 +590,7 @@ def setup_devices_and_management(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
-    tenant = create_org("acme", "bugs@bunny.org", "correcthorse")
+    tenant = create_org("acme", "bugs@bunny.org", "correcthorse", plan="enterprise")
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth_v1.URL_DEVICES)

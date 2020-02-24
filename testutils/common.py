@@ -124,10 +124,10 @@ def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
     return User(uid, name, pwd)
 
 
-def create_org(name, username, password):
+def create_org(name, username, password, plan="os"):
     cli = CliTenantadm()
     user_id = None
-    tenant_id = cli.create_org(name, username, password)
+    tenant_id = cli.create_org(name, username, password, plan=plan)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
     api = ApiClient(useradm.URL_MGMT)
     # Try log in every second for 3 minutes.

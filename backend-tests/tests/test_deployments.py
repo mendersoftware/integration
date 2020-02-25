@@ -31,6 +31,13 @@ from testutils.common import (
 )
 
 
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
+
+
 def rand_id_data():
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), "x") for i in range(6)])
     sn = "".join(["{}".format(random.randint(0x00, 0xFF)) for i in range(6)])

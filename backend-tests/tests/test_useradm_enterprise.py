@@ -16,6 +16,7 @@ import random
 import time
 import base64
 import io
+import logging
 from urllib import parse
 
 from PIL import Image
@@ -30,6 +31,12 @@ import testutils.api.tenantadm as tenantadm
 from testutils.common import User, Tenant, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
 
 
 @pytest.yield_fixture(scope="function")

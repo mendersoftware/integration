@@ -92,10 +92,25 @@ services:
             - mender-mongo
 
     #
-    # mender-workflows
+    # mender-workflows-server
     #
     mender-workflows-server:
         image: mendersoftware/workflows:master
+        environment:
+            WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+
+    #
+    # mender-workflows-worker
+    #
+    mender-workflows-worker:
+        image: mendersoftware/workflows-worker:master
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:

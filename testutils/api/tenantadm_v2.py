@@ -1,4 +1,4 @@
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,3 +16,5 @@ URL = 'http://mender-tenantadm:8080/api'
 URL_MGMT = URL + '/management/v2/tenantadm'
 
 URL_CREATE_ORG_TENANT = '/tenants'
+URL_TENANT_STATUS = '/tenants/{id}/status'
+URL_TENANT_SECRET = '/secret'

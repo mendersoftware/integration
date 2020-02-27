@@ -19,6 +19,7 @@ URL_MGMT = URL + '/management/v1/tenantadm'
 URL_INTERNAL_SUSPEND = '/tenants/{tid}/status'
 URL_INTERNAL_TENANTS = '/tenants'
 URL_MGMT_TENANTS = '/tenants'
+URL_MGMT_THIS_TENANT = '/user/tenant'
 
 def req_status(status):
     return {'status': status}

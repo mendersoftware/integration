@@ -49,6 +49,13 @@ git:
     - mender-inventory
     release_component: true
 
+  inventory-enterprise:
+    docker_image:
+    - inventory-enterprise
+    docker_container:
+    - mender-inventory
+    release_component: true
+
   mender:
     docker_image:
     - mender-client-qemu
@@ -162,6 +169,13 @@ docker_image:
   inventory:
     git:
     - inventory
+    docker_container:
+    - mender-inventory
+    release_component: true
+
+  inventory-enterprise:
+    git:
+    - inventory-enterprise
     docker_container:
     - mender-inventory
     release_component: true
@@ -291,8 +305,10 @@ docker_container:
   mender-inventory:
     git:
     - inventory
+    - inventory-enterprise
     docker_image:
     - inventory
+    - inventory-enterprise
     release_component: true
 
   mender-client:

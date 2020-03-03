@@ -24,6 +24,7 @@ from testutils.common import mongo, clean_mongo
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
+import testutils.api.deviceauth as deviceauth_v1
 from testutils.infra.cli import CliTenantadm
 
 
@@ -38,6 +39,8 @@ class TestCreateOrganizationEnterprise:
     def test_success(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
+        tenantadmi = ApiClient(tenantadm.URL_INTERNAL)
+        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
 
         logging.info("Starting TestCreateOrganizationEnterprise")
         smtp_mock = SMTPMock()
@@ -85,6 +88,75 @@ class TestCreateOrganizationEnterprise:
                 "User could not log in within three minutes after organization has been created."
             )
 
+        # get the tenant id (and verify that only one tenant exists)
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        assert r.status_code == 200
+        api_tenants = r.json()
+        assert len(api_tenants) == 1
+
+        # verify the device limit via internal api
+        # the default plan is "os" so the device limit should be set to 50
+        r = devauthi.call(
+            "GET",
+            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            path_params={"tid": api_tenants[0]["id"]},
+        )
+        assert r.status_code == 200
+        assert r.json()["limit"] == 50
+
+    def test_success_with_plan(self, clean_migrated_mongo):
+        tc = ApiClient(tenantadm.URL_MGMT)
+        uc = ApiClient(useradm.URL_MGMT)
+        tenantadmi = ApiClient(tenantadm.URL_INTERNAL)
+        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
+
+        logging.info("Starting TestCreateOrganizationEnterprise")
+
+        payload = {
+            "request_id": "123456",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+            "plan": "professional",
+        }
+        r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
+        assert r.status_code == 202
+
+        # Try log in every second for 5 minutes.
+        # Creating organization is an async job
+        # and may take some time to complete.
+        for i in range(5 * 60):
+            rsp = uc.call(
+                "POST",
+                useradm.URL_LOGIN,
+                auth=("some.user@example.com", "asdfqwer1234"),
+            )
+            if rsp.status_code == 200:
+                break
+            time.sleep(1)
+
+        if rsp.status_code != 200:
+            raise ValueError(
+                "User could not log in within five minutes after organization has been created."
+            )
+
+        # get the tenant id (and verify that only one tenant exists)
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        assert r.status_code == 200
+        api_tenants = r.json()
+        assert len(api_tenants) == 1
+
+        # verify the device limit via internal api
+        # the device limit for professional plan should be 250
+        r = devauthi.call(
+            "GET",
+            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            path_params={"tid": api_tenants[0]["id"]},
+        )
+        assert r.status_code == 200
+        assert r.json()["limit"] == 250
+
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         payload = {
@@ -128,6 +200,19 @@ class TestCreateOrganizationEnterprise:
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
+
+    def test_plan_invalid(self, clean_migrated_mongo):
+        tc = ApiClient(tenantadm.URL_MGMT)
+        payload = {
+            "request_id": "123456",
+            "organization": "tenant-foo",
+            "email": "some.user@example.com",
+            "password": "asdfqwer1234",
+            "g-recaptcha-response": "foobar",
+            "plan": "foo",
+        }
+        rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
+        assert rsp.status_code == 400
 
 
 class SMTPMock:

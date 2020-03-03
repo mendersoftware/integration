@@ -113,6 +113,7 @@ services:
     #
     mender-workflows-worker:
         image: mendersoftware/workflows-worker:master
+        command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:

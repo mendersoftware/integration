@@ -90,7 +90,7 @@ services:
         command: server --automigrate
 
     mender-workflows-worker:
-        command: worker --automigrate
+        command: worker --automigrate --excluded-workflows generate_artifact
 
     mender-create-artifact-worker:
         command: --automigrate

@@ -37,6 +37,10 @@ def clean_migrated_mongo(clean_mongo):
 
 
 class TestCreateOrganizationEnterprise:
+    def _cleanup_stripe(self, tenant_email):
+        cust = stripeutils.customer_for_tenant(tenant_email)
+        stripeutils.delete_cust(cust["id"])
+
     def test_success(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
@@ -110,6 +114,8 @@ class TestCreateOrganizationEnterprise:
         assert cust.default_source is not None
         assert len(cust.sources) == 1
 
+        self._cleanup_stripe(email)
+
     def test_success_with_plan(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
@@ -163,6 +169,8 @@ class TestCreateOrganizationEnterprise:
         assert r.status_code == 200
         assert r.json()["limit"] == 250
 
+        self._cleanup_stripe(email)
+
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
 
@@ -189,8 +197,12 @@ class TestCreateOrganizationEnterprise:
             "g-recaptcha-response": "foobar",
             "token": "tok_visa",
         }
+
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
+
+        self._cleanup_stripe(email)
+        self._cleanup_stripe(email2)
 
     def test_duplicate_email(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
@@ -221,6 +233,8 @@ class TestCreateOrganizationEnterprise:
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
+
+        self._cleanup_stripe(email)
 
     def test_plan_invalid(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)

@@ -1,21 +1,19 @@
 import logging
-import random
-import string
 import time
 import os
 import pytest
 import subprocess
 import time
 import stripe
-from stripe import SetupIntent
 
 import pymongo
 
-from testutils.common import mongo, mongo_cleanup, clean_mongo, create_org
+from testutils.common import mongo, mongo_cleanup, clean_mongo, create_org, randstr
 from testutils.common import User
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm_v1
 import testutils.api.tenantadm_v2 as tenantadm_v2
+import testutils.integration.stripe as stripeutils
 from testutils.api.client import ApiClient
 
 api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT)
@@ -90,9 +88,9 @@ class TestCreateOrganizationV2EnterpriseNew:
 
             # we're emulating CC collection (and setup intent confirmation)
             # setup intent cofirm is the last step normally done by the stripe ui components
-            seti = stripe_find_setup_intent(secret)
+            seti = stripeutils.find_setup_intent(secret)
 
-            stripe_confirm(card, seti["id"])
+            stripeutils.confirm(card, seti["id"])
 
             # tenant can be activated now
             res = api_tadm_v2.call(
@@ -108,12 +106,12 @@ class TestCreateOrganizationV2EnterpriseNew:
 
             # verify that tenant's customer has an attached
             # payment method/default payment method
-            cust = stripe_customer_for_tenant(uname)
-            stripe_customer_has_pm(cust)
+            cust = stripeutils.customer_for_tenant(uname)
+            stripeutils.customer_has_pm(cust)
 
             # cleanup
             # setup intents can't be cleaned up apparently, cancel doesn't work
-            stripe.Customer.delete(cust["id"])
+            stripeutils.delete_cust(cust["id"])
 
     def test_ok_sca_cards(self, clean_mongo):
         """ Regulatory test card numbers.
@@ -163,10 +161,10 @@ class TestCreateOrganizationV2EnterpriseNew:
 
             # we're emulating CC collection (and setup intent confirmation)
             # setup intent cofirm is the last step normally done by the stripe ui components
-            seti = stripe_find_setup_intent(secret)
+            seti = stripeutils.find_setup_intent(secret)
 
             # this will pass, because it's a test mode - but still the card will be unconfirmed/unusable
-            stripe_confirm(card, seti["id"])
+            stripeutils.confirm(card, seti["id"])
 
             # tenant *cannot* be activated
             # because the auth was not completed
@@ -209,8 +207,8 @@ class TestCreateOrganizationV2EnterpriseExisting:
 
         # UI uses the secret to collect card and confirm the setup intent
         # let's use a different card
-        seti = stripe_find_setup_intent(secret)
-        stripe_confirm("pm_card_mastercard", seti["id"])
+        seti = stripeutils.find_setup_intent(secret)
+        stripeutils.confirm("pm_card_mastercard", seti["id"])
 
         res = api_tadm_v2.call(
             "PUT",
@@ -221,16 +219,16 @@ class TestCreateOrganizationV2EnterpriseExisting:
         assert res.status_code == 202
 
         # verify the old source is detached and new one attached
-        cust = stripe_customer_for_tenant(email)
+        cust = stripeutils.customer_for_tenant(email)
 
         assert cust["default_source"] == None
         assert len(cust["sources"]) == 0
 
-        stripe_customer_has_pm(cust)
+        stripeutils.customer_has_pm(cust)
 
         # cleanup
         # setup intents can't be cleaned up apparently, cancel doesn't work
-        stripe.Customer.delete(cust["id"])
+        stripeutils.delete_cust(cust["id"])
 
 
 def create_org_v1(name, email, pwd, card_token):
@@ -251,43 +249,6 @@ def create_org_v1(name, email, pwd, card_token):
     )
     assert res.status_code == 202
     return res
-
-
-def randstr():
-    """ Random suffix generation.
-        Useful to ensure that parallel runs on the same key don't
-        step on each other's data.
-    """
-    charset = string.ascii_letters + string.digits
-    return "".join(random.choice(charset) for i in range(5))
-
-
-def stripe_find_setup_intent(seti_secret):
-    res = stripe.SetupIntent.list()
-    found = [seti for seti in res["data"] if seti["client_secret"] == seti_secret]
-    assert len(found) == 1
-    return found[0]
-
-
-def stripe_confirm(cc, seti_id):
-    stripe.SetupIntent.confirm(seti_id, payment_method=cc)
-
-
-def stripe_customer_for_tenant(email):
-    stripe_custs = stripe.Customer.list(email=email)
-    assert len(stripe_custs.data) == 1
-    found = stripe_custs.data[0]
-    return found
-
-
-def stripe_customer_has_pm(cust):
-    res = stripe.PaymentMethod.list(customer=cust["id"], type="card")
-
-    method = [d for d in res["data"]]
-    assert len(method) == 1
-    method = method[0]
-
-    assert cust["invoice_settings"]["default_payment_method"] == method["id"]
 
 
 def try_login(api, name, pwd, timeout_secs=60):

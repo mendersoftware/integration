@@ -14,3 +14,4 @@ services:
         environment:
             PYTHONPATH: "/testutils"
             PYTHONDONTWRITEBYTECODE: 1
+            TENANTADM_STRIPE_API_KEY: rk_test_OsbFRKGIa8vzUClRziJTiAF000ieB4joJj

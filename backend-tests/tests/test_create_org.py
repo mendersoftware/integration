@@ -55,6 +55,7 @@ class TestCreateOrganizationEnterprise:
             "email": "some.user@example.com",
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
@@ -119,6 +120,7 @@ class TestCreateOrganizationEnterprise:
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
             "plan": "professional",
+            "token": "tok_visa",
         }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
@@ -165,6 +167,7 @@ class TestCreateOrganizationEnterprise:
             "email": "some.user@example.com",
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
@@ -175,6 +178,7 @@ class TestCreateOrganizationEnterprise:
             "email": "some.user1@example.com",
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
@@ -187,6 +191,7 @@ class TestCreateOrganizationEnterprise:
             "email": "some.user@example.com",
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
@@ -197,6 +202,7 @@ class TestCreateOrganizationEnterprise:
             "email": "some.user@example.com",
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
@@ -210,6 +216,7 @@ class TestCreateOrganizationEnterprise:
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
             "plan": "foo",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 400

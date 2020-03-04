@@ -3,14 +3,14 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:1.8.x
+        image: registry.mender.io/mendersoftware/deployments-enterprise:1.8.1
 
     mender-conductor:
-        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:1.5.x
+        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:1.5.0
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:1.0.x
+        image: registry.mender.io/mendersoftware/tenantadm:1.0.0
         extends:
             file: common.yml
             service: mender-base
@@ -22,7 +22,7 @@ services:
             TENANTADM_CONDUCTOR_ADDR: http://mender-conductor:8080
 
     mender-org-welcome-email-preparer:
-        image: registry.mender.io/mendersoftware/org-welcome-email-preparer:1.5.x
+        image: registry.mender.io/mendersoftware/org-welcome-email-preparer:1.5.0
         extends:
             file: common.yml
             service: mender-base
@@ -34,7 +34,7 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
 
     mender-email-sender:
-        image: mendersoftware/email-sender:1.5.x
+        image: mendersoftware/email-sender:1.5.0
         extends:
             file: common.yml
             service: mender-base
@@ -63,7 +63,7 @@ services:
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:1.9.x
+        image: registry.mender.io/mendersoftware/useradm-enterprise:1.9.1
         environment:
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 

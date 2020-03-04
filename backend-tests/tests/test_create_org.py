@@ -25,6 +25,7 @@ from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deviceauth as deviceauth_v1
+import testutils.integration.stripe as stripeutils
 from testutils.infra.cli import CliTenantadm
 
 
@@ -103,6 +104,11 @@ class TestCreateOrganizationEnterprise:
         )
         assert r.status_code == 200
         assert r.json()["limit"] == 50
+
+        # verify there is a stripe customer with a correctly assigned source
+        cust = stripeutils.customer_for_tenant(email)
+        assert cust.default_source is not None
+        assert len(cust.sources) == 1
 
     def test_success_with_plan(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)

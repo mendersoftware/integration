@@ -71,6 +71,12 @@ class Test2FAEnterprise:
         r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd), body=body)
         return r
 
+    def _verify(self, utoken, totp):
+        body = {"token2fa": totp}
+
+        r = uadm.with_auth(utoken).call("PUT", useradm.URL_2FAVERIFY, body=body)
+        return r
+
     def _toggle_tfa(self, utoken, on=True):
         body = {"2fa": "enabled"}
         if not on:
@@ -102,18 +108,10 @@ class Test2FAEnterprise:
         assert r.status_code == 200
         user_2fa_tok = r.text
 
-        # enable tfa for 1 user, straight login doesn't work anymore
+        # enable tfa for 1 user, straight login still works, token is not verified
         self._toggle_tfa(user_2fa_tok, on=True)
         r = self._login(user_2fa)
-        assert r.status_code == 401
-
-        # the other user, and other tenant's users, are unaffected
-        r = self._login(user_no_2fa)
         assert r.status_code == 200
-
-        for other_user in tenants_users[1].users:
-            r = self._login(other_user)
-            assert r.status_code == 200
 
         # grab qr code, extract token, calc TOTP
         r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
@@ -124,9 +122,25 @@ class Test2FAEnterprise:
         totp = pyotp.TOTP(secret)
         tok = totp.now()
 
+        # verify token
+        r = self._verify(user_2fa_tok, tok)
+        assert r.status_code == 202
+
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
         assert r.status_code == 200
+
+        # logi without otp now does not work
+        r = self._login(user_2fa)
+        assert r.status_code == 401
+
+        # the other user, and other tenant's users, are unaffected
+        r = self._login(user_no_2fa)
+        assert r.status_code == 200
+
+        for other_user in tenants_users[1].users:
+            r = self._login(other_user)
+            assert r.status_code == 200
 
         # after disabling - straight login works again
         self._toggle_tfa(user_2fa_tok, on=False)

@@ -16,6 +16,7 @@ import json
 import pytest
 import random
 import time
+import string
 
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
@@ -242,3 +243,12 @@ def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
     dev.status = "accepted"
 
     return dev
+
+
+def randstr():
+    """ Random suffix generation.
+        Useful when we need e.g. unique object ids so that
+        parallel test runs don't step on each other's data.
+    """
+    charset = string.ascii_letters + string.digits
+    return "".join(random.choice(charset) for i in range(5))

@@ -20,11 +20,12 @@ from threading import Thread
 
 from testutils.infra.smtpd_mock import SMTPServerMock
 
-from testutils.common import mongo, clean_mongo
+from testutils.common import mongo, clean_mongo, randstr
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deviceauth as deviceauth_v1
+import testutils.integration.stripe as stripeutils
 from testutils.infra.cli import CliTenantadm
 
 
@@ -35,12 +36,11 @@ def clean_migrated_mongo(clean_mongo):
     yield clean_mongo
 
 
-@pytest.mark.skip(
-    reason="""These expect no stripe api key = stripe integration disabled.
-              We must provide the key for v2 tests which breaks this assumption and breaks the following tests.
-              See https://tracker.mender.io/browse/MEN-3260"""
-)
 class TestCreateOrganizationEnterprise:
+    def _cleanup_stripe(self, tenant_email):
+        cust = stripeutils.customer_for_tenant(tenant_email)
+        stripeutils.delete_cust(cust["id"])
+
     def test_success(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
@@ -54,36 +54,36 @@ class TestCreateOrganizationEnterprise:
         thread.daemon = True
         thread.start()
 
+        tenant = "tenant{}".format(randstr())
+        email = "some.user@{}.com".format(tenant)
+
         payload = {
             "request_id": "123456",
-            "organization": "tenant-foo",
-            "email": "some.user@example.com",
+            "organization": tenant,
+            "email": email,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
 
         for i in range(60 * 5):
-            if len(smtp_mock.filtered_messages) > 0:
+            if len(smtp_mock.filtered_messages(email)) > 0:
                 break
             time.sleep(1)
 
         logging.info("TestCreateOrganizationEnterprise: Waiting finished. Stoping mock")
         smtp_mock.stop()
         logging.info("TestCreateOrganizationEnterprise: Mock stopped.")
-        smtp_mock.assert_called()
+        smtp_mock.assert_called(email)
         logging.info("TestCreateOrganizationEnterprise: Assert ok.")
 
         # Try log in every second for 3 minutes.
         # - There usually is a slight delay (in order of ms) for propagating
         #   the created user to the db.
         for i in range(3 * 60):
-            rsp = uc.call(
-                "POST",
-                useradm.URL_LOGIN,
-                auth=("some.user@example.com", "asdfqwer1234"),
-            )
+            rsp = uc.call("POST", useradm.URL_LOGIN, auth=(email, "asdfqwer1234"),)
             if rsp.status_code == 200:
                 break
             time.sleep(1)
@@ -109,6 +109,13 @@ class TestCreateOrganizationEnterprise:
         assert r.status_code == 200
         assert r.json()["limit"] == 50
 
+        # verify there is a stripe customer with a correctly assigned source
+        cust = stripeutils.customer_for_tenant(email)
+        assert cust.default_source is not None
+        assert len(cust.sources) == 1
+
+        self._cleanup_stripe(email)
+
     def test_success_with_plan(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
@@ -117,13 +124,17 @@ class TestCreateOrganizationEnterprise:
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
+        tenant = "tenant{}".format(randstr())
+        email = "some.user@{}.com".format(tenant)
+
         payload = {
             "request_id": "123456",
-            "organization": "tenant-foo",
-            "email": "some.user@example.com",
+            "organization": tenant,
+            "email": email,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
             "plan": "professional",
+            "token": "tok_visa",
         }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
@@ -132,11 +143,7 @@ class TestCreateOrganizationEnterprise:
         # Creating organization is an async job
         # and may take some time to complete.
         for i in range(5 * 60):
-            rsp = uc.call(
-                "POST",
-                useradm.URL_LOGIN,
-                auth=("some.user@example.com", "asdfqwer1234"),
-            )
+            rsp = uc.call("POST", useradm.URL_LOGIN, auth=(email, "asdfqwer1234"),)
             if rsp.status_code == 200:
                 break
             time.sleep(1)
@@ -162,49 +169,72 @@ class TestCreateOrganizationEnterprise:
         assert r.status_code == 200
         assert r.json()["limit"] == 250
 
+        self._cleanup_stripe(email)
+
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
+
+        tenant = "tenant{}".format(randstr())
+        email = "some.user@{}.com".format(tenant)
+
         payload = {
             "request_id": "123456",
-            "organization": "tenant-foo",
-            "email": "some.user@example.com",
+            "organization": tenant,
+            "email": email,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
+        email2 = "some.user1@{}.com".format(tenant)
         payload = {
             "request_id": "123457",
-            "organization": "tenant-foo",
-            "email": "some.user1@example.com",
+            "organization": tenant,
+            "email": email2,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
+
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
+
+        self._cleanup_stripe(email)
+        self._cleanup_stripe(email2)
 
     def test_duplicate_email(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
+
+        tenant = "tenant{}".format(randstr())
+        email = "some.user@{}.com".format(tenant)
+
         payload = {
             "request_id": "123456",
-            "organization": "tenant-foo",
-            "email": "some.user@example.com",
+            "organization": tenant,
+            "email": email,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
+        tenant = "tenant{}".format(randstr())
+
         payload = {
             "request_id": "123457",
-            "organization": "tenant-foo",
-            "email": "some.user@example.com",
+            "organization": tenant,
+            "email": email,
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
+
+        self._cleanup_stripe(email)
 
     def test_plan_invalid(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT)
@@ -215,6 +245,7 @@ class TestCreateOrganizationEnterprise:
             "password": "asdfqwer1234",
             "g-recaptcha-response": "foobar",
             "plan": "foo",
+            "token": "tok_visa",
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 400
@@ -228,18 +259,14 @@ class SMTPMock:
     def stop(self):
         self.server.close()
 
-    @property
-    def filtered_messages(self):
-        return tuple(
-            filter(
-                lambda m: m.rcpttos[0] == "some.user@example.com", self.server.messages
-            )
-        )
+    def filtered_messages(self, email):
+        return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
 
-    def assert_called(self):
-        assert len(self.filtered_messages) == 1
-        m = self.filtered_messages[0]
+    def assert_called(self, email):
+        msgs = self.filtered_messages(email)
+        assert len(msgs) == 1
+        m = msgs[0]
         assert m.mailfrom == "contact@mender.io"
-        assert m.rcpttos[0] == "some.user@example.com"
+        assert m.rcpttos[0] == email
 
         assert len(m.data) > 0

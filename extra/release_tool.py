@@ -172,6 +172,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "deviceauth": "DEVICEAUTH_REV",
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",
+    "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
     "tenantadm": "TENANTADM_REV",
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",

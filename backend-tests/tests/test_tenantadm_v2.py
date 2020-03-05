@@ -21,6 +21,8 @@ api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT)
 
 api_uadm = ApiClient(useradm.URL_MGMT)
 stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
+if stripe.api_key is None:
+    raise RuntimeError("provide the TENANTADM_STRIPE_API_KEY variable!")
 
 
 class TestCreateOrganizationV2EnterpriseNew:

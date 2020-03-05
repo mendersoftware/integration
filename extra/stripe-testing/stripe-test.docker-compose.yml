@@ -3,7 +3,7 @@ services:
 
     mender-tenantadm:
         environment:
-            TENANTADM_STRIPE_API_KEY: rk_test_OsbFRKGIa8vzUClRziJTiAF000ieB4joJj
+            TENANTADM_STRIPE_API_KEY: ${STRIPE_API_KEY}
 
 networks:
     mender:

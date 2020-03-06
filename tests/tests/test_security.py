@@ -89,7 +89,7 @@ class TestSecurity(MenderTesting):
         timeout_time = int(time.time()) + 60
         while int(time.time()) < timeout_time:
             with quiet():
-                output = run("journalctl -u mender -l --no-pager | grep \"received new authorization data\"")
+                output = run("journalctl -u mender-client -l --no-pager | grep \"received new authorization data\"")
                 time.sleep(1)
 
             if output.return_code == 0:

@@ -201,7 +201,7 @@ class Client:
 
     @staticmethod
     def get_logs():
-        output_from_journalctl = run("journalctl -u mender -l")
+        output_from_journalctl = run("journalctl -u mender-client -l")
         logger.info(output_from_journalctl)
 
     @staticmethod
@@ -236,7 +236,7 @@ class Client:
     def restart():
         """Restart the mender service."""
 
-        run('systemctl restart mender.service')
+        run('systemctl restart mender-client.service')
 
     @staticmethod
     def have_authtoken():
@@ -247,7 +247,7 @@ class Client:
                 out = run('strings {} | grep authtoken'.format(Client.MENDER_STORE))
                 return out != ''
             except:
-                output_from_journalctl = run("journalctl -u mender -l")
+                output_from_journalctl = run("journalctl -u mender-client -l")
                 logger.info("Logs from client: " + output_from_journalctl)
 
                 time.sleep(10)

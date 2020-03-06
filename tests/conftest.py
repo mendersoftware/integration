@@ -127,7 +127,7 @@ def pytest_exception_interact(node, call, report):
 
         try:
             logger.info("Printing client systemd log, if possible:")
-            output = execute(run, "journalctl -u mender || true", hosts=get_mender_clients())
+            output = execute(run, "journalctl -u mender-client || true", hosts=get_mender_clients())
             logger.info(output)
         except:
             logger.info("Not able to print client systemd log")

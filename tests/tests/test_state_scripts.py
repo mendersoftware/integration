@@ -652,11 +652,11 @@ class TestStateScripts(MenderTesting):
                 raise
 
             finally:
-                run("systemctl stop mender && "
+                run("systemctl stop mender-client && "
                                 + "rm -f /data/test_state_scripts.log && "
                                 + "rm -rf /etc/mender/scripts && "
                                 + "rm -rf /data/mender/scripts && "
-                                + "systemctl start mender")
+                                + "systemctl start mender-client")
 
 
 
@@ -732,7 +732,7 @@ class TestStateScripts(MenderTesting):
             # quite slow.
             subprocess.check_call(["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir)
             # Stop client first to avoid race conditions.
-            run("systemctl stop mender")
+            run("systemctl stop mender-client")
             try:
                 put(os.path.join(work_dir, "rootfs-scripts.tar.gz"),
                     remote_path="/")
@@ -741,7 +741,7 @@ class TestStateScripts(MenderTesting):
                     + "tar xzf /rootfs-scripts.tar.gz && "
                     + "rm -f /rootfs-scripts.tar.gz")
             finally:
-                run("systemctl start mender")
+                run("systemctl start mender-client")
 
             # Put artifact-scripts in the artifact.
             artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -781,7 +781,7 @@ class TestStateScripts(MenderTesting):
                     return all_output
                 info_query = [
                     "cat /data/test_state_scripts.log 1>&2",
-                    "journalctl -u mender",
+                    "journalctl -u mender-client",
                     "top -n5 -b",
                     "ls -l /proc/`pgrep mender`/fd",
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
@@ -834,11 +834,11 @@ class TestStateScripts(MenderTesting):
                     deploy.abort(deployment_id)
                 except:
                     pass
-            run("systemctl stop mender && "
+            run("systemctl stop mender-client && "
                 + "rm -f /data/test_state_scripts.log && "
                 + "rm -rf /etc/mender/scripts && "
                 + "rm -rf /data/mender/scripts && "
-                + "systemctl start mender")
+                + "systemctl start mender-client")
 
     def verify_script_log_correct(self, test_set, log_orig):
         expected_order = test_set['ScriptOrder']

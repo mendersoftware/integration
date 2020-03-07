@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
 #    limitations under the License.
 
 import time
-from fabric.api import *
-from fabric.network import disconnect_all
 import subprocess
 import logging
 import random
@@ -25,16 +23,11 @@ import os
 import socket
 import traceback
 import json
-from fabric.contrib.files import exists
 from . import conftest
-from .common import *
 
 from MenderAPI import auth_v2
 
 logger = logging.getLogger()
-
-class FabricFatalException(BaseException):
-    pass
 
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
@@ -54,43 +47,56 @@ class Helpers:
         except Exception as e:
             pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
 
-    @classmethod
-    def yocto_id_installed_on_machine(self):
+    @staticmethod
+    def yocto_id_installed_on_machine(device):
         cmd = "mender -show-artifact"
-        output = run(cmd).strip()
+        output = device.run(cmd, hide=True).strip()
         return output
 
     @staticmethod
-    def get_active_partition():
+    def get_active_partition(device):
         cmd = "mount | awk '/on \/ / { print $1}'"
-        with quiet():
-            active = run(cmd)
+        active = device.run(cmd, hide=True)
         return active.strip()
 
     @staticmethod
-    def get_passive_partition():
-        active = Helpers.get_active_partition()
+    def get_passive_partition(device):
+        active = Helpers.get_active_partition(device)
         cmd = "fdisk -l | grep $(blockdev --getsz %s) | grep -v %s | awk '{ print $1}'" % (active, active)
-        with quiet():
-            passive = run(cmd)
+        passive = device.run(cmd, hide=True)
         return passive.strip()
 
     @staticmethod
     # simulate broken internet by drop packets to gateway and fileserver
-    def gateway_connectivity(accessible, hosts=["mender-artifact-storage.localhost", "mender-api-gateway"]):
+    def gateway_connectivity(
+        device,
+        accessible,
+        hosts=["mender-artifact-storage.localhost", "mender-api-gateway"],
+    ):
         try:
-            with settings(hide('everything'), warn_only=True):
-                for h in hosts:
-                    gateway_ip = run("nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'" % (h)).strip()
+            for h in hosts:
+                gateway_ip = device.run(
+                    "nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+                    % (h),
+                    hide=True,
+                ).strip()
 
-                    if accessible:
-                        logger.info("Allowing network communication to %s" % h)
-                        run("iptables -D INPUT -s %s -j DROP" % (gateway_ip))
-                        run("iptables -D OUTPUT -s %s -j DROP" % (gateway_ip))
-                    else:
-                        logger.info("Disallowing network communication to %s" % h)
-                        run("iptables -I INPUT 1 -s %s -j DROP" % gateway_ip)
-                        run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip)
+                if accessible:
+                    logger.info("Allowing network communication to %s" % h)
+                    device.run(
+                        "iptables -D INPUT -s %s -j DROP" % (gateway_ip), hide=True
+                    )
+                    device.run(
+                        "iptables -D OUTPUT -s %s -j DROP" % (gateway_ip), hide=True
+                    )
+                else:
+                    logger.info("Disallowing network communication to %s" % h)
+                    device.run(
+                        "iptables -I INPUT 1 -s %s -j DROP" % gateway_ip, hide=True
+                    )
+                    device.run(
+                        "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
+                    )
         except Exception as e:
             logger.info("Exception while messing with network connectivity: " + e)
 
@@ -105,17 +111,19 @@ class Helpers:
         return json.dumps(data_dict, separators=(",", ":"))
 
     @staticmethod
-    def ip_to_device_id_map(clients):
+    def ip_to_device_id_map(device_group):
         # Get deviceauth data, which includes device identity.
-        devauth_devices = auth_v2.get_devices(expected_devices=len(clients))
+        devauth_devices = auth_v2.get_devices(expected_devices=len(device_group))
 
         # Collect identity of each client.
-        ret = execute(run, "/usr/share/mender/identity/mender-device-identity", hosts=clients)
+        ret = device_group.run("/usr/share/mender/identity/mender-device-identity")
 
         # Calculate device identities.
         identity_to_ip = {}
-        for client in clients:
-            identity_to_ip[Helpers.identity_script_to_identity_string(ret[client])] = client
+        for device in device_group:
+            identity_to_ip[
+                Helpers.identity_script_to_identity_string(ret[device.host_string])
+            ] = device.host_string
 
         # Match them.
         ip_to_device_id = {}
@@ -124,59 +132,32 @@ class Helpers:
 
         return ip_to_device_id
 
-    @staticmethod
-    def ssh_is_opened(host):
-        @parallel
-        def ssh_is_opened_impl(cmd="true", wait=60*60):
-            count = 0
-            sleeptime = 1
-
-            while count < wait:
-                try:
-                    # no point in printing this with each test
-                    with quiet():
-                        return run(cmd)
-                except BaseException:
-                    time.sleep(sleeptime)
-                    count += sleeptime
-                    sleeptime *= 2
-                    continue
-                else:
-                    break
-            else:
-                logger.fatal("Unable to connect to host: %s", env.host_string)
-
-        execute(ssh_is_opened_impl, hosts=host)
-
     class RebootDetector:
         server = None
+        device = None
         host_ip = None
-        client_ip = None
         # This global one is used to increment each port used.
         port = 8181
 
-        def __init__(self, host_ip, client_ip=None):
+        def __init__(self, device, host_ip):
             self.port = Helpers.RebootDetector.port
             Helpers.RebootDetector.port += 1
             self.host_ip = host_ip
-            self.client_ip = client_ip
+            self.device = device
 
         def __enter__(self):
-            def setup_client():
-                local_name = "test.mender-reboot-detector.txt.%s" % env.host_string
-                with open(local_name, "w") as fd:
-                    fd.write("%s:%d" % (self.host_ip, self.port))
-                try:
-                    put(local_name, remote_path="/data/mender/test.mender-reboot-detector.txt")
-                finally:
-                    os.unlink(local_name)
+            local_name = "test.mender-reboot-detector.txt.%s" % self.device.host_string
+            with open(local_name, "w") as fd:
+                fd.write("%s:%d" % (self.host_ip, self.port))
+            try:
+                self.device.put(
+                    local_name,
+                    remote_path="/data/mender/test.mender-reboot-detector.txt",
+                )
+            finally:
+                os.unlink(local_name)
 
-                run("systemctl restart mender-reboot-detector")
-
-            if env.host_string:
-                setup_client()
-            else:
-                execute(setup_client, hosts=self.client_ip)
+            self.device.run("systemctl restart mender-reboot-detector")
 
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -192,10 +173,7 @@ class Helpers:
 
             cmd = "systemctl stop mender-reboot-detector ; rm -f /data/mender/test.mender-reboot-detector.txt"
             try:
-                if env.host_string:
-                    run(cmd)
-                else:
-                    execute(run, cmd, hosts=self.client_ip)
+                self.device.run(cmd)
             except:
                 logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
                 # Only produce our own exception if we won't be hiding an
@@ -210,7 +188,7 @@ class Helpers:
             while True:
                 try:
                     self.server.settimeout(start_time + max_wait - time.time())
-                    connection, address = self.server.accept()
+                    connection, _ = self.server.accept()
                 except socket.timeout:
                     logger.info("Client did not reboot in %d seconds" % max_wait)
                     return False

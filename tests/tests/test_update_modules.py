@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,11 +18,7 @@ import subprocess
 import tempfile
 import shutil
 
-from fabric.api import *
-import pytest
-
 from .. import conftest
-from ..common import *
 from ..common_setup import standard_setup_one_docker_client_bootstrapped, \
                            standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure, update_image_successful
@@ -35,13 +31,7 @@ class TestUpdateModules(MenderTesting):
         """Test the file based update module, first with a failed update, then
         a successful one."""
 
-        mender_clients = standard_setup_one_docker_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_file_update_module,
-                    standard_setup_one_docker_client_bootstrapped,
-                    hosts=mender_clients)
-            return
+        mender_device = standard_setup_one_docker_client_bootstrapped.device
 
         file_tree = tempfile.mkdtemp()
         try:
@@ -59,7 +49,7 @@ class TestUpdateModules(MenderTesting):
                 return artifact_file
 
             # Block the path with a file first
-            run("touch /tmp/test_file_update_module")
+            mender_device.run("touch /tmp/test_file_update_module")
 
             # We use verify_status=False, because update module updates are so
             # quick that it sometimes races past the 'inprogress' status without
@@ -70,11 +60,11 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             deploy.check_expected_status("finished", deployment_id)
 
-            output = run("mender -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == "original"
 
             # Remove path block.
-            run("rm -f /tmp/test_file_update_module")
+            mender_device.run("rm -f /tmp/test_file_update_module")
 
             deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact,
                                                                        verify_status=False)
@@ -82,10 +72,12 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
 
             for file_and_content in files_and_content:
-                output = run("cat /tmp/test_file_update_module/%s" % file_and_content).strip()
+                output = mender_device.run(
+                    "cat /tmp/test_file_update_module/%s" % file_and_content
+                ).strip()
                 assert output == file_and_content
 
-            output = run("mender -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == expected_image_id
 
         finally:
@@ -96,13 +88,7 @@ class TestUpdateModules(MenderTesting):
         """Test that a rootfs-image update is rejected when such a setup isn't
         present."""
 
-        mender_clients = standard_setup_one_docker_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_rootfs_image_rejected,
-                    standard_setup_one_docker_client_bootstrapped,
-                    hosts=mender_clients)
-            return
+        mender_device = standard_setup_one_docker_client_bootstrapped.device
 
         file_tree = tempfile.mkdtemp()
         try:
@@ -117,11 +103,11 @@ class TestUpdateModules(MenderTesting):
                 subprocess.check_call(cmd, shell=True)
                 return artifact_file
 
-            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact)
+            deployment_id, _ = common_update_procedure(make_artifact=make_artifact)
             deploy.check_expected_status("finished", deployment_id)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-            output = run("mender -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service("mender-client")
@@ -135,14 +121,6 @@ class TestUpdateModules(MenderTesting):
         """Test the rootfs-image-v2 update module, which does the same as the
         built-in rootfs-image type."""
 
-        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_rootfs_update_module_success,
-                    standard_setup_one_client_bootstrapped,
-                    hosts=mender_clients)
-            return
-
         def make_artifact(artifact_file, artifact_id):
             cmd = ("mender-artifact write module-image "
                    + "-o %s -n %s -t %s -T rootfs-image-v2 -f %s"
@@ -151,5 +129,8 @@ class TestUpdateModules(MenderTesting):
             subprocess.check_call(cmd, shell=True)
             return artifact_file
 
-        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        update_image_successful(host_ip, make_artifact=make_artifact)
+        update_image_successful(
+            standard_setup_one_client_bootstrapped.device,
+            standard_setup_one_client_bootstrapped.get_virtual_network_host_ip(),
+            make_artifact=make_artifact,
+        )

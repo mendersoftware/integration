@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,14 +13,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from fabric.api import *
-import pytest
-
 from .. import conftest
-from ..common import *
 from ..common_setup import standard_setup_two_clients_bootstrapped
 from .common_update import common_update_procedure
-from ..MenderAPI import inv, deploy
+from ..MenderAPI import inv, deploy, logger
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 
@@ -105,48 +101,42 @@ class TestGrouping(MenderTesting):
         # each group, hence a lot of separate execute() calls for each. We aim
         # to update the group alpha, not beta.
 
-        clients = standard_setup_two_clients_bootstrapped.get_mender_clients()
-        assert(len(clients) == 2)
-        alpha = clients[0]
-        bravo = clients[1]
+        mender_device_group = standard_setup_two_clients_bootstrapped.device_group
+        assert(len(mender_device_group) == 2)
+        alpha = mender_device_group[0]
+        bravo = mender_device_group[1]
 
-        ip_to_device_id = Helpers.ip_to_device_id_map(clients)
-        id_alpha = ip_to_device_id[alpha]
-        id_bravo = ip_to_device_id[bravo]
-        print("ID of alpha host: %s\nID of bravo host: %s" % (id_alpha, id_bravo))
+        ip_to_device_id = Helpers.ip_to_device_id_map(mender_device_group)
+        id_alpha = ip_to_device_id[alpha.host_string]
+        id_bravo = ip_to_device_id[bravo.host_string]
+        logger.info("ID of alpha host: %s" % id_alpha)
+        logger.info("ID of bravo host: %s" % id_bravo)
 
-        ret = execute(Helpers.get_passive_partition, hosts=clients)
-        pass_part_alpha = ret[alpha]
-        pass_part_bravo = ret[bravo]
+        # TODO: parallelize these using fabric.group.ThreadingGroup once we upgrade to Python 3
+        pass_part_alpha = Helpers.get_passive_partition(alpha)
+        pass_part_bravo = Helpers.get_passive_partition(bravo)
 
         inv.put_device_in_group(id_alpha, "Update")
 
         reboot = { alpha: None, bravo: None }
         host_ip = standard_setup_two_clients_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(host_ip, alpha) as reboot[alpha], Helpers.RebootDetector(host_ip, bravo) as reboot[bravo]:
+        with Helpers.RebootDetector(alpha, host_ip) as reboot[
+            alpha
+        ], Helpers.RebootDetector(bravo, host_ip) as reboot[bravo]:
 
-            deployment_id, expected_image_id = common_update_procedure(conftest.get_valid_image(),
-                                                                       devices=[id_alpha])
+            deployment_id, expected_image_id = common_update_procedure(
+                conftest.get_valid_image(), devices=[id_alpha]
+            )
 
-            @parallel
-            def verify_reboot_performed_for_alpha_only():
-                if env.host_string == alpha:
-                    reboot[alpha].verify_reboot_performed()
-                elif env.host_string == bravo:
-                    # Extra long wait here, because a real update takes quite a lot
-                    # of time.
-                    reboot[bravo].verify_reboot_not_performed(300)
-                else:
-                    raise Exception("verify_reboot_performed_for_alpha_only() called with unknown host")
+            # Extra long wait here, because a real update takes quite a lot of time.
+            reboot[bravo].verify_reboot_not_performed(300)
+            reboot[alpha].verify_reboot_performed()
 
-            execute(verify_reboot_performed_for_alpha_only, hosts=clients)
+        assert Helpers.get_passive_partition(alpha) != pass_part_alpha
+        assert Helpers.get_passive_partition(bravo) == pass_part_bravo
 
-        ret = execute(Helpers.get_passive_partition, hosts=clients)
-        assert ret[alpha] != pass_part_alpha
-        assert ret[bravo] == pass_part_bravo
-        ret = execute(Helpers.get_active_partition, hosts=clients)
-        assert ret[alpha] == pass_part_alpha
-        assert ret[bravo] != pass_part_bravo
+        assert Helpers.get_active_partition(alpha) == pass_part_alpha
+        assert Helpers.get_active_partition(bravo) != pass_part_bravo
 
         deploy.check_expected_statistics(deployment_id, expected_status="success", expected_count=1)
 
@@ -155,8 +145,8 @@ class TestGrouping(MenderTesting):
         for id in [id_alpha, id_bravo]:
             deploy.get_logs(id, deployment_id, expected_status=404)
 
-        assert execute(Helpers.yocto_id_installed_on_machine, hosts=alpha)[alpha] == expected_image_id
-        assert execute(Helpers.yocto_id_installed_on_machine, hosts=bravo)[bravo] != expected_image_id
+        assert Helpers.yocto_id_installed_on_machine(alpha) == expected_image_id
+        assert Helpers.yocto_id_installed_on_machine(bravo) != expected_image_id
 
         # Important: Leave the groups as you found them: Empty.
         inv.delete_device_from_group(id_alpha, "Update")

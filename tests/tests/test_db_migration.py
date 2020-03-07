@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ import os
 import tempfile
 import shutil
 
-from fabric.api import *
 import pytest
 
 from .. import conftest
@@ -62,27 +61,20 @@ exit 0
             and this time the update should succeed.
         """
 
-        mender_clients = setup_with_legacy_client.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_migrate_from_legacy_mender_v1_failure,
-                    setup_with_legacy_client,
-                    hosts=mender_clients,
-                    install_image=install_image)
-            return
+        mender_device = setup_with_legacy_client.device
 
         dirpath = tempfile.mkdtemp()
         script_content = '#!/bin/sh\nexit 1\n'
         with open(os.path.join(dirpath, "ArtifactCommit_Enter_01"), "w") as fd:
             fd.write(script_content)
 
-        active_part = Helpers.get_active_partition()
+        active_part = Helpers.get_active_partition(mender_device)
 
         ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
 
         # first start with the failed update
         host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(host_ip) as reboot:
+        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image,
                                                        scripts=[ensure_persistent_conf,
                                                                 os.path.join(dirpath, "ArtifactCommit_Enter_01")],
@@ -91,15 +83,17 @@ exit 0
             logger.info("waiting for system to reboot twice")
             reboot.verify_reboot_performed(number_of_reboots=2)
 
-            assert Helpers.get_active_partition() == active_part
+            assert Helpers.get_active_partition(mender_device) == active_part
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
         # do the next update, this time succesfull
-        execute(update_image_successful,
-                host_ip,
-                scripts=[ensure_persistent_conf],
-                install_image=install_image,
-                version=2)
+        update_image_successful(
+            mender_device,
+            host_ip,
+            scripts=[ensure_persistent_conf],
+            install_image=install_image,
+            version=2,
+        )
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
     def test_migrate_from_legacy_mender_v1_success(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
@@ -112,14 +106,7 @@ exit 0
             any traces in the database that are causing issues.
         """
 
-        mender_clients = setup_with_legacy_client.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_migrate_from_legacy_mender_v1_success,
-                    setup_with_legacy_client,
-                    hosts=mender_clients,
-                    install_image=install_image)
-            return
+        mender_device = setup_with_legacy_client.device
 
         tmpdir = tempfile.mkdtemp()
         test_log = "/var/lib/mender/migration_state_scripts.log"
@@ -137,19 +124,25 @@ exit 0
 
             # do the succesfull update twice
             host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
-            execute(update_image_successful,
-                    host_ip,
-                    install_image=install_image,
-                    scripts=[ensure_persistent_conf] + scripts_paths,
-                    version=2)
-            assert run("cat %s" % test_log).strip() == "\n".join(scripts)
+            update_image_successful(
+                mender_device,
+                host_ip,
+                install_image=install_image,
+                scripts=[ensure_persistent_conf] + scripts_paths,
+                version=2,
+            )
+            assert mender_device.run("cat %s" % test_log).strip() == "\n".join(scripts)
 
-            execute(update_image_successful,
-                    host_ip,
-                    install_image=install_image,
-                    scripts=[ensure_persistent_conf] + scripts_paths,
-                    version=2)
-            assert run("cat %s" % test_log).strip() == "\n".join(scripts) + "\n" + "\n".join(scripts)
+            update_image_successful(
+                mender_device,
+                host_ip,
+                install_image=install_image,
+                scripts=[ensure_persistent_conf] + scripts_paths,
+                version=2,
+            )
+            assert mender_device.run("cat %s" % test_log).strip() == "\n".join(
+                scripts
+            ) + "\n" + "\n".join(scripts)
 
         finally:
             shutil.rmtree(tmpdir)

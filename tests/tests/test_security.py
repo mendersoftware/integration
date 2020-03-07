@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,18 +13,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import sys
 import subprocess
 import contextlib
 import ssl
 import socket
 import time
 
-from fabric.api import *
 import pytest
 
 from .. import conftest
-from ..common import *
 from ..common_setup import running_custom_production_setup, standard_setup_with_short_lived_token
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
@@ -78,27 +75,11 @@ class TestSecurity(MenderTesting):
             and that deployments are still recieved by the client
         """
 
-        mender_clients = standard_setup_with_short_lived_token.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_token_token_expiration,
-                    standard_setup_with_short_lived_token,
-                    hosts=mender_clients)
-            return
-
-        timeout_time = int(time.time()) + 60
-        while int(time.time()) < timeout_time:
-            with quiet():
-                output = run("journalctl -u mender-client -l --no-pager | grep \"received new authorization data\"")
-                time.sleep(1)
-
-            if output.return_code == 0:
-                logger.info("mender logs indicate new authorization data available")
-                break
-
-        if timeout_time <= int(time.time()):
-            pytest.fail("timed out waiting for download retries")
-
+        mender_device = standard_setup_with_short_lived_token.device
+        mender_device.run(
+            'journalctl -u mender-client -l --no-pager | grep "received new authorization data"',
+            wait=60,
+        )
 
         # this call verifies that the deployment process goes into an "inprogress" state
         # which is only possible when the client has a valid token.

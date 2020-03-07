@@ -81,7 +81,7 @@ def pytest_configure(config):
     # Don't combine stderr with stdout. The login profile sometimes prints
     # terminal specific codes there, and we don't want it interfering with our
     # output. It can still be turned on on a case by case basis by passing
-    # combine_stderr to each run() or sudo() command.
+    # combine_stderr to each run().
     env.combine_stderr = False
 
     env.user = "root"

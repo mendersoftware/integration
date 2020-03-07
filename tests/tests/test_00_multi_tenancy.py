@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,64 +14,26 @@
 #    limitations under the License.
 
 import tempfile
-
-from fabric.api import *
-import pytest
+import time
 
 from .. import conftest
-from ..common import *
 from ..common_setup import enterprise_no_client
 from .common_update import update_image_successful, update_image_failed, \
                            common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
-from ..helpers import Helpers
 from . import artifact_lock
 
+from testutils.infra.device import MenderDevice
+
 class TestMultiTenancyEnterprise(MenderTesting):
-    def mender_log_contains_aborted_string(self):
-        expected_string = "deployment aborted at the backend"
 
-        for _ in range(60*5):
-            with settings(hide('everything'), warn_only=True):
-                out = run("journalctl -u mender-client | grep \"%s\"" % expected_string)
-                if out.succeeded:
-                    return
-                else:
-                    time.sleep(2)
-
-        pytest.fail("deployment never aborted.")
 
     def test_token_validity(self, enterprise_no_client):
         """ verify that only devices with valid tokens can bootstrap
             successfully to a multitenancy setup """
 
         wrong_token = "wrong-token"
-
-        def wait_until_bootstrap_attempt():
-            mender_clients = enterprise_no_client.get_mender_clients()
-            if not env.host_string:
-                return execute(wait_until_bootstrap_attempt,
-                               hosts=mender_clients)
-            Helpers.ssh_is_opened(mender_clients)
-
-            for i in range(1, 20):
-                    with settings(hide('everything'), warn_only=True):
-                        out = run('journalctl -u mender-client | grep "bootstrapped -> authorize-wait"')
-                        if out.succeeded:
-                            return True
-                        time.sleep(20/i)
-            return False
-
-        def set_correct_tenant_token(token):
-            if not env.host_string:
-                mender_clients = enterprise_no_client.get_mender_clients()
-                return execute(set_correct_tenant_token,
-                               token,
-                               hosts=mender_clients)
-
-            run("sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token))
-            run("systemctl restart mender-client")
 
         auth.reset_auth_token()
         auth.new_tenant("admin", "bob@bob.com", "hunter2hunter2")
@@ -80,15 +42,24 @@ class TestMultiTenancyEnterprise(MenderTesting):
         # create a new client with an incorrect token set
         enterprise_no_client.new_tenant_client("mender-client", wrong_token)
 
-        if wait_until_bootstrap_attempt():
-            for _ in range(5):
-                time.sleep(5)
-                auth_v2.get_devices(expected_devices=0)  # make sure device not seen
-        else:
-            pytest.fail("failed to bootstrap device")
+        mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
+
+        mender_device.ssh_is_opened()
+        mender_device.run(
+            'journalctl -u mender-client | grep "authentication request rejected server error message: Unauthorized"',
+            wait=70,
+        )
+
+        for _ in range(5):
+            time.sleep(5)
+            auth_v2.get_devices(expected_devices=0)  # make sure device not seen
 
         # setting the correct token makes the client visible to the backend
-        set_correct_tenant_token(token)
+        mender_device.run(
+            "sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token)
+        )
+        mender_device.run("systemctl restart mender-client")
+
         auth_v2.get_devices(expected_devices=1)
 
     def test_artifacts_exclusive_to_user(self, enterprise_no_client):
@@ -211,19 +182,21 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
             assert len(inv.get_devices()) == 1
 
-            mender_clients = enterprise_no_client.get_mender_client_by_container_name(user["container"])
+            mender_device = MenderDevice(
+                enterprise_no_client.get_mender_client_by_container_name(
+                    user["container"]
+                )
+            )
             host_ip = enterprise_no_client.get_virtual_network_host_ip()
             if user["fail"]:
-                execute(update_image_failed,
-                        host_ip,
-                        hosts=mender_clients)
+                update_image_failed(mender_device, host_ip)
             else:
-                execute(update_image_successful,
-                        host_ip,
-                        install_image=conftest.get_valid_image(),
-                        skip_reboot_verification=True,
-                        hosts=mender_clients)
-
+                update_image_successful(
+                    mender_device,
+                    host_ip,
+                    install_image=conftest.get_valid_image(),
+                    skip_reboot_verification=True,
+                )
 
     def test_multi_tenancy_deployment_aborting(self, enterprise_no_client):
         """ Simply make sure we are able to run the multi tenancy setup and
@@ -251,7 +224,12 @@ class TestMultiTenancyEnterprise(MenderTesting):
             deploy.abort(deployment_id)
             deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
-            mender_clients = enterprise_no_client.get_mender_client_by_container_name(user["container"])
-
-            execute(self.mender_log_contains_aborted_string,
-                    hosts=mender_clients)
+            mender_device = MenderDevice(
+                enterprise_no_client.get_mender_client_by_container_name(
+                    user["container"]
+                )
+            )
+            mender_device.run(
+                'journalctl -u mender-client | grep "deployment aborted at the backend"',
+                wait=600,
+            )

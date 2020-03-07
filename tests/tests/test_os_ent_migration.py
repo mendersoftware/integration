@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,10 +12,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import subprocess
 import time
 import json
-import os
 
 import requests
 import pytest
@@ -101,7 +99,7 @@ def initialize_os_setup(env):
 
     # create and accept some devs; save tokens
     devs = []
-    for i in range(10):
+    for _ in range(10):
         devs.append(make_accepted_device(dauthd, dauthm, utoken))
 
     # get tokens for all

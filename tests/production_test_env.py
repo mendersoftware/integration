@@ -4,13 +4,6 @@ import os
 import sys
 import subprocess
 import argparse
-import shutil
-
-sys.path.insert(0, "../")
-from tests import conftest
-from tests import common
-from tests.MenderAPI import auth, auth_v2
-from tests.tests import common_update
 
 parser = argparse.ArgumentParser(description='Helper script to bring up production env and provision for upgrade testing')
 

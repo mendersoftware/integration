@@ -16,9 +16,6 @@ services:
       - mender-inventory
       - mender-useradm
       - mender-mongo
-      - mender-conductor
-      - mender-elasticsearch
-      - mender-redis
       - minio
 
     ##

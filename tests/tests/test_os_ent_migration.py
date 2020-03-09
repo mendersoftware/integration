@@ -43,7 +43,6 @@ def initial_os_setup(request):
     request.addfinalizer(os_env.teardown)
 
     os_env.setup()
-    ensure_conductor_ready(os_env.get_mender_conductor(), 60, "provision_device")
     os_env.init_data = initialize_os_setup(os_env)
 
     return os_env
@@ -139,8 +138,6 @@ def migrate_ent_setup(env):
     """ Migrate the ENT setup - create a tenant and user via create-org,
         substitute default token env in the ent. testing layer.
     """
-    ensure_conductor_ready(env.get_mender_conductor(), 60, "create_organization")
-
     # extra long sleep to make sure all services ran their migrations
     # maybe conductor fails because some services are still in a migration phase,
     # and not serving the API yet?
@@ -229,23 +226,3 @@ class TestEntMigration:
         assert r.status_code == 200
         assert len(r.json()) == len(migrated_enterprise_setup.init_data["os_devs"])
 
-
-def ensure_conductor_ready(ip, max_time=120, wfname="create_organization"):
-    """
-    Wait on:
-    - conductor api being up, not refusing conns
-    - a particular workflow being available.
-    """
-    for i in range(max_time):
-        try:
-            r = requests.get(
-                "http://{}:8080/api/metadata/workflow/{}".format(ip, wfname)
-            )
-            if r.status_code != 404:
-                return
-        except requests.ConnectionError:
-            pass
-
-        time.sleep(1)
-
-    raise RuntimeError("waiting for conductor timed out")

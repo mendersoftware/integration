@@ -123,15 +123,17 @@ class DockerComposeNamespace(DockerNamespace):
 
     def _wait_for_containers(self, expected_containers):
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
+        running_countainers_count = 0
         for _ in range(60 * 5):
             out = subprocess.check_output("docker-compose -p %s %s ps -q" % (self.name, files_args), shell=True)
-            if len(out.split()) == expected_containers:
+            running_countainers_count = len(out.split())
+            if running_countainers_count == expected_containers:
                 time.sleep(60)
                 return
             else:
                 time.sleep(1)
-
-        raise Exception("timeout: %d containers not running for docker-compose project: %s" % (expected_containers, self.name))
+        logger.info("%s: running countainers mismatch, list of currently running: %s" % (self.name, out))
+        raise Exception("timeout: running containers count: %d, expected: %d for docker-compose project: %s" % (running_countainers_count, expected_containers, self.name))
 
     def _stop_docker_compose(self):
         with docker_lock:

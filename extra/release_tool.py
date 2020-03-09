@@ -165,8 +165,6 @@ class Component:
 # A map from git repo name to build parameter name in CI scripts.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
-    "mender-conductor": "MENDER_CONDUCTOR_REV",
-    "mender-conductor-enterprise": "MENDER_CONDUCTOR_ENTERPRISE_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -193,8 +191,8 @@ GIT_TO_BUILDPARAM_MAP = {
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
 BACKEND_SERVICES_OPEN = {"deviceauth", "inventory"}
-BACKEND_SERVICES_ENT = {"deployments-enterprise", "mender-conductor-enterprise", "tenantadm", "useradm-enterprise"}
-BACKEND_SERVICES_OPEN_ENT = {"deployments", "mender-conductor", "useradm"}
+BACKEND_SERVICES_ENT = {"deployments-enterprise", "tenantadm", "useradm-enterprise"}
+BACKEND_SERVICES_OPEN_ENT = {"deployments", "useradm"}
 BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 
 class BuildParam():

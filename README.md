@@ -44,33 +44,27 @@ A provided `docker-compose.yml` file will provision the following set of
 services:
 
 ```
-        |
-        |
-   port |        +-----------------------+           +----------------------------------+
-    443 | <----> |  API Gateway          |      +--->|  Device Authentication           |
-        |        |  (mender-api-gateway) |<-----|    |  (mender-device-auth)            | <---+
-        |        +-----------------------+      |    +----------------------------------+     |
-        |                                       +--->|  Inventory                       |     |
-        |                                       |    |  (mender-inventory)              | <---+
-        |                                       |    +----------------------------------+     |     +----------------------------+
-        |                                       +--->|  User Administration             |     +---> |  Workflows Server          |
-        |                                       |    |  (mender-useradm)                | <---+     |  (mender-workflows-server) |
-        |                                       |    +----------------------------------+     |     +----------------------------+
-        |                                       +--->|  Create Artifact Worker          |     |
-        |                                       |    |  (mender-create-artifact-worker) | <---+
-        |                                       |    +----------------------------------+     |
-        |                                       +--->|  Deployments                     |     |
-        |              +---------------------------->|  (mender-deployments)            | <---+
-        |              |                             +----------------------------------+
-        |              |
-        |              |
-        |              v
-        |        +------------------+                 +---------+
-   port |        |                  |                 |         |
-   9000 | <----> |  Storage Proxy   |<--------------->| Minio   |
-        |        |  (storage-proxy) |                 | (minio) |
-        |        +------------------+                 +---------+
-        |
+       |
+  port |        +-----------------------+         +------------------------+
+   443 | <----> |  API Gateway          |    +--->|  Device Authentication |
+       |        |  (mender-api-gateway) |<---|    |  (mender-device-auth)  | <---+
+       |        +-----------------------+    |    +------------------------+     |
+       |                                     +--->|  Inventory             |     |
+       |                                     |    |  (mender-inventory)    | <---+
+       |                                     |    +------------------------+     |     +----------------------------------+
+       |                                     +--->|  User Administration   |     +---> |  Workflows Engine                |
+       |                                     |    |  (mender-useradm)      | <---+     |  (mender-workflows-server)       |
+       |                                     |    +------------------------+     |     |  (mender-workflows-worker)       |
+       |                                     +--->|  Deployments           |     |     |  (mender-create-artifact-worker) |
+       |                 +----------------------->|  (mender-deployments)  | <---+     +----------------------------------+
+       |                 |                        +------------------------+
+       |                 |
+       |                 v
+  port |        +------------------+              +----------+
+  9000 | <----> |  Storage Proxy   |<------------>|  Minio   |
+       |        |  (storage-proxy) |              |  (minio) |
+       |        +------------------+              +----------+
+       |
 ```
 
 It is customary to provide deployment specific overrides in a separate compose

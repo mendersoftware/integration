@@ -11,7 +11,7 @@ services:
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master
 
-    mender-workflows:
+    mender-workflows-server:
         image: registry.mender.io/mendersoftware/workflows-enterprise:master
 
     mender-workflows-worker:

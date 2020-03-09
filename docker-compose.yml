@@ -57,7 +57,7 @@ services:
     mender-device-auth:
         image: mendersoftware/deviceauth:master
         environment:
-            DEVICE_AUTH_ORCHESTRATOR: http://mender-workflows-server:8080/
+            DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
             file: common.yml
             service: mender-base

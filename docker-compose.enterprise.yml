@@ -18,7 +18,7 @@ services:
     mender-tenantadm:
         image: registry.mender.io/mendersoftware/tenantadm:master
         environment:
-            TENANTADM_CONDUCTOR_ADDR: http://mender-workflows-server:8080/
+            TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
             file: common.yml
             service: mender-base

@@ -5,9 +5,6 @@ services:
     mender-deployments:
         image: registry.mender.io/mendersoftware/deployments-enterprise:master
 
-    mender-conductor:
-        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:master
-
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master
 
@@ -29,33 +26,6 @@ services:
             - mender
         depends_on:
             - mender-mongo
-        environment:
-            TENANTADM_CONDUCTOR_ADDR: http://mender-conductor:8080
-
-    mender-org-welcome-email-preparer:
-        image: registry.mender.io/mendersoftware/org-welcome-email-preparer:master
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-conductor
-        environment:
-            CONDUCTOR: "http://mender-conductor:8080"
-
-    mender-email-sender:
-        image: mendersoftware/email-sender:master
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-conductor
-        environment:
-            CONDUCTOR: "http://mender-conductor:8080"
-            DEMO: "true"
 
     # configure the rest
     mender-device-auth:

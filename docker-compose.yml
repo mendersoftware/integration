@@ -158,36 +158,5 @@ services:
                     - mongo-useradm
                     - mongo-workflows
 
-    mender-conductor:
-        image: mendersoftware/mender-conductor:master
-        depends_on:
-            - mender-elasticsearch
-            - mender-redis
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-
-    mender-elasticsearch:
-        image: elasticsearch:6.8.6
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        environment:
-            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-            - discovery.type=single-node
-            - network.host=0.0.0.0
-
-    mender-redis:
-        image: redis:5-alpine3.8
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-
 networks:
     mender:

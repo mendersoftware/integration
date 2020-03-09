@@ -9,9 +9,9 @@ import subprocess
 import sys
 
 # Only do basic checks on these.
-OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'mender-conductor' ]
+OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration' ]
 # We don't currently care about these.
-IGNORE_REPOS = [ 'mender-conductor-enterprise' ]
+IGNORE_REPOS = [ ]
 
 # The directories to look in.
 DIRS = [os.path.join(os.path.dirname(sys.argv[0]), "../..")]

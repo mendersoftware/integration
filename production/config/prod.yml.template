@@ -129,15 +129,6 @@ services:
     mender-mongo:
         volumes:
             - mender-db:/data/db:rw
-    mender-elasticsearch:
-        volumes:
-            - mender-elasticsearch-db:/usr/share/elasticsearch/data:rw
-    mender-redis:
-        volumes:
-            - mender-redis-db:/var/lib/redis:rw
-            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
-            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
-        entrypoint: /redis/entrypoint.sh
 
 volumes:
     # mender artifacts storage
@@ -150,13 +141,3 @@ volumes:
       external:
           # use external volume created manually
           name: mender-db
-    # elasticsearch database
-    mender-elasticsearch-db:
-      external:
-          # use external volume created manually
-          name: mender-elasticsearch-db
-    # redis database
-    mender-redis-db:
-      external:
-          # use external volume created manually
-          name: mender-redis-db

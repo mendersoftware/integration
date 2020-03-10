@@ -113,16 +113,16 @@ class TestGrouping(MenderTesting):
         logger.info("ID of bravo host: %s" % id_bravo)
 
         # TODO: parallelize these using fabric.group.ThreadingGroup once we upgrade to Python 3
-        pass_part_alpha = Helpers.get_passive_partition(alpha)
-        pass_part_bravo = Helpers.get_passive_partition(bravo)
+        pass_part_alpha = alpha.get_passive_partition()
+        pass_part_bravo = bravo.get_passive_partition()
 
         inv.put_device_in_group(id_alpha, "Update")
 
         reboot = { alpha: None, bravo: None }
         host_ip = standard_setup_two_clients_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(alpha, host_ip) as reboot[
+        with alpha.get_reboot_detector(host_ip) as reboot[
             alpha
-        ], Helpers.RebootDetector(bravo, host_ip) as reboot[bravo]:
+        ], bravo.get_reboot_detector(host_ip) as reboot[bravo]:
 
             deployment_id, expected_image_id = common_update_procedure(
                 conftest.get_valid_image(), devices=[id_alpha]
@@ -132,11 +132,11 @@ class TestGrouping(MenderTesting):
             reboot[bravo].verify_reboot_not_performed(300)
             reboot[alpha].verify_reboot_performed()
 
-        assert Helpers.get_passive_partition(alpha) != pass_part_alpha
-        assert Helpers.get_passive_partition(bravo) == pass_part_bravo
+        assert alpha.get_passive_partition() != pass_part_alpha
+        assert bravo.get_passive_partition() == pass_part_bravo
 
-        assert Helpers.get_active_partition(alpha) == pass_part_alpha
-        assert Helpers.get_active_partition(bravo) != pass_part_bravo
+        assert alpha.get_active_partition() == pass_part_alpha
+        assert bravo.get_active_partition() != pass_part_bravo
 
         deploy.check_expected_statistics(deployment_id, expected_status="success", expected_count=1)
 
@@ -145,8 +145,8 @@ class TestGrouping(MenderTesting):
         for id in [id_alpha, id_bravo]:
             deploy.get_logs(id, deployment_id, expected_status=404)
 
-        assert Helpers.yocto_id_installed_on_machine(alpha) == expected_image_id
-        assert Helpers.yocto_id_installed_on_machine(bravo) != expected_image_id
+        assert alpha.yocto_id_installed_on_machine() == expected_image_id
+        assert bravo.yocto_id_installed_on_machine() != expected_image_id
 
         # Important: Leave the groups as you found them: Empty.
         inv.delete_device_from_group(id_alpha, "Update")

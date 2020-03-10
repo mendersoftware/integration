@@ -18,7 +18,6 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..helpers import Helpers
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
@@ -32,7 +31,7 @@ class TestFailures(MenderTesting):
         mender_device = standard_setup_one_client_bootstrapped.device
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, expected_image_id = common_update_procedure(install_image, True)
             reboot.verify_reboot_performed()
 
@@ -53,7 +52,7 @@ class TestFailures(MenderTesting):
         mender_device = standard_setup_one_client_bootstrapped.device
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image="large_image.dat")
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             reboot.verify_reboot_not_performed()

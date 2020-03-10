@@ -20,7 +20,6 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..helpers import Helpers
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
@@ -39,10 +38,10 @@ class TestDeploymentAborting(MenderTesting):
         mender_device = container_manager.device
 
         install_image=conftest.get_valid_image()
-        expected_partition = Helpers.get_active_partition(mender_device)
-        expected_image_id = Helpers.yocto_id_installed_on_machine(mender_device)
+        expected_partition = mender_device.get_active_partition()
+        expected_image_id = mender_device.yocto_id_installed_on_machine()
         host_ip = container_manager.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
             if abort_step is not None:
@@ -65,8 +64,8 @@ class TestDeploymentAborting(MenderTesting):
                 mender_device.run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
                 reboot.verify_reboot_performed()
 
-        assert Helpers.get_active_partition(mender_device) == expected_partition
-        assert Helpers.yocto_id_installed_on_machine(mender_device) == expected_image_id
+        assert mender_device.get_active_partition() == expected_partition
+        assert mender_device.yocto_id_installed_on_machine() == expected_image_id
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
@@ -95,7 +94,7 @@ class TestDeploymentAborting(MenderTesting):
 
         install_image = conftest.get_valid_image()
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
 
             reboot.verify_reboot_performed()

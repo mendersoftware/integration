@@ -105,8 +105,8 @@ def update_image(
         Logs will not be retrieved, and result in 404.
     """
 
-    previous_inactive_part = Helpers.get_passive_partition(device)
-    with Helpers.RebootDetector(device, host_ip) as reboot:
+    previous_inactive_part = device.get_passive_partition()
+    with device.get_reboot_detector(host_ip) as reboot:
         deployment_id, expected_image_id = common_update_procedure(install_image,
                                                                    regenerate_image_id,
                                                                    signed=signed,
@@ -118,9 +118,9 @@ def update_image(
                                                                    version=version)
         reboot.verify_reboot_performed()
 
-    with Helpers.RebootDetector(device, host_ip) as reboot:
+    with device.get_reboot_detector(host_ip) as reboot:
         try:
-            assert Helpers.get_active_partition(device) == previous_inactive_part
+            assert device.get_active_partition() == previous_inactive_part
         except AssertionError:
             logs = []
             for d in auth_v2.get_devices():
@@ -137,7 +137,7 @@ def update_image(
         if not skip_reboot_verification:
             reboot.verify_reboot_not_performed()
 
-    assert Helpers.yocto_id_installed_on_machine(device) == expected_image_id
+    assert device.yocto_id_installed_on_machine() == expected_image_id
 
     deploy.check_expected_status("finished", deployment_id)
 
@@ -163,10 +163,10 @@ def update_image_failed(
         The resulting upgrade will be considered a failure.
     """
 
-    original_image_id = Helpers.yocto_id_installed_on_machine(device)
+    original_image_id = device.yocto_id_installed_on_machine()
 
-    previous_active_part = Helpers.get_active_partition(device)
-    with Helpers.RebootDetector(device, host_ip) as reboot:
+    previous_active_part = device.get_active_partition()
+    with device.get_reboot_detector(host_ip) as reboot:
         deployment_id, _ = common_update_procedure(install_image,
                                                    make_artifact=make_artifact)
         # It will reboot twice. Once into the failed update, which the
@@ -179,15 +179,15 @@ def update_image_failed(
         # *sure* we are in the correct partition.
         reboot.verify_reboot_performed(number_of_reboots=2)
 
-    with Helpers.RebootDetector(device, host_ip) as reboot:
-        assert Helpers.get_active_partition(device) == previous_active_part
+    with device.get_reboot_detector(host_ip) as reboot:
+        assert device.get_active_partition() == previous_active_part
 
         deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
 
         for d in auth_v2.get_devices():
             assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
 
-        assert Helpers.yocto_id_installed_on_machine(device) == original_image_id
+        assert device.yocto_id_installed_on_machine() == original_image_id
         reboot.verify_reboot_not_performed()
 
     deploy.check_expected_status("finished", deployment_id)

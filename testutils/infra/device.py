@@ -14,6 +14,8 @@
 
 import time
 import logging
+import os
+import socket
 
 import fabric
 
@@ -99,6 +101,135 @@ class MenderDevice:
         wait - Timeout (in seconds)
         """
         self.run("true", hide=True, wait=wait)
+
+    def yocto_id_installed_on_machine(self):
+        cmd = "mender -show-artifact"
+        output = self.run(cmd, hide=True).strip()
+        return output
+
+    def get_active_partition(self):
+        cmd = "mount | awk '/on \/ / { print $1}'"
+        active = self.run(cmd, hide=True)
+        return active.strip()
+
+    def get_passive_partition(self):
+        active = self.get_active_partition()
+        cmd = (
+            "fdisk -l | grep $(blockdev --getsz %s) | grep -v %s | awk '{ print $1}'"
+            % (active, active)
+        )
+        passive = self.run(cmd, hide=True)
+        return passive.strip()
+
+    def get_reboot_detector(self, host_ip):
+        return RebootDetector(self, host_ip)
+
+
+class RebootDetector:
+    server = None
+    device = None
+    host_ip = None
+    # This global one is used to increment each port used.
+    port = 8181
+
+    def __init__(self, device, host_ip):
+        self.port = RebootDetector.port
+        RebootDetector.port += 1
+        self.host_ip = host_ip
+        self.device = device
+
+    def __enter__(self):
+        local_name = "test.mender-reboot-detector.txt.%s" % self.device.host_string
+        with open(local_name, "w") as fd:
+            fd.write("%s:%d" % (self.host_ip, self.port))
+        try:
+            self.device.put(
+                local_name, remote_path="/data/mender/test.mender-reboot-detector.txt",
+            )
+        finally:
+            os.unlink(local_name)
+
+        self.device.run("systemctl restart mender-reboot-detector")
+
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.bind((self.host_ip, self.port))
+        self.server.listen(1)
+
+        return self
+
+    def __exit__(self, type, value, trace):
+        if self.server:
+            self.server.close()
+        self.server = None
+
+        cmd = "systemctl stop mender-reboot-detector ; rm -f /data/mender/test.mender-reboot-detector.txt"
+        try:
+            self.device.run(cmd)
+        except:
+            logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
+            # Only produce our own exception if we won't be hiding an
+            # existing one.
+            if type is None:
+                raise
+
+    def verify_reboot_performed_impl(self, max_wait, number_of_reboots=1):
+        up = True
+        reboot_count = 0
+        start_time = time.time()
+        while True:
+            try:
+                self.server.settimeout(start_time + max_wait - time.time())
+                connection, _ = self.server.accept()
+            except socket.timeout:
+                logger.info("Client did not reboot in %d seconds" % max_wait)
+                return False
+
+            message = connection.recv(4096).strip()
+            connection.close()
+
+            if message == "shutdown":
+                logger.debug("Got shutdown message from client")
+                if up:
+                    up = False
+                else:
+                    raise RuntimeError(
+                        "Received message of shutdown when already shut down??"
+                    )
+            elif message == "startup":
+                logger.debug("Got startup message from client")
+                # Tempting to check up flag here, but in the spontaneous
+                # reboot case, we may not get the shutdown message.
+                up = True
+                reboot_count += 1
+            else:
+                raise RuntimeError("Unexpected message from mender-reboot-detector")
+
+            if reboot_count >= number_of_reboots:
+                logger.info("Client has rebooted %d time(s)" % reboot_count)
+                return True
+
+    def verify_reboot_performed(self, max_wait=60 * 60, number_of_reboots=1):
+        if self.server is None:
+            raise RuntimeError(
+                "verify_reboot_performed() used outside of 'with' scope."
+            )
+
+        logger.info("Waiting for client to reboot %d time(s)" % number_of_reboots)
+        if not self.verify_reboot_performed_impl(
+            max_wait=max_wait, number_of_reboots=number_of_reboots
+        ):
+            raise RuntimeError("Device never rebooted")
+
+    def verify_reboot_not_performed(self, wait=60):
+        if self.server is None:
+            raise RuntimeError(
+                "verify_reboot_not_performed() used outside of 'with' scope."
+            )
+
+        logger.info("Waiting %d seconds to check that client does not reboot" % wait)
+        if self.verify_reboot_performed_impl(max_wait=wait):
+            raise RuntimeError("Device unexpectedly rebooted")
 
 
 class MenderDeviceGroup:

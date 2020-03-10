@@ -594,7 +594,7 @@ class TestStateScripts(MenderTesting):
             )[mender_device.host_string]
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot_detector:
+        with mender_device.get_reboot_detector(host_ip) as reboot_detector:
 
             common_update_procedure(
                 install_image=new_rootfs,
@@ -604,7 +604,7 @@ class TestStateScripts(MenderTesting):
 
             try:
 
-                orig_part = Helpers.get_active_partition(mender_device)
+                orig_part = mender_device.get_active_partition()
 
                 # handle case where the client has not finished the update
                 # path on the committed partition, but new partition is installed,
@@ -628,9 +628,9 @@ class TestStateScripts(MenderTesting):
 
                 # make sure the client ended up on the right partition
                 if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
-                    assert orig_part != Helpers.get_active_partition(mender_device)
+                    assert orig_part != mender_device.get_active_partition()
                 else:
-                    assert orig_part == Helpers.get_active_partition(mender_device)
+                    assert orig_part == mender_device.get_active_partition()
 
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
@@ -663,7 +663,7 @@ class TestStateScripts(MenderTesting):
             script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
-            old_active = Helpers.get_active_partition(mender_device)
+            old_active = mender_device.get_active_partition()
 
             # Make rootfs-scripts and put them in rootfs image.
             rootfs_script_dir = os.path.join(work_dir, "rootfs-scripts")
@@ -792,7 +792,7 @@ class TestStateScripts(MenderTesting):
             output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split('\n'))
 
-            new_active = Helpers.get_active_partition(mender_device)
+            new_active = mender_device.get_active_partition()
             should_switch_partition = (test_set['ExpectedStatus'] == "success")
 
             if test_set.get('SwapPartitionExpectation'):

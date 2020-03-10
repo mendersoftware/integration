@@ -20,7 +20,6 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client, standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..helpers import Helpers
 from ..MenderAPI import auth_v2, logger
 from .mendertesting import MenderTesting
 
@@ -78,7 +77,7 @@ class TestBootstrapping(MenderTesting):
         auth_v2.check_expected_status("rejected", 1)
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             try:
                 common_update_procedure(install_image=conftest.get_valid_image())
             except AssertionError:

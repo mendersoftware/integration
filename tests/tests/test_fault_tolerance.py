@@ -25,7 +25,6 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure, update_image_failed
-from ..helpers import Helpers
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
@@ -111,7 +110,7 @@ class TestFaultTolerance(MenderTesting):
         mender_device = standard_setup_one_client_bootstrapped.device
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
             reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
             deploy.check_expected_statistics(deployment_id, "failure", 1)
@@ -130,7 +129,7 @@ class TestFaultTolerance(MenderTesting):
         TestFaultTolerance.manipulate_network_connectivity(mender_device, False)
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
             time.sleep(60)
 
@@ -143,7 +142,7 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_performed()
             deploy.check_expected_statistics(deployment_id, "success", 1)
 
-        assert Helpers.yocto_id_installed_on_machine(mender_device) == expected_yocto_id
+        assert mender_device.yocto_id_installed_on_machine() == expected_yocto_id
 
     @MenderTesting.slow
     @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
@@ -165,10 +164,10 @@ class TestFaultTolerance(MenderTesting):
         # to speed up timeouting client connection
         mender_device.run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
 
-        inactive_part = Helpers.get_passive_partition(mender_device)
+        inactive_part = mender_device.get_passive_partition()
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             if test_set['blockAfterStart']:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(install_image)
@@ -201,8 +200,8 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_performed()
             deploy.check_expected_status("finished", deployment_id)
 
-            assert Helpers.get_active_partition(mender_device) == inactive_part
-            assert Helpers.yocto_id_installed_on_machine(mender_device) == new_yocto_id
+            assert mender_device.get_active_partition() == inactive_part
+            assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
     @MenderTesting.slow
@@ -213,14 +212,14 @@ class TestFaultTolerance(MenderTesting):
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
-        inactive_part = Helpers.get_passive_partition(mender_device)
+        inactive_part = mender_device.get_passive_partition()
 
         mender_device.run(
             "echo '1.1.1.1 s3.docker.mender.io' >> /etc/hosts"
         )  # break s3 connectivity before triggering deployment
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, new_yocto_id = common_update_procedure(install_image)
 
             TestFaultTolerance.wait_for_download_retry_attempts(mender_device, "update fetch failed")
@@ -229,8 +228,8 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_performed()
             deploy.check_expected_status("finished", deployment_id)
 
-            assert Helpers.get_active_partition(mender_device) == inactive_part
-            assert Helpers.yocto_id_installed_on_machine(mender_device) == new_yocto_id
+            assert mender_device.get_active_partition() == inactive_part
+            assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
 

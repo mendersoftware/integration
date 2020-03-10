@@ -22,7 +22,6 @@ import pytest
 from .. import conftest
 from ..common_setup import setup_with_legacy_client
 from .common_update import update_image, common_update_procedure
-from ..helpers import Helpers
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
@@ -68,13 +67,13 @@ exit 0
         with open(os.path.join(dirpath, "ArtifactCommit_Enter_01"), "w") as fd:
             fd.write(script_content)
 
-        active_part = Helpers.get_active_partition(mender_device)
+        active_part = mender_device.get_active_partition()
 
         ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
 
         # first start with the failed update
         host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(mender_device, host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image,
                                                        scripts=[ensure_persistent_conf,
                                                                 os.path.join(dirpath, "ArtifactCommit_Enter_01")],
@@ -83,7 +82,7 @@ exit 0
             logger.info("waiting for system to reboot twice")
             reboot.verify_reboot_performed(number_of_reboots=2)
 
-            assert Helpers.get_active_partition(mender_device) == active_part
+            assert mender_device.get_active_partition() == active_part
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
         # do the next update, this time succesfull

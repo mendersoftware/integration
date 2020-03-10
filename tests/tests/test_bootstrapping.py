@@ -104,7 +104,7 @@ class TestBootstrapping(MenderTesting):
         for _ in range(10):
             with settings(abort_exception=Exception):
                 try:
-                    run("journalctl -u mender -l -n 3 | grep -q 'authentication request rejected'")
+                    run("journalctl -u mender-client -l -n 3 | grep -q 'authentication request rejected'")
                 except:
                     time.sleep(30)
                 else:

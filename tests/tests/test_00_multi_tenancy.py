@@ -34,7 +34,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         for _ in range(60*5):
             with settings(hide('everything'), warn_only=True):
-                out = run("journalctl -u mender | grep \"%s\"" % expected_string)
+                out = run("journalctl -u mender-client | grep \"%s\"" % expected_string)
                 if out.succeeded:
                     return
                 else:
@@ -57,7 +57,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
             for i in range(1, 20):
                     with settings(hide('everything'), warn_only=True):
-                        out = run('journalctl -u mender | grep "bootstrapped -> authorize-wait"')
+                        out = run('journalctl -u mender-client | grep "bootstrapped -> authorize-wait"')
                         if out.succeeded:
                             return True
                         time.sleep(20/i)
@@ -71,7 +71,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
                                hosts=mender_clients)
 
             run("sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token))
-            run("systemctl restart mender")
+            run("systemctl restart mender-client")
 
         auth.reset_auth_token()
         auth.new_tenant("admin", "bob@bob.com", "hunter2hunter2")

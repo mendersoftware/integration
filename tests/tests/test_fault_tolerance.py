@@ -51,7 +51,7 @@ class TestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             with quiet():
-                output = run("journalctl -u mender -l --no-pager | grep 'msg=\".*%s' | wc -l"
+                output = run("journalctl -u mender-client -l --no-pager | grep 'msg=\".*%s' | wc -l"
                              % re.escape(search_string))
                 time.sleep(2)
                 if int(output) >= 2:  # check that some retries have occured

@@ -163,13 +163,13 @@ class TestBasicIntegration(MenderTesting):
         if out.return_code != 0:
             logger.error(out)
             pytest.fail("failed to set a large polling interval for the client.")
-        run("systemctl restart mender")
+        run("systemctl restart mender-client")
 
         def deployment_callback():
             logger.info("Running pre deployment callback function")
             wait_count = 0
             # Match the log template six times to make sure the client is truly sleeping.
-            catcmd = "journalctl -u mender --output=cat"
+            catcmd = "journalctl -u mender-client --output=cat"
             template = run(catcmd)
             while True:
                 logger.info("sleeping...")
@@ -214,12 +214,12 @@ class TestBasicIntegration(MenderTesting):
         # Give the image a really large wait interval.
         sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % ("\(.*PollInter.*:\)\( *[0-9]*\)", "\\1 1800")
         out = run(sedcmd)
-        run("systemctl restart mender")
+        run("systemctl restart mender-client")
 
         logger.info("Running pre deployment callback function")
         wait_count = 0
         # Match the log template six times to make sure the client is truly sleeping.
-        catcmd = "journalctl -u mender --output=cat"
+        catcmd = "journalctl -u mender-client --output=cat"
         template = run(catcmd)
         while True:
             logger.info("sleeping...")

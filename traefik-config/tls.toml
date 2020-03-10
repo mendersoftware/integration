@@ -1,0 +1,15 @@
+[tls.stores]
+[tls.stores.default]
+[tls.stores.default.defaultCertificate]
+certFile = "/config/traefik.crt"
+keyFile  = "/config/traefik.key"
+
+[serversTransport]
+insecureSkipVerify = true
+
+[tls.options]
+[tls.options.default]
+[tls.options.default.clientAuth]
+# need initial nonempty list
+caFiles = ["config/tenant-dummy.ca.crt"]
+clientAuthType = "RequireAndVerifyClientCert"

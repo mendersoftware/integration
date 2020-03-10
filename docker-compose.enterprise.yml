@@ -16,7 +16,14 @@ services:
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:mender-master
+        image: tenantadm-temp
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:

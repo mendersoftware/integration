@@ -35,7 +35,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:master
+        image: gateway-temp
         extends:
             file: common.yml
             service: mender-base
@@ -49,12 +49,47 @@ services:
             - mender-gui
             - mender-useradm
             - mender-inventory
+        labels:
+            - traefik.enable=true
+            - traefik.docker.network=mender
+            - traefik.http.routers.gateway.tls=true
+            - traefik.http.routers.gateway.entrypoints=https
+            - traefik.http.routers.gateway.rule=PathPrefix(`/api/devices/v1/authentication`)
+            - traefik.http.services.gateway.loadbalancer.server.port=443
+            - traefik.http.services.gateway.loadbalancer.server.scheme=https
+
+    traefik-ambassador:
+        image: traefik:v2.1
+        command: 
+            - --api.insecure=true 
+            - --providers.docker=true
+            - --accesslog=true
+            - --log.level=DEBUG
+            - --entrypoints.http.address=:80
+            - --entryPoints.https.address=:443
+            - --providers.docker.network=mender
+            - --providers.file.filename=/config/tls.toml
+
+            - --serverstransport.insecureskipverify=true #allows self signed cert on gateway
+        ports:
+            - "9080:80"
+            - "9081:8080"
+            # avoid contention with mender-gateway - both want to expose the TLS port on localhost
+            - "1443:443"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            # for hot file reaload - mount the whole dir to avoid a changing inode on file edit
+            - ./traefik-config:/config
+        depends_on:
+            - mender-api-gateway
+        networks:
+            - mender
 
     #
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:mender-master
+        image: deviceauth-temp
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -91,6 +126,11 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            - traefik.http.routers.useradm.tls=true
+            - traefik.http.routers.useradm.entrypoints=https
+            - traefik.http.routers.useradm.rule=PathPrefix(`/api/management/v1/useradm`)
+            - traefik.http.services.useradm.loadbalancer.server.port=8080
 
     #
     # mender-workflows-server

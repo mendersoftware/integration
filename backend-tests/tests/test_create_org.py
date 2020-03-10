@@ -266,7 +266,7 @@ class SMTPMock:
         msgs = self.filtered_messages(email)
         assert len(msgs) == 1
         m = msgs[0]
-        assert m.mailfrom == "contact@mender.io"
+        assert m.mailfrom.rsplit("@", 1)[-1] == "mender.io"
         assert m.rcpttos[0] == email
 
         assert len(m.data) > 0

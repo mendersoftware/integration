@@ -21,7 +21,7 @@ import pytest
 
 from .. import conftest
 from ..common_setup import setup_with_legacy_client
-from .common_update import update_image_successful, common_update_procedure
+from .common_update import update_image, common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
@@ -87,7 +87,7 @@ exit 0
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
         # do the next update, this time succesfull
-        update_image_successful(
+        update_image(
             mender_device,
             host_ip,
             scripts=[ensure_persistent_conf],
@@ -124,7 +124,7 @@ exit 0
 
             # do the succesfull update twice
             host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
-            update_image_successful(
+            update_image(
                 mender_device,
                 host_ip,
                 install_image=install_image,
@@ -133,7 +133,7 @@ exit 0
             )
             assert mender_device.run("cat %s" % test_log).strip() == "\n".join(scripts)
 
-            update_image_successful(
+            update_image(
                 mender_device,
                 host_ip,
                 install_image=install_image,

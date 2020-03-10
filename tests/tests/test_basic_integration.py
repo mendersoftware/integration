@@ -23,7 +23,7 @@ from .. import conftest
 from ..common_setup import standard_setup_one_rofs_client_bootstrapped, \
                            standard_setup_with_short_lived_token, setup_failover, \
                            standard_setup_one_client_bootstrapped
-from .common_update import update_image_successful, update_image_failed
+from .common_update import update_image, update_image_failed
 from ..MenderAPI import image, inv, logger
 from .mendertesting import MenderTesting
 
@@ -42,7 +42,7 @@ class TestBasicIntegration(MenderTesting):
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
         host_ip = standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
-        update_image_successful(
+        update_image(
             mender_device,
             host_ip,
             install_image="mender-image-full-cmdline-rofs-%s.ext4"
@@ -51,7 +51,7 @@ class TestBasicIntegration(MenderTesting):
         )
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        update_image_successful(
+        update_image(
             mender_device,
             host_ip,
             install_image="mender-image-full-cmdline-rofs-%s.ext4"
@@ -64,7 +64,7 @@ class TestBasicIntegration(MenderTesting):
     def test_update_jwt_expired(self, standard_setup_with_short_lived_token):
         """Update a device with a short lived JWT token"""
 
-        update_image_successful(
+        update_image(
             standard_setup_with_short_lived_token.device,
             standard_setup_with_short_lived_token.get_virtual_network_host_ip(),
             install_image=conftest.get_valid_image(),
@@ -99,7 +99,7 @@ class TestBasicIntegration(MenderTesting):
             image.replace_mender_conf(tmp_image, conf)
 
             host_ip = setup_failover.get_virtual_network_host_ip()
-            update_image_successful(mender_device, host_ip, install_image=tmp_image)
+            update_image(mender_device, host_ip, install_image=tmp_image)
         finally:
             os.remove(tmp_image)
 
@@ -111,14 +111,12 @@ class TestBasicIntegration(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
 
         update_image_failed(mender_device, host_ip)
-        update_image_successful(
-            mender_device, host_ip, install_image=conftest.get_valid_image()
-        )
+        update_image(mender_device, host_ip, install_image=conftest.get_valid_image())
 
     def test_update_no_compression(self, standard_setup_one_client_bootstrapped):
         """Uploads an uncompressed artifact, and runs the whole udpate process."""
 
-        update_image_successful(
+        update_image(
             standard_setup_one_client_bootstrapped.device,
             standard_setup_one_client_bootstrapped.get_virtual_network_host_ip(),
             install_image=conftest.get_valid_image(),
@@ -166,7 +164,7 @@ class TestBasicIntegration(MenderTesting):
                 pytest.fail("Forcing the update check failed")
             logger.info("mender client has forced an update check")
 
-        update_image_successful(
+        update_image(
             mender_device,
             standard_setup_one_client_bootstrapped.get_virtual_network_host_ip(),
             install_image=conftest.get_valid_image(),

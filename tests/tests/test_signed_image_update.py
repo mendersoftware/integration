@@ -17,7 +17,7 @@ import pytest
 
 from .. import conftest
 from ..common_setup import standard_setup_with_signed_artifact_client
-from .common_update import update_image_successful, common_update_procedure
+from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
@@ -30,7 +30,7 @@ class TestSignedUpdates(MenderTesting):
 
     def test_signed_artifact_success(self, standard_setup_with_signed_artifact_client):
 
-        update_image_successful(
+        update_image(
             standard_setup_with_signed_artifact_client.device,
             standard_setup_with_signed_artifact_client.get_virtual_network_host_ip(),
             install_image=conftest.get_valid_image(),

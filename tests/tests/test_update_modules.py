@@ -21,7 +21,7 @@ import shutil
 from .. import conftest
 from ..common_setup import standard_setup_one_docker_client_bootstrapped, \
                            standard_setup_one_client_bootstrapped
-from .common_update import common_update_procedure, update_image_successful
+from .common_update import common_update_procedure, update_image
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
@@ -129,7 +129,7 @@ class TestUpdateModules(MenderTesting):
             subprocess.check_call(cmd, shell=True)
             return artifact_file
 
-        update_image_successful(
+        update_image(
             standard_setup_one_client_bootstrapped.device,
             standard_setup_one_client_bootstrapped.get_virtual_network_host_ip(),
             make_artifact=make_artifact,

@@ -26,7 +26,7 @@ from .mendertesting import MenderTesting
 
 
 class TestBootstrapping(MenderTesting):
-    MENDER_STORE = '/data/mender/mender-store'
+    MENDER_STORE = "/data/mender/mender-store"
 
     @MenderTesting.fast
     def test_bootstrap(self, standard_setup_one_client):

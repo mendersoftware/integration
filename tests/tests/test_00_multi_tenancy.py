@@ -18,7 +18,7 @@ import time
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
-from .common_update import update_image_successful, update_image_failed, \
+from .common_update import update_image, update_image_failed, \
                            common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
@@ -191,7 +191,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             if user["fail"]:
                 update_image_failed(mender_device, host_ip)
             else:
-                update_image_successful(
+                update_image(
                     mender_device,
                     host_ip,
                     install_image=conftest.get_valid_image(),

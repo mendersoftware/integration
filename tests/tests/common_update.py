@@ -81,7 +81,7 @@ def common_update_procedure(install_image=None,
     return deployment_id, artifact_id
 
 
-def update_image_successful(
+def update_image(
     device,
     host_ip,
     install_image=None,

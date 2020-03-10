@@ -1,0 +1,9 @@
+version: '2.1'
+services:
+
+    mender-workflows-worker:
+        environment:
+            - WORKFLOWS_SMTP_HOST=mender-backend-tests-runner:4444
+
+networks:
+    mender:

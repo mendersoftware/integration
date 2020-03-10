@@ -67,40 +67,6 @@ class Helpers:
         return passive.strip()
 
     @staticmethod
-    # simulate broken internet by drop packets to gateway and fileserver
-    def gateway_connectivity(
-        device,
-        accessible,
-        hosts=["mender-artifact-storage.localhost", "mender-api-gateway"],
-    ):
-        try:
-            for h in hosts:
-                gateway_ip = device.run(
-                    "nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
-                    % (h),
-                    hide=True,
-                ).strip()
-
-                if accessible:
-                    logger.info("Allowing network communication to %s" % h)
-                    device.run(
-                        "iptables -D INPUT -s %s -j DROP" % (gateway_ip), hide=True
-                    )
-                    device.run(
-                        "iptables -D OUTPUT -s %s -j DROP" % (gateway_ip), hide=True
-                    )
-                else:
-                    logger.info("Disallowing network communication to %s" % h)
-                    device.run(
-                        "iptables -I INPUT 1 -s %s -j DROP" % gateway_ip, hide=True
-                    )
-                    device.run(
-                        "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
-                    )
-        except Exception as e:
-            logger.info("Exception while messing with network connectivity: " + e)
-
-    @staticmethod
     def identity_script_to_identity_string(output):
         data_dict = {}
         for line in output.split('\n'):

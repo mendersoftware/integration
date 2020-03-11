@@ -70,7 +70,7 @@ TEST_SETS = [
             "ExpectedStatus": "success",
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
-                "Idle_Enter_09", # Error in this script should not have any effect.
+                "Idle_Enter_09",  # Error in this script should not have any effect.
                 "Idle_Leave_09",
                 "Idle_Leave_10",
                 "Sync_Enter_02",
@@ -105,7 +105,7 @@ TEST_SETS = [
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
-                "Idle_Leave_09", # Error in this script should not have any effect.
+                "Idle_Leave_09",  # Error in this script should not have any effect.
                 "Idle_Leave_10",
                 "Sync_Enter_02",
                 "Sync_Enter_03",
@@ -314,7 +314,7 @@ TEST_SETS = [
                 "ArtifactReboot_Leave_99",
                 "ArtifactCommit_Enter_01",
                 "ArtifactCommit_Enter_05",
-                "ArtifactCommit_Leave_01_extra_string", # Error in this script should not have any effect.
+                "ArtifactCommit_Leave_01_extra_string",  # Error in this script should not have any effect.
                 "ArtifactCommit_Error_91",
             ],
         },
@@ -402,9 +402,7 @@ REBOOT_TEST_SET = [
     (
         "simulate_powerloss_artifact_install_enter",
         {
-            "RebootScripts": [
-                "ArtifactInstall_Enter_01",
-            ],
+            "RebootScripts": ["ArtifactInstall_Enter_01",],
             "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
@@ -417,7 +415,7 @@ REBOOT_TEST_SET = [
             "ExpectedScriptFlow": [
                 "ArtifactInstall_Enter_01",  # kill!
                 "ArtifactFailure_Enter_01",  # run failure scripts
-                "ArtifactFailure_Leave_89"
+                "ArtifactFailure_Leave_89",
             ],
         },
     ),
@@ -481,12 +479,11 @@ REBOOT_TEST_SET = [
 ]
 
 
-
 class TestStateScripts(MenderTesting):
     scripts = [
         "Idle_Enter_08_testing",
         "Idle_Enter_09",
-        "Idle_Enter_100", # Invalid script, should never be run.
+        "Idle_Enter_100",  # Invalid script, should never be run.
         "Idle_Leave_09",
         "Idle_Leave_10",
         "Idle_Error_00",
@@ -524,39 +521,44 @@ class TestStateScripts(MenderTesting):
         "ArtifactRollback_Enter_01",
         "ArtifactRollback_Leave_00",
         "ArtifactRollback_Leave_01",
-        "ArtifactRollback_Error_15", # Error for this state doesn't exist, should never run.
+        "ArtifactRollback_Error_15",  # Error for this state doesn't exist, should never run.
         "ArtifactRollbackReboot_Enter_00",
         "ArtifactRollbackReboot_Enter_99",
         "ArtifactRollbackReboot_Leave_01",
         "ArtifactRollbackReboot_Leave_99",
-        "ArtifactRollbackReboot_Error_88", # Error for this state doesn't exist, should never run.
-        "ArtifactRollbackReboot_Error_99", # Error for this state doesn't exist, should never run.
+        "ArtifactRollbackReboot_Error_88",  # Error for this state doesn't exist, should never run.
+        "ArtifactRollbackReboot_Error_99",  # Error for this state doesn't exist, should never run.
         "ArtifactFailure_Enter_22",
         "ArtifactFailure_Enter_33",
         "ArtifactFailure_Leave_44",
         "ArtifactFailure_Leave_55",
-        "ArtifactFailure_Error_55", # Error for this state doesn't exist, should never run.
+        "ArtifactFailure_Error_55",  # Error for this state doesn't exist, should never run.
     ]
 
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
-    def test_reboot_recovery(self, standard_setup_one_client_bootstrapped, description, test_set):
+    def test_reboot_recovery(
+        self, standard_setup_one_client_bootstrapped, description, test_set
+    ):
 
         mender_device = standard_setup_one_client_bootstrapped.device
         work_dir = "test_state_scripts.%s" % mender_device.host_string
 
-        script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
+        script_content = (
+            '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
+        )
 
-        script_failure_content = script_content + 'sync\necho b > /proc/sysrq-trigger\n' # flush to disk before killing
+        script_failure_content = (
+            script_content + "sync\necho b > /proc/sysrq-trigger\n"
+        )  # flush to disk before killing
 
         # This is only needed in the case: die commit-leave,
         # otherwise the device will get stuck in a boot-reboot loop
-        script_reboot_once =(
-        '''#!/bin/sh
+        script_reboot_once = """#!/bin/sh
         if [ $(grep -c $(basename $0) /data/test_state_scripts.log) -eq 0 ]; then
             echo "$(basename $0)" >> /data/test_state_scripts.log && sync && echo b > /proc/sysrq-trigger
         fi
         echo "$(basename $0)" >> /data/test_state_scripts.log
-        exit 0''')
+        exit 0"""
 
         # Put artifact-scripts in the artifact.
         artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -570,8 +572,7 @@ class TestStateScripts(MenderTesting):
         new_rootfs = os.path.join(work_dir, "rootfs.ext4")
         shutil.copy(conftest.get_valid_image(), new_rootfs)
 
-        ps = subprocess.Popen(
-            ["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
+        ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
         ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
         ps.stdin.close()
         ps.wait()
@@ -590,8 +591,8 @@ class TestStateScripts(MenderTesting):
 
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map(
-                MenderDeviceGroup([mender_device.host_string])
-            )[mender_device.host_string]
+            MenderDeviceGroup([mender_device.host_string])
+        )[mender_device.host_string]
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot_detector:
@@ -600,7 +601,8 @@ class TestStateScripts(MenderTesting):
                 install_image=new_rootfs,
                 verify_status=True,
                 devices=[device_id],
-                scripts=[artifact_script_dir])[0]
+                scripts=[artifact_script_dir],
+            )[0]
 
             try:
 
@@ -619,7 +621,7 @@ class TestStateScripts(MenderTesting):
                 # wait until the last script has been run
                 logger.debug("waint until the last script has been run")
                 script_logs = ""
-                timeout = time.time() + 60*60
+                timeout = time.time() + 60 * 60
                 while timeout >= time.time():
                     time.sleep(3)
                     script_logs = mender_device.run("cat /data/test_state_scripts.log")
@@ -652,7 +654,9 @@ class TestStateScripts(MenderTesting):
 
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
-    def test_state_scripts(self, standard_setup_one_client_bootstrapped, description, test_set):
+    def test_state_scripts(
+        self, standard_setup_one_client_bootstrapped, description, test_set
+    ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
@@ -674,28 +678,30 @@ class TestStateScripts(MenderTesting):
             new_rootfs = os.path.join(work_dir, "rootfs.ext4")
             shutil.copy(conftest.get_valid_image(), new_rootfs)
             ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
-            ps.stdin.write("cd /etc/mender\n"
-                           "mkdir scripts\n"
-                           "cd scripts\n")
+            ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
 
             with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
-                if test_set.get('CorruptEtcScriptVersionInUpdate'):
+                if test_set.get("CorruptEtcScriptVersionInUpdate"):
                     fd.write("1000")
                 else:
                     fd.write("2")
             ps.stdin.write("rm version\n")
-            ps.stdin.write("write %s version\n" % os.path.join(rootfs_script_dir, "version"))
+            ps.stdin.write(
+                "write %s version\n" % os.path.join(rootfs_script_dir, "version")
+            )
             for script in self.scripts:
                 if script.startswith("Artifact"):
                     # This is a script for the artifact, skip this one.
                     continue
                 with open(os.path.join(rootfs_script_dir, script), "w") as fd:
-                    if script in test_set['FailureScript']:
+                    if script in test_set["FailureScript"]:
                         fd.write(script_failure_content)
                     else:
                         fd.write(script_content)
                     os.fchmod(fd.fileno(), 0755)
-                ps.stdin.write("write %s %s\n" % (os.path.join(rootfs_script_dir, script), script))
+                ps.stdin.write(
+                    "write %s %s\n" % (os.path.join(rootfs_script_dir, script), script)
+                )
 
             ps.stdin.close()
             ps.wait()
@@ -707,7 +713,9 @@ class TestStateScripts(MenderTesting):
             # Then copy them to QEMU host.
             # Zip them all up to avoid having to copy each and every file, which is
             # quite slow.
-            subprocess.check_call(["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir)
+            subprocess.check_call(
+                ["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir
+            )
             # Stop client first to avoid race conditions.
             mender_device.run("systemctl stop mender-client")
             try:
@@ -731,7 +739,7 @@ class TestStateScripts(MenderTesting):
                     # Not an artifact script, skip this one.
                     continue
                 with open(os.path.join(artifact_script_dir, script), "w") as fd:
-                    if script in test_set['FailureScript']:
+                    if script in test_set["FailureScript"]:
                         fd.write(script_failure_content)
                     else:
                         fd.write(script_content)
@@ -742,11 +750,13 @@ class TestStateScripts(MenderTesting):
             device_id = Helpers.ip_to_device_id_map(
                 MenderDeviceGroup([mender_device.host_string])
             )[mender_device.host_string]
-            deployment_id = common_update_procedure(install_image=new_rootfs,
-                                                    verify_status=False,
-                                                    devices=[device_id],
-                                                    scripts=[artifact_script_dir])[0]
-            if test_set['ExpectedStatus'] is None:
+            deployment_id = common_update_procedure(
+                install_image=new_rootfs,
+                verify_status=False,
+                devices=[device_id],
+                scripts=[artifact_script_dir],
+            )[0]
+            if test_set["ExpectedStatus"] is None:
                 # In this case we don't expect the deployment to even be
                 # attempted, presumably due to failing Idle/Sync/Download
                 # scripts on the client. So no deployment checking. Just wait
@@ -760,6 +770,7 @@ class TestStateScripts(MenderTesting):
                         logger.error("%s:\n%s" % (cmd, output))
                         all_output += "%s\n" % output
                     return all_output
+
                 info_query = [
                     "cat /data/test_state_scripts.log 1>&2",
                     "journalctl -u mender-client",
@@ -768,7 +779,7 @@ class TestStateScripts(MenderTesting):
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
                 starttime = time.time()
-                while starttime + 60*60 >= time.time():
+                while starttime + 60 * 60 >= time.time():
                     result = mender_device.run(
                         "grep Error /data/test_state_scripts.log", warn_only=True
                     )
@@ -781,27 +792,35 @@ class TestStateScripts(MenderTesting):
                         continue
                 else:
                     info = fetch_info(info_query)
-                    pytest.fail('Waited too long for "Error" to appear in log:\n%s' % info)
+                    pytest.fail(
+                        'Waited too long for "Error" to appear in log:\n%s' % info
+                    )
             else:
-                deploy.check_expected_statistics(deployment_id, test_set['ExpectedStatus'], 1)
+                deploy.check_expected_statistics(
+                    deployment_id, test_set["ExpectedStatus"], 1
+                )
 
             # Always give the client a little bit of time to settle in the base
             # state after an update.
             time.sleep(10)
 
             output = mender_device.run("cat /data/test_state_scripts.log")
-            self.verify_script_log_correct(test_set, output.split('\n'))
+            self.verify_script_log_correct(test_set, output.split("\n"))
 
             new_active = mender_device.get_active_partition()
-            should_switch_partition = (test_set['ExpectedStatus'] == "success")
+            should_switch_partition = test_set["ExpectedStatus"] == "success"
 
-            if test_set.get('SwapPartitionExpectation'):
+            if test_set.get("SwapPartitionExpectation"):
                 should_switch_partition = not should_switch_partition
 
             if should_switch_partition:
-                assert old_active != new_active, "Device did not switch partition as expected!"
+                assert (
+                    old_active != new_active
+                ), "Device did not switch partition as expected!"
             else:
-                assert old_active == new_active, "Device switched partition which was not expected!"
+                assert (
+                    old_active == new_active
+                ), "Device switched partition which was not expected!"
 
         except:
             output = mender_device.run(
@@ -826,7 +845,7 @@ class TestStateScripts(MenderTesting):
             )
 
     def verify_script_log_correct(self, test_set, log_orig):
-        expected_order = test_set['ScriptOrder']
+        expected_order = test_set["ScriptOrder"]
 
         # First remove timestamps from the log
         log = [l.split(" ")[-1] for l in log_orig]
@@ -856,10 +875,12 @@ class TestStateScripts(MenderTesting):
                     num_iterations = num_iterations + 1
                     expected_pos = 0
 
-                if (log_pos < len(log)
+                if (
+                    log_pos < len(log)
                     and log[log_pos - 1].startswith("Sync_")
                     and log[log_pos].startswith("Idle_")
-                    and not expected_order[expected_pos].startswith("Idle_")):
+                    and not expected_order[expected_pos].startswith("Idle_")
+                ):
                     # The Idle/Sync sequence is allowed to "wrap around" and start
                     # over, because it may take a few rounds of checking before the
                     # deployment is ready for the client.
@@ -869,14 +890,15 @@ class TestStateScripts(MenderTesting):
             # Test cases with None expectation will loop through the error sequence in a loop, but still
             # we want to make sure that it is reasonable (i.e. looping with the correct time intervals).
             # For these cases we set a max. of 50 iterations to accomodate for slow running of the framework
-            if test_set['ExpectedStatus'] is not None:
+            if test_set["ExpectedStatus"] is not None:
                 assert num_iterations == 1
             else:
                 assert num_iterations < 50
 
         except:
-            logger.error("Exception in verify_script_log_correct: log of scripts = '%s'"
-                  % "\n".join(log_orig))
-            logger.error("scripts we expected = '%s'"
-                  % "\n".join(expected_order))
+            logger.error(
+                "Exception in verify_script_log_correct: log of scripts = '%s'"
+                % "\n".join(log_orig)
+            )
+            logger.error("scripts we expected = '%s'" % "\n".join(expected_order))
             raise

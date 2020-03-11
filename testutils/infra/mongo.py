@@ -14,12 +14,13 @@
 
 from pymongo import MongoClient as PyMongoClient
 
+
 class MongoClient:
     def __init__(self, addr="mender-mongo:27017"):
         self.client = PyMongoClient(addr)
 
     def cleanup(self):
         dbs = self.client.list_database_names()
-        dbs = [d for d in dbs if d not in ['local', 'admin', 'config', 'workflows']]
+        dbs = [d for d in dbs if d not in ["local", "admin", "config", "workflows"]]
         for d in dbs:
             self.client.drop_database(d)

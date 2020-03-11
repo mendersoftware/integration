@@ -15,6 +15,7 @@
 
 import random
 
+
 class BaseContainerManagerNamespace:
     """Base class to define a containers namespace
     """

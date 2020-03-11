@@ -14,7 +14,8 @@
 #    limitations under the License.
 
 from platform import python_version
-if python_version().startswith('2'):
+
+if python_version().startswith("2"):
     from fabric.api import *
 else:
     # User should re-implement: ???
@@ -52,8 +53,12 @@ def pytest_addoption(parser):
     parser.addoption("--runslow", action="store_true", help="run slow tests")
     parser.addoption("--runfast", action="store_true", help="run fast tests")
 
-    parser.addoption("--machine-name", action="store", default="qemux86-64",
-                     help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.")
+    parser.addoption(
+        "--machine-name",
+        action="store",
+        default="qemux86-64",
+        help="The machine name to test. Most common values are qemux86-64 and vexpress-qemu.",
+    )
 
 
 def pytest_configure(config):
@@ -92,6 +97,7 @@ def pytest_configure(config):
 
     MenderTesting.set_test_conditions(config)
 
+
 def unique_test_name(request):
     """Generate unique test names by prepending the class to the method name"""
     if request.node.cls is not None:
@@ -99,15 +105,20 @@ def unique_test_name(request):
     else:
         return request.node.name
 
+
 # If we have xdist installed, the testlogger fixture will include the thread id
 try:
     import xdist
+
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request, worker_id):
         test_name = unique_test_name(request)
         log.setup_test_logger(test_name, worker_id)
         logger.info("%s is starting.... " % test_name)
+
+
 except ImportError:
+
     @pytest.fixture(scope="function", autouse=True)
     def testlogger(request):
         test_name = unique_test_name(request)
@@ -117,30 +128,42 @@ except ImportError:
 
 def pytest_exception_interact(node, call, report):
     if report.failed:
-        logger.error("Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr()))
+        logger.error(
+            "Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr())
+        )
         try:
             logger.info("Printing client deployment log, if possible:")
-            output = execute(run, "cat /data/mender/deployment*.log || true", hosts=get_mender_clients())
+            output = execute(
+                run,
+                "cat /data/mender/deployment*.log || true",
+                hosts=get_mender_clients(),
+            )
             logger.info(output)
         except:
             logger.info("Not able to print client deployment log")
 
         try:
             logger.info("Printing client systemd log, if possible:")
-            output = execute(run, "journalctl -u mender-client || true", hosts=get_mender_clients())
+            output = execute(
+                run, "journalctl -u mender-client || true", hosts=get_mender_clients()
+            )
             logger.info(output)
         except:
             logger.info("Not able to print client systemd log")
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter
-        output = subprocess.check_output('docker ps --filter "status=exited"', shell=True)
+        output = subprocess.check_output(
+            'docker ps --filter "status=exited"', shell=True
+        )
         logger.info("Containers that exited during the test:")
-        for line in output.split('\n'):
+        for line in output.split("\n"):
             logger.info(line)
+
 
 def get_valid_image():
     return env.valid_image
+
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here
@@ -152,4 +175,6 @@ def verify_sane_test_environment():
 
     ret = subprocess.call("docker ps > /dev/null", shell=True)
     if ret != 0:
-        raise SystemExit("not able to use docker, is your user part of the docker group?")
+        raise SystemExit(
+            "not able to use docker, is your user part of the docker group?"
+        )

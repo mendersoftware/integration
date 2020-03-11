@@ -21,6 +21,7 @@ from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
+
 @MenderTesting.fast
 class TestSignedUpdates(MenderTesting):
     """
@@ -37,18 +38,26 @@ class TestSignedUpdates(MenderTesting):
             signed=True,
         )
 
-    @pytest.mark.parametrize("standard_setup_with_signed_artifact_client", ["force_new"], indirect=True)
-    def test_unsigned_artifact_fails_deployment(self, standard_setup_with_signed_artifact_client):
+    @pytest.mark.parametrize(
+        "standard_setup_with_signed_artifact_client", ["force_new"], indirect=True
+    )
+    def test_unsigned_artifact_fails_deployment(
+        self, standard_setup_with_signed_artifact_client
+    ):
         """
             Make sure that an unsigned image fails, and is handled by the backend.
             Notice that this test needs a fresh new version of the backend, since
             we installed a signed image earlier without a verification key in mender.conf
         """
 
-        deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
+        deployment_id, _ = common_update_procedure(
+            install_image=conftest.get_valid_image()
+        )
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "failure", 1)
 
         for d in auth_v2.get_devices():
-            assert "expecting signed artifact, but no signature file found" in \
-                deploy.get_logs(d["id"], deployment_id)
+            assert (
+                "expecting signed artifact, but no signature file found"
+                in deploy.get_logs(d["id"], deployment_id)
+            )

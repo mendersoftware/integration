@@ -29,6 +29,7 @@ from MenderAPI import auth_v2
 
 logger = logging.getLogger()
 
+
 class Helpers:
     artifact_info_file = "/etc/mender/artifact_info"
     artifact_prefix = "artifact_name"
@@ -36,7 +37,11 @@ class Helpers:
     @classmethod
     def yocto_id_from_ext4(self, filename):
         try:
-            cmd = "debugfs -R 'cat %s' %s| sed -n 's/^%s=//p'" % (self.artifact_info_file, filename, self.artifact_prefix)
+            cmd = "debugfs -R 'cat %s' %s| sed -n 's/^%s=//p'" % (
+                self.artifact_info_file,
+                filename,
+                self.artifact_prefix,
+            )
             output = subprocess.check_output(cmd, shell=True).strip()
             logger.info("Running: " + cmd + " returned: " + output)
             return output
@@ -45,14 +50,17 @@ class Helpers:
             pytest.fail("Unable to read: %s, is it a broken image?" % (filename))
 
         except Exception as e:
-            pytest.fail("Unexpected error trying to read ext4 image: %s, error: %s" % (filename, str(e)))
+            pytest.fail(
+                "Unexpected error trying to read ext4 image: %s, error: %s"
+                % (filename, str(e))
+            )
 
     @staticmethod
     def identity_script_to_identity_string(output):
         data_dict = {}
-        for line in output.split('\n'):
-            split = line.split('=', 2)
-            assert(len(split) == 2)
+        for line in output.split("\n"):
+            split = line.split("=", 2)
+            assert len(split) == 2
             data_dict[split[0]] = split[1]
 
         return json.dumps(data_dict, separators=(",", ":"))
@@ -75,7 +83,10 @@ class Helpers:
         # Match them.
         ip_to_device_id = {}
         for device in devauth_devices:
-            ip_to_device_id[identity_to_ip[json.dumps(device['identity_data'], separators=(",", ":"))]] = device['id']
+            ip_to_device_id[
+                identity_to_ip[
+                    json.dumps(device["identity_data"], separators=(",", ":"))
+                ]
+            ] = device["id"]
 
         return ip_to_device_id
-

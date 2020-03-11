@@ -4,7 +4,9 @@ import unicodedata
 import re
 import errno
 
-TEST_LOGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mender_test_logs")
+TEST_LOGS_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "mender_test_logs"
+)
 
 # Create dir if does not exist
 try:
@@ -15,6 +17,7 @@ except OSError as e:
 
 # Default logger deafult level to DEBUG
 logging.getLogger().setLevel(logging.DEBUG)
+
 
 def setup_test_logger(test_name, worker_id=None):
     """Sets the default test logger
@@ -32,7 +35,9 @@ def setup_test_logger(test_name, worker_id=None):
     # Define format. For console logging, prepend the test name
     base_log_format = "%(asctime)s [%(levelname)s]: >> %(message)s"
     if worker_id is not None:
-        console_log_format = "[{}] {} -- {}".format(worker_id, test_name, base_log_format)
+        console_log_format = "[{}] {} -- {}".format(
+            worker_id, test_name, base_log_format
+        )
     else:
         console_log_format = "{} -- {}".format(test_name, base_log_format)
 
@@ -52,8 +57,9 @@ def setup_test_logger(test_name, worker_id=None):
     logger.addHandler(file_handler)
 
 
-_re_slugify_pass1_sub = re.compile(r'[^\w\s-]').sub
-_re_slugify_pass2_sub = re.compile(r'[-\s]+').sub
+_re_slugify_pass1_sub = re.compile(r"[^\w\s-]").sub
+_re_slugify_pass2_sub = re.compile(r"[-\s]+").sub
+
 
 def slugify(value):
     """
@@ -65,6 +71,8 @@ def slugify(value):
     """
 
     value = unicode(value)
-    value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
-    value = _re_slugify_pass1_sub('', value).strip().lower()
-    return _re_slugify_pass2_sub('-', value)
+    value = (
+        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    )
+    value = _re_slugify_pass1_sub("", value).strip().lower()
+    return _re_slugify_pass2_sub("-", value)

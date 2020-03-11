@@ -24,19 +24,21 @@ from ..MenderAPI import auth_v2, deploy, image, logger
 from . import artifact_lock
 
 
-def common_update_procedure(install_image=None,
-                            regenerate_image_id=True,
-                            device_type=conftest.machine_name,
-                            verify_status=True,
-                            signed=False,
-                            devices=None,
-                            scripts=[],
-                            pre_upload_callback=lambda: None,
-                            pre_deployment_callback=lambda: None,
-                            deployment_triggered_callback=lambda: None,
-                            make_artifact=None,
-                            compression_type="gzip",
-                            version=None):
+def common_update_procedure(
+    install_image=None,
+    regenerate_image_id=True,
+    device_type=conftest.machine_name,
+    verify_status=True,
+    signed=False,
+    devices=None,
+    scripts=[],
+    pre_upload_callback=lambda: None,
+    pre_deployment_callback=lambda: None,
+    deployment_triggered_callback=lambda: None,
+    make_artifact=None,
+    compression_type="gzip",
+    version=None,
+):
 
     with artifact_lock:
         if regenerate_image_id:
@@ -51,24 +53,33 @@ def common_update_procedure(install_image=None,
                 created_artifact = make_artifact(artifact_file.name, artifact_id)
             else:
                 compression_arg = "--compression " + compression_type
-                created_artifact = image.make_rootfs_artifact(install_image,
-                                                              device_type,
-                                                              artifact_id,
-                                                              artifact_file,
-                                                              signed=signed,
-                                                              scripts=scripts,
-                                                              global_flags=compression_arg,
-                                                              version=version)
+                created_artifact = image.make_rootfs_artifact(
+                    install_image,
+                    device_type,
+                    artifact_id,
+                    artifact_file,
+                    signed=signed,
+                    scripts=scripts,
+                    global_flags=compression_arg,
+                    version=version,
+                )
 
             if created_artifact:
                 pre_upload_callback()
                 deploy.upload_image(created_artifact)
                 if devices is None:
-                    devices = list(set([device["id"] for device in auth_v2.get_devices_status("accepted")]))
+                    devices = list(
+                        set(
+                            [
+                                device["id"]
+                                for device in auth_v2.get_devices_status("accepted")
+                            ]
+                        )
+                    )
                 pre_deployment_callback()
-                deployment_id = deploy.trigger_deployment(name="New valid update",
-                                                          artifact_name=artifact_id,
-                                                          devices=devices)
+                deployment_id = deploy.trigger_deployment(
+                    name="New valid update", artifact_name=artifact_id, devices=devices
+                )
             else:
                 logger.warn("failed to create artifact")
                 pytest.fail("error creating artifact")
@@ -107,15 +118,17 @@ def update_image(
 
     previous_inactive_part = device.get_passive_partition()
     with device.get_reboot_detector(host_ip) as reboot:
-        deployment_id, expected_image_id = common_update_procedure(install_image,
-                                                                   regenerate_image_id,
-                                                                   signed=signed,
-                                                                   scripts=scripts,
-                                                                   pre_deployment_callback=pre_deployment_callback,
-                                                                   deployment_triggered_callback=deployment_triggered_callback,
-                                                                   make_artifact=make_artifact,
-                                                                   compression_type=compression_type,
-                                                                   version=version)
+        deployment_id, expected_image_id = common_update_procedure(
+            install_image,
+            regenerate_image_id,
+            signed=signed,
+            scripts=scripts,
+            pre_deployment_callback=pre_deployment_callback,
+            deployment_triggered_callback=deployment_triggered_callback,
+            make_artifact=make_artifact,
+            compression_type=compression_type,
+            version=version,
+        )
         reboot.verify_reboot_performed()
 
     with device.get_reboot_detector(host_ip) as reboot:
@@ -126,10 +139,14 @@ def update_image(
             for d in auth_v2.get_devices():
                 logs.append(deploy.get_logs(d["id"], deployment_id))
 
-            pytest.fail("device did not flip partitions during update, here are the device logs:\n\n %s" % (logs))
+            pytest.fail(
+                "device did not flip partitions during update, here are the device logs:\n\n %s"
+                % (logs)
+            )
 
-
-        deploy.check_expected_statistics(deployment_id, "success", expected_mender_clients)
+        deploy.check_expected_statistics(
+            deployment_id, "success", expected_mender_clients
+        )
 
         for d in auth_v2.get_devices():
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
@@ -144,7 +161,9 @@ def update_image(
     # make sure backend recognizes signed and unsigned images
     artifact_id = deploy.get_deployment(deployment_id)["artifacts"][0]
     artifact_info = deploy.get_artifact_details(artifact_id)
-    assert artifact_info["signed"] is signed, "image was not correct recognized as signed/unsigned"
+    assert (
+        artifact_info["signed"] is signed
+    ), "image was not correct recognized as signed/unsigned"
 
     return deployment_id
 
@@ -167,8 +186,9 @@ def update_image_failed(
 
     previous_active_part = device.get_active_partition()
     with device.get_reboot_detector(host_ip) as reboot:
-        deployment_id, _ = common_update_procedure(install_image,
-                                                   make_artifact=make_artifact)
+        deployment_id, _ = common_update_procedure(
+            install_image, make_artifact=make_artifact
+        )
         # It will reboot twice. Once into the failed update, which the
         # bootloader will roll back, and therefore we will end up on the
         # original partition. Then once more because of the
@@ -182,7 +202,9 @@ def update_image_failed(
     with device.get_reboot_detector(host_ip) as reboot:
         assert device.get_active_partition() == previous_active_part
 
-        deploy.check_expected_statistics(deployment_id, "failure", expected_mender_clients)
+        deploy.check_expected_statistics(
+            deployment_id, "failure", expected_mender_clients
+        )
 
         for d in auth_v2.get_devices():
             assert expected_log_message in deploy.get_logs(d["id"], deployment_id)

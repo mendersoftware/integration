@@ -20,6 +20,7 @@ from ..MenderAPI import inv, deploy, logger
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 
+
 @MenderTesting.fast
 class TestGrouping(MenderTesting):
     def validate_group_responses(self, device_map):
@@ -44,21 +45,27 @@ class TestGrouping(MenderTesting):
             else:
                 groups_map[group] = [device]
 
-        assert(sorted(inv.get_groups()) == sorted(groups))
-        assert(sorted([device['id'] for device in inv.get_devices(has_group=True)]) == sorted(devices_with_group))
-        assert(sorted([device['id'] for device in inv.get_devices(has_group=False)]) == sorted(devices_without_group))
-        assert(sorted([device['id'] for device in inv.get_devices()]) == sorted(device_map.keys()))
+        assert sorted(inv.get_groups()) == sorted(groups)
+        assert sorted(
+            [device["id"] for device in inv.get_devices(has_group=True)]
+        ) == sorted(devices_with_group)
+        assert sorted(
+            [device["id"] for device in inv.get_devices(has_group=False)]
+        ) == sorted(devices_without_group)
+        assert sorted([device["id"] for device in inv.get_devices()]) == sorted(
+            device_map.keys()
+        )
 
         for group in groups:
-            assert(sorted(inv.get_devices_in_group(group)) == sorted(groups_map[group]))
+            assert sorted(inv.get_devices_in_group(group)) == sorted(groups_map[group])
         for device in device_map:
-            assert(inv.get_device_group(device)['group'] == device_map[device])
+            assert inv.get_device_group(device)["group"] == device_map[device]
 
     def test_basic_groups(self, standard_setup_two_clients_bootstrapped):
         """Tests various group operations."""
 
-        devices = [device['id'] for device in inv.get_devices()]
-        assert(len(devices) == 2)
+        devices = [device["id"] for device in inv.get_devices()]
+        assert len(devices) == 2
 
         # Purely for easier reading: Assign labels to each device.
         alpha = devices[0]
@@ -85,7 +92,6 @@ class TestGrouping(MenderTesting):
         inv.delete_device_from_group(bravo, "Red")
         self.validate_group_responses({alpha: None, bravo: None})
 
-
     def test_update_device_group(self, standard_setup_two_clients_bootstrapped):
         """
             Perform a successful upgrade on one group of devices, and assert that:
@@ -102,7 +108,7 @@ class TestGrouping(MenderTesting):
         # to update the group alpha, not beta.
 
         mender_device_group = standard_setup_two_clients_bootstrapped.device_group
-        assert(len(mender_device_group) == 2)
+        assert len(mender_device_group) == 2
         alpha = mender_device_group[0]
         bravo = mender_device_group[1]
 
@@ -118,7 +124,7 @@ class TestGrouping(MenderTesting):
 
         inv.put_device_in_group(id_alpha, "Update")
 
-        reboot = { alpha: None, bravo: None }
+        reboot = {alpha: None, bravo: None}
         host_ip = standard_setup_two_clients_bootstrapped.get_virtual_network_host_ip()
         with alpha.get_reboot_detector(host_ip) as reboot[
             alpha
@@ -138,7 +144,9 @@ class TestGrouping(MenderTesting):
         assert alpha.get_active_partition() == pass_part_alpha
         assert bravo.get_active_partition() != pass_part_bravo
 
-        deploy.check_expected_statistics(deployment_id, expected_status="success", expected_count=1)
+        deploy.check_expected_statistics(
+            deployment_id, expected_status="success", expected_count=1
+        )
 
         # No logs for either host: alpha because it was successful, bravo
         # because it should never have attempted an update in the first place.

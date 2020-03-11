@@ -20,35 +20,45 @@ from .. import conftest
 
 from . import logger
 
-class Artifacts():
+
+class Artifacts:
     artifacts_tool_path = "mender-artifact"
 
     def reset(self):
         # Reset all temporary values.
         pass
 
-    def make_rootfs_artifact(self, image, device_type, artifact_name, artifact_file_created, signed=False, scripts=[], global_flags="", version=None):
+    def make_rootfs_artifact(
+        self,
+        image,
+        device_type,
+        artifact_name,
+        artifact_file_created,
+        signed=False,
+        scripts=[],
+        global_flags="",
+        version=None,
+    ):
         signed_arg = ""
 
         if artifact_name.startswith("artifact_name="):
-            artifact_name = artifact_name.split('=')[1]
+            artifact_name = artifact_name.split("=")[1]
 
         if signed:
             private_key = "../extra/signed-artifact-client-testing/private.key"
             assert os.path.exists(private_key), "private key for testing doesn't exist"
             signed_arg = "-k %s" % (private_key)
 
-        cmd = ("%s %s  write rootfs-image -f %s -t %s -n %s -o %s %s %s"
-               % (self.artifacts_tool_path,
-                  global_flags,
-                  image,
-                  device_type,
-                  artifact_name,
-                  artifact_file_created.name,
-                  signed_arg,
-                  ("-v %d" % version) if version else ""
-                  )
-              )
+        cmd = "%s %s  write rootfs-image -f %s -t %s -n %s -o %s %s %s" % (
+            self.artifacts_tool_path,
+            global_flags,
+            image,
+            device_type,
+            artifact_name,
+            artifact_file_created.name,
+            signed_arg,
+            ("-v %d" % version) if version else "",
+        )
         for script in scripts:
             cmd += " -s %s" % script
 
@@ -64,10 +74,11 @@ class Artifacts():
         """
         conf = {}
 
-        output = subprocess.check_output("debugfs -R 'cat /etc/mender/mender.conf' " + \
-                                             "%s" % \
-                                             image, shell=True)
+        output = subprocess.check_output(
+            "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image, shell=True
+        )
         import json
+
         conf = json.loads(output)
 
         return conf
@@ -82,15 +93,17 @@ class Artifacts():
             os.mkdir(tmp_conf_dir)
             tmp_conf_path = os.path.join(tmp_conf_dir, "mender.conf")
             import json
+
             with open(tmp_conf_path, "w") as f:
                 json.dump(conf, f, indent=2, sort_keys=True)
-            debugfs_cmd = "cd /etc/mender/\n" + \
-                          "rm mender.conf\n" + \
-                          "write %s mender.conf\n" % tmp_conf_path + \
-                          "close\n"
+            debugfs_cmd = (
+                "cd /etc/mender/\n"
+                + "rm mender.conf\n"
+                + "write %s mender.conf\n" % tmp_conf_path
+                + "close\n"
+            )
 
-            cmd = "cat << EOF | debugfs -w %s\n%sEOF\n" % \
-                  (image, debugfs_cmd)
+            cmd = "cat << EOF | debugfs -w %s\n%sEOF\n" % (image, debugfs_cmd)
             retcode = subprocess.call(cmd, shell=True)
             if retcode != 0:
                 logger.fatal("debugfs returned status code: %s." % retcode)

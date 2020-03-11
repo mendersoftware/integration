@@ -19,11 +19,14 @@ import tempfile
 import shutil
 
 from .. import conftest
-from ..common_setup import standard_setup_one_docker_client_bootstrapped, \
-                           standard_setup_one_client_bootstrapped
+from ..common_setup import (
+    standard_setup_one_docker_client_bootstrapped,
+    standard_setup_one_client_bootstrapped,
+)
 from .common_update import common_update_procedure, update_image
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
+
 
 class TestUpdateModules(MenderTesting):
     @MenderTesting.fast
@@ -42,8 +45,10 @@ class TestUpdateModules(MenderTesting):
                     fd.write(file_and_content)
 
             def make_artifact(artifact_file, artifact_id):
-                cmd = ("directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module %s"
-                       % (artifact_file, artifact_id, file_tree))
+                cmd = (
+                    "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module %s"
+                    % (artifact_file, artifact_id, file_tree)
+                )
                 logger.info("Executing: " + cmd)
                 subprocess.check_call(cmd, shell=True)
                 return artifact_file
@@ -55,8 +60,9 @@ class TestUpdateModules(MenderTesting):
             # quick that it sometimes races past the 'inprogress' status without
             # the test framework having time to register it. That's not really
             # the part we're interested in though, so just skip it.
-            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact,
-                                                                       verify_status=False)
+            deployment_id, expected_image_id = common_update_procedure(
+                make_artifact=make_artifact, verify_status=False
+            )
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             deploy.check_expected_status("finished", deployment_id)
 
@@ -66,8 +72,9 @@ class TestUpdateModules(MenderTesting):
             # Remove path block.
             mender_device.run("rm -f /tmp/test_file_update_module")
 
-            deployment_id, expected_image_id = common_update_procedure(make_artifact=make_artifact,
-                                                                       verify_status=False)
+            deployment_id, expected_image_id = common_update_procedure(
+                make_artifact=make_artifact, verify_status=False
+            )
             deploy.check_expected_statistics(deployment_id, "success", 1)
             deploy.check_expected_status("finished", deployment_id)
 
@@ -97,8 +104,10 @@ class TestUpdateModules(MenderTesting):
                 fd.write("dummy")
 
             def make_artifact(artifact_file, artifact_id):
-                cmd = ("mender-artifact write rootfs-image -o %s -n %s -t docker-client -f %s"
-                       % (artifact_file, artifact_id, file1))
+                cmd = (
+                    "mender-artifact write rootfs-image -o %s -n %s -t docker-client -f %s"
+                    % (artifact_file, artifact_id, file1)
+                )
                 logger.info("Executing: " + cmd)
                 subprocess.check_call(cmd, shell=True)
                 return artifact_file
@@ -110,8 +119,13 @@ class TestUpdateModules(MenderTesting):
             output = mender_device.run("mender -show-artifact").strip()
             assert output == "original"
 
-            output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service("mender-client")
-            assert "Artifact Payload type 'rootfs-image' is not supported by this Mender Client" in output
+            output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service(
+                "mender-client"
+            )
+            assert (
+                "Artifact Payload type 'rootfs-image' is not supported by this Mender Client"
+                in output
+            )
 
         finally:
             shutil.rmtree(file_tree)
@@ -122,9 +136,16 @@ class TestUpdateModules(MenderTesting):
         built-in rootfs-image type."""
 
         def make_artifact(artifact_file, artifact_id):
-            cmd = ("mender-artifact write module-image "
-                   + "-o %s -n %s -t %s -T rootfs-image-v2 -f %s"
-                   % (artifact_file, artifact_id, conftest.machine_name, conftest.get_valid_image()))
+            cmd = (
+                "mender-artifact write module-image "
+                + "-o %s -n %s -t %s -T rootfs-image-v2 -f %s"
+                % (
+                    artifact_file,
+                    artifact_id,
+                    conftest.machine_name,
+                    conftest.get_valid_image(),
+                )
+            )
             logger.info("Executing: " + cmd)
             subprocess.check_call(cmd, shell=True)
             return artifact_file

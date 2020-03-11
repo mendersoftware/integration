@@ -24,6 +24,7 @@ from .docker_compose_manager import DockerComposeEnterpriseSetup
 from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
 from .docker_compose_manager import DockerComposeCustomSetup
 
+
 class ContainerManagerFactory:
     def getStandardSetup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
@@ -76,27 +77,38 @@ class ContainerManagerFactory:
         """
         pass
 
+
 class DockerComposeManagerFactory(ContainerManagerFactory):
     def getStandardSetup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
+
     def getDockerClientSetup(self, name=None):
         return DockerComposeDockerClientSetup(name)
+
     def getRofsClientSetup(self, name=None):
         return DockerComposeRofsClientSetup(name)
+
     def getLegacyClientSetup(self, name=None):
         return DockerComposeLegacyClientSetup(name)
+
     def getSignedArtifactClientSetup(self, name=None):
         return DockerComposeSignedArtifactClientSetup(name)
+
     def getShortLivedTokenSetup(self, name=None):
         return DockerComposeShortLivedTokenSetup(name)
+
     def getFailoverServerSetup(self, name=None):
         return DockerComposeFailoverServerSetup(name)
+
     def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
+
     def getEnterpriseSMTPSetup(self, name=None):
         return DockerComposeEnterpriseSMTPSetup(name)
+
     def getCustomSetup(self, name=None):
         return DockerComposeCustomSetup(name)
+
 
 def get_factory(manager_id="docker-compose"):
     if manager_id == "docker-compose":

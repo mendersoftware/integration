@@ -38,7 +38,7 @@ class TestPreauthBase(MenderTesting):
         # preauthorize a new device
         preauth_iddata = {"mac": "mac-preauth"}
         # serialize manually to avoid an extra space (id data helper doesn't insert one)
-        preauth_iddata_str = "{\"mac\":\"mac-preauth\"}"
+        preauth_iddata_str = '{"mac":"mac-preauth"}'
 
         r = auth_v2.preauth(json.loads(preauth_iddata_str), preauth_key)
         assert r.status_code == 201
@@ -46,13 +46,13 @@ class TestPreauthBase(MenderTesting):
         # verify the device appears correctly in api results
         devs = auth_v2.get_devices(2)
 
-        dev_preauth = [d for d in devs if d['status'] == 'preauthorized']
+        dev_preauth = [d for d in devs if d["status"] == "preauthorized"]
         assert len(dev_preauth) == 1
         dev_preauth = dev_preauth[0]
         logger.info("dev_prauth_map: " + str(dev_preauth))
-        assert dev_preauth['identity_data'] == preauth_iddata
-        assert len(dev_preauth['auth_sets']) == 1
-        assert dev_preauth['auth_sets'][0]['pubkey'] == preauth_key
+        assert dev_preauth["identity_data"] == preauth_iddata
+        assert len(dev_preauth["auth_sets"]) == 1
+        assert dev_preauth["auth_sets"][0]["pubkey"] == preauth_key
 
         # make one of the existing devices the preauthorized device
         # by substituting id data and restarting
@@ -62,13 +62,14 @@ class TestPreauthBase(MenderTesting):
         # verify api results - after some time the device should be 'accepted'
         for _ in range(120):
             time.sleep(15)
-            dev_accepted = auth_v2.get_devices_status(status="accepted", expected_devices=2)
-            if len([d for d in dev_accepted if d['status'] == 'accepted']) == 1:
+            dev_accepted = auth_v2.get_devices_status(
+                status="accepted", expected_devices=2
+            )
+            if len([d for d in dev_accepted if d["status"] == "accepted"]) == 1:
                 break
 
-
         logger.info("devices: " + str(dev_accepted))
-        dev_accepted = [d for d in dev_accepted if d['status'] == 'accepted']
+        dev_accepted = [d for d in dev_accepted if d["status"] == "accepted"]
         logger.info("accepted devices: " + str(dev_accepted))
 
         Client.get_logs(mender_device)
@@ -77,9 +78,9 @@ class TestPreauthBase(MenderTesting):
         dev_accepted = dev_accepted[0]
         logger.info("accepted device: " + str(dev_accepted))
 
-        assert dev_accepted['identity_data'] == preauth_iddata
-        assert len(dev_preauth['auth_sets']) == 1
-        assert dev_accepted['auth_sets'][0]['pubkey'] == preauth_key
+        assert dev_accepted["identity_data"] == preauth_iddata
+        assert len(dev_preauth["auth_sets"]) == 1
+        assert dev_accepted["auth_sets"][0]["pubkey"] == preauth_key
 
         # verify device was issued a token
         Client.have_authtoken(mender_device)
@@ -89,8 +90,8 @@ class TestPreauthBase(MenderTesting):
             Test the removal of a preauthorized auth set, verify it's gone from all API results.
         """
         # preauthorize
-        preauth_iddata = json.loads("{\"mac\":\"preauth-mac\"}")
-        preauth_key = '''-----BEGIN PUBLIC KEY-----
+        preauth_iddata = json.loads('{"mac":"preauth-mac"}')
+        preauth_key = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzogVU7RGDilbsoUt/DdH
 VJvcepl0A5+xzGQ50cq1VE/Dyyy8Zp0jzRXCnnu9nu395mAFSZGotZVr+sWEpO3c
 yC3VmXdBZmXmQdZqbdD/GuixJOYfqta2ytbIUPRXFN7/I7sgzxnXWBYXYmObYvdP
@@ -99,32 +100,34 @@ okP0mQanY+WKxp7Q16pt1RoqoAd0kmV39g13rFl35muSHbSBoAW3GBF3gO+mF5Ty
 iyYyh1852rti3Afw4mDxuVSD7sd9ggvYMc0QHIpQNkD4YWOhNiE1AB0zH57VbUYG
 UwIDAQAB
 -----END PUBLIC KEY-----
-'''
+"""
 
         r = auth_v2.preauth(preauth_iddata, preauth_key)
         assert r.status_code == 201
 
         devs = auth_v2.get_devices(2)
 
-        dev_preauth = [d for d in devs if d['identity_data'] == preauth_iddata]
+        dev_preauth = [d for d in devs if d["identity_data"] == preauth_iddata]
         assert len(dev_preauth) == 1
         dev_preauth = dev_preauth[0]
 
         # remove from deviceauth
-        r = auth_v2.delete_auth_set(dev_preauth['id'], dev_preauth["auth_sets"][0]["id"])
+        r = auth_v2.delete_auth_set(
+            dev_preauth["id"], dev_preauth["auth_sets"][0]["id"]
+        )
         assert r.status_code == 204
 
         # verify removed from deviceauth
         devs = auth_v2.get_devices(1)
-        dev_removed = [d for d in devs if d['identity_data'] == preauth_iddata]
+        dev_removed = [d for d in devs if d["identity_data"] == preauth_iddata]
         assert len(dev_removed) == 0
 
         # verify removed from deviceauth
-        r = auth_v2.get_device(dev_preauth['id'])
+        r = auth_v2.get_device(dev_preauth["id"])
         assert r.status_code == 404
 
         # verify removed from inventory
-        r = inv.get_device(dev_preauth['id'])
+        r = inv.get_device(dev_preauth["id"])
         assert r.status_code == 404
 
     def do_test_fail_preauth_existing(self):
@@ -136,7 +139,7 @@ UwIDAQAB
         dev = devs[0]
 
         # try to preauthorize the same id data, new key
-        preauth_key = '''-----BEGIN PUBLIC KEY-----
+        preauth_key = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzogVU7RGDilbsoUt/DdH
 VJvcepl0A5+xzGQ50cq1VE/Dyyy8Zp0jzRXCnnu9nu395mAFSZGotZVr+sWEpO3c
 yC3VmXdBZmXmQdZqbdD/GuixJOYfqta2ytbIUPRXFN7/I7sgzxnXWBYXYmObYvdP
@@ -145,8 +148,8 @@ okP0mQanY+WKxp7Q16pt1RoqoAd0kmV39g13rFl35muSHbSBoAW3GBF3gO+mF5Ty
 iyYyh1852rti3Afw4mDxuVSD7sd9ggvYMc0QHIpQNkD4YWOhNiE1AB0zH57VbUYG
 UwIDAQAB
 -----END PUBLIC KEY-----
-'''
-        r = auth_v2.preauth(dev['identity_data'], preauth_key)
+"""
+        r = auth_v2.preauth(dev["identity_data"], preauth_key)
         assert r.status_code == 409
 
 
@@ -183,17 +186,17 @@ class TestPreauthEnterprise(TestPreauthBase):
         mender_device.ssh_is_opened()
         container_manager.device = mender_device
 
+
 class Client:
     """Wraps various actions on the client, performed via SSH (inside fabric.execute())."""
 
-    ID_HELPER = '/usr/share/mender/identity/mender-device-identity'
-    PRIV_KEY = '/data/mender/mender-agent.pem'
-    MENDER_STORE = '/data/mender/mender-store'
+    ID_HELPER = "/usr/share/mender/identity/mender-device-identity"
+    PRIV_KEY = "/data/mender/mender-agent.pem"
+    MENDER_STORE = "/data/mender/mender-store"
 
     KEYGEN_TIMEOUT = 300
     DEVICE_ACCEPTED_TIMEOUT = 600
     MENDER_STORE_TIMEOUT = 600
-
 
     @staticmethod
     def get_logs(device):
@@ -205,25 +208,24 @@ class Client:
         """Extract the device's public key from its private key."""
 
         Client.__wait_for_keygen(device)
-        keystr = device.run('cat {}'.format(Client.PRIV_KEY))
+        keystr = device.run("cat {}".format(Client.PRIV_KEY))
         private_key = serialization.load_pem_private_key(
             data=keystr.encode() if isinstance(keystr, str) else keystr,
             password=None,
-            backend=default_backend()
+            backend=default_backend(),
         )
         public_key = private_key.public_key()
         return public_key.public_bytes(
-            serialization.Encoding.PEM,
-            serialization.PublicFormat.SubjectPublicKeyInfo
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
         )
 
     @staticmethod
     def substitute_id_data(device, id_data_dict):
         """Change the device's identity by substituting it's id data helper script."""
 
-        id_data = '#!/bin/sh\n'
-        for k,v in id_data_dict.items():
-            id_data += 'echo {}={}\n'.format(k,v)
+        id_data = "#!/bin/sh\n"
+        for k, v in id_data_dict.items():
+            id_data += "echo {}={}\n".format(k, v)
 
         cmd = 'echo "{}" > {}'.format(id_data, Client.ID_HELPER)
         device.run(cmd)
@@ -243,16 +245,20 @@ class Client:
                 out = device.run(
                     "strings {} | grep authtoken".format(Client.MENDER_STORE)
                 )
-                return out != ''
+                return out != ""
             except:
                 output_from_journalctl = device.run("journalctl -u mender-client -l")
                 logger.info("Logs from client: " + output_from_journalctl)
 
                 time.sleep(10)
                 sleepsec += 10
-                logger.info("waiting for mender-store file, sleepsec: {}".format(sleepsec))
+                logger.info(
+                    "waiting for mender-store file, sleepsec: {}".format(sleepsec)
+                )
 
-        assert sleepsec <= Client.MENDER_STORE_TIMEOUT, "timeout for mender-store file exceeded"
+        assert (
+            sleepsec <= Client.MENDER_STORE_TIMEOUT
+        ), "timeout for mender-store file exceeded"
 
     @staticmethod
     def __wait_for_keygen(device):
@@ -269,4 +275,3 @@ class Client:
                 break
 
         assert sleepsec <= Client.KEYGEN_TIMEOUT, "timeout for key generation exceeded"
-

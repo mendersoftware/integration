@@ -1,5 +1,6 @@
 import pytest
 
+
 class MenderTesting(object):
     slow_cond = False
     fast_cond = False
@@ -24,5 +25,9 @@ class MenderTesting(object):
             MenderTesting.slow_cond = True
             MenderTesting.fast_cond = True
 
-        MenderTesting.slow = pytest.mark.skipif(not MenderTesting.slow_cond, reason="need --runslow option to run")
-        MenderTesting.fast = pytest.mark.skipif(not MenderTesting.fast_cond, reason="need --runfast option to run")
+        MenderTesting.slow = pytest.mark.skipif(
+            not MenderTesting.slow_cond, reason="need --runslow option to run"
+        )
+        MenderTesting.fast = pytest.mark.skipif(
+            not MenderTesting.fast_cond, reason="need --runfast option to run"
+        )

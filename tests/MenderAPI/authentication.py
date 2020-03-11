@@ -25,6 +25,7 @@ from .requests_helpers import requests_retry
 
 from testutils.infra.cli import CliUseradm, CliTenantadm
 
+
 class Authentication:
     auth_header = None
 
@@ -76,24 +77,26 @@ class Authentication:
         #             already (if not running xdist)
         r = self._do_login(self.username, self.password)
 
-        logger.info("Getting authentication token for user %s@%s"
-                    % (self.username, self.org_name))
+        logger.info(
+            "Getting authentication token for user %s@%s"
+            % (self.username, self.org_name)
+        )
 
         if create_new_user:
             if r.status_code is not 200:
                 if self.multitenancy and self.org_create:
-                    tenant_id = self._create_org(self.org_name,
-                                                 self.username,
-                                                 self.password)
+                    tenant_id = self._create_org(
+                        self.org_name, self.username, self.password
+                    )
                     tenant_id = tenant_id.strip()
 
                     tenant_data = self._get_tenant_data(tenant_id)
                     tenant_data_json = json.loads(tenant_data)
 
                     self.current_tenant = {
-                        "tenant_id":    tenant_id,
+                        "tenant_id": tenant_id,
                         "tenant_token": tenant_data_json["tenant_token"],
-                        "name":         tenant_data_json["name"]
+                        "name": tenant_data_json["name"],
                     }
                     self.org_create = False
 
@@ -125,10 +128,11 @@ class Authentication:
 
     def _do_login(self, username, password):
         r = requests_retry().post(
-            "https://%s/api/management/%s/useradm/auth/login" %
-            (get_container_manager().get_mender_gateway(), api_version),
+            "https://%s/api/management/%s/useradm/auth/login"
+            % (get_container_manager().get_mender_gateway(), api_version),
             verify=False,
-            auth=HTTPBasicAuth(username, password))
+            auth=HTTPBasicAuth(username, password),
+        )
         assert r.status_code == 200 or r.status_code == 401
 
         if r.status_code == 200:

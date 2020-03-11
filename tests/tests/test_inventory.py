@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,14 +14,13 @@
 #    limitations under the License.
 
 import json
+import time
 
-from fabric.api import *
 import pytest
 
 from .. import conftest
-from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
-from ..MenderAPI import auth_v2, inv
+from ..MenderAPI import auth_v2, inv, logger
 from .mendertesting import MenderTesting
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
@@ -94,7 +93,7 @@ class TestInventory(MenderTesting):
                                 assert key in keys
 
                     except:
-                        print("Exception caught, 'device' json: ", device)
+                        logger.info("Exception caught, 'device' json: %s" % device)
                         raise
                 break
 

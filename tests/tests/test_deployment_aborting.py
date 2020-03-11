@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
 
 import time
 
-from fabric.api import *
 import pytest
 
 from .. import conftest
-from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..helpers import Helpers
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
@@ -38,27 +35,19 @@ class TestDeploymentAborting(MenderTesting):
                                         if set to True, wait until device is rebooted.
         """
 
-        mender_clients = container_manager.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.abort_deployment,
-                    container_manager,
-                    abort_step=abort_step,
-                    mender_performs_reboot=mender_performs_reboot,
-                    hosts=mender_clients)
-            return
+        mender_device = container_manager.device
 
         install_image=conftest.get_valid_image()
-        expected_partition = Helpers.get_active_partition()
-        expected_image_id = Helpers.yocto_id_installed_on_machine()
+        expected_partition = mender_device.get_active_partition()
+        expected_image_id = mender_device.yocto_id_installed_on_machine()
         host_ip = container_manager.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image, verify_status=False)
 
             if abort_step is not None:
-                deploy.check_expected_statistics(deployment_id, abort_step, len(mender_clients))
+                deploy.check_expected_statistics(deployment_id, abort_step, 1)
             deploy.abort(deployment_id)
-            deploy.check_expected_statistics(deployment_id, "aborted", len(mender_clients))
+            deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
             # no deployment logs are sent by the client, is this expected?
             for d in auth_v2.get_devices():
@@ -72,11 +61,11 @@ class TestDeploymentAborting(MenderTesting):
                 # Else we reboot ourselves, just to make sure that we have not
                 # unintentionally switched to the new partition.
                 reboot.verify_reboot_not_performed()
-                run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
+                mender_device.run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
                 reboot.verify_reboot_performed()
 
-        assert Helpers.get_active_partition() == expected_partition
-        assert Helpers.yocto_id_installed_on_machine() == expected_image_id
+        assert mender_device.get_active_partition() == expected_partition
+        assert mender_device.yocto_id_installed_on_machine() == expected_image_id
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
@@ -101,24 +90,18 @@ class TestDeploymentAborting(MenderTesting):
     def test_deployment_abortion_success(self, standard_setup_one_client_bootstrapped):
         # maybe an acceptance test is enough for this check?
 
-        mender_clients =  standard_setup_one_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_deployment_abortion_success,
-                    standard_setup_one_client_bootstrapped,
-                    hosts=mender_clients)
-            return
+        mender_device = standard_setup_one_client_bootstrapped.device
 
         install_image = conftest.get_valid_image()
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(host_ip) as reboot:
+        with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
 
             reboot.verify_reboot_performed()
 
-        deploy.check_expected_statistics(deployment_id, "success", len(mender_clients))
+        deploy.check_expected_statistics(deployment_id, "success", 1)
         time.sleep(5)
 
         deploy.abort_finished_deployment(deployment_id)
-        deploy.check_expected_statistics(deployment_id, "success", len(mender_clients))
+        deploy.check_expected_statistics(deployment_id, "success", 1)
         deploy.check_expected_status("finished", deployment_id)

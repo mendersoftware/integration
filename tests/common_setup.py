@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ from . import conftest
 from .MenderAPI import auth, auth_v2, reset_mender_api
 from .helpers import Helpers
 
+from testutils.infra.device import MenderDevice, MenderDeviceGroup
 from testutils.infra.container_manager import factory
 container_factory = factory.get_factory()
 
@@ -28,7 +29,10 @@ def standard_setup_one_client(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
 
     return env
@@ -39,7 +43,10 @@ def standard_setup_one_client_bootstrapped(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth_v2.accept_devices(1)
 
@@ -51,7 +58,10 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth_v2.accept_devices(1)
 
@@ -63,7 +73,10 @@ def standard_setup_one_docker_client_bootstrapped(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth_v2.accept_devices(1)
 
@@ -75,7 +88,10 @@ def standard_setup_two_clients_bootstrapped(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device_group = MenderDeviceGroup(env.get_mender_clients())
+    env.device_group.ssh_is_opened()
+
     reset_mender_api(env)
     auth_v2.accept_devices(2)
 
@@ -103,7 +119,10 @@ def setup_with_legacy_client(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth_v2.accept_devices(1)
 
@@ -115,7 +134,10 @@ def standard_setup_with_signed_artifact_client(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
@@ -128,7 +150,10 @@ def standard_setup_with_short_lived_token(request):
     request.addfinalizer(env.teardown)
 
     env.setup()
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     reset_mender_api(env)
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
@@ -142,7 +167,10 @@ def setup_failover(request):
 
     env.setup()
     reset_mender_api(env)
-    Helpers.ssh_is_opened(env.get_mender_clients())
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
     auth.reset_auth_token()
     auth_v2.accept_devices(1)
 

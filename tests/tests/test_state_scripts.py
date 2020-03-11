@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2016 Mender Software AS
+# Copyright 2020 Mender Software AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,16 +18,15 @@ import time
 import os
 import subprocess
 
-from fabric.api import *
 import pytest
 
 from .. import conftest
-from ..common import *
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
+from testutils.infra.device import MenderDeviceGroup
 
 TEST_SETS = [
     (
@@ -542,19 +541,8 @@ class TestStateScripts(MenderTesting):
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(self, standard_setup_one_client_bootstrapped, description, test_set):
 
-        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(
-                self.test_reboot_recovery,
-                standard_setup_one_client_bootstrapped,
-                description,
-                test_set,
-                hosts=mender_clients)
-            return
-
-        client = env.host_string
-        work_dir = "test_state_scripts.%s" % client
+        mender_device = standard_setup_one_client_bootstrapped.device
+        work_dir = "test_state_scripts.%s" % mender_device.host_string
 
         script_content = '#!/bin/sh\n\necho "$(basename $0)" >> /data/test_state_scripts.log\n'
 
@@ -569,7 +557,6 @@ class TestStateScripts(MenderTesting):
         fi
         echo "$(basename $0)" >> /data/test_state_scripts.log
         exit 0''')
-        script_error_content = script_content + "exit 1"
 
         # Put artifact-scripts in the artifact.
         artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -602,12 +589,14 @@ class TestStateScripts(MenderTesting):
                     fd.write(script_content)
 
         # Now create the artifact, and make the deployment.
-        device_id = Helpers.ip_to_device_id_map([client])[client]
+        device_id = Helpers.ip_to_device_id_map(
+                MenderDeviceGroup([mender_device.host_string])
+            )[mender_device.host_string]
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with Helpers.RebootDetector(host_ip) as reboot_detector:
+        with mender_device.get_reboot_detector(host_ip) as reboot_detector:
 
-            deployment_id = common_update_procedure(
+            common_update_procedure(
                 install_image=new_rootfs,
                 verify_status=True,
                 devices=[device_id],
@@ -615,7 +604,7 @@ class TestStateScripts(MenderTesting):
 
             try:
 
-                orig_part = Helpers.get_active_partition()
+                orig_part = mender_device.get_active_partition()
 
                 # handle case where the client has not finished the update
                 # path on the committed partition, but new partition is installed,
@@ -633,34 +622,33 @@ class TestStateScripts(MenderTesting):
                 timeout = time.time() + 60*60
                 while timeout >= time.time():
                     time.sleep(3)
-                    script_logs = run("cat /data/test_state_scripts.log")
+                    script_logs = mender_device.run("cat /data/test_state_scripts.log")
                     if test_set.get("ExpectedScriptFlow")[-1] in script_logs:
                         break
 
                 # make sure the client ended up on the right partition
                 if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
-                    assert orig_part != Helpers.get_active_partition()
+                    assert orig_part != mender_device.get_active_partition()
                 else:
-                    assert orig_part == Helpers.get_active_partition()
+                    assert orig_part == mender_device.get_active_partition()
 
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 
             except:
-                with settings(warn_only=True):
-                    output = run("cat /data/mender/deployment*.log")
-                    logger.info(output)
+                output = mender_device.run(
+                    "cat /data/mender/deployment*.log", warn_only=True
+                )
+                logger.info(output)
                 raise
 
             finally:
-                run("systemctl stop mender-client && "
-                                + "rm -f /data/test_state_scripts.log && "
-                                + "rm -rf /etc/mender/scripts && "
-                                + "rm -rf /data/mender/scripts && "
-                                + "systemctl start mender-client")
-
-
-
-
+                mender_device.run(
+                    "systemctl stop mender-client && "
+                    + "rm -f /data/test_state_scripts.log && "
+                    + "rm -rf /etc/mender/scripts && "
+                    + "rm -rf /data/mender/scripts && "
+                    + "systemctl start mender-client"
+                )
 
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
@@ -668,25 +656,14 @@ class TestStateScripts(MenderTesting):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        mender_clients = standard_setup_one_client_bootstrapped.get_mender_clients()
-
-        if not env.host_string:
-            execute(self.test_state_scripts,
-                    standard_setup_one_client_bootstrapped,
-                    description,
-                    test_set,
-                    hosts=mender_clients)
-            return
-
-        client = env.host_string
-
-        work_dir = "test_state_scripts.%s" % client
+        mender_device = standard_setup_one_client_bootstrapped.device
+        work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
         try:
             script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
-            old_active = Helpers.get_active_partition()
+            old_active = mender_device.get_active_partition()
 
             # Make rootfs-scripts and put them in rootfs image.
             rootfs_script_dir = os.path.join(work_dir, "rootfs-scripts")
@@ -732,16 +709,19 @@ class TestStateScripts(MenderTesting):
             # quite slow.
             subprocess.check_call(["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir)
             # Stop client first to avoid race conditions.
-            run("systemctl stop mender-client")
+            mender_device.run("systemctl stop mender-client")
             try:
-                put(os.path.join(work_dir, "rootfs-scripts.tar.gz"),
-                    remote_path="/")
-                run("mkdir -p cd /etc/mender/scripts && "
+                mender_device.put(
+                    os.path.join(work_dir, "rootfs-scripts.tar.gz"), remote_path="/"
+                )
+                mender_device.run(
+                    "mkdir -p cd /etc/mender/scripts && "
                     + "cd /etc/mender/scripts && "
                     + "tar xzf /rootfs-scripts.tar.gz && "
-                    + "rm -f /rootfs-scripts.tar.gz")
+                    + "rm -f /rootfs-scripts.tar.gz"
+                )
             finally:
-                run("systemctl start mender-client")
+                mender_device.run("systemctl start mender-client")
 
             # Put artifact-scripts in the artifact.
             artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -759,7 +739,9 @@ class TestStateScripts(MenderTesting):
                         fd.write("printf '1000' > /data/mender/scripts/version\n")
 
             # Now create the artifact, and make the deployment.
-            device_id = Helpers.ip_to_device_id_map([client])[client]
+            device_id = Helpers.ip_to_device_id_map(
+                MenderDeviceGroup([mender_device.host_string])
+            )[mender_device.host_string]
             deployment_id = common_update_procedure(install_image=new_rootfs,
                                                     verify_status=False,
                                                     devices=[device_id],
@@ -774,8 +756,7 @@ class TestStateScripts(MenderTesting):
                 def fetch_info(cmd_list):
                     all_output = ""
                     for cmd in cmd_list:
-                        with settings(warn_only=True):
-                            output = run(cmd)
+                        output = mender_device.run(cmd, warn_only=True)
                         logger.error("%s:\n%s" % (cmd, output))
                         all_output += "%s\n" % output
                     return all_output
@@ -788,15 +769,16 @@ class TestStateScripts(MenderTesting):
                 ]
                 starttime = time.time()
                 while starttime + 60*60 >= time.time():
-                    with settings(warn_only=True):
-                        result = run("grep Error /data/test_state_scripts.log")
-                        if result.succeeded:
-                            # If it succeeds, stop.
-                            break
-                        else:
-                            fetch_info(info_query)
-                            time.sleep(10)
-                            continue
+                    result = mender_device.run(
+                        "grep Error /data/test_state_scripts.log", warn_only=True
+                    )
+                    if result.succeeded:
+                        # If it succeeds, stop.
+                        break
+                    else:
+                        fetch_info(info_query)
+                        time.sleep(10)
+                        continue
                 else:
                     info = fetch_info(info_query)
                     pytest.fail('Waited too long for "Error" to appear in log:\n%s' % info)
@@ -807,10 +789,10 @@ class TestStateScripts(MenderTesting):
             # state after an update.
             time.sleep(10)
 
-            output = run("cat /data/test_state_scripts.log")
+            output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split('\n'))
 
-            new_active = Helpers.get_active_partition()
+            new_active = mender_device.get_active_partition()
             should_switch_partition = (test_set['ExpectedStatus'] == "success")
 
             if test_set.get('SwapPartitionExpectation'):
@@ -822,9 +804,10 @@ class TestStateScripts(MenderTesting):
                 assert old_active == new_active, "Device switched partition which was not expected!"
 
         except:
-            with settings(warn_only=True):
-                output = run("cat /data/mender/deployment*.log")
-                logger.info(output)
+            output = mender_device.run(
+                "cat /data/mender/deployment*.log", warn_only=True
+            )
+            logger.info(output)
             raise
 
         finally:
@@ -834,11 +817,13 @@ class TestStateScripts(MenderTesting):
                     deploy.abort(deployment_id)
                 except:
                     pass
-            run("systemctl stop mender-client && "
+            mender_device.run(
+                "systemctl stop mender-client && "
                 + "rm -f /data/test_state_scripts.log && "
                 + "rm -rf /etc/mender/scripts && "
                 + "rm -rf /data/mender/scripts && "
-                + "systemctl start mender-client")
+                + "systemctl start mender-client"
+            )
 
     def verify_script_log_correct(self, test_set, log_orig):
         expected_order = test_set['ScriptOrder']

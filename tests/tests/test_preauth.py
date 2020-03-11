@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,13 +18,10 @@ import time
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
-from fabric.api import *
-import pytest
-
 from ..common_setup import standard_setup_one_client, enterprise_no_client
-from ..helpers import Helpers
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, auth_v2, inv, logger
+from testutils.infra.device import MenderDevice
 
 
 class TestPreauthBase(MenderTesting):
@@ -33,11 +30,10 @@ class TestPreauthBase(MenderTesting):
             Test the happy path from preauthorizing a device to a successful bootstrap.
             Verify that the device/auth set appear correctly in devauth API results.
         """
-        client = container_manager.get_mender_clients()[0]
+        mender_device = container_manager.device
 
         # we'll use the same pub key for the preauth'd device, so get it
-        res = execute(Client.get_pub_key, hosts=client)
-        preauth_key = res[client]
+        preauth_key = Client.get_pub_key(mender_device)
 
         # preauthorize a new device
         preauth_iddata = {"mac": "mac-preauth"}
@@ -60,8 +56,8 @@ class TestPreauthBase(MenderTesting):
 
         # make one of the existing devices the preauthorized device
         # by substituting id data and restarting
-        res = execute(Client.substitute_id_data, preauth_iddata, hosts=client)
-        res = execute(Client.restart, hosts=client)
+        Client.substitute_id_data(mender_device, preauth_iddata)
+        Client.restart(mender_device)
 
         # verify api results - after some time the device should be 'accepted'
         for _ in range(120):
@@ -75,7 +71,7 @@ class TestPreauthBase(MenderTesting):
         dev_accepted = [d for d in dev_accepted if d['status'] == 'accepted']
         logger.info("accepted devices: " + str(dev_accepted))
 
-        execute(Client.get_logs, hosts=client)
+        Client.get_logs(mender_device)
 
         assert len(dev_accepted) == 1, "looks like the device was never accepted"
         dev_accepted = dev_accepted[0]
@@ -86,8 +82,7 @@ class TestPreauthBase(MenderTesting):
         assert dev_accepted['auth_sets'][0]['pubkey'] == preauth_key
 
         # verify device was issued a token
-        res = execute(Client.have_authtoken, hosts=client)
-        assert res[client]
+        Client.have_authtoken(mender_device)
 
     def do_test_ok_preauth_and_remove(self):
         """
@@ -184,8 +179,9 @@ class TestPreauthEnterprise(TestPreauthBase):
         token = auth.current_tenant["tenant_token"]
 
         container_manager.new_tenant_client("tenant-container", token)
-        client = container_manager.get_mender_clients()[0]
-        Helpers.ssh_is_opened(client)
+        mender_device = MenderDevice(container_manager.get_mender_clients()[0])
+        mender_device.ssh_is_opened()
+        container_manager.device = mender_device
 
 class Client:
     """Wraps various actions on the client, performed via SSH (inside fabric.execute())."""
@@ -200,16 +196,16 @@ class Client:
 
 
     @staticmethod
-    def get_logs():
-        output_from_journalctl = run("journalctl -u mender-client -l")
+    def get_logs(device):
+        output_from_journalctl = device.run("journalctl -u mender-client -l")
         logger.info(output_from_journalctl)
 
     @staticmethod
-    def get_pub_key():
+    def get_pub_key(device):
         """Extract the device's public key from its private key."""
 
-        Client.__wait_for_keygen()
-        keystr = run('cat {}'.format(Client.PRIV_KEY))
+        Client.__wait_for_keygen(device)
+        keystr = device.run('cat {}'.format(Client.PRIV_KEY))
         private_key = serialization.load_pem_private_key(
             data=keystr.encode() if isinstance(keystr, str) else keystr,
             password=None,
@@ -222,7 +218,7 @@ class Client:
         )
 
     @staticmethod
-    def substitute_id_data(id_data_dict):
+    def substitute_id_data(device, id_data_dict):
         """Change the device's identity by substituting it's id data helper script."""
 
         id_data = '#!/bin/sh\n'
@@ -230,24 +226,26 @@ class Client:
             id_data += 'echo {}={}\n'.format(k,v)
 
         cmd = 'echo "{}" > {}'.format(id_data, Client.ID_HELPER)
-        run(cmd)
+        device.run(cmd)
 
     @staticmethod
-    def restart():
+    def restart(device):
         """Restart the mender service."""
 
-        run('systemctl restart mender-client.service')
+        device.run("systemctl restart mender-client.service")
 
     @staticmethod
-    def have_authtoken():
+    def have_authtoken(device):
         """Verify that the device was authenticated by checking its data store for the authtoken."""
         sleepsec = 0
         while sleepsec < Client.MENDER_STORE_TIMEOUT:
             try:
-                out = run('strings {} | grep authtoken'.format(Client.MENDER_STORE))
+                out = device.run(
+                    "strings {} | grep authtoken".format(Client.MENDER_STORE)
+                )
                 return out != ''
             except:
-                output_from_journalctl = run("journalctl -u mender-client -l")
+                output_from_journalctl = device.run("journalctl -u mender-client -l")
                 logger.info("Logs from client: " + output_from_journalctl)
 
                 time.sleep(10)
@@ -257,11 +255,11 @@ class Client:
         assert sleepsec <= Client.MENDER_STORE_TIMEOUT, "timeout for mender-store file exceeded"
 
     @staticmethod
-    def __wait_for_keygen():
+    def __wait_for_keygen(device):
         sleepsec = 0
         while sleepsec < Client.KEYGEN_TIMEOUT:
             try:
-                run('stat {}'.format(Client.PRIV_KEY))
+                device.run("stat {}".format(Client.PRIV_KEY))
             except:
                 time.sleep(10)
                 sleepsec += 10

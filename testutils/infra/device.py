@@ -126,9 +126,6 @@ class MenderDevice:
 
 
 class RebootDetector:
-    server = None
-    device = None
-    host_ip = None
     # This global one is used to increment each port used.
     port = 8181
 
@@ -137,6 +134,7 @@ class RebootDetector:
         RebootDetector.port += 1
         self.host_ip = host_ip
         self.device = device
+        self.server = None
 
     def __enter__(self):
         local_name = "test.mender-reboot-detector.txt.%s" % self.device.host_string

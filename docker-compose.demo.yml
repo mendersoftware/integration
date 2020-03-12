@@ -73,19 +73,6 @@ services:
             # enable demo mode for UI ["true"/"false"]
             DEMO: "true"
 
-    mender-conductor:
-        environment:
-            - CONDUCTOR_JAVA_OPTS=-Xms128m -Xmx128m
-        ports:
-            - "8080:8080"
-
-    mender-redis:
-        volumes:
-            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
-            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
-            - /var/lib/redis
-        entrypoint: /redis/entrypoint.sh
-
     mender-workflows-server:
         command: server --automigrate
 

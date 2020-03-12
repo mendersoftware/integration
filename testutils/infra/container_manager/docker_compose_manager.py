@@ -80,8 +80,8 @@ class DockerComposeNamespace(DockerNamespace):
         + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
-    NUM_SERVICES_OPENSOURCE = 14
-    NUM_SERVICES_ENTERPRISE = 18
+    NUM_SERVICES_OPENSOURCE = 11
+    NUM_SERVICES_ENTERPRISE = 13
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
@@ -282,18 +282,6 @@ class DockerComposeNamespace(DockerNamespace):
             )
 
         return gateway[0]
-
-    def get_mender_conductor(self):
-        """Returns IP address of mender-conductor service"""
-        conductor = self.get_ip_of_service("mender-conductor")
-
-        if len(conductor) != 1:
-            raise SystemExit(
-                "expected one instance of mender-conductor running, but found: %d instance(s)"
-                % len(conductor)
-            )
-
-        return conductor[0]
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):

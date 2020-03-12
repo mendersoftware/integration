@@ -130,44 +130,6 @@ services:
                     - mongo-inventory
                     - mongo-useradm
 
-    mender-conductor-2:
-        image: mendersoftware/mender-conductor:master
-        depends_on:
-            - mender-elasticsearch-2
-            - mender-redis-2
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender-failover
-        volumes:
-            - ./conductor/server/config:/app/config
-        environment:
-            - CONFIG_PROP=config.properties
-
-    mender-elasticsearch-2:
-        image: elasticsearch:6.8.6
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender-failover
-
-    mender-redis-2:
-        image: redis:5-alpine3.8
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender-failover
-        volumes:
-            - ./conductor/redis/redis.conf:/etc/redis/redis.conf
-            - ./conductor/redis/entrypoint.sh:/redis/entrypoint.sh
-            - /var/lib/redis
-        entrypoint: /redis/entrypoint.sh
-
-    
-
     # Add client to failover network as well
     mender-client:
         networks:

@@ -179,7 +179,7 @@ class TestDeviceDecomissioningBase:
         assert r.status_code == 401
 
         # check device gone from inventory
-        # this may take some time because it's done as an async job (conductor workflow)
+        # this may take some time because it's done as an async job (workflow)
         timeout = time.time() + (60 * 3)
         while time.time() < timeout:
             r = inventorym.with_auth(utoken).call(

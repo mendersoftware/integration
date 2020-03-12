@@ -75,8 +75,6 @@ def fill_production_template():
 def setup_docker_volumes():
     docker_volumes = [
         "mender-artifacts",
-        "mender-redis-db",
-        "mender-elasticsearch-db",
         "mender-db",
     ]
 

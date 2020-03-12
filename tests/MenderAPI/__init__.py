@@ -12,8 +12,11 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 # Define get funtion before the below imports to avoid circular dependency
 container_manager = None
+
+
 def get_container_manager():
     return container_manager
+
 
 from .authentication import Authentication
 from .deployments import Deployments

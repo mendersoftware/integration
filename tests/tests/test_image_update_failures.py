@@ -21,21 +21,29 @@ from .common_update import common_update_procedure
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
+
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFailures(MenderTesting):
-
     @MenderTesting.slow
-    def test_update_image_id_already_installed(self, standard_setup_one_client_bootstrapped, install_image=conftest.get_valid_image()):
+    def test_update_image_id_already_installed(
+        self,
+        standard_setup_one_client_bootstrapped,
+        install_image=conftest.get_valid_image(),
+    ):
         """Uploading an image with an incorrect name set results in failure and rollback."""
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, expected_image_id = common_update_procedure(install_image, True)
+            deployment_id, expected_image_id = common_update_procedure(
+                install_image, True
+            )
             reboot.verify_reboot_performed()
 
-        devices_accepted_id = [device["id"] for device in auth_v2.get_devices_status("accepted")]
+        devices_accepted_id = [
+            device["id"] for device in auth_v2.get_devices_status("accepted")
+        ]
         deployment_id = deploy.trigger_deployment(
             name="New valid update",
             artifact_name=expected_image_id,

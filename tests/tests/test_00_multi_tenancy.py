@@ -18,17 +18,15 @@ import time
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
-from .common_update import update_image, update_image_failed, \
-                           common_update_procedure
+from .common_update import update_image, update_image_failed, common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
 from . import artifact_lock
 
 from testutils.infra.device import MenderDevice
 
+
 class TestMultiTenancyEnterprise(MenderTesting):
-
-
     def test_token_validity(self, enterprise_no_client):
         """ verify that only devices with valid tokens can bootstrap
             successfully to a multitenancy setup """
@@ -69,18 +67,28 @@ class TestMultiTenancyEnterprise(MenderTesting):
         time.sleep(30)
 
         users = [
-            {"email": "foo1@foo1.com", "password": "hunter2hunter2", "username": "foo1"},
-            {"email": "bar2@bar2.com", "password": "hunter2hunter2", "username": "bar2"},
+            {
+                "email": "foo1@foo1.com",
+                "password": "hunter2hunter2",
+                "username": "foo1",
+            },
+            {
+                "email": "bar2@bar2.com",
+                "password": "hunter2hunter2",
+                "username": "bar2",
+            },
         ]
 
         for user in users:
             auth.set_tenant(user["username"], user["email"], user["password"])
             with artifact_lock:
                 with tempfile.NamedTemporaryFile() as artifact_file:
-                    artifact = image.make_rootfs_artifact(conftest.get_valid_image(),
-                                                          conftest.machine_name,
-                                                          user["email"],
-                                                          artifact_file)
+                    artifact = image.make_rootfs_artifact(
+                        conftest.get_valid_image(),
+                        conftest.machine_name,
+                        user["email"],
+                        artifact_file,
+                    )
 
                     deploy.upload_image(artifact)
 
@@ -95,21 +103,21 @@ class TestMultiTenancyEnterprise(MenderTesting):
     def test_clients_exclusive_to_user(self, enterprise_no_client):
         users = [
             {
-              "email": "foo1@foo1.com",
-              "password": "hunter2hunter2",
-              "username": "foo1",
-              "container": "mender-client-exclusive-1",
-              "client_id": "",
-              "device_id": ""
+                "email": "foo1@foo1.com",
+                "password": "hunter2hunter2",
+                "username": "foo1",
+                "container": "mender-client-exclusive-1",
+                "client_id": "",
+                "device_id": "",
             },
             {
-               "email": "bar1@bar1.com",
-               "password": "hunter2hunter2",
-               "username": "bar1",
-               "container": "mender-client-exclusive-2",
-               "client_id": "",
-               "device_id": ""
-            }
+                "email": "bar1@bar1.com",
+                "password": "hunter2hunter2",
+                "username": "bar1",
+                "container": "mender-client-exclusive-2",
+                "client_id": "",
+                "device_id": "",
+            },
         ]
 
         for user in users:
@@ -137,14 +145,19 @@ class TestMultiTenancyEnterprise(MenderTesting):
             timeout = time.time() + (60 * 5)
             device_id = user["device_id"]
             while time.time() < timeout:
-                    newAdmissions = auth_v2.get_devices()[0]
-                    if device_id != newAdmissions["id"] \
-                       and user["client_id"] != newAdmissions["id"]:
-                        logger.info("device [%s] not found in inventory [%s]" % (device_id, str(newAdmissions)))
-                        break
-                    else:
-                        logger.info("device [%s] found in inventory..." % (device_id))
-                    time.sleep(.5)
+                newAdmissions = auth_v2.get_devices()[0]
+                if (
+                    device_id != newAdmissions["id"]
+                    and user["client_id"] != newAdmissions["id"]
+                ):
+                    logger.info(
+                        "device [%s] not found in inventory [%s]"
+                        % (device_id, str(newAdmissions))
+                    )
+                    break
+                else:
+                    logger.info("device [%s] found in inventory..." % (device_id))
+                time.sleep(0.5)
             else:
                 assert False, "decommissioned device still available in inventory"
 
@@ -160,15 +173,15 @@ class TestMultiTenancyEnterprise(MenderTesting):
                 "password": "hunter2hunter2",
                 "username": "foo2",
                 "container": "mender-client-deployment-1",
-                "fail": False
+                "fail": False,
             },
             {
                 "email": "bar2@bar2.com",
                 "password": "hunter2hunter2",
                 "username": "bar2",
                 "container": "mender-client-deployment-2",
-                "fail": True
-            }
+                "fail": True,
+            },
         ]
 
         for user in users:
@@ -220,7 +233,9 @@ class TestMultiTenancyEnterprise(MenderTesting):
             auth_v2.accept_devices(1)
 
         for user in users:
-            deployment_id, _ = common_update_procedure(install_image=conftest.get_valid_image())
+            deployment_id, _ = common_update_procedure(
+                install_image=conftest.get_valid_image()
+            )
             deploy.abort(deployment_id)
             deploy.check_expected_statistics(deployment_id, "aborted", 1)
 

@@ -14,6 +14,7 @@
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
 
+
 class BaseCli:
     def __init__(self, microservice, containers_namespace, container_manager):
         if container_manager is None:
@@ -24,84 +25,88 @@ class BaseCli:
         base_filter = microservice + "_1"
         self.cid = self.container_manager.getid([base_filter])
 
+
 class CliUseradm(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
-        BaseCli.__init__(self, "mender-useradm", containers_namespace, container_manager)
+        BaseCli.__init__(
+            self, "mender-useradm", containers_namespace, container_manager
+        )
 
         # is it an open useradm, or useradm-enterprise?
-        for path in ['/usr/bin/useradm', '/usr/bin/useradm-enterprise']:
+        for path in ["/usr/bin/useradm", "/usr/bin/useradm-enterprise"]:
             try:
-                self.container_manager.execute(self.cid, [path, '--version'])
-                self.path=path
+                self.container_manager.execute(self.cid, [path, "--version"])
+                self.path = path
             except:
                 continue
 
         if self.path is None:
-            raise RuntimeError('no runnable binary found in mender-useradm')
+            raise RuntimeError("no runnable binary found in mender-useradm")
 
+    def create_user(self, username, password, tenant_id=""):
+        cmd = [self.path, "create-user", "--username", username, "--password", password]
 
-    def create_user(self, username, password, tenant_id=''):
-        cmd = [self.path,
-               'create-user',
-               '--username', username,
-               '--password', password]
-
-        if tenant_id != '':
-            cmd += ['--tenant-id', tenant_id]
+        if tenant_id != "":
+            cmd += ["--tenant-id", tenant_id]
 
         uid = self.container_manager.execute(self.cid, cmd)
         return uid
 
-
     def migrate(self, tenant_id=None):
-        cmd = [self.path,
-               'migrate']
+        cmd = [self.path, "migrate"]
 
         if tenant_id is not None:
-            cmd.extend(['--tenant', tenant_id])
+            cmd.extend(["--tenant", tenant_id])
 
         self.container_manager.execute(self.cid, cmd)
 
 
 class CliTenantadm(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
-        BaseCli.__init__(self, "mender-tenantadm", containers_namespace, container_manager)
+        BaseCli.__init__(
+            self, "mender-tenantadm", containers_namespace, container_manager
+        )
 
-    def create_org(self, name, username, password, plan='os'):
-        cmd = ['/usr/bin/tenantadm',
-               'create-org',
-               '--name', name,
-               '--username', username,
-               '--password', password,
-               '--plan', plan]
+    def create_org(self, name, username, password, plan="os"):
+        cmd = [
+            "/usr/bin/tenantadm",
+            "create-org",
+            "--name",
+            name,
+            "--username",
+            username,
+            "--password",
+            password,
+            "--plan",
+            plan,
+        ]
 
         tid = self.container_manager.execute(self.cid, cmd)
         return tid
 
     def get_tenant(self, tid):
-        cmd = ['/usr/bin/tenantadm',
-               'get-tenant',
-               '--id', tid]
+        cmd = ["/usr/bin/tenantadm", "get-tenant", "--id", tid]
 
         tenant = self.container_manager.execute(self.cid, cmd)
         return tenant
 
     def migrate(self):
-        cmd = ['usr/bin/tenantadm',
-               'migrate']
+        cmd = ["usr/bin/tenantadm", "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
 
+
 class CliDeviceauth(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
-        BaseCli.__init__(self, "mender-device-auth", containers_namespace, container_manager)
+        BaseCli.__init__(
+            self, "mender-device-auth", containers_namespace, container_manager
+        )
 
     def migrate(self, tenant_id=None):
-        cmd = ['usr/bin/deviceauth',
-               'migrate']
+        cmd = ["usr/bin/deviceauth", "migrate"]
 
         if tenant_id is not None:
-            cmd.extend(['--tenant', tenant_id])
+            cmd.extend(["--tenant", tenant_id])
 
         self.container_manager.execute(self.cid, cmd)
 
@@ -114,9 +119,14 @@ class CliDeviceauth(BaseCli):
         """
 
         # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml')
-        cmd = ['/bin/sed', '-i', '$adefault_tenant_token: {}'.format(tenant_token), '/etc/deviceauth/config.yaml']
+        cmd = [
+            "/bin/sed",
+            "-i",
+            "$adefault_tenant_token: {}".format(tenant_token),
+            "/etc/deviceauth/config.yaml",
+        ]
         self.container_manager.execute(self.cid, cmd)
 
         # Restart the container, so that it is picked up by the device-auth service on startup
-        self.container_manager.cmd(self.cid, 'stop')
-        self.container_manager.cmd(self.cid, 'start')
+        self.container_manager.cmd(self.cid, "stop")
+        self.container_manager.cmd(self.cid, "start")

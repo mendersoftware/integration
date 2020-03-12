@@ -18,7 +18,10 @@ import time
 import pytest
 
 from .. import conftest
-from ..common_setup import standard_setup_one_client, standard_setup_one_client_bootstrapped
+from ..common_setup import (
+    standard_setup_one_client,
+    standard_setup_one_client_bootstrapped,
+)
 from .common_update import common_update_procedure
 from ..MenderAPI import auth_v2, logger
 from .mendertesting import MenderTesting
@@ -37,7 +40,9 @@ class TestBootstrapping(MenderTesting):
 
         # iterate over devices and accept them
         for d in auth_v2.get_devices():
-            auth_v2.set_device_auth_set_status(d["id"], d["auth_sets"][0]["id"], "accepted")
+            auth_v2.set_device_auth_set_status(
+                d["id"], d["auth_sets"][0]["id"], "accepted"
+            )
             logger.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
@@ -71,7 +76,9 @@ class TestBootstrapping(MenderTesting):
 
         # iterate over devices and reject them
         for device in auth_v2.get_devices():
-            auth_v2.set_device_auth_set_status(device["id"], device["auth_sets"][0]["id"], "rejected")
+            auth_v2.set_device_auth_set_status(
+                device["id"], device["auth_sets"][0]["id"], "rejected"
+            )
             logger.info("Rejecting DeviceID: %s" % device["id"])
 
         auth_v2.check_expected_status("rejected", 1)

@@ -29,18 +29,12 @@ from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    {
-        "blockAfterStart": False,
-        "logMessageToLookFor": "update fetch failed:",
-    },
-    {
-        "blockAfterStart": True,
-        "logMessageToLookFor": "Download connection broken:",
-    },
+    {"blockAfterStart": False, "logMessageToLookFor": "update fetch failed:",},
+    {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:",},
 ]
 
-class TestFaultTolerance(MenderTesting):
 
+class TestFaultTolerance(MenderTesting):
     @staticmethod
     def manipulate_network_connectivity(
         device,
@@ -88,18 +82,27 @@ class TestFaultTolerance(MenderTesting):
             )
             time.sleep(2)
             if int(output) >= 2:  # check that some retries have occured
-                logger.info("Looks like the download was retried 2 times, restoring download functionality")
+                logger.info(
+                    "Looks like the download was retried 2 times, restoring download functionality"
+                )
                 break
 
         if timeout_time <= int(time.time()):
             pytest.fail("timed out waiting for download retries")
 
         # make sure that retries happen after 2 minutes have passed
-        assert timeout_time - int(time.time()) >= 2 * 60, "Ooops, looks like the retry happend within less than 5 minutes"
+        assert (
+            timeout_time - int(time.time()) >= 2 * 60
+        ), "Ooops, looks like the retry happend within less than 5 minutes"
         logger.info("Waiting for system to finish download")
 
     @MenderTesting.slow
-    def test_update_image_breaks_networking(self, standard_setup_one_client_bootstrapped, install_image="core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name):
+    def test_update_image_breaks_networking(
+        self,
+        standard_setup_one_client_bootstrapped,
+        install_image="core-image-full-cmdline-%s-broken-network.ext4"
+        % conftest.machine_name,
+    ):
         """
             Install an image without systemd-networkd binary existing.
             The network will not function, mender will not be able to send any logs.
@@ -112,11 +115,15 @@ class TestFaultTolerance(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(install_image)
-            reboot.verify_reboot_performed() # since the network is broken, two reboots will be performed, and the last one will be detected
+            reboot.verify_reboot_performed()  # since the network is broken, two reboots will be performed, and the last one will be detected
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
     @MenderTesting.slow
-    def test_deployed_during_network_outage(self, standard_setup_one_client_bootstrapped, install_image=conftest.get_valid_image()):
+    def test_deployed_during_network_outage(
+        self,
+        standard_setup_one_client_bootstrapped,
+        install_image=conftest.get_valid_image(),
+    ):
         """
             Install a valid upgrade image while there is no network availability on the device
             Re-establishing the network connectivity results in the upgrade to be triggered.
@@ -130,12 +137,16 @@ class TestFaultTolerance(MenderTesting):
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, expected_yocto_id = common_update_procedure(install_image, verify_status=False)
+            deployment_id, expected_yocto_id = common_update_procedure(
+                install_image, verify_status=False
+            )
             time.sleep(60)
 
             for i in range(5):
                 time.sleep(5)
-                TestFaultTolerance.manipulate_network_connectivity(mender_device, i % 2 == 0)
+                TestFaultTolerance.manipulate_network_connectivity(
+                    mender_device, i % 2 == 0
+                )
             TestFaultTolerance.manipulate_network_connectivity(mender_device, True)
 
             logger.info("Network stabilized")
@@ -146,7 +157,12 @@ class TestFaultTolerance(MenderTesting):
 
     @MenderTesting.slow
     @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
-    def test_image_download_retry_timeout(self, standard_setup_one_client_bootstrapped, test_set, install_image=conftest.get_valid_image()):
+    def test_image_download_retry_timeout(
+        self,
+        standard_setup_one_client_bootstrapped,
+        test_set,
+        install_image=conftest.get_valid_image(),
+    ):
         """
             Install an update, and block storage connection when we detect it's
             being copied over to the inactive parition.
@@ -168,7 +184,7 @@ class TestFaultTolerance(MenderTesting):
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            if test_set['blockAfterStart']:
+            if test_set["blockAfterStart"]:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(install_image)
                 for _ in range(60):
@@ -187,12 +203,14 @@ class TestFaultTolerance(MenderTesting):
                 mender_device, False, hosts=["s3.docker.mender.io"]
             )  # disable connectivity
 
-            if not test_set['blockAfterStart']:
+            if not test_set["blockAfterStart"]:
                 # Block before we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(install_image)
 
             # re-enable connectivity after 2 retries
-            TestFaultTolerance.wait_for_download_retry_attempts(mender_device, test_set['logMessageToLookFor'])
+            TestFaultTolerance.wait_for_download_retry_attempts(
+                mender_device, test_set["logMessageToLookFor"]
+            )
             TestFaultTolerance.manipulate_network_connectivity(
                 mender_device, True, hosts=["s3.docker.mender.io"]
             )  # re-enable connectivity
@@ -205,7 +223,11 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
     @MenderTesting.slow
-    def test_image_download_retry_hosts_broken(self, standard_setup_one_client_bootstrapped, install_image=conftest.get_valid_image()):
+    def test_image_download_retry_hosts_broken(
+        self,
+        standard_setup_one_client_bootstrapped,
+        install_image=conftest.get_valid_image(),
+    ):
         """
             Block storage host (minio) by modifying the hosts file.
         """
@@ -222,7 +244,9 @@ class TestFaultTolerance(MenderTesting):
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, new_yocto_id = common_update_procedure(install_image)
 
-            TestFaultTolerance.wait_for_download_retry_attempts(mender_device, "update fetch failed")
+            TestFaultTolerance.wait_for_download_retry_attempts(
+                mender_device, "update fetch failed"
+            )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
             reboot.verify_reboot_performed()
@@ -232,8 +256,9 @@ class TestFaultTolerance(MenderTesting):
             assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
-
-    def test_rootfs_conf_missing_from_new_update(self, standard_setup_one_client_bootstrapped):
+    def test_rootfs_conf_missing_from_new_update(
+        self, standard_setup_one_client_bootstrapped
+    ):
         """Test that the client is able to reboot to roll back if module or rootfs
         config is missing from the new partition. This only works for cases where a
         reboot restores the state."""
@@ -274,7 +299,9 @@ class TestFaultTolerance(MenderTesting):
                 remote_path="/etc/mender",
             )
 
-            host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+            host_ip = (
+                standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+            )
             update_image_failed(
                 mender_device,
                 host_ip,

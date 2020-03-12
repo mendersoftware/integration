@@ -15,16 +15,16 @@
 
 import smtpd
 
-class Message():
 
+class Message:
     def __init__(self, peer, mailfrom, rcpttos, data):
         self.peer = peer
         self.mailfrom = mailfrom
         self.rcpttos = rcpttos
         self.data = data
 
-class SMTPServerMock(smtpd.SMTPServer):
 
+class SMTPServerMock(smtpd.SMTPServer):
     def __init__(self, *args, **kwargs):
         self.messages = []
         smtpd.SMTPServer.__init__(self, *args, **kwargs)

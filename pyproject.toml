@@ -1,7 +1,15 @@
 
 [tool.black]
 target-version = ['py38']
-include = '.*/backend-tests/.*\.py$'
+include = '''
+(
+  /(
+      backend-tests
+    | testutils
+    | tests
+  )/.*\.py$
+)
+'''
 exclude = '''
 (
   /(
@@ -13,6 +21,7 @@ exclude = '''
     | _build
     | build
     | dist
+    | extra/gitdm
   )/
 )
 '''

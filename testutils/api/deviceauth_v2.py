@@ -13,22 +13,21 @@
 #    limitations under the License.
 import testutils.api.client
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v2/devauth'
+URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/devauth"
 
-URL_AUTHSET_STATUS = '/devices/{did}/auth/{aid}/status'
-URL_AUTHSET = '/devices/{did}/auth/{aid}'
+URL_AUTHSET_STATUS = "/devices/{did}/auth/{aid}/status"
+URL_AUTHSET = "/devices/{did}/auth/{aid}"
 
-URL_DEVICES = '/devices'
-URL_DEVICE = '/devices/{id}'
-URL_AUTHSET_STATUS  = '/devices/{did}/auth/{aid}/status'
-URL_DEVICES_COUNT = '/devices/count'
-URL_LIMITS_MAX_DEVICES = '/limits/max_devices'
+URL_DEVICES = "/devices"
+URL_DEVICE = "/devices/{id}"
+URL_AUTHSET_STATUS = "/devices/{did}/auth/{aid}/status"
+URL_DEVICES_COUNT = "/devices/count"
+URL_LIMITS_MAX_DEVICES = "/limits/max_devices"
+
 
 def preauth_req(id_data, pubkey):
-    return {
-        "identity_data": id_data,
-        "pubkey": pubkey
-    }
+    return {"identity_data": id_data, "pubkey": pubkey}
+
 
 def req_status(status):
-    return {'status': status}
+    return {"status": status}

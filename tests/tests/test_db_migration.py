@@ -25,15 +25,16 @@ from .common_update import update_image, common_update_procedure
 from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
-class TestDBMigration(MenderTesting):
 
+class TestDBMigration(MenderTesting):
     def ensure_persistent_conf_script(self, dir):
         # Because older versions of Yocto branches did not split mender.conf
         # into /etc/mender/mender.conf and /data/mender/mender.conf, we need to
         # provide the content of the second file ourselves.
         name = os.path.join(dir, "ArtifactInstall_Enter_00_ensure_persistent_conf")
         with open(name, "w") as fd:
-            fd.write("""#!/bin/sh
+            fd.write(
+                """#!/bin/sh
 
 set -e
 
@@ -45,11 +46,14 @@ if ! [ -f /data/mender/mender.conf ]; then
     ) > /data/mender/mender.conf
 fi
 exit 0
-""")
+"""
+            )
         return name
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_failure(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_failure(
+        self, setup_with_legacy_client, install_image=conftest.get_valid_image()
+    ):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -63,7 +67,7 @@ exit 0
         mender_device = setup_with_legacy_client.device
 
         dirpath = tempfile.mkdtemp()
-        script_content = '#!/bin/sh\nexit 1\n'
+        script_content = "#!/bin/sh\nexit 1\n"
         with open(os.path.join(dirpath, "ArtifactCommit_Enter_01"), "w") as fd:
             fd.write(script_content)
 
@@ -74,10 +78,14 @@ exit 0
         # first start with the failed update
         host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(install_image,
-                                                       scripts=[ensure_persistent_conf,
-                                                                os.path.join(dirpath, "ArtifactCommit_Enter_01")],
-                                                       version=2)
+            deployment_id, _ = common_update_procedure(
+                install_image,
+                scripts=[
+                    ensure_persistent_conf,
+                    os.path.join(dirpath, "ArtifactCommit_Enter_01"),
+                ],
+                version=2,
+            )
 
             logger.info("waiting for system to reboot twice")
             reboot.verify_reboot_performed(number_of_reboots=2)
@@ -95,7 +103,9 @@ exit 0
         )
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_success(self, setup_with_legacy_client, install_image=conftest.get_valid_image()):
+    def test_migrate_from_legacy_mender_v1_success(
+        self, setup_with_legacy_client, install_image=conftest.get_valid_image()
+    ):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
 
@@ -119,7 +129,7 @@ exit 0
                 script_path = os.path.join(tmpdir, script)
                 scripts_paths += [script_path]
                 with open(script_path, "w") as fd:
-                    fd.write('#!/bin/sh\necho $(basename $0) >> %s\n' % test_log)
+                    fd.write("#!/bin/sh\necho $(basename $0) >> %s\n" % test_log)
 
             # do the succesfull update twice
             host_ip = setup_with_legacy_client.get_virtual_network_host_ip()

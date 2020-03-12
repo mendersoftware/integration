@@ -15,8 +15,8 @@ import subprocess
 
 from .base import BaseContainerManagerNamespace
 
-class DockerNamespace(BaseContainerManagerNamespace):
 
+class DockerNamespace(BaseContainerManagerNamespace):
     def __init__(self, name):
         BaseContainerManagerNamespace.__init__(self, name)
 
@@ -27,23 +27,25 @@ class DockerNamespace(BaseContainerManagerNamespace):
         pass
 
     def execute(self, container_id, cmd):
-        cmd = ['docker', 'exec', '{}'.format(container_id)] + cmd
-        ret = subprocess.check_output(cmd).decode('utf-8').strip()
+        cmd = ["docker", "exec", "{}".format(container_id)] + cmd
+        ret = subprocess.check_output(cmd).decode("utf-8").strip()
         return ret
 
     def cmd(self, container_id, docker_cmd, cmd=[]):
-        cmd = ['docker', docker_cmd] + [str(container_id)] + cmd
-        ret = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        return ret.stdout.decode('utf-8').strip()
+        cmd = ["docker", docker_cmd] + [str(container_id)] + cmd
+        ret = subprocess.run(
+            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        return ret.stdout.decode("utf-8").strip()
 
     def getid(self, filters):
         filters.append(self.name)
         filters = ["grep {}".format(f) for f in filters]
-        cmd = "docker ps | " + " | ".join(filters)  + " | awk '{print $1}'"
+        cmd = "docker ps | " + " | ".join(filters) + " | awk '{print $1}'"
 
-        ret = subprocess.check_output(cmd, shell=True).decode('utf-8').strip()
+        ret = subprocess.check_output(cmd, shell=True).decode("utf-8").strip()
 
-        if ret == '':
-            raise RuntimeError('container id for {} not found'.format(str(filters)))
+        if ret == "":
+            raise RuntimeError("container id for {} not found".format(str(filters)))
 
         return ret

@@ -21,7 +21,9 @@ from .helpers import Helpers
 
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
 from testutils.infra.container_manager import factory
+
 container_factory = factory.get_factory()
+
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
@@ -36,6 +38,7 @@ def standard_setup_one_client(request):
     reset_mender_api(env)
 
     return env
+
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped(request):
@@ -52,6 +55,7 @@ def standard_setup_one_client_bootstrapped(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def standard_setup_one_rofs_client_bootstrapped(request):
     env = container_factory.getRofsClientSetup()
@@ -66,6 +70,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     auth_v2.accept_devices(1)
 
     return env
+
 
 @pytest.fixture(scope="function")
 def standard_setup_one_docker_client_bootstrapped(request):
@@ -82,6 +87,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped(request):
     env = container_factory.getStandardSetup(num_clients=2)
@@ -97,6 +103,7 @@ def standard_setup_two_clients_bootstrapped(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def standard_setup_without_client(request):
     env = container_factory.getStandardSetup(num_clients=0)
@@ -107,13 +114,15 @@ def standard_setup_without_client(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def setup_with_legacy_client(request):
     # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
     # it when running other platforms.
     if conftest.machine_name != "qemux86-64":
-        pytest.skip("Test only works with qemux86-64, and this is %s"
-                    % conftest.machine_name)
+        pytest.skip(
+            "Test only works with qemux86-64, and this is %s" % conftest.machine_name
+        )
 
     env = container_factory.getLegacyClientSetup()
     request.addfinalizer(env.teardown)
@@ -127,6 +136,7 @@ def setup_with_legacy_client(request):
     auth_v2.accept_devices(1)
 
     return env
+
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):
@@ -144,6 +154,7 @@ def standard_setup_with_signed_artifact_client(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def standard_setup_with_short_lived_token(request):
     env = container_factory.getShortLivedTokenSetup()
@@ -159,6 +170,7 @@ def standard_setup_with_short_lived_token(request):
     auth_v2.accept_devices(1)
 
     return env
+
 
 @pytest.fixture(scope="function")
 def setup_failover(request):
@@ -176,6 +188,7 @@ def setup_failover(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
@@ -192,6 +205,7 @@ def running_custom_production_setup(request):
 
     return env
 
+
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):
     env = container_factory.getEnterpriseSetup(num_clients=0)
@@ -201,6 +215,7 @@ def enterprise_no_client(request):
     reset_mender_api(env)
 
     return env
+
 
 @pytest.fixture(scope="function")
 def enterprise_no_client_smtp(request):

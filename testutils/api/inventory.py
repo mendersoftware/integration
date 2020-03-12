@@ -13,10 +13,10 @@
 #    limitations under the License.
 import testutils.api.client
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + '/api/management/v1/inventory'
-URL_DEV = testutils.api.client.GATEWAY_URL + '/api/devices/v1/inventory'
+URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v1/inventory"
+URL_DEV = testutils.api.client.GATEWAY_URL + "/api/devices/v1/inventory"
 
-URL_DEVICE = '/devices/{id}'
-URL_DEVICES = '/devices'
+URL_DEVICE = "/devices/{id}"
+URL_DEVICES = "/devices"
 
-URL_DEVICE_ATTRIBUTES = '/device/attributes'
+URL_DEVICE_ATTRIBUTES = "/device/attributes"

@@ -20,19 +20,25 @@ import time
 import pytest
 
 from .. import conftest
-from ..common_setup import standard_setup_one_rofs_client_bootstrapped, \
-                           standard_setup_with_short_lived_token, setup_failover, \
-                           standard_setup_one_client_bootstrapped
+from ..common_setup import (
+    standard_setup_one_rofs_client_bootstrapped,
+    standard_setup_with_short_lived_token,
+    setup_failover,
+    standard_setup_one_client_bootstrapped,
+)
 from .common_update import update_image, update_image_failed
 from ..MenderAPI import image, inv, logger
 from .mendertesting import MenderTesting
 
+
 class TestBasicIntegration(MenderTesting):
-
-
     @MenderTesting.fast
-    @pytest.mark.skipif(not os.path.exists("mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name),
-                        reason="Thud branch and older from Yocto does not have R/O rootfs support")
+    @pytest.mark.skipif(
+        not os.path.exists(
+            "mender-image-full-cmdline-rofs-%s.ext4" % conftest.machine_name
+        ),
+        reason="Thud branch and older from Yocto does not have R/O rootfs support",
+    )
     def test_double_update_rofs(self, standard_setup_one_rofs_client_bootstrapped):
         """Upgrade a device with two consecutive R/O images using different compression algorithms"""
 
@@ -41,7 +47,9 @@ class TestBasicIntegration(MenderTesting):
         # Verify that partition is read-only as expected
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        host_ip = standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
+        host_ip = (
+            standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
+        )
         update_image(
             mender_device,
             host_ip,
@@ -93,8 +101,10 @@ class TestBasicIntegration(MenderTesting):
             if conf == None:
                 raise SystemExit("Could not retrieve mender.conf")
 
-            conf["Servers"] = [{"ServerURL": "https://docker.mender-failover.io"}, \
-                               {"ServerURL": conf["ServerURL"]}]
+            conf["Servers"] = [
+                {"ServerURL": "https://docker.mender-failover.io"},
+                {"ServerURL": conf["ServerURL"]},
+            ]
             conf.pop("ServerURL")
             image.replace_mender_conf(tmp_image, conf)
 
@@ -104,7 +114,9 @@ class TestBasicIntegration(MenderTesting):
             os.remove(tmp_image)
 
     @MenderTesting.fast
-    def test_failed_updated_and_valid_update(self, standard_setup_one_client_bootstrapped):
+    def test_failed_updated_and_valid_update(
+        self, standard_setup_one_client_bootstrapped
+    ):
         """Upload a device with a broken image, followed by a valid image"""
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -123,13 +135,18 @@ class TestBasicIntegration(MenderTesting):
             compression_type="none",
         )
 
-    def test_forced_update_check_from_client(self, standard_setup_one_client_bootstrapped):
+    def test_forced_update_check_from_client(
+        self, standard_setup_one_client_bootstrapped
+    ):
         """Upload a device with a broken image, followed by a valid image"""
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
         # Give the image a really large wait interval.
-        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % ("\(.*PollInter.*:\)\( *[0-9]*\)", "\\1 1800")
+        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
+            "\(.*PollInter.*:\)\( *[0-9]*\)",
+            "\\1 1800",
+        )
         out = mender_device.run(sedcmd)
         if out.return_code != 0:
             logger.error(out)
@@ -173,13 +190,18 @@ class TestBasicIntegration(MenderTesting):
         )
 
     @pytest.mark.timeout(1000)
-    def test_forced_inventory_update_from_client(self, standard_setup_one_client_bootstrapped):
+    def test_forced_inventory_update_from_client(
+        self, standard_setup_one_client_bootstrapped
+    ):
         """Forces an inventory update from an idling client."""
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
         # Give the image a really large wait interval.
-        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % ("\(.*PollInter.*:\)\( *[0-9]*\)", "\\1 1800")
+        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
+            "\(.*PollInter.*:\)\( *[0-9]*\)",
+            "\\1 1800",
+        )
         mender_device.run(sedcmd)
         mender_device.run("systemctl restart mender-client")
 
@@ -204,7 +226,9 @@ class TestBasicIntegration(MenderTesting):
             wait_count = 0
 
         # Create some new inventory data from an inventory script.
-        mender_device.run("cd /usr/share/mender/inventory && echo '#!/bin/sh\necho host=foobar' > mender-inventory-test && chmod +x mender-inventory-test")
+        mender_device.run(
+            "cd /usr/share/mender/inventory && echo '#!/bin/sh\necho host=foobar' > mender-inventory-test && chmod +x mender-inventory-test"
+        )
 
         # Now that the client has settled into the wait-state, run the command, and check if it does indeed exit the wait state,
         # and send inventory.

@@ -16,17 +16,18 @@ import json
 import testutils.api.client
 import testutils.util.crypto
 
-URL_DEVICES = testutils.api.client.GATEWAY_URL + '/api/devices/v1/authentication'
-URL_INTERNAL = 'http://mender-device-auth:8080/api/internal/v1/devauth'
+URL_DEVICES = testutils.api.client.GATEWAY_URL + "/api/devices/v1/authentication"
+URL_INTERNAL = "http://mender-device-auth:8080/api/internal/v1/devauth"
 
-URL_AUTH_REQS = '/auth_requests'
-URL_LIMITS_MAX_DEVICES = '/tenant/{tid}/limits/max_devices'
+URL_AUTH_REQS = "/auth_requests"
+URL_LIMITS_MAX_DEVICES = "/tenant/{tid}/limits/max_devices"
 
-def auth_req(id_data, pubkey, privkey, tenant_token=''):
+
+def auth_req(id_data, pubkey, privkey, tenant_token=""):
     payload = {
         "id_data": json.dumps(id_data),
         "tenant_token": tenant_token,
         "pubkey": pubkey,
     }
     signature = testutils.util.crypto.rsa_sign_data(json.dumps(payload), privkey)
-    return payload, {'X-MEN-Signature': signature}
+    return payload, {"X-MEN-Signature": signature}

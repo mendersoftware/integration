@@ -13,13 +13,14 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 from base64 import b64encode
-from cryptography.hazmat.backends   import default_backend
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import padding
 
-def rsa_compare_keys(a,b):
+
+def rsa_compare_keys(a, b):
     """
     Compares the base64 encoded DER structure of the keys
     """
@@ -29,17 +30,16 @@ def rsa_compare_keys(a,b):
     b_b64 = "".join(list(filter(None, b.splitlines()))[1:-1])
     return a_b64 == b_b64
 
+
 def rsa_get_keypair():
     private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=1024,
-        backend=default_backend()
+        public_exponent=65537, key_size=1024, backend=default_backend()
     )
     public_key = private_key.public_key()
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption()
+        encryption_algorithm=serialization.NoEncryption(),
     )
     public_pem = public_key.public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -47,15 +47,16 @@ def rsa_get_keypair():
     )
     return private_pem.decode(), public_pem.decode()
 
+
 def rsa_sign_data(data, private_key):
     _private_key = serialization.load_pem_private_key(
         private_key if isinstance(private_key, bytes) else private_key.encode(),
         password=None,
-        backend=default_backend()
+        backend=default_backend(),
     )
     signature = _private_key.sign(
         data if isinstance(data, bytes) else data.encode(),
         padding.PKCS1v15(),
-        hashes.SHA256()
+        hashes.SHA256(),
     )
     return b64encode(signature).decode()

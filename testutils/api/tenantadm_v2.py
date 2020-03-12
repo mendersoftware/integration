@@ -12,9 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-URL = 'http://mender-tenantadm:8080/api'
-URL_MGMT = URL + '/management/v2/tenantadm'
+URL = "http://mender-tenantadm:8080/api"
+URL_MGMT = URL + "/management/v2/tenantadm"
 
-URL_CREATE_ORG_TENANT = '/tenants'
-URL_TENANT_STATUS = '/tenants/{id}/status'
-URL_TENANT_SECRET = '/secret'
+URL_CREATE_ORG_TENANT = "/tenants"
+URL_TENANT_STATUS = "/tenants/{id}/status"
+URL_TENANT_SECRET = "/secret"

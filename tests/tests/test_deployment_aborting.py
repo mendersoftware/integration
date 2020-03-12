@@ -23,9 +23,11 @@ from .common_update import common_update_procedure
 from ..MenderAPI import auth_v2, deploy
 from .mendertesting import MenderTesting
 
-class TestDeploymentAborting(MenderTesting):
 
-    def abort_deployment(self, container_manager, abort_step=None, mender_performs_reboot=False):
+class TestDeploymentAborting(MenderTesting):
+    def abort_deployment(
+        self, container_manager, abort_step=None, mender_performs_reboot=False
+    ):
         """
             Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
@@ -37,12 +39,14 @@ class TestDeploymentAborting(MenderTesting):
 
         mender_device = container_manager.device
 
-        install_image=conftest.get_valid_image()
+        install_image = conftest.get_valid_image()
         expected_partition = mender_device.get_active_partition()
         expected_image_id = mender_device.yocto_id_installed_on_machine()
         host_ip = container_manager.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(install_image, verify_status=False)
+            deployment_id, _ = common_update_procedure(
+                install_image, verify_status=False
+            )
 
             if abort_step is not None:
                 deploy.check_expected_statistics(deployment_id, abort_step, 1)
@@ -69,22 +73,29 @@ class TestDeploymentAborting(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
-    def test_deployment_abortion_instantly(self, standard_setup_one_client_bootstrapped):
+    def test_deployment_abortion_instantly(
+        self, standard_setup_one_client_bootstrapped
+    ):
         self.abort_deployment(standard_setup_one_client_bootstrapped)
 
     # Because the install step is over almost instantly, this test is very
     # fragile, it breaks at the slightest timing issue: MEN-1364
     @pytest.mark.skip
     @MenderTesting.fast
-    def test_deployment_abortion_downloading(self, standard_setup_one_client_bootstrapped):
-        self.abort_deployment(standard_setup_one_client_bootstrapped,
-                              "downloading")
+    def test_deployment_abortion_downloading(
+        self, standard_setup_one_client_bootstrapped
+    ):
+        self.abort_deployment(standard_setup_one_client_bootstrapped, "downloading")
 
     @MenderTesting.fast
-    def test_deployment_abortion_rebooting(self, standard_setup_one_client_bootstrapped):
-        self.abort_deployment(standard_setup_one_client_bootstrapped,
-                              "rebooting",
-                              mender_performs_reboot=True)
+    def test_deployment_abortion_rebooting(
+        self, standard_setup_one_client_bootstrapped
+    ):
+        self.abort_deployment(
+            standard_setup_one_client_bootstrapped,
+            "rebooting",
+            mender_performs_reboot=True,
+        )
 
     @MenderTesting.slow
     def test_deployment_abortion_success(self, standard_setup_one_client_bootstrapped):

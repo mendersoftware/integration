@@ -76,7 +76,8 @@ class DockerComposeNamespace(DockerNamespace):
     ]
     SMTP_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml",
-        COMPOSE_FILES_PATH + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
+        COMPOSE_FILES_PATH
+        + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
 
     NUM_SERVICES_OPENSOURCE = 11

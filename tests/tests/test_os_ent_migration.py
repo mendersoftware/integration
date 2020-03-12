@@ -225,4 +225,3 @@ class TestEntMigration:
 
         assert r.status_code == 200
         assert len(r.json()) == len(migrated_enterprise_setup.init_data["os_devs"])
-

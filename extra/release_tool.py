@@ -644,6 +644,8 @@ def setup_temp_git_checkout(state, repo_git, ref):
         output = execute_git(state, tmpdir, ["init"], capture=True, capture_stderr=True)
         output = execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
                                     "--tags"], capture=True, capture_stderr=True)
+        output = execute_git(state, tmpdir, ["checkout", "FETCH_HEAD~0"], capture=True,
+                             capture_stderr=True)
         output = execute_git(state, tmpdir, ["tag"], capture=True)
         tags = output.split('\n')
         output = execute_git(state, tmpdir, ["branch"], capture=True)

@@ -29,7 +29,7 @@ from ..MenderAPI import deploy, logger
 from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    {"blockAfterStart": False, "logMessageToLookFor": "update fetch failed:",},
+    {"blockAfterStart": False, "logMessageToLookFor": "Update fetch failed:",},
     {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:",},
 ]
 
@@ -245,7 +245,7 @@ class TestFaultTolerance(MenderTesting):
             deployment_id, new_yocto_id = common_update_procedure(install_image)
 
             TestFaultTolerance.wait_for_download_retry_attempts(
-                mender_device, "update fetch failed"
+                mender_device, "Update fetch failed"
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 

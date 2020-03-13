@@ -23,10 +23,10 @@ from ..MenderAPI import auth_v2, inv, logger
 from .mendertesting import MenderTesting
 
 
-@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestInventory(MenderTesting):
     @MenderTesting.fast
-    def test_inventory(self):
+    @pytest.mark.standard_setup_one_client_bootstrapped
+    def test_inventory(self, standard_setup_one_client_bootstrapped):
         """Test that device reports inventory after having bootstrapped."""
 
         attempts = 10

@@ -65,10 +65,6 @@ class ContainerManagerFactory:
         """Setup with enterprise versions for the applicable services"""
         pass
 
-    def getEnterpriseSMTPSetup(self, name=None):
-        """Enterprise setup with SMTP enabled"""
-        pass
-
     def getCustomSetup(self, name=None):
         """A noop setup for tests that use custom setups
 
@@ -102,9 +98,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
-
-    def getEnterpriseSMTPSetup(self, name=None):
-        return DockerComposeEnterpriseSMTPSetup(name)
 
     def getCustomSetup(self, name=None):
         return DockerComposeCustomSetup(name)

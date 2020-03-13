@@ -169,10 +169,30 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
 
-python3 -m pytest \
-    $EXTRA_TEST_ARGS \
-    --verbose \
-    --junitxml=results.xml \
-    $HTML_REPORT \
-    "$@" \
-    $SPECIFIC_INTEGRATION_TEST_FLAG "$SPECIFIC_INTEGRATION_TEST"
+SETUPS="standard_setup_one_client
+standard_setup_one_client_bootstrapped
+standard_setup_one_rofs_client_bootstrapped
+standard_setup_one_docker_client_bootstrapped
+standard_setup_two_clients_bootstrapped
+setup_with_legacy_client
+standard_setup_with_signed_artifact_client
+standard_setup_with_short_lived_token
+setup_failover
+running_custom_production_setup
+enterprise_no_client
+migrated_enterprise_setup"
+
+for setup in $SETUPS; do 
+    date
+    python3 -m pytest \
+        $EXTRA_TEST_ARGS \
+        --verbose \
+        --junitxml=results.xml \
+        $HTML_REPORT \
+        "$@" \
+        -m $setup \
+        -n 0 \
+        $SPECIFIC_INTEGRATION_TEST_FLAG "$SPECIFIC_INTEGRATION_TEST" || true
+    [ -f results.xml ] && cp results.xml results-$setup.xml || true
+    [ -f results.html ] && cp results.html results-$setup.html || true
+done

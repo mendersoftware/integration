@@ -30,6 +30,7 @@ class TestBootstrapping(MenderTesting):
     MENDER_STORE = "/data/mender/mender-store"
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client
     def test_bootstrap(self, standard_setup_one_client):
         """Simply make sure we are able to bootstrap a device"""
 
@@ -68,6 +69,7 @@ class TestBootstrapping(MenderTesting):
             logger.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_reject_bootstrap(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):

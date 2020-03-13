@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import pytest
 import tempfile
 import time
 
@@ -26,6 +27,7 @@ from testutils.infra.device import MenderDevice
 
 
 class TestMultiTenancyEnterprise(MenderTesting):
+    @pytest.mark.enterprise_no_client
     def test_token_validity(self, enterprise_no_client):
         """ verify that only devices with valid tokens can bootstrap
             successfully to a multitenancy setup """
@@ -59,6 +61,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         auth_v2.get_devices(expected_devices=1)
 
+    @pytest.mark.enterprise_no_client
     def test_artifacts_exclusive_to_user(self, enterprise_no_client, valid_image):
         # extra long sleep to make sure all services ran their migrations
         # maybe conductor fails because some services are still in a migration phase,
@@ -99,6 +102,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             assert len(artifacts_for_user)
             assert artifacts_for_user[0]["name"] == user["email"]
 
+    @pytest.mark.enterprise_no_client
     def test_clients_exclusive_to_user(self, enterprise_no_client):
         users = [
             {
@@ -160,6 +164,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             else:
                 assert False, "decommissioned device still available in inventory"
 
+    @pytest.mark.enterprise_no_client
     def test_multi_tenancy_deployment(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
@@ -210,6 +215,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
                     skip_reboot_verification=True,
                 )
 
+    @pytest.mark.enterprise_no_client
     def test_multi_tenancy_deployment_aborting(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """

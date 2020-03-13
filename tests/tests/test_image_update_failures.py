@@ -24,6 +24,7 @@ from .mendertesting import MenderTesting
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestFailures(MenderTesting):
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_update_image_id_already_installed(
         self, standard_setup_one_client_bootstrapped, valid_image,
     ):
@@ -51,6 +52,7 @@ class TestFailures(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_large_update_image(self, standard_setup_one_client_bootstrapped):
         """Installing an image larger than the passive/active parition size should result in a failure."""
 

@@ -50,6 +50,7 @@ exit 0
         return name
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
+    @pytest.mark.setup_with_legacy_client
     def test_migrate_from_legacy_mender_v1_failure(
         self, setup_with_legacy_client, valid_image
     ):
@@ -102,6 +103,7 @@ exit 0
         )
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
+    @pytest.mark.setup_with_legacy_client
     def test_migrate_from_legacy_mender_v1_success(
         self, setup_with_legacy_client, valid_image
     ):

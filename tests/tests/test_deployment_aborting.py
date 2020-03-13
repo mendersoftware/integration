@@ -72,6 +72,7 @@ class TestDeploymentAborting(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_deployment_abortion_instantly(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -82,6 +83,7 @@ class TestDeploymentAborting(MenderTesting):
     # Because the install step is over almost instantly, this test is very
     # fragile, it breaks at the slightest timing issue: MEN-1364
     @pytest.mark.skip
+    @pytest.mark.standard_setup_one_client_bootstrapped
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
         self, standard_setup_one_client_bootstrapped, valid_image
@@ -91,6 +93,7 @@ class TestDeploymentAborting(MenderTesting):
         )
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_deployment_abortion_rebooting(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -102,6 +105,7 @@ class TestDeploymentAborting(MenderTesting):
         )
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_deployment_abortion_success(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):

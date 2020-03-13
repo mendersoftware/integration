@@ -24,7 +24,7 @@ from testutils.infra.container_manager import factory
 container_factory = factory.get_factory()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_one_client(request):
     env = container_factory.getStandardSetup(num_clients=1)
     request.addfinalizer(env.teardown)
@@ -39,7 +39,7 @@ def standard_setup_one_client(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_one_client_bootstrapped(request):
     env = container_factory.getStandardSetup(num_clients=1)
     request.addfinalizer(env.teardown)
@@ -55,7 +55,7 @@ def standard_setup_one_client_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_one_rofs_client_bootstrapped(request):
     env = container_factory.getRofsClientSetup()
     request.addfinalizer(env.teardown)
@@ -71,7 +71,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_one_docker_client_bootstrapped(request):
     env = container_factory.getDockerClientSetup()
     request.addfinalizer(env.teardown)
@@ -87,7 +87,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_two_clients_bootstrapped(request):
     env = container_factory.getStandardSetup(num_clients=2)
     request.addfinalizer(env.teardown)
@@ -103,18 +103,7 @@ def standard_setup_two_clients_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def standard_setup_without_client(request):
-    env = container_factory.getStandardSetup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-    reset_mender_api(env)
-
-    return env
-
-
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def setup_with_legacy_client(request):
     # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
     # it when running other platforms.
@@ -137,7 +126,7 @@ def setup_with_legacy_client(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_with_signed_artifact_client(request):
     env = container_factory.getSignedArtifactClientSetup()
     request.addfinalizer(env.teardown)
@@ -154,7 +143,7 @@ def standard_setup_with_signed_artifact_client(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def standard_setup_with_short_lived_token(request):
     env = container_factory.getShortLivedTokenSetup()
     request.addfinalizer(env.teardown)
@@ -171,7 +160,7 @@ def standard_setup_with_short_lived_token(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def setup_failover(request):
     env = container_factory.getFailoverServerSetup()
     request.addfinalizer(env.teardown)
@@ -188,7 +177,7 @@ def setup_failover(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
@@ -205,20 +194,9 @@ def running_custom_production_setup(request):
     return env
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def enterprise_no_client(request):
     env = container_factory.getEnterpriseSetup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-    reset_mender_api(env)
-
-    return env
-
-
-@pytest.fixture(scope="function")
-def enterprise_no_client_smtp(request):
-    env = container_factory.getEnterpriseSMTPSetup()
     request.addfinalizer(env.teardown)
 
     env.setup()

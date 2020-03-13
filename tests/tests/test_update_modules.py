@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import os
+import pytest
 import subprocess
 import tempfile
 import shutil
@@ -29,6 +30,7 @@ from .mendertesting import MenderTesting
 
 class TestUpdateModules(MenderTesting):
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_docker_client_bootstrapped
     def test_file_update_module(self, standard_setup_one_docker_client_bootstrapped):
         """Test the file based update module, first with a failed update, then
         a successful one."""
@@ -90,6 +92,7 @@ class TestUpdateModules(MenderTesting):
             shutil.rmtree(file_tree)
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_docker_client_bootstrapped
     def test_rootfs_image_rejected(self, standard_setup_one_docker_client_bootstrapped):
         """Test that a rootfs-image update is rejected when such a setup isn't
         present."""
@@ -130,6 +133,7 @@ class TestUpdateModules(MenderTesting):
             shutil.rmtree(file_tree)
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_rootfs_update_module_success(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):

@@ -32,6 +32,7 @@ from .mendertesting import MenderTesting
 
 class TestBasicIntegration(MenderTesting):
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_rofs_client_bootstrapped
     def test_double_update_rofs(
         self, standard_setup_one_rofs_client_bootstrapped, valid_image_rofs
     ):
@@ -67,6 +68,7 @@ class TestBasicIntegration(MenderTesting):
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_with_short_lived_token
     def test_update_jwt_expired(
         self, standard_setup_with_short_lived_token, valid_image
     ):
@@ -79,6 +81,7 @@ class TestBasicIntegration(MenderTesting):
         )
 
     @MenderTesting.fast
+    @pytest.mark.setup_failover
     def test_update_failover_server(self, setup_failover, valid_image):
         """
         Client is initially set up against server A, and then receives an update
@@ -113,6 +116,7 @@ class TestBasicIntegration(MenderTesting):
             os.remove(tmp_image)
 
     @MenderTesting.fast
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_failed_updated_and_valid_update(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -124,6 +128,7 @@ class TestBasicIntegration(MenderTesting):
         update_image_failed(mender_device, host_ip)
         update_image(mender_device, host_ip, install_image=valid_image)
 
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_update_no_compression(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -136,6 +141,7 @@ class TestBasicIntegration(MenderTesting):
             compression_type="none",
         )
 
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_forced_update_check_from_client(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -185,6 +191,7 @@ class TestBasicIntegration(MenderTesting):
         )
 
     @pytest.mark.timeout(1000)
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_forced_inventory_update_from_client(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):

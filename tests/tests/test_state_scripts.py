@@ -534,6 +534,7 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Error_55",  # Error for this state doesn't exist, should never run.
     ]
 
+    @pytest.mark.standard_setup_one_client_bootstrapped
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
         self, standard_setup_one_client_bootstrapped, description, test_set, valid_image
@@ -667,6 +668,7 @@ class TestStateScripts(MenderTesting):
                 )
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(
         self, standard_setup_one_client_bootstrapped, valid_image, description, test_set

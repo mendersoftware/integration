@@ -13,7 +13,9 @@
 #    limitations under the License.
 
 import json
+import pytest
 import time
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
@@ -153,25 +155,31 @@ UwIDAQAB
 
 
 class TestPreauth(TestPreauthBase):
+    @pytest.mark.standard_setup_one_client
     def test_ok_preauth_and_bootstrap(self, standard_setup_one_client):
         self.do_test_ok_preauth_and_bootstrap(standard_setup_one_client)
 
+    @pytest.mark.standard_setup_one_client
     def test_ok_preauth_and_remove(self, standard_setup_one_client):
         self.do_test_ok_preauth_and_remove()
 
+    @pytest.mark.standard_setup_one_client
     def test_fail_preauth_existing(self, standard_setup_one_client):
         self.do_test_fail_preauth_existing()
 
 
 class TestPreauthEnterprise(TestPreauthBase):
+    @pytest.mark.enterprise_no_client
     def test_ok_preauth_and_bootstrap(self, enterprise_no_client):
         self.__create_tenant_and_container(enterprise_no_client)
         self.do_test_ok_preauth_and_bootstrap(enterprise_no_client)
 
+    @pytest.mark.enterprise_no_client
     def test_ok_preauth_and_remove(self, enterprise_no_client):
         self.__create_tenant_and_container(enterprise_no_client)
         self.do_test_ok_preauth_and_remove()
 
+    @pytest.mark.enterprise_no_client
     def test_fail_preauth_existing(self, enterprise_no_client):
         self.__create_tenant_and_container(enterprise_no_client)
         self.do_test_fail_preauth_existing()

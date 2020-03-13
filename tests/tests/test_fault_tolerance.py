@@ -96,6 +96,7 @@ class TestFaultTolerance(MenderTesting):
         logger.info("Waiting for system to finish download")
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_update_image_breaks_networking(
         self,
         standard_setup_one_client_bootstrapped,
@@ -118,6 +119,7 @@ class TestFaultTolerance(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_deployed_during_network_outage(
         self, standard_setup_one_client_bootstrapped, valid_image,
     ):
@@ -153,6 +155,7 @@ class TestFaultTolerance(MenderTesting):
         assert mender_device.yocto_id_installed_on_machine() == expected_yocto_id
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
     def test_image_download_retry_timeout(
         self, standard_setup_one_client_bootstrapped, test_set, valid_image,
@@ -208,6 +211,7 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
     @MenderTesting.slow
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_image_download_retry_hosts_broken(
         self, standard_setup_one_client_bootstrapped, valid_image,
     ):
@@ -239,6 +243,7 @@ class TestFaultTolerance(MenderTesting):
             assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
+    @pytest.mark.standard_setup_one_client_bootstrapped
     def test_rootfs_conf_missing_from_new_update(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):

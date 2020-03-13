@@ -28,6 +28,7 @@ class TestSignedUpdates(MenderTesting):
         we will only test basic backend integration with signed images here.
     """
 
+    @pytest.mark.standard_setup_with_signed_artifact_client
     def test_signed_artifact_success(
         self, standard_setup_with_signed_artifact_client, valid_image
     ):
@@ -39,6 +40,7 @@ class TestSignedUpdates(MenderTesting):
             signed=True,
         )
 
+    @pytest.mark.standard_setup_with_signed_artifact_client
     @pytest.mark.parametrize(
         "standard_setup_with_signed_artifact_client", ["force_new"], indirect=True
     )

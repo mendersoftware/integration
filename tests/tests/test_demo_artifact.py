@@ -90,6 +90,7 @@ class TestDemoArtifact(MenderTesting):
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
     @pytest.mark.timeout(3000)
+    @pytest.mark.running_custom_production_setup
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""
 
@@ -116,6 +117,7 @@ class TestDemoArtifact(MenderTesting):
         run_demo_script.teardown()
         self.auth.reset_auth_token()
 
+    @pytest.mark.running_custom_production_setup
     def demo_artifact_upload(self, run_demo_script, exit_cond="Login password:"):
         proc = run_demo_script(exit_cond)
         arts = self.deploy.get_artifacts()
@@ -130,6 +132,7 @@ class TestDemoArtifact(MenderTesting):
         proc.wait()
         assert proc.returncode == 0
 
+    @pytest.mark.running_custom_production_setup
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""
         run_demo_script()
@@ -160,6 +163,7 @@ class TestDemoArtifact(MenderTesting):
         # Verify the deployment
         self.deploy.check_expected_status("finished", deployment_id)
 
+    @pytest.mark.running_custom_production_setup
     def demo_up_down_up(self, run_demo_script):
         """Test that bringing the demo environment up, then down, then up succeeds"""
 

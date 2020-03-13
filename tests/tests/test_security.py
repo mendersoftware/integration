@@ -31,6 +31,7 @@ from ..MenderAPI import logger
 
 
 class TestSecurity(MenderTesting):
+    @pytest.mark.running_custom_production_setup
     def test_ssl_only(self, running_custom_production_setup):
         """ make sure we are not exposing any non-ssl connections in production environment """
         done = False
@@ -87,6 +88,7 @@ class TestSecurity(MenderTesting):
                 ]
             )
 
+    @pytest.mark.standard_setup_with_short_lived_token
     def test_token_token_expiration(
         self, standard_setup_with_short_lived_token, valid_image
     ):

@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import pytest
+
 from .. import conftest
 from ..common_setup import standard_setup_two_clients_bootstrapped
 from .common_update import common_update_procedure
@@ -60,6 +62,7 @@ class TestGrouping(MenderTesting):
         for device in device_map:
             assert inv.get_device_group(device)["group"] == device_map[device]
 
+    @pytest.mark.standard_setup_two_clients_bootstrapped
     def test_basic_groups(self, standard_setup_two_clients_bootstrapped):
         """Tests various group operations."""
 
@@ -91,6 +94,7 @@ class TestGrouping(MenderTesting):
         inv.delete_device_from_group(bravo, "Red")
         self.validate_group_responses({alpha: None, bravo: None})
 
+    @pytest.mark.standard_setup_two_clients_bootstrapped
     def test_update_device_group(
         self, standard_setup_two_clients_bootstrapped, valid_image
     ):

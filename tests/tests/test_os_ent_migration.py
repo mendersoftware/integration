@@ -160,6 +160,7 @@ def migrate_ent_setup(env):
 
 
 @pytest.mark.usefixtures("migrated_enterprise_setup")
+@pytest.mark.migrated_enterprise_setup
 class TestEntMigration:
     def test_users_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()

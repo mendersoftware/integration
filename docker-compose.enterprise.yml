@@ -3,23 +3,23 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:master
+        image: registry.mender.io/mendersoftware/deployments-enterprise:internal-v2020.02
 
     mender-conductor:
-        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:master
+        image: registry.mender.io/mendersoftware/mender-conductor-enterprise:internal-v2020.02
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:master
+        image: registry.mender.io/mendersoftware/inventory-enterprise:internal-v2020.02
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise:internal-v2020.02
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:internal-v2020.02
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:master
+        image: registry.mender.io/mendersoftware/tenantadm:internal-v2020.02
         environment:
             TENANTADM_CONDUCTOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -33,7 +33,7 @@ services:
             TENANTADM_CONDUCTOR_ADDR: http://mender-conductor:8080
 
     mender-org-welcome-email-preparer:
-        image: registry.mender.io/mendersoftware/org-welcome-email-preparer:master
+        image: registry.mender.io/mendersoftware/org-welcome-email-preparer:internal-v2020.02
         extends:
             file: common.yml
             service: mender-base
@@ -45,7 +45,7 @@ services:
             CONDUCTOR: "http://mender-conductor:8080"
 
     mender-email-sender:
-        image: mendersoftware/email-sender:master
+        image: mendersoftware/email-sender:internal-v2020.02
         extends:
             file: common.yml
             service: mender-base
@@ -63,7 +63,7 @@ services:
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:internal-v2020.02
         environment:
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 

@@ -52,6 +52,9 @@ DRY_RUN = False
 # Whether we are using GitLab
 USE_GITLAB = True
 
+class NotAVersionException(Exception):
+    pass
+
 class Component:
     COMPONENT_MAPS = None
 
@@ -639,6 +642,8 @@ def setup_temp_git_checkout(state, repo_git, ref):
         output = execute_git(state, tmpdir, ["init"], capture=True, capture_stderr=True)
         output = execute_git(state, tmpdir, ["fetch", os.path.join(state['repo_dir'], repo_git),
                                     "--tags"], capture=True, capture_stderr=True)
+        output = execute_git(state, tmpdir, ["checkout", "FETCH_HEAD~0"], capture=True,
+                             capture_stderr=True)
         output = execute_git(state, tmpdir, ["tag"], capture=True)
         tags = output.split('\n')
         output = execute_git(state, tmpdir, ["branch"], capture=True)
@@ -789,7 +794,7 @@ def version_components(version):
 
     match = re.match("^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
     if match is None:
-        raise Exception("Invalid version '%s' passed to version_components." % version)
+        raise NotAVersionException("Invalid version '%s' passed to version_components." % version)
 
     if match.group(4) is None:
         return (int(match.group(1)), int(match.group(2)), int(match.group(3)), None)
@@ -800,7 +805,11 @@ def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
-    (version_major, version_minor, version_patch, version_beta) = version_components(version)
+    try:
+        (version_major, version_minor, version_patch, version_beta) = version_components(version)
+    except NotAVersionException:
+        # Useful for internal releases with special tags.
+        return None
 
     for tag in tag_list:
         (tag_major, tag_minor, tag_patch, tag_beta) = version_components(tag)

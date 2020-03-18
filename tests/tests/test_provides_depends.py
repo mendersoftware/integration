@@ -13,12 +13,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import subprocess
 import time
 
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting
-from ..MenderAPI import auth, auth_v2, deploy, image
+from ..MenderAPI import auth, auth_v2, deploy, image, logger
 
 from testutils.infra.device import MenderDevice
 
@@ -39,7 +40,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
         token = auth.current_tenant["tenant_token"]
 
         # Create client setup with tenant token
-        enterprise_no_client.new_tenant_client("mender-client", token)
+        enterprise_no_client.new_tenant_docker_client("mender-client", token)
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
         mender_device.host_ip = enterprise_no_client.get_virtual_network_host_ip()
 
@@ -52,48 +53,46 @@ class TestProvidesDependsEnterprise(MenderTesting):
         assert len(auth_v2.get_devices_status("accepted")) == 1
 
         # Update client with and artifact with custom provides
-        def prepare_provides_artifact(artifact_filename, artifact_id):
-            artifact = None
-            try:
-                f = open(artifact_filename, "w+b")
-                artifact = image.make_rootfs_artifact(
-                    IMAGE_NAME,
-                    device_type="qemux86-64",
-                    artifact_name=artifact_id,
-                    artifact_file_created=f,
-                    provides={"foo": "bar"},
-                )
-            finally:
-                f.close()
-            return artifact
+        def prepare_provides_artifact(artifact_file, artifact_id):
+            cmd = (
+                # Package MenderAPI in the artifact, just a random folder.
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module MenderAPI -- --provides foo:bar"
+                % (artifact_file, artifact_id)
+            )
+            logger.info("Executing: " + cmd)
+            subprocess.check_call(cmd, shell=True)
+            return artifact_file
 
-        update_image(
+        deployment_id, _ = common_update_procedure(
             mender_device,
             mender_device.host_ip,
             make_artifact=prepare_provides_artifact,
+            # We use verify_status=False, because update module updates are so
+            # quick that it sometimes races past the 'inprogress' status without
+            # the test framework having time to register it. That's not really
+            # the part we're interested in though, so just skip it.
+            verify_status=False,
         )
+        deploy.check_expected_status("finished", deployment_id)
 
         # Issue another update which depends on the custom provides
-        def prepare_depends_artifact(artifact_filename, artifact_id):
-            artifact = None
-            try:
-                f = open(artifact_filename, "w+b")
-                artifact = image.make_rootfs_artifact(
-                    IMAGE_NAME,
-                    device_type="qemux86-64",
-                    artifact_name=artifact_id,
-                    artifact_file_created=f,
-                    depends={"foo": "bar"},
-                )
-            finally:
-                f.close()
-            return artifact
+        def prepare_depends_artifact(artifact_file, artifact_id):
+            cmd = (
+                # Package MenderAPI in the artifact, just a random folder.
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module MenderAPI -- --depends foo:bar"
+                % (artifact_file, artifact_id)
+            )
+            logger.info("Executing: " + cmd)
+            subprocess.check_call(cmd, shell=True)
+            return artifact_file
 
-        update_image(
+        deployment_id, _ = common_update_procedure(
             mender_device,
             mender_device.host_ip,
             make_artifact=prepare_depends_artifact,
+            verify_status=False,
         )
+        deploy.check_expected_status("finished", deployment_id)
 
         # Issue a third update with the same update as previous, this time
         # with insufficient provides -> no artifact status

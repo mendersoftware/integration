@@ -148,10 +148,7 @@ class TestBasicIntegration(MenderTesting):
             "\(.*PollInter.*:\)\( *[0-9]*\)",
             "\\1 1800",
         )
-        out = mender_device.run(sedcmd)
-        if out.return_code != 0:
-            logger.error(out)
-            pytest.fail("failed to set a large polling interval for the client.")
+        mender_device.run(sedcmd)
         mender_device.run("systemctl restart mender-client")
 
         def deployment_callback():
@@ -176,10 +173,7 @@ class TestBasicIntegration(MenderTesting):
                 wait_count = 0
 
         def deployment_triggered_callback():
-            output = mender_device.run("mender -check-update")
-            if output.return_code != 0:
-                logger.error(output)
-                pytest.fail("Forcing the update check failed")
+            mender_device.run("mender -check-update")
             logger.info("mender client has forced an update check")
 
         update_image(

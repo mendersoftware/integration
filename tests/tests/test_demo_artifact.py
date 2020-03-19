@@ -72,6 +72,7 @@ class TestDemoArtifact(MenderTesting):
             password = ""
             time.sleep(60)
             for line in iter(proc.stdout.readline, ""):
+                line = line.decode()
                 logger.info(line)
                 if exit_cond in line.strip():
                     if exit_cond == "Login password:":

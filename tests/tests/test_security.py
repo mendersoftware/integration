@@ -54,7 +54,7 @@ class TestSecurity(MenderTesting):
                     "docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat"
                     % running_custom_production_setup.name,
                     shell=True,
-                )
+                ).decode()
 
                 try:
                     for host in exposed_hosts.split():

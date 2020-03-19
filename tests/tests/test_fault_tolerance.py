@@ -181,16 +181,7 @@ class TestFaultTolerance(MenderTesting):
             if test_set["blockAfterStart"]:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(valid_image)
-                for _ in range(60):
-                    time.sleep(0.5)
-                    # make sure we are writing to the inactive partition
-                    output = mender_device.run(
-                        "fuser -mv %s" % (inactive_part), hide=True
-                    )
-                    if output.return_code == 0:
-                        break
-                else:
-                    pytest.fail("Download never started?")
+                mender_device.run("fuser -mv %s" % (inactive_part))
 
             # use iptables to block traffic to storage
             TestFaultTolerance.manipulate_network_connectivity(
@@ -257,8 +248,10 @@ class TestFaultTolerance(MenderTesting):
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
-        output = mender_device.run("test -e /data/mender/mender.conf", hide=True)
-        if output.return_code != 0:
+        output = mender_device.run(
+            "test -e /data/mender/mender.conf && echo true", hide=True
+        )
+        if output.rstrip() != "true":
             pytest.skip("Needs split mender.conf configuration to run this test")
 
         tmpdir = tempfile.mkdtemp()

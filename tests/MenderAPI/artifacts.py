@@ -15,7 +15,6 @@
 import os
 import shutil
 import subprocess
-from .. import conftest
 
 from . import logger
 
@@ -75,7 +74,7 @@ class Artifacts:
 
         output = subprocess.check_output(
             "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image, shell=True
-        )
+        ).decode()
         import json
 
         conf = json.loads(output)

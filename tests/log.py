@@ -70,7 +70,7 @@ def slugify(value):
     https://github.com/django/django/blob/3.0.2/django/utils/text.py#L393
     """
 
-    value = unicode(value)
+    value = str(value)
     value = (
         unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
     )

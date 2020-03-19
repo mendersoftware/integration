@@ -105,8 +105,7 @@ class TestGrouping(MenderTesting):
         """
 
         # Beware that there will two parallel things going on below, one for
-        # each group, hence a lot of separate execute() calls for each. We aim
-        # to update the group alpha, not beta.
+        # each group. We aim to update the group alpha, not beta.
 
         mender_device_group = standard_setup_two_clients_bootstrapped.device_group
         assert len(mender_device_group) == 2

@@ -104,7 +104,7 @@ class Authentication:
 
             # It might take some time for create_org to propagate the new user.
             # Retry login for a minute.
-            for i in range(60):
+            for _ in range(60):
                 r = self._do_login(self.username, self.password)
                 if r.status_code == 200:
                     break
@@ -117,7 +117,7 @@ class Authentication:
     def create_user(self, username, password, tenant_id=""):
         namespace = get_container_manager().name
         cli = CliUseradm(containers_namespace=namespace)
-        uid = cli.create_user(username, password, tenant_id)
+        cli.create_user(username, password, tenant_id)
 
     def get_tenant_id(self):
         return self.current_tenant["tenant_id"]

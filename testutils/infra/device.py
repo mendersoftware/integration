@@ -165,7 +165,7 @@ class RebootDetector:
         try:
             self.device.run(cmd)
         except:
-            logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
+            logger.error("Unable to stop reboot-detector:\n%s", traceback.format_exc())
             # Only produce our own exception if we won't be hiding an
             # existing one.
             if type is None:
@@ -180,7 +180,7 @@ class RebootDetector:
                 self.server.settimeout(start_time + max_wait - time.time())
                 connection, _ = self.server.accept()
             except socket.timeout:
-                logger.info("Client did not reboot in %d seconds" % max_wait)
+                logger.info("Client did not reboot in %d seconds", max_wait)
                 return False
 
             message = connection.recv(4096).strip()
@@ -201,10 +201,12 @@ class RebootDetector:
                 up = True
                 reboot_count += 1
             else:
-                raise RuntimeError("Unexpected message from mender-reboot-detector")
+                raise RuntimeError(
+                    "Unexpected message '%s' from mender-reboot-detector" % message
+                )
 
             if reboot_count >= number_of_reboots:
-                logger.info("Client has rebooted %d time(s)" % reboot_count)
+                logger.info("Client has rebooted %d time(s)", reboot_count)
                 return True
 
     def verify_reboot_performed(self, max_wait=60 * 60, number_of_reboots=1):
@@ -213,7 +215,7 @@ class RebootDetector:
                 "verify_reboot_performed() used outside of 'with' scope."
             )
 
-        logger.info("Waiting for client to reboot %d time(s)" % number_of_reboots)
+        logger.info("Waiting for client to reboot %d time(s)", number_of_reboots)
         if not self.verify_reboot_performed_impl(
             max_wait=max_wait, number_of_reboots=number_of_reboots
         ):
@@ -225,7 +227,7 @@ class RebootDetector:
                 "verify_reboot_not_performed() used outside of 'with' scope."
             )
 
-        logger.info("Waiting %d seconds to check that client does not reboot" % wait)
+        logger.info("Waiting %d seconds to check that client does not reboot", wait)
         if self.verify_reboot_performed_impl(max_wait=wait):
             raise RuntimeError("Device unexpectedly rebooted")
 

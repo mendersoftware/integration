@@ -32,6 +32,8 @@ import pytest
 import distutils.spawn
 from . import log
 from .tests.mendertesting import MenderTesting
+from testutils.infra.container_manager.base import BaseContainerManagerNamespace
+from testutils.infra.device import MenderDevice, MenderDeviceGroup
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -140,25 +142,41 @@ def pytest_exception_interact(node, call, report):
         logger.error(
             "Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr())
         )
-        try:
-            logger.info("Printing client deployment log, if possible:")
-            output = execute(
-                run,
-                "cat /data/mender/deployment*.log || true",
-                hosts=get_mender_clients(),
-            )
-            logger.info(output)
-        except:
-            logger.info("Not able to print client deployment log")
 
-        try:
-            logger.info("Printing client systemd log, if possible:")
-            output = execute(
-                run, "journalctl -u mender-client || true", hosts=get_mender_clients()
-            )
-            logger.info(output)
-        except:
-            logger.info("Not able to print client systemd log")
+        # Hack-ish way to inspect the fixtures in use by the node to find a MenderDevice/MenderDeviceGroup
+        device = None
+        env_candidates = [
+            val
+            for val in node.funcargs.values()
+            if isinstance(val, BaseContainerManagerNamespace)
+        ]
+        if len(env_candidates) == 1:
+            env = env_candidates[0]
+            dev_candidates = [
+                getattr(env, attr)
+                for attr in dir(env)
+                if isinstance(getattr(env, attr), MenderDevice)
+                or isinstance(getattr(env, attr), MenderDeviceGroup)
+            ]
+            if len(dev_candidates) == 1:
+                device = dev_candidates[0]
+
+        # If we have a device (or group) try to print deployment and systemd logs
+        if device == None:
+            logger.info("Could not find device in test environment, no printing logs")
+        else:
+            try:
+                logger.info("Printing client deployment log, if possible:")
+                output = device.run("cat /data/mender/deployment*.log || true")
+                logger.info(output)
+            except:
+                logger.info("Not able to print client deployment log")
+            try:
+                logger.info("Printing client systemd log, if possible:")
+                output = device.run("journalctl -u mender-client || true")
+                logger.info(output)
+            except:
+                logger.info("Not able to print client systemd log")
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter

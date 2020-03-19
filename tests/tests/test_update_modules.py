@@ -131,7 +131,9 @@ class TestUpdateModules(MenderTesting):
             shutil.rmtree(file_tree)
 
     @MenderTesting.fast
-    def test_rootfs_update_module_success(self, standard_setup_one_client_bootstrapped):
+    def test_rootfs_update_module_success(
+        self, standard_setup_one_client_bootstrapped, valid_image
+    ):
         """Test the rootfs-image-v2 update module, which does the same as the
         built-in rootfs-image type."""
 
@@ -139,12 +141,7 @@ class TestUpdateModules(MenderTesting):
             cmd = (
                 "mender-artifact write module-image "
                 + "-o %s -n %s -t %s -T rootfs-image-v2 -f %s"
-                % (
-                    artifact_file,
-                    artifact_id,
-                    conftest.machine_name,
-                    conftest.get_valid_image(),
-                )
+                % (artifact_file, artifact_id, conftest.machine_name, valid_image,)
             )
             logger.info("Executing: " + cmd)
             subprocess.check_call(cmd, shell=True)

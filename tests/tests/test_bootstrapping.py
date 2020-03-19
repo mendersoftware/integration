@@ -69,7 +69,9 @@ class TestBootstrapping(MenderTesting):
             logger.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
-    def test_reject_bootstrap(self, standard_setup_one_client_bootstrapped):
+    def test_reject_bootstrap(
+        self, standard_setup_one_client_bootstrapped, valid_image
+    ):
         """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -86,7 +88,7 @@ class TestBootstrapping(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             try:
-                common_update_procedure(install_image=conftest.get_valid_image())
+                common_update_procedure(install_image=valid_image)
             except AssertionError:
                 logger.info("Failed to deploy upgrade to rejected device.")
                 reboot.verify_reboot_not_performed()

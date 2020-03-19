@@ -537,7 +537,7 @@ class TestStateScripts(MenderTesting):
 
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
-        self, standard_setup_one_client_bootstrapped, description, test_set
+        self, standard_setup_one_client_bootstrapped, description, test_set, valid_image
     ):
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -570,7 +570,7 @@ class TestStateScripts(MenderTesting):
         os.mkdir(artifact_script_dir)
 
         new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-        shutil.copy(conftest.get_valid_image(), new_rootfs)
+        shutil.copy(valid_image, new_rootfs)
 
         ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
         ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
@@ -655,7 +655,7 @@ class TestStateScripts(MenderTesting):
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(
-        self, standard_setup_one_client_bootstrapped, description, test_set
+        self, standard_setup_one_client_bootstrapped, valid_image, description, test_set
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
@@ -676,7 +676,7 @@ class TestStateScripts(MenderTesting):
             os.mkdir(rootfs_script_dir)
 
             new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-            shutil.copy(conftest.get_valid_image(), new_rootfs)
+            shutil.copy(valid_image, new_rootfs)
             ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
             ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
 

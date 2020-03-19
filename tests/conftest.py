@@ -61,12 +61,21 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.fixture(scope="session")
+def valid_image(request):
+    return "core-image-full-cmdline-%s.ext4" % machine_name
+
+
+@pytest.fixture(scope="session")
+def valid_image_rofs(request):
+    return "mender-image-full-cmdline-rofs-%s.ext4" % machine_name
+
+
 def pytest_configure(config):
     verify_sane_test_environment()
 
     global machine_name
     machine_name = config.getoption("--machine-name")
-    env.valid_image = "core-image-full-cmdline-%s.ext4" % machine_name
 
     env.password = ""
 
@@ -159,10 +168,6 @@ def pytest_exception_interact(node, call, report):
         logger.info("Containers that exited during the test:")
         for line in output.split("\n"):
             logger.info(line)
-
-
-def get_valid_image():
-    return env.valid_image
 
 
 def verify_sane_test_environment():

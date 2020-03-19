@@ -52,7 +52,7 @@ exit 0
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
     def test_migrate_from_legacy_mender_v1_failure(
-        self, setup_with_legacy_client, install_image=conftest.get_valid_image()
+        self, setup_with_legacy_client, valid_image
     ):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
@@ -79,7 +79,7 @@ exit 0
         host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
-                install_image,
+                valid_image,
                 scripts=[
                     ensure_persistent_conf,
                     os.path.join(dirpath, "ArtifactCommit_Enter_01"),
@@ -98,13 +98,13 @@ exit 0
             mender_device,
             host_ip,
             scripts=[ensure_persistent_conf],
-            install_image=install_image,
+            install_image=valid_image,
             version=2,
         )
 
     @pytest.mark.usefixtures("setup_with_legacy_client")
     def test_migrate_from_legacy_mender_v1_success(
-        self, setup_with_legacy_client, install_image=conftest.get_valid_image()
+        self, setup_with_legacy_client, valid_image
     ):
         """
             Start a legacy client (1.7.0) first and update it to the new one.
@@ -136,7 +136,7 @@ exit 0
             update_image(
                 mender_device,
                 host_ip,
-                install_image=install_image,
+                install_image=valid_image,
                 scripts=[ensure_persistent_conf] + scripts_paths,
                 version=2,
             )
@@ -145,7 +145,7 @@ exit 0
             update_image(
                 mender_device,
                 host_ip,
-                install_image=install_image,
+                install_image=valid_image,
                 scripts=[ensure_persistent_conf] + scripts_paths,
                 version=2,
             )

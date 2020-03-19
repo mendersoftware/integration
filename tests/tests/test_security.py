@@ -88,7 +88,9 @@ class TestSecurity(MenderTesting):
                 ]
             )
 
-    def test_token_token_expiration(self, standard_setup_with_short_lived_token):
+    def test_token_token_expiration(
+        self, standard_setup_with_short_lived_token, valid_image
+    ):
         """ verify that an expired token is handled correctly (client gets a new, valid one)
             and that deployments are still recieved by the client
         """
@@ -101,4 +103,4 @@ class TestSecurity(MenderTesting):
 
         # this call verifies that the deployment process goes into an "inprogress" state
         # which is only possible when the client has a valid token.
-        common_update_procedure(install_image=conftest.get_valid_image())
+        common_update_procedure(install_image=valid_image)

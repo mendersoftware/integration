@@ -16,6 +16,7 @@
 import subprocess
 import time
 
+from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting
@@ -32,7 +33,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
         """
 
         DEMO_POLL_INTERVAL = 5
-        IMAGE_NAME = "core-image-full-cmdline-qemux86-64.ext4"
+        IMAGE_NAME = conftest.get_valid_image()
 
         # Create tenant user
         auth.reset_auth_token()
@@ -42,21 +43,20 @@ class TestProvidesDependsEnterprise(MenderTesting):
         # Create client setup with tenant token
         enterprise_no_client.new_tenant_docker_client("mender-client", token)
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
-        mender_device.host_ip = enterprise_no_client.get_virtual_network_host_ip()
+        host_ip = enterprise_no_client.get_virtual_network_host_ip()
 
         # Wait for ssh to be open
         mender_device.ssh_is_opened()
         # Check that the device has authorized with the backend.
-        device = auth_v2.get_devices(expected_devices=1)
-        device_ids = [device[0]["id"]]
+        auth_v2.get_devices(expected_devices=1)
         auth_v2.accept_devices(1)
         assert len(auth_v2.get_devices_status("accepted")) == 1
 
         # Update client with and artifact with custom provides
         def prepare_provides_artifact(artifact_file, artifact_id):
             cmd = (
-                # Package MenderAPI in the artifact, just a random folder.
-                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module MenderAPI -- --provides foo:bar"
+                # Package tests folder in the artifact, just a random folder.
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --provides foo:bar"
                 % (artifact_file, artifact_id)
             )
             logger.info("Executing: " + cmd)
@@ -64,8 +64,6 @@ class TestProvidesDependsEnterprise(MenderTesting):
             return artifact_file
 
         deployment_id, _ = common_update_procedure(
-            mender_device,
-            mender_device.host_ip,
             make_artifact=prepare_provides_artifact,
             # We use verify_status=False, because update module updates are so
             # quick that it sometimes races past the 'inprogress' status without
@@ -78,8 +76,8 @@ class TestProvidesDependsEnterprise(MenderTesting):
         # Issue another update which depends on the custom provides
         def prepare_depends_artifact(artifact_file, artifact_id):
             cmd = (
-                # Package MenderAPI in the artifact, just a random folder.
-                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module MenderAPI -- --depends foo:bar"
+                # Package tests folder in the artifact, just a random folder.
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --depends foo:bar"
                 % (artifact_file, artifact_id)
             )
             logger.info("Executing: " + cmd)
@@ -87,8 +85,6 @@ class TestProvidesDependsEnterprise(MenderTesting):
             return artifact_file
 
         deployment_id, _ = common_update_procedure(
-            mender_device,
-            mender_device.host_ip,
             make_artifact=prepare_depends_artifact,
             verify_status=False,
         )

@@ -7,5 +7,7 @@ RUN apt-get -y -qq update && apt-get -qq -y install \
 COPY requirements-py3.txt .
 
 RUN pip3 install -r requirements-py3.txt
+COPY mender-artifact /usr/local/bin/mender-artifact
+RUN chmod 755 /usr/local/bin/mender-artifact
 
 ENTRYPOINT ["bash", "/tests/run.sh"]

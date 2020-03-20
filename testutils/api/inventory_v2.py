@@ -11,8 +11,17 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import testutils
+import testutils.api.client
+
+SERVICE_URL = "http://mender-inventory:8080"
 
 URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/inventory"
+URL_INTERNAL = SERVICE_URL + "/api/internal/v2/inventory"
 
+URL_SEARCH = "/filters/search"
 URL_FILTERS = "/filters"
+URL_SAVED_FILTERS = "/filters"
+URL_SAVED_FILTER = "/filters/{id}"
+URL_SAVED_FILTER_SEARCH = "/filters/{id}/search"
+
+URL_SEARCH_INTERNAL = "/tenants/{tenant_id}/filters/search"

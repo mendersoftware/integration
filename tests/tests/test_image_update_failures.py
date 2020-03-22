@@ -61,7 +61,12 @@ class TestFailures(MenderTesting):
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(install_image="large_image.dat")
+            deployment_id, _ = common_update_procedure(
+                install_image="large_image.dat",
+                # We use verify_status=False because the device is very quick in reporting
+                # failure and the test framework might miss the 'inprogress' status transition.
+                verify_status=False,
+            )
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             reboot.verify_reboot_not_performed()
             deploy.check_expected_status("finished", deployment_id)

@@ -1592,16 +1592,22 @@ def do_build(args):
 
     for pr in args.pr or []:
         match = re.match("^([^/]+)/([0-9]+)$", pr)
-        if match is None:
-            raise Exception("%s is not a valid repo/pr pair!" % pr)
+        if match is not None:
+            pr_str = "pull/%s/head" % match.group(2)
+        else:
+            match = re.match("^([^/]+)/(.+)$", pr)
+            if match is not None:
+                pr_str = match.group(2)
+            else:
+                raise Exception("%s is not a valid repo/pr or repo/branch pair!" % pr)
         repo = match.group(1)
         assert repo in GIT_TO_BUILDPARAM_MAP.keys(), "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
         if GIT_TO_BUILDPARAM_MAP[repo] in extra_buildparams:
             # For non-version repos
-            update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], "pull/%s/head" % match.group(2))
+            update_state(state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], pr_str)
         else:
             # For versioned Mender repos.
-            tag_avail[repo]['build_tag'] = "pull/%s/head" % match.group(2)
+            tag_avail[repo]['build_tag'] = pr_str
 
     trigger_build(state, tag_avail)
 
@@ -2130,7 +2136,8 @@ def main():
                         help="Select server CI where to trigger the builds. Default is GitLab.")
     parser.add_argument("--pr", dest="pr", metavar="REPO/PR-NUMBER", action="append",
                         help="Can only be used with -b. Specifies a repository and pull request number "
-                        + "that should be triggered with the rest of the repository versions. "
+                        + "that should be triggered with the rest of the repository versions. It is "
+                        + "also possible to specify a branch name instead of a pull request number. "
                         + "May be specified more than once.")
     parser.add_argument("-l", "--list", metavar="container|docker|git", dest="list", const="git", nargs="?",
                         help="List the Mender repositories in use for this release. The optional "

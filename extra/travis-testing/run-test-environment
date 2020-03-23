@@ -83,7 +83,7 @@ shift
 echo "-- compose command: $COMPOSE_CMD -f $TESTS_COMPOSE_PATH"
 
 if [ -n "$failed" ]; then
-    tmppath=$(mktemp /tmp/acceptance.XXXXXX)
+    tmppath=$(mktemp ${SELFDIR}/acceptance.XXXXXX)
     echo "-- tests failed, dumping logs to $tmppath"
     $COMPOSE_CMD -f $TESTS_COMPOSE_PATH logs > $tmppath
 fi

@@ -21,3 +21,5 @@ update.mender
 # folders for local testing dependencies
 node_modules
 venv
+
+.dir-locals.el # Emacs directory local variables

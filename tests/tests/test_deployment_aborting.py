@@ -97,24 +97,3 @@ class TestDeploymentAborting(MenderTesting):
             "rebooting",
             mender_performs_reboot=True,
         )
-
-    @MenderTesting.slow
-    def test_deployment_abortion_success(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        # maybe an acceptance test is enough for this check?
-
-        mender_device = standard_setup_one_client_bootstrapped.device
-
-        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
-        with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(valid_image)
-
-            reboot.verify_reboot_performed()
-
-        deploy.check_expected_statistics(deployment_id, "success", 1)
-        time.sleep(5)
-
-        deploy.abort_finished_deployment(deployment_id)
-        deploy.check_expected_statistics(deployment_id, "success", 1)
-        deploy.check_expected_status("finished", deployment_id)

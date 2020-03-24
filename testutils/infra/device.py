@@ -326,12 +326,17 @@ def _put(device, file, local_path=".", remote_path="."):
     )
 
 
+# Roughly the execution time of the slowest test (*) times 3
+# (*) As per 2020-03-24 test_image_download_retry_hosts_broken takes 515.13 seconds
+_DEFAULT_WAIT_TIME = 25 * 60
+
+
 def _run(conn, cmd, **kw):
     if kw.get("wait") is not None:
         wait = kw["wait"]
         del kw["wait"]
     else:
-        wait = 60 * 60
+        wait = _DEFAULT_WAIT_TIME
 
     result = None
     start_time = time.time()

@@ -79,9 +79,6 @@ class TestDeploymentAborting(MenderTesting):
             standard_setup_one_client_bootstrapped, valid_image
         )
 
-    # Because the install step is over almost instantly, this test is very
-    # fragile, it breaks at the slightest timing issue: MEN-1364
-    @pytest.mark.skip
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
         self, standard_setup_one_client_bootstrapped, valid_image

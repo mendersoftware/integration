@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,9 +25,7 @@ from .mendertesting import MenderTesting
 class TestFailures(MenderTesting):
     @MenderTesting.slow
     def test_update_image_id_already_installed(
-        self,
-        standard_setup_one_client_bootstrapped,
-        install_image=conftest.get_valid_image(),
+        self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """Uploading an image with an incorrect name set results in failure and rollback."""
 
@@ -37,7 +34,7 @@ class TestFailures(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, expected_image_id = common_update_procedure(
-                install_image, True
+                valid_image, True
             )
             reboot.verify_reboot_performed()
 

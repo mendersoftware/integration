@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -120,9 +119,7 @@ class TestFaultTolerance(MenderTesting):
 
     @MenderTesting.slow
     def test_deployed_during_network_outage(
-        self,
-        standard_setup_one_client_bootstrapped,
-        install_image=conftest.get_valid_image(),
+        self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """
             Install a valid upgrade image while there is no network availability on the device
@@ -138,7 +135,7 @@ class TestFaultTolerance(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, expected_yocto_id = common_update_procedure(
-                install_image, verify_status=False
+                valid_image, verify_status=False
             )
             time.sleep(60)
 
@@ -158,10 +155,7 @@ class TestFaultTolerance(MenderTesting):
     @MenderTesting.slow
     @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
     def test_image_download_retry_timeout(
-        self,
-        standard_setup_one_client_bootstrapped,
-        test_set,
-        install_image=conftest.get_valid_image(),
+        self, standard_setup_one_client_bootstrapped, test_set, valid_image,
     ):
         """
             Install an update, and block storage connection when we detect it's
@@ -186,17 +180,8 @@ class TestFaultTolerance(MenderTesting):
         with mender_device.get_reboot_detector(host_ip) as reboot:
             if test_set["blockAfterStart"]:
                 # Block after we start the download.
-                deployment_id, new_yocto_id = common_update_procedure(install_image)
-                for _ in range(60):
-                    time.sleep(0.5)
-                    # make sure we are writing to the inactive partition
-                    output = mender_device.run(
-                        "fuser -mv %s" % (inactive_part), hide=True
-                    )
-                    if output.return_code == 0:
-                        break
-                else:
-                    pytest.fail("Download never started?")
+                deployment_id, new_yocto_id = common_update_procedure(valid_image)
+                mender_device.run("fuser -mv %s" % (inactive_part))
 
             # use iptables to block traffic to storage
             TestFaultTolerance.manipulate_network_connectivity(
@@ -205,7 +190,7 @@ class TestFaultTolerance(MenderTesting):
 
             if not test_set["blockAfterStart"]:
                 # Block before we start the download.
-                deployment_id, new_yocto_id = common_update_procedure(install_image)
+                deployment_id, new_yocto_id = common_update_procedure(valid_image)
 
             # re-enable connectivity after 2 retries
             TestFaultTolerance.wait_for_download_retry_attempts(
@@ -224,9 +209,7 @@ class TestFaultTolerance(MenderTesting):
 
     @MenderTesting.slow
     def test_image_download_retry_hosts_broken(
-        self,
-        standard_setup_one_client_bootstrapped,
-        install_image=conftest.get_valid_image(),
+        self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """
             Block storage host (minio) by modifying the hosts file.
@@ -242,7 +225,7 @@ class TestFaultTolerance(MenderTesting):
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, new_yocto_id = common_update_procedure(install_image)
+            deployment_id, new_yocto_id = common_update_procedure(valid_image)
 
             TestFaultTolerance.wait_for_download_retry_attempts(
                 mender_device, "Update fetch failed"
@@ -257,7 +240,7 @@ class TestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
     def test_rootfs_conf_missing_from_new_update(
-        self, standard_setup_one_client_bootstrapped
+        self, standard_setup_one_client_bootstrapped, valid_image
     ):
         """Test that the client is able to reboot to roll back if module or rootfs
         config is missing from the new partition. This only works for cases where a
@@ -265,13 +248,15 @@ class TestFaultTolerance(MenderTesting):
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
-        output = mender_device.run("test -e /data/mender/mender.conf", hide=True)
-        if output.return_code != 0:
+        output = mender_device.run(
+            "test -e /data/mender/mender.conf && echo true", hide=True
+        )
+        if output.rstrip() != "true":
             pytest.skip("Needs split mender.conf configuration to run this test")
 
         tmpdir = tempfile.mkdtemp()
         try:
-            orig_image = conftest.get_valid_image()
+            orig_image = valid_image
             image_name = os.path.join(tmpdir, os.path.basename(orig_image))
             shutil.copyfile(orig_image, image_name)
 

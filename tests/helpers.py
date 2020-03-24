@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,11 +20,10 @@ import tempfile
 import pytest
 import os
 import socket
-import traceback
 import json
 from . import conftest
 
-from MenderAPI import auth_v2
+from .MenderAPI import auth_v2
 
 logger = logging.getLogger()
 
@@ -42,7 +40,7 @@ class Helpers:
                 filename,
                 self.artifact_prefix,
             )
-            output = subprocess.check_output(cmd, shell=True).strip()
+            output = subprocess.check_output(cmd, shell=True).decode().strip()
             logger.info("Running: " + cmd + " returned: " + output)
             return output
 
@@ -58,7 +56,7 @@ class Helpers:
     @staticmethod
     def identity_script_to_identity_string(output):
         data_dict = {}
-        for line in output.split("\n"):
+        for line in output.rstrip().split("\n"):
             split = line.split("=", 2)
             assert len(split) == 2
             data_dict[split[0]] = split[1]

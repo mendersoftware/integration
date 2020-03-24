@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -92,7 +91,9 @@ class TestGrouping(MenderTesting):
         inv.delete_device_from_group(bravo, "Red")
         self.validate_group_responses({alpha: None, bravo: None})
 
-    def test_update_device_group(self, standard_setup_two_clients_bootstrapped):
+    def test_update_device_group(
+        self, standard_setup_two_clients_bootstrapped, valid_image
+    ):
         """
             Perform a successful upgrade on one group of devices, and assert that:
             * deployment status/logs are correct.
@@ -104,8 +105,7 @@ class TestGrouping(MenderTesting):
         """
 
         # Beware that there will two parallel things going on below, one for
-        # each group, hence a lot of separate execute() calls for each. We aim
-        # to update the group alpha, not beta.
+        # each group. We aim to update the group alpha, not beta.
 
         mender_device_group = standard_setup_two_clients_bootstrapped.device_group
         assert len(mender_device_group) == 2
@@ -131,7 +131,7 @@ class TestGrouping(MenderTesting):
         ], bravo.get_reboot_detector(host_ip) as reboot[bravo]:
 
             deployment_id, expected_image_id = common_update_procedure(
-                conftest.get_valid_image(), devices=[id_alpha]
+                valid_image, devices=[id_alpha]
             )
 
             # Extra long wait here, because a real update takes quite a lot of time.

@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -60,7 +59,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         auth_v2.get_devices(expected_devices=1)
 
-    def test_artifacts_exclusive_to_user(self, enterprise_no_client):
+    def test_artifacts_exclusive_to_user(self, enterprise_no_client, valid_image):
         # extra long sleep to make sure all services ran their migrations
         # maybe conductor fails because some services are still in a migration phase,
         # and not serving the API yet?
@@ -84,7 +83,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             with artifact_lock:
                 with tempfile.NamedTemporaryFile() as artifact_file:
                     artifact = image.make_rootfs_artifact(
-                        conftest.get_valid_image(),
+                        valid_image,
                         conftest.machine_name,
                         user["email"],
                         artifact_file,
@@ -161,7 +160,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             else:
                 assert False, "decommissioned device still available in inventory"
 
-    def test_multi_tenancy_deployment(self, enterprise_no_client):
+    def test_multi_tenancy_deployment(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
 
@@ -207,11 +206,11 @@ class TestMultiTenancyEnterprise(MenderTesting):
                 update_image(
                     mender_device,
                     host_ip,
-                    install_image=conftest.get_valid_image(),
+                    install_image=valid_image,
                     skip_reboot_verification=True,
                 )
 
-    def test_multi_tenancy_deployment_aborting(self, enterprise_no_client):
+    def test_multi_tenancy_deployment_aborting(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """
 
@@ -233,9 +232,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             auth_v2.accept_devices(1)
 
         for user in users:
-            deployment_id, _ = common_update_procedure(
-                install_image=conftest.get_valid_image()
-            )
+            deployment_id, _ = common_update_procedure(valid_image)
             deploy.abort(deployment_id)
             deploy.check_expected_statistics(deployment_id, "aborted", 1)
 

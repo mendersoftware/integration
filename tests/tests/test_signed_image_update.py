@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,12 +28,14 @@ class TestSignedUpdates(MenderTesting):
         we will only test basic backend integration with signed images here.
     """
 
-    def test_signed_artifact_success(self, standard_setup_with_signed_artifact_client):
+    def test_signed_artifact_success(
+        self, standard_setup_with_signed_artifact_client, valid_image
+    ):
 
         update_image(
             standard_setup_with_signed_artifact_client.device,
             standard_setup_with_signed_artifact_client.get_virtual_network_host_ip(),
-            install_image=conftest.get_valid_image(),
+            install_image=valid_image,
             signed=True,
         )
 
@@ -42,7 +43,7 @@ class TestSignedUpdates(MenderTesting):
         "standard_setup_with_signed_artifact_client", ["force_new"], indirect=True
     )
     def test_unsigned_artifact_fails_deployment(
-        self, standard_setup_with_signed_artifact_client
+        self, standard_setup_with_signed_artifact_client, valid_image
     ):
         """
             Make sure that an unsigned image fails, and is handled by the backend.
@@ -50,9 +51,7 @@ class TestSignedUpdates(MenderTesting):
             we installed a signed image earlier without a verification key in mender.conf
         """
 
-        deployment_id, _ = common_update_procedure(
-            install_image=conftest.get_valid_image()
-        )
+        deployment_id, _ = common_update_procedure(install_image=valid_image)
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "failure", 1)
 

@@ -152,7 +152,7 @@ dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 EXTRA_TEST_ARGS=
 HTML_REPORT="--html=report.html --self-contained-html"
 
-if ! pip2 list |grep -e pytest-xdist >/dev/null 2>&1; then
+if ! python3 -m pip show pytest-xdist >/dev/null; then
     EXTRA_TEST_ARGS="--maxfail=1"
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
@@ -160,7 +160,7 @@ else
     EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
 fi
 
-if ! pip2 list|grep -e pytest-html >/dev/null 2>&1; then
+if ! python3 -m pip show pytest-html >/dev/null; then
     HTML_REPORT=""
     echo "WARNING: install pytest-html for html results report"
 fi
@@ -169,7 +169,7 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
 
-python2 -m pytest \
+python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \

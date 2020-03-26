@@ -131,14 +131,15 @@ def pytest_exception_interact(node, call, report):
         else:
             try:
                 logger.info("Printing client deployment log, if possible:")
-                output = device.run("cat /data/mender/deployment*.log || true")
+                output = device.run("cat /data/mender/deployment*.log || true", wait=60)
                 logger.info(output)
             except:
                 logger.info("Not able to print client deployment log")
             try:
                 logger.info("Printing client systemd log, if possible:")
                 output = device.run(
-                    "journalctl -u %s || true" % device.get_client_service_name()
+                    "journalctl -u %s || true" % device.get_client_service_name(),
+                    wait=60,
                 )
                 logger.info(output)
             except:

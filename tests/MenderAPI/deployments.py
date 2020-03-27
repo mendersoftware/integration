@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -197,7 +196,7 @@ class Deployments:
                         all_failed_logs += (
                             self.get_logs(device["id"], deployment_id) + "\n" * 5
                         )
-                    except Exception as e:
+                    except Exception:
                         logger.warning("failed to get logs.")
 
                 pytest.fail(

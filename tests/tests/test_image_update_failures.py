@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,9 +25,7 @@ from .mendertesting import MenderTesting
 class TestFailures(MenderTesting):
     @MenderTesting.slow
     def test_update_image_id_already_installed(
-        self,
-        standard_setup_one_client_bootstrapped,
-        install_image=conftest.get_valid_image(),
+        self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """Uploading an image with an incorrect name set results in failure and rollback."""
 
@@ -37,7 +34,7 @@ class TestFailures(MenderTesting):
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, expected_image_id = common_update_procedure(
-                install_image, True
+                valid_image, True
             )
             reboot.verify_reboot_performed()
 
@@ -61,7 +58,12 @@ class TestFailures(MenderTesting):
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(install_image="large_image.dat")
+            deployment_id, _ = common_update_procedure(
+                install_image="large_image.dat",
+                # We use verify_status=False because the device is very quick in reporting
+                # failure and the test framework might miss the 'inprogress' status transition.
+                verify_status=False,
+            )
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             reboot.verify_reboot_not_performed()
             deploy.check_expected_status("finished", deployment_id)

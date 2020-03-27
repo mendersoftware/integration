@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# Copyright 2020 Mender Software AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -537,7 +536,7 @@ class TestStateScripts(MenderTesting):
 
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
-        self, standard_setup_one_client_bootstrapped, description, test_set
+        self, standard_setup_one_client_bootstrapped, description, test_set, valid_image
     ):
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -570,10 +569,10 @@ class TestStateScripts(MenderTesting):
         os.mkdir(artifact_script_dir)
 
         new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-        shutil.copy(conftest.get_valid_image(), new_rootfs)
+        shutil.copy(valid_image, new_rootfs)
 
         ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
-        ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
+        ps.stdin.write(b"cd /etc/mender\n" b"mkdir scripts\n" b"cd scripts\n")
         ps.stdin.close()
         ps.wait()
 
@@ -619,14 +618,29 @@ class TestStateScripts(MenderTesting):
                     reboot_detector.verify_reboot_performed()
 
                 # wait until the last script has been run
-                logger.debug("waint until the last script has been run")
+                logger.debug("Wait until the last script has been run")
                 script_logs = ""
                 timeout = time.time() + 60 * 60
                 while timeout >= time.time():
                     time.sleep(3)
-                    script_logs = mender_device.run("cat /data/test_state_scripts.log")
-                    if test_set.get("ExpectedScriptFlow")[-1] in script_logs:
-                        break
+                    try:
+                        script_logs = mender_device.run(
+                            "cat /data/test_state_scripts.log"
+                        )
+                        if test_set.get("ExpectedScriptFlow")[-1] in script_logs:
+                            break
+                    except EOFError:
+                        # In some cases the SSH connection raises here EOF due to the
+                        # client simulating powerloss. The test will just retry
+                        pass
+                else:
+                    pytest.fail(
+                        "Timeout waiting for ExpectedScriptFlow in state scripts. Expected %s, got %s"
+                        % (
+                            test_set.get("ExpectedScriptFlow"),
+                            ", ".join(script_logs.rstrip().split("\n")),
+                        )
+                    )
 
                 # make sure the client ended up on the right partition
                 if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
@@ -655,7 +669,7 @@ class TestStateScripts(MenderTesting):
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(
-        self, standard_setup_one_client_bootstrapped, description, test_set
+        self, standard_setup_one_client_bootstrapped, valid_image, description, test_set
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
@@ -676,18 +690,21 @@ class TestStateScripts(MenderTesting):
             os.mkdir(rootfs_script_dir)
 
             new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-            shutil.copy(conftest.get_valid_image(), new_rootfs)
+            shutil.copy(valid_image, new_rootfs)
             ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
-            ps.stdin.write("cd /etc/mender\n" "mkdir scripts\n" "cd scripts\n")
+            ps.stdin.write(b"cd /etc/mender\n" b"mkdir scripts\n" b"cd scripts\n")
 
             with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
                 if test_set.get("CorruptEtcScriptVersionInUpdate"):
                     fd.write("1000")
                 else:
                     fd.write("2")
-            ps.stdin.write("rm version\n")
+            ps.stdin.write(b"rm version\n")
             ps.stdin.write(
-                "write %s version\n" % os.path.join(rootfs_script_dir, "version")
+                bytes(
+                    "write %s version\n" % os.path.join(rootfs_script_dir, "version"),
+                    "utf-8",
+                )
             )
             for script in self.scripts:
                 if script.startswith("Artifact"):
@@ -698,9 +715,13 @@ class TestStateScripts(MenderTesting):
                         fd.write(script_failure_content)
                     else:
                         fd.write(script_content)
-                    os.fchmod(fd.fileno(), 0755)
+                    os.fchmod(fd.fileno(), 0o0755)
                 ps.stdin.write(
-                    "write %s %s\n" % (os.path.join(rootfs_script_dir, script), script)
+                    bytes(
+                        "write %s %s\n"
+                        % (os.path.join(rootfs_script_dir, script), script),
+                        "utf-8",
+                    )
                 )
 
             ps.stdin.close()
@@ -780,10 +801,10 @@ class TestStateScripts(MenderTesting):
                 ]
                 starttime = time.time()
                 while starttime + 60 * 60 >= time.time():
-                    result = mender_device.run(
+                    output = mender_device.run(
                         "grep Error /data/test_state_scripts.log", warn_only=True
                     )
-                    if result.succeeded:
+                    if output.rstrip() != "":
                         # If it succeeds, stop.
                         break
                     else:

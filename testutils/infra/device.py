@@ -14,12 +14,26 @@
 
 import time
 import logging
+import traceback
 import os
 import socket
+import subprocess
 
-import fabric
+from fabric import Connection
+from paramiko import SSHException
+from paramiko.ssh_exception import NoValidConnectionsError
+from paramiko.client import MissingHostKeyPolicy
+from invoke.exceptions import UnexpectedExit
 
 logger = logging.getLogger()
+
+
+class IgnorePolicy(MissingHostKeyPolicy):
+    """Custom paramiko-like policy to just accept silently any unknown host key
+    """
+
+    def missing_host_key(self, client, hostname, key):
+        pass
 
 
 class MenderDevice:
@@ -37,6 +51,15 @@ class MenderDevice:
         user -- Remote SSH user
         """
         self.host, self.port = host_string.split(":")
+        self.user = user
+        self._conn = Connection(
+            host=self.host,
+            user=self.user,
+            port=self.port,
+            connect_timeout=60,
+            connect_kwargs={"password": "", "banner_timeout": 60, "auth_timeout": 60},
+        )
+        self._conn.client.set_missing_host_key_policy(IgnorePolicy())
 
     @property
     def host_string(self):
@@ -52,31 +75,15 @@ class MenderDevice:
         hide - do not print stdout nor stderr, and do not fail on errors
         warn_only - do not fail on errors
         wait - timeout for how long to retry the execution
-
-        References for Fabric 2 migration:
-        - https://www.fabfile.org/upgrading.html#upgrading
-        - http://docs.pyinvoke.org/en/latest/api/runners.html#invoke.runners.Runner.run
-        - https://docs.fabfile.org/en/1.12.1/api/core/context_managers.html#fabric.context_managers.quiet
         """
-        if kw.get("hide") == True:
-            del kw["hide"]
-            with fabric.api.quiet():
-                return self._run(cmd, **kw)
-        elif kw.get("warn_only") == True:
+        # TODO: Rework tests using warn_only and remove it
+        # TODO: Revisit tests using hide and check if they expect errors
+        if kw.get("warn_only") == True:
             del kw["warn_only"]
-            with fabric.api.settings(warn_only=True):
-                return self._run(cmd, **kw)
-        else:
-            return self._run(cmd, **kw)
-
-    def _run(self, cmd, **kw):
-        if not fabric.api.env.host_string:
-            output = fabric.api.execute(self.run, cmd, hosts=self.host_string, **kw)
-            # Fabric's execute returns a dict with the output
-            # for each host. Return only our output
-            return output[self.host_string]
-
-        return _run(cmd, **kw)
+            kw["warn"] = True
+        if kw.get("hide") == True:
+            kw["warn"] = True
+        return _run(self._conn, cmd, **kw).stdout
 
     def put(self, file, local_path=".", remote_path="."):
         """Copy local_path/file into remote_path over SSH connection
@@ -86,13 +93,8 @@ class MenderDevice:
         local_path - local dirpath
         remote_path - remote dirpath
         """
-        if not fabric.api.env.host_string:
-            fabric.api.execute(
-                self.put, file, local_path, remote_path, hosts=self.host_string
-            )
-            return
 
-        _put(file, local_path, remote_path)
+        _put(self, file, local_path, remote_path)
 
     def ssh_is_opened(self, wait=60 * 60):
         """Block until SSH connection is established on the device
@@ -165,7 +167,7 @@ class RebootDetector:
         try:
             self.device.run(cmd)
         except:
-            logger.error("Unable to stop reboot-detector:\n%s" % traceback.format_exc())
+            logger.error("Unable to stop reboot-detector:\n%s", traceback.format_exc())
             # Only produce our own exception if we won't be hiding an
             # existing one.
             if type is None:
@@ -180,10 +182,10 @@ class RebootDetector:
                 self.server.settimeout(start_time + max_wait - time.time())
                 connection, _ = self.server.accept()
             except socket.timeout:
-                logger.info("Client did not reboot in %d seconds" % max_wait)
+                logger.info("Client did not reboot in %d seconds", max_wait)
                 return False
 
-            message = connection.recv(4096).strip()
+            message = connection.recv(4096).decode().strip()
             connection.close()
 
             if message == "shutdown":
@@ -201,10 +203,12 @@ class RebootDetector:
                 up = True
                 reboot_count += 1
             else:
-                raise RuntimeError("Unexpected message from mender-reboot-detector")
+                raise RuntimeError(
+                    "Unexpected message '%s' from mender-reboot-detector" % message
+                )
 
             if reboot_count >= number_of_reboots:
-                logger.info("Client has rebooted %d time(s)" % reboot_count)
+                logger.info("Client has rebooted %d time(s)", reboot_count)
                 return True
 
     def verify_reboot_performed(self, max_wait=60 * 60, number_of_reboots=1):
@@ -213,7 +217,7 @@ class RebootDetector:
                 "verify_reboot_performed() used outside of 'with' scope."
             )
 
-        logger.info("Waiting for client to reboot %d time(s)" % number_of_reboots)
+        logger.info("Waiting for client to reboot %d time(s)", number_of_reboots)
         if not self.verify_reboot_performed_impl(
             max_wait=max_wait, number_of_reboots=number_of_reboots
         ):
@@ -225,7 +229,7 @@ class RebootDetector:
                 "verify_reboot_not_performed() used outside of 'with' scope."
             )
 
-        logger.info("Waiting %d seconds to check that client does not reboot" % wait)
+        logger.info("Waiting %d seconds to check that client does not reboot", wait)
         if self.verify_reboot_performed_impl(max_wait=wait):
             raise RuntimeError("Device unexpectedly rebooted")
 
@@ -233,8 +237,9 @@ class RebootDetector:
 class MenderDeviceGroup:
     """Group of SSH accessible devices with Mender client
 
-    Currently, run/put methods are serialized, but they will be migrated to a parallel execution with Fabric 2
-    https://docs.fabfile.org/en/latest/api/group.html
+    Currently, run/put methods are serialized, but they could be migrated to a parallel execution
+    ref https://docs.fabfile.org/en/latest/api/group.html
+    However there is a real challenge in the underlying _run method to be able to handle GroupException
     """
 
     def __init__(self, host_string_list, user="root"):
@@ -268,21 +273,18 @@ class MenderDeviceGroup:
             dev.ssh_is_opened(wait)
 
 
-def _ssh_prep_args():
-    return _ssh_prep_args_impl("ssh")
+def _ssh_prep_args(device):
+    return _ssh_prep_args_impl(device, "ssh")
 
 
-def _scp_prep_args():
-    return _ssh_prep_args_impl("scp")
+def _scp_prep_args(device):
+    return _ssh_prep_args_impl(device, "scp")
 
 
-def _ssh_prep_args_impl(tool):
-    if not fabric.api.env.host_string:
-        raise Exception("get()/put() called outside of execute()")
-
+def _ssh_prep_args_impl(device, tool):
     cmd = "%s -C -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" % tool
 
-    host_parts = fabric.api.env.host_string.split(":")
+    host_parts = device.host_string.split(":")
     host = ""
     port = ""
     port_flag = "-p"
@@ -300,47 +302,79 @@ def _ssh_prep_args_impl(tool):
     return (cmd, host, port)
 
 
-def _put(file, local_path=".", remote_path="."):
-    (scp, host, port) = _scp_prep_args()
+def _put(device, file, local_path=".", remote_path="."):
+    (scp, host, port) = _scp_prep_args(device)
 
-    fabric.api.local(
+    subprocess.check_call(
         "%s %s %s/%s %s@%s:%s"
-        % (scp, port, local_path, file, fabric.api.env.user, host, remote_path)
+        % (scp, port, local_path, file, device.user, host, remote_path),
+        shell=True,
     )
 
 
-def _run(cmd, **kw):
+def _run(conn, cmd, **kw):
     if kw.get("wait") is not None:
         wait = kw["wait"]
         del kw["wait"]
     else:
         wait = 60 * 60
 
-    output = ""
+    result = None
     start_time = time.time()
     sleeptime = 1
-    # Use shorter timeout to get a faster cycle. Not recommended though, since
-    # in a heavily loaded environment, QEMU might be quite slow to use the
-    # connection.
-    with fabric.api.settings(timeout=60, abort_exception=Exception):
-        while True:
-            try:
-                output = fabric.api.run(cmd, **kw)
-                break
-            except Exception:
-                if time.time() >= start_time + wait:
-                    raise Exception("Could not successfully run: %s" % cmd)
-                time.sleep(sleeptime)
-                # Back off exponentially to save SSH handshakes in QEMU, which
-                # are quite expensive.
-                sleeptime *= 2
-                continue
-            finally:
-                # Taken from disconnect_all() in Fabric.
-                from fabric.state import connections
+    while time.time() < start_time + wait:
+        # Back off exponentially to save SSH handshakes in QEMU, which
+        # are quite expensive.
+        time.sleep(sleeptime)
+        sleeptime *= 2
 
-                if connections.get(fabric.api.env.host_string) is not None:
-                    connections[fabric.api.env.host_string].close()
-                    del connections[fabric.api.env.host_string]
+        try:
+            result = conn.run(cmd, **kw)
+            break
+        except NoValidConnectionsError as e:
+            logger.info("Could not connect to host %s: %s", conn.host, e)
+            continue
+        except SSHException as e:
+            logger.info(
+                "Got SSH exception while connecting to host %s: %s", conn.host, e
+            )
+            if not (
+                "Connection reset by peer" in str(e)
+                or "Error reading SSH protocol banner" in str(e)
+                or "No existing session" in str(e)
+            ):
+                raise e
+            continue
+        except OSError as e:
+            # The OSError is happening while there is no QEMU instance initialized
+            logger.info(
+                "Got OSError exception while connecting to host %s: %s", conn.host, e
+            )
+            if not "Cannot assign requested address" in str(e):
+                raise e
+            continue
+        except UnexpectedExit as e:
+            # Many tests rely on the old behaviour of "keep trying until it passes", so
+            # they run commands that may return non 0 for a while
+            logger.info(
+                "Got UnexpectedExit while executing command in host %s: %s",
+                conn.host,
+                e,
+            )
+            continue
+        except Exception as e:
+            logger.error(
+                "Generic exception happened while connecting to host %s: %s",
+                conn.host,
+                e,
+            )
+            logger.error(type(e))
+            logger.error(e.args)
+            raise e
+    else:
+        raise RuntimeError(
+            "Could not successfully run command after %d seconds on host %s: %s"
+            % (wait, conn.host, cmd)
+        )
 
-    return output
+    return result

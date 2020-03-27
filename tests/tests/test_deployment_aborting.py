@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,8 +24,9 @@ from .mendertesting import MenderTesting
 
 
 class TestDeploymentAborting(MenderTesting):
+    @staticmethod
     def abort_deployment(
-        self, container_manager, abort_step=None, mender_performs_reboot=False
+        container_manager, install_image, abort_step=None, mender_performs_reboot=False,
     ):
         """
             Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
@@ -39,7 +39,6 @@ class TestDeploymentAborting(MenderTesting):
 
         mender_device = container_manager.device
 
-        install_image = conftest.get_valid_image()
         expected_partition = mender_device.get_active_partition()
         expected_image_id = mender_device.yocto_id_installed_on_machine()
         host_ip = container_manager.get_virtual_network_host_ip()
@@ -74,39 +73,45 @@ class TestDeploymentAborting(MenderTesting):
 
     @MenderTesting.fast
     def test_deployment_abortion_instantly(
-        self, standard_setup_one_client_bootstrapped
+        self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        self.abort_deployment(standard_setup_one_client_bootstrapped)
+        TestDeploymentAborting.abort_deployment(
+            standard_setup_one_client_bootstrapped, valid_image
+        )
 
     # Because the install step is over almost instantly, this test is very
     # fragile, it breaks at the slightest timing issue: MEN-1364
     @pytest.mark.skip
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
-        self, standard_setup_one_client_bootstrapped
+        self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        self.abort_deployment(standard_setup_one_client_bootstrapped, "downloading")
+        TestDeploymentAborting.abort_deployment(
+            standard_setup_one_client_bootstrapped, valid_image, "downloading"
+        )
 
     @MenderTesting.fast
     def test_deployment_abortion_rebooting(
-        self, standard_setup_one_client_bootstrapped
+        self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        self.abort_deployment(
+        TestDeploymentAborting.abort_deployment(
             standard_setup_one_client_bootstrapped,
+            valid_image,
             "rebooting",
             mender_performs_reboot=True,
         )
 
     @MenderTesting.slow
-    def test_deployment_abortion_success(self, standard_setup_one_client_bootstrapped):
+    def test_deployment_abortion_success(
+        self, standard_setup_one_client_bootstrapped, valid_image
+    ):
         # maybe an acceptance test is enough for this check?
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
-        install_image = conftest.get_valid_image()
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            deployment_id, _ = common_update_procedure(install_image)
+            deployment_id, _ = common_update_procedure(valid_image)
 
             reboot.verify_reboot_performed()
 

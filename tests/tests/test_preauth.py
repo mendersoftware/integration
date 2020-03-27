@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -217,7 +216,7 @@ class Client:
         public_key = private_key.public_key()
         return public_key.public_bytes(
             serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+        ).decode()
 
     @staticmethod
     def substitute_id_data(device, id_data_dict):

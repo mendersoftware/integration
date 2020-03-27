@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# Copyright 2017 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,14 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from platform import python_version
-
-if python_version().startswith("2"):
-    from fabric.api import *
-else:
-    # User should re-implement: ???
-    pass
-
 import logging
 import requests
 import filelock
@@ -32,6 +23,8 @@ import pytest
 import distutils.spawn
 from . import log
 from .tests.mendertesting import MenderTesting
+from testutils.infra.container_manager.base import BaseContainerManagerNamespace
+from testutils.infra.device import MenderDevice, MenderDeviceGroup
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -61,39 +54,21 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.fixture(scope="session")
+def valid_image(request):
+    return "core-image-full-cmdline-%s.ext4" % machine_name
+
+
+@pytest.fixture(scope="session")
+def valid_image_rofs(request):
+    return "mender-image-full-cmdline-rofs-%s.ext4" % machine_name
+
+
 def pytest_configure(config):
     verify_sane_test_environment()
 
     global machine_name
     machine_name = config.getoption("--machine-name")
-    env.valid_image = "core-image-full-cmdline-%s.ext4" % machine_name
-
-    env.password = ""
-
-    # Bash not always available, nor currently required:
-    env.shell = "/bin/sh -c"
-
-    # Disable known_hosts file, to avoid "host identification changed" errors.
-    env.disable_known_hosts = True
-
-    env.abort_on_prompts = True
-    # Don't allocate pseudo-TTY by default, since it is not fully functional.
-    # It can still be overriden on a case by case basis by passing
-    # "pty = True/False" to the various fabric functions. See
-    # https://www.fabfile.org/faq.html about init scripts.
-    env.always_use_pty = False
-
-    # Don't combine stderr with stdout. The login profile sometimes prints
-    # terminal specific codes there, and we don't want it interfering with our
-    # output. It can still be turned on on a case by case basis by passing
-    # combine_stderr to each run().
-    env.combine_stderr = False
-
-    env.user = "root"
-
-    env.connection_attempts = 50
-    env.eagerly_disconnect = True
-    env.banner_timeout = 10
 
     MenderTesting.set_test_conditions(config)
 
@@ -131,38 +106,50 @@ def pytest_exception_interact(node, call, report):
         logger.error(
             "Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr())
         )
-        try:
-            logger.info("Printing client deployment log, if possible:")
-            output = execute(
-                run,
-                "cat /data/mender/deployment*.log || true",
-                hosts=get_mender_clients(),
-            )
-            logger.info(output)
-        except:
-            logger.info("Not able to print client deployment log")
 
-        try:
-            logger.info("Printing client systemd log, if possible:")
-            output = execute(
-                run, "journalctl -u mender-client || true", hosts=get_mender_clients()
-            )
-            logger.info(output)
-        except:
-            logger.info("Not able to print client systemd log")
+        # Hack-ish way to inspect the fixtures in use by the node to find a MenderDevice/MenderDeviceGroup
+        device = None
+        env_candidates = [
+            val
+            for val in node.funcargs.values()
+            if isinstance(val, BaseContainerManagerNamespace)
+        ]
+        if len(env_candidates) == 1:
+            env = env_candidates[0]
+            dev_candidates = [
+                getattr(env, attr)
+                for attr in dir(env)
+                if isinstance(getattr(env, attr), MenderDevice)
+                or isinstance(getattr(env, attr), MenderDeviceGroup)
+            ]
+            if len(dev_candidates) == 1:
+                device = dev_candidates[0]
+
+        # If we have a device (or group) try to print deployment and systemd logs
+        if device == None:
+            logger.info("Could not find device in test environment, no printing logs")
+        else:
+            try:
+                logger.info("Printing client deployment log, if possible:")
+                output = device.run("cat /data/mender/deployment*.log || true")
+                logger.info(output)
+            except:
+                logger.info("Not able to print client deployment log")
+            try:
+                logger.info("Printing client systemd log, if possible:")
+                output = device.run("journalctl -u mender-client || true")
+                logger.info(output)
+            except:
+                logger.info("Not able to print client systemd log")
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter
         output = subprocess.check_output(
             'docker ps --filter "status=exited"', shell=True
-        )
+        ).decode()
         logger.info("Containers that exited during the test:")
         for line in output.split("\n"):
             logger.info(line)
-
-
-def get_valid_image():
-    return env.valid_image
 
 
 def verify_sane_test_environment():

@@ -15,7 +15,7 @@
         - [Local Dependencies](#local-dependencies)
         - [Debian](#debian)
         - [Alpine Linux](#alpine-linux)
-        - [Python2 and Python3](#python2-and-python3)
+        - [Python3](#python3)
     - [Running the Tests Locally](#running-the-tests-locally)
         - [Running the Tests](#running-the-tests)
     - [Modifying the Docker Images Employed](#modifying-the-docker-images-employed)
@@ -55,7 +55,7 @@ environment. The "de-facto" standard is
 $ pip install virtualenv
 ```
 
-> Make sure that you are using the correct version of pip (In this case, pip2).
+> Make sure that you are using the correct version of pip (In this case, pip3).
 
 #### Initialize the Virtual Environment
 
@@ -66,7 +66,7 @@ $ virtualenv <name-of-virtualenv-folder>
 
 ##### (Optional) -- Select Python Version
 ```bash
-$ virtualenv -p /usr/bin/python2.7 <name-of-virtualenv-folder>
+$ python -m venv <name-of-virtualenv-folder>
 ```
 
 #### Activate the Virtual Environment
@@ -82,9 +82,9 @@ discoverable by Python.
 Verify the virtual-environment through running
 
 ```bash
-$ python2 --version
-  python 2.7.x
-$ which python2
+$ python3 --version
+  python 3.7.x
+$ which python3
   /path/to/current/dir/venv/bin/python
 ```
 
@@ -108,17 +108,16 @@ $ apt install -yyq $(cat requirements/deb-requirements.txt)
 $ apk --update add $(cat requirements/apk-requirements.txt)
 ```
 
-### Python2 and Python3
+### Python3
 
 ```bash
-$ pip2  install  -r requirements/python-requirements.txt
 $ pip3  install  -r requirements/python-requirements.txt
 ```
 
 > The Python install works the same whether or not a Python virtual-environment
 > is active. But with a virtual-environment active, the dependencies will keep
 > your native Python environment clean. Also remember that the virtual
-> environment is only enabled for Python2 with this setup.
+> environment is only enabled for Python3 with this setup.
 
 
 -------------------------------------------------------------------------------

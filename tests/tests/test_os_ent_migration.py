@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,7 +85,7 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     )
 
     initial_enterprise_setup.init_data = dict(
-        ent_data.items() + initial_enterprise_setup.init_data.items()
+        {**ent_data, **initial_enterprise_setup.init_data}
     )
     return initial_enterprise_setup
 

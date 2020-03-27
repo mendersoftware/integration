@@ -361,6 +361,11 @@ class TestDeviceFilteringEnterprise:
         return attr_list
 
     def test_search_v2(self, clean_mongo):
+        """
+        Tests the v2/filters/search endpoint.
+        This test and the following (internal) test covers all allowed
+        search operations, in addition to asserting OBAC permissions.
+        """
         NUM_DEVICES = 100
 
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -645,6 +650,11 @@ class TestDeviceFilteringEnterprise:
                     )
 
     def test_search_v2_internal(self, clean_mongo):
+        """
+        Tests the internal v2/{tenant_id}/filters/search endpoint.
+        This test along with the former covers all allowed operation
+        types.
+        """
         NUM_DEVICES = 100
 
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -956,6 +966,11 @@ class TestDeviceFilteringEnterprise:
                     )
 
     def test_saved_filters(self, clean_mongo):
+        """
+        Test saved filters covers saving new filters, getting all
+        filters, getting filter by id, executing filter and deleting
+        filters.
+        """
         devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
         usradmm = ApiClient(useradm.URL_MGMT)
         invm_v2 = ApiClient(inventory_v2.URL_MGMT)

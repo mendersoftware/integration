@@ -17,7 +17,7 @@ import time
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
-from .common_update import update_image, common_update_procedure
+from .common_update import update_image, update_image_failed, common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
 from . import artifact_lock

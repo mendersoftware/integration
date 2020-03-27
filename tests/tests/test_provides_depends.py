@@ -32,9 +32,6 @@ class TestProvidesDependsEnterprise(MenderTesting):
         to the artifact and the second artifact depends on these provides.
         """
 
-        DEMO_POLL_INTERVAL = 5
-        IMAGE_NAME = conftest.get_valid_image()
-
         # Create tenant user
         auth.reset_auth_token()
         auth.new_tenant("admin", "bob@builder.org", "secret-service")

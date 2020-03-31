@@ -44,7 +44,14 @@ class CliUseradm(BaseCli):
             raise RuntimeError("no runnable binary found in mender-useradm")
 
     def create_user(self, username, password, tenant_id=""):
-        cmd = [self.path, "create-user", "--username", username, "--password", password]
+        cmd = [
+            self.path,
+            "create-user",
+            "--username",
+            username,
+            "--password",
+            password,
+        ]
 
         if tenant_id != "":
             cmd += ["--tenant-id", tenant_id]

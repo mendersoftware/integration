@@ -22,4 +22,5 @@ update.mender
 node_modules
 venv
 
-.dir-locals.el # Emacs directory local variables
+# Emacs directory local variables
+.dir-locals.el

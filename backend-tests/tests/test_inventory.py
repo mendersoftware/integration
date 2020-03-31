@@ -18,7 +18,7 @@ import random
 import time
 
 from testutils.api.client import ApiClient
-from testutils.common import mongo, clean_mongo
+from testutils.common import mongo, clean_mongo, mongo_cleanup
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
@@ -360,19 +360,12 @@ class TestDeviceFilteringEnterprise:
 
         return attr_list
 
-    def setup_tenants(self, plan):
-        cli = CliTenantadm()
-        names = ["tenant1", "tenant2"]
-        tenants = []
-
-        for n in names:
-            username = "user@%s.com" % n
-            password = "correcthorse"
-            tenant = create_org(n, username, password, plan=plan)
-            tenants.append(tenant)
-        return tenants
-
     def test_search_v2(self, clean_mongo):
+        """
+        Tests the v2/filters/search endpoint.
+        This test and the following (internal) test covers all allowed
+        search operations, in addition to asserting OBAC permissions.
+        """
         NUM_DEVICES = 100
 
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -657,6 +650,11 @@ class TestDeviceFilteringEnterprise:
                     )
 
     def test_search_v2_internal(self, clean_mongo):
+        """
+        Tests the internal v2/{tenant_id}/filters/search endpoint.
+        This test along with the former covers all allowed operation
+        types.
+        """
         NUM_DEVICES = 100
 
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -966,3 +964,613 @@ class TestDeviceFilteringEnterprise:
                         "Unexpected result from search: %s not in response %s"
                         % (test_case["response"], body)
                     )
+
+    def test_saved_filters(self, clean_mongo):
+        """
+        Test saved filters covers saving new filters, getting all
+        filters, getting filter by id, executing filter and deleting
+        filters.
+        """
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        usradmm = ApiClient(useradm.URL_MGMT)
+        invm_v2 = ApiClient(inventory_v2.URL_MGMT)
+        invd = ApiClient(inventory.URL_DEV)
+
+        # Setup tenants
+        tenants = []
+        tenants.append(
+            create_org(
+                "BobTheEnterprise", "bob@enterprise.org", "password", plan="enterprise"
+            )
+        )
+        tenants.append(
+            create_org("BobThePro", "bob@pro.org", "password", plan="professional")
+        )
+        tenants.append(
+            create_org("BobTheOpenSource", "bob@open.src", "password", plan="os")
+        )
+        tenants[0].dev_inventories = [
+            {"mndr": "v2.0", "py3": "3.3", "py2": "2.7", "idx": 0},
+            {"mndr": "v2.0", "py3": "3.5", "py2": "2.7", "idx": 1},
+            {"mndr": "v2.1", "py2": "2.7", "idx": 2},
+            {"mndr": "v2.1", "py2": "2.7", "idx": 3},
+            {"mndr": "v2.1", "py3": "3.5", "py2": "2.7", "idx": 4},
+            {"mndr": "v2.2", "py3": "3.6", "py2": "2.7", "idx": 5},
+            {"mndr": "v2.2", "py3": "3.6", "idx": 6},
+            {"mndr": "v2.2", "py3": "3.7", "idx": 7},
+            {"mndr": "v2.2", "py3": "3.7", "idx": 8},
+            {"mndr": "v2.2", "py3": "3.8", "idx": 9},
+        ]
+        tenants[1].dev_inventories = [{"idx": 0}, {"idx": 1}, {"idx": 2}]
+        tenants[2].dev_inventories = [{"idx": 0}, {"idx": 1}, {"idx": 2}]
+
+        for tenant in tenants:
+            rsp = usradmm.call(
+                "POST",
+                useradm.URL_LOGIN,
+                auth=(tenant.users[0].name, tenant.users[0].pwd),
+            )
+            assert rsp.status_code == 200
+            tenant.api_token = rsp.text
+            for inv in tenant.dev_inventories:
+                device = make_accepted_device(
+                    tenant.api_token, devauthd, tenant_token=tenant.tenant_token
+                )
+
+                rsp = invd.with_auth(device.token).call(
+                    "PATCH",
+                    inventory.URL_DEVICE_ATTRIBUTES,
+                    body=self.dict_to_inventoryattrs(inv),
+                )
+                assert rsp.status_code == 200
+                device.inventory = inv
+                try:
+                    tenant.devices.append(device)
+                except AttributeError:
+                    tenant.devices = []
+                    tenant.devices.append(device)
+
+        test_cases = [
+            {
+                "name": "Simple $eq filters",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "test1",
+                    "terms": [
+                        {
+                            "type": "$eq",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": "v2.2",
+                        }
+                    ],
+                },
+                "status_codes": [201, 200, 200, 200],
+                "result": [
+                    {
+                        "id": dev.id,
+                        "attributes": self.dict_to_inventoryattrs(dev.inventory),
+                    }
+                    for dev in filter(
+                        lambda dev: dev.inventory["mndr"] == "v2.2", tenants[0].devices
+                    )
+                ],
+            },
+            {
+                "name": "Compound filter: $in -> $exists -> $nin",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "test2",
+                    "terms": [
+                        {
+                            "type": "$in",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": ["v2.0", "v2.1"],
+                        },
+                        {
+                            "type": "$exists",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": True,
+                        },
+                        {
+                            "type": "$nin",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": ["3.5", "3.6"],
+                        },
+                    ],
+                },
+                "status_codes": [201, 200, 200, 200],
+                "result": [
+                    {
+                        "id": dev.id,
+                        "attributes": self.dict_to_inventoryattrs(dev.inventory),
+                    }
+                    for dev in filter(
+                        lambda dev: dev.inventory["mndr"] in ["v2.0", "v2.1"]
+                        and "py3" in dev.inventory
+                        and dev.inventory["py3"] not in ["3.5", "3.6"],
+                        tenants[0].devices,
+                    )
+                ],
+            },
+            {
+                "name": "Compound filter: $ne -> $lt -> $gte -> $exists",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "test3",
+                    "terms": [
+                        {
+                            "type": "$ne",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": "v2.0",
+                        },
+                        {
+                            "type": "$lte",
+                            "scope": "inventory",
+                            "attribute": "idx",
+                            "value": 8,
+                        },
+                        {
+                            "type": "$gt",
+                            "scope": "inventory",
+                            "attribute": "idx",
+                            "value": 1,
+                        },
+                        {
+                            "type": "$exists",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": False,
+                        },
+                    ],
+                },
+                "status_codes": [201, 200, 200, 200],
+                "result": [
+                    {
+                        "id": dev.id,
+                        "attributes": self.dict_to_inventoryattrs(dev.inventory),
+                    }
+                    for dev in filter(
+                        lambda dev: "py3" not in dev.inventory
+                        and 2 <= dev.inventory["idx"] < 8
+                        and dev.inventory["mndr"] != "v2.0",
+                        tenants[0].devices,
+                    )
+                ],
+            },
+            {
+                "name": "Error filter already exists",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "test1",
+                    "terms": [
+                        {
+                            "type": "$ne",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": "v2.2",
+                        }
+                    ],
+                },
+                "status_codes": [409, 200, 404, 404],
+            },
+            {
+                "name": "Error not allowed for professional accounts",
+                "tenant": tenants[1],
+                "request": {
+                    "name": "forbidden",
+                    "terms": [
+                        {
+                            "type": "$eq",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": "v2.0",
+                        }
+                    ],
+                },
+                "status_codes": [403, 403, 403, 403],
+            },
+            {
+                "name": "Error not allowed for open-source accounts",
+                "tenant": tenants[2],
+                "request": {
+                    "name": "forbidden",
+                    "terms": [
+                        {
+                            "type": "$eq",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": "v2.0",
+                        }
+                    ],
+                },
+                "status_codes": [403, 403, 403, 403],
+            },
+            {
+                "name": "Error empty value",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "forbidden",
+                    "terms": [
+                        {"type": "$eq", "scope": "inventory", "attribute": "mndr"}
+                    ],
+                },
+                "status_codes": [400, 200, 404, 404],
+            },
+            {
+                "name": "Error invalid filter type",
+                "tenant": tenants[0],
+                "request": {
+                    "name": "forbidden",
+                    "terms": [
+                        {
+                            "type": "$type",
+                            "scope": "inventory",
+                            "attribute": "mndr",
+                            "value": ["string", "array"],
+                        }
+                    ],
+                },
+                "status_codes": [400, 200, 404, 404],
+            },
+        ]
+
+        for test_case in test_cases:
+            self.logger.info("Running test: %s" % test_case["name"])
+            # Test POST /filters endpoint
+            rsp = invm_v2.with_auth(test_case["tenant"].api_token).call(
+                "POST", inventory_v2.URL_SAVED_FILTERS, body=test_case["request"]
+            )
+            assert rsp.status_code == test_case["status_codes"][0], (
+                "Unexpected status code (%d) on POST %s request; response: %s"
+                % (rsp.status_code, rsp.url, rsp.text)
+            )
+            filter_url = rsp.headers.get("Location", "foobar")
+            filter_id = filter_url.split("/")[-1]
+
+            # Test GET /filters endpoint
+            rsp = invm_v2.with_auth(test_case["tenant"].api_token).call(
+                "GET",
+                inventory_v2.URL_SAVED_FILTERS,
+                qs_params={"per_page": len(test_cases)},
+            )
+            assert rsp.status_code == test_case["status_codes"][1]
+            if test_case["status_codes"][0] == 201:
+                # Check that newly posted filter is present in the result
+                found = False
+                for fltr in rsp.json():
+                    if fltr["name"] == test_case["request"]["name"]:
+                        found = True
+                        break
+                assert found, "GET %s did not return saved filter" % (
+                    inventory_v2.URL_SAVED_FILTERS
+                )
+
+            # Test GET /filter/{id} endpoint
+            rsp = invm_v2.with_auth(test_case["tenant"].api_token).call(
+                "GET", inventory_v2.URL_SAVED_FILTER.format(id=filter_id)
+            )
+            assert rsp.status_code == test_case["status_codes"][2]
+
+            # Test GET /filter/{id}/search endpoint
+            rsp = invm_v2.with_auth(test_case["tenant"].api_token).call(
+                "GET", inventory_v2.URL_SAVED_FILTER_SEARCH.format(id=filter_id),
+            )
+
+            assert rsp.status_code == test_case["status_codes"][3]
+            if test_case["status_codes"][3] == 200:
+                # There are no ordering guarantee on the response,
+                # so let's make it so.
+                match = rsp.json()
+                match.sort(key=lambda m: m["id"])
+                for dev in match:
+                    dev["attributes"].sort(key=lambda attr: attr["name"])
+                test_case["result"].sort(key=lambda m: m["id"])
+                for dev in test_case["result"]:
+                    dev["attributes"].sort(key=lambda attr: attr["name"])
+
+                assert self.is_subset(match, test_case["result"]), (
+                    "Unexpected results from search; expected: %s, found: %s"
+                    % (test_case["result"], match)
+                )
+
+        # Final test case: delete all filters
+        rsp = invm_v2.with_auth(tenants[0].api_token).call(
+            "GET", inventory_v2.URL_SAVED_FILTERS
+        )
+        assert rsp.status_code == 200
+        for fltr in rsp.json():
+            rsp = invm_v2.with_auth(tenants[0].api_token).call(
+                "DELETE", inventory_v2.URL_SAVED_FILTER.format(id=fltr["id"])
+            )
+            assert rsp.status_code == 204, (
+                "Unexpected status code (%d) returned on DELETE %s. Response: %s"
+                % (rsp.status_code, rsp.url, rsp.text)
+            )
+
+    def test_saved_filters_dynamic(self, clean_mongo, mongo):
+        """
+        Check that the saved filters return the correct set of
+        devices when the inventory changes dynamically. That is,
+        when devices modify their inventory or get removed entirely.
+        """
+
+        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        usradmm = ApiClient(useradm.URL_MGMT)
+        invm_v2 = ApiClient(inventory_v2.URL_MGMT)
+        invd = ApiClient(inventory.URL_DEV)
+
+        # Initial device inventory setup
+        inventories = [
+            {"deb": "squeeze", "py3": 3.3, "py2": 2.7, "idx": 0},
+            {"deb": "squeeze", "py3": 3.5, "py2": 2.7, "idx": 1},
+            {"deb": "wheezy", "py2": 2.7, "idx": 2},
+            {"deb": "wheezy", "py2": 2.7, "idx": 3},
+            {"deb": "wheezy", "py3": 3.5, "py2": 2.7, "idx": 4},
+            {"deb": "wheezy", "py3": 3.6, "py2": 2.7, "idx": 5},
+            {"deb": "wheezy", "py3": 3.6, "idx": 6},
+            {"deb": "jessie", "py3": 3.7, "idx": 7},
+            {"deb": "jessie", "py3": 3.7, "idx": 8},
+            {"deb": "jessie", "py3": 3.8, "idx": 9},
+            {"deb": "jessie", "py3": 3.8, "idx": 10},
+            {"deb": "jessie", "py3": 3.8, "idx": 11},
+            {"deb": "jessie", "py3": 3.8, "idx": 12},
+            {"deb": "jessie", "py3": 3.8, "idx": 13},
+            {"deb": "buster", "py3": 3.8, "idx": 14},
+            {"deb": "buster", "py3": 3.8, "idx": 15},
+            {"deb": "buster", "py3": 3.8, "idx": 16},
+            {"deb": "buster", "py3": 3.8, "idx": 17},
+            {"deb": "buster", "py3": 3.8, "idx": 18},
+            {"deb": "buster", "py3": 3.8, "idx": 19},
+            {"deb": "buster", "py3": 3.8, "idx": 20},
+        ]
+
+        test_cases = [
+            {
+                "name": "Test $eq modify string",
+                "filter_req": {
+                    "name": "test",
+                    "terms": [
+                        {
+                            "type": "$eq",
+                            "scope": "inventory",
+                            "attribute": "deb",
+                            "value": "jessie",
+                        }
+                    ],
+                },
+                "filter": lambda dev: dev.inventory["deb"] == "jessie",
+                # Perturbations
+                "new": [],
+                # Modifications in (device filter, change) pairs
+                "mods": [
+                    (lambda dev: dev.inventory["idx"] in range(3, 6), {"deb": "jessie"})
+                ],
+                # List of device filters to remove.
+                "remove": [],
+            },
+            {
+                "name": "Test $exists -> $gte removing devices",
+                "filter_req": {
+                    "name": "test",
+                    "terms": [
+                        {
+                            "type": "$exists",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": True,
+                        },
+                        {
+                            "type": "$gte",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": 3.7,
+                        },
+                    ],
+                },
+                "filter": lambda dev: "py3" in dev.inventory
+                and dev.inventory["py3"] >= 3.7,
+                "new": [],
+                "mods": [],
+                "remove": [
+                    lambda dev: "py3" in dev.inventory and dev.inventory["py3"] == 3.7
+                ],
+            },
+            {
+                "name": "Test $exists adding new devices",
+                "filter_req": {
+                    "name": "test",
+                    "terms": [
+                        {
+                            "type": "$exists",
+                            "scope": "inventory",
+                            "attribute": "py2",
+                            "value": True,
+                        }
+                    ],
+                },
+                "filter": lambda dev: "py2" in dev.inventory,
+                "new": [
+                    {"idx": 20, "py3": 3.7},
+                    {"idx": 21, "py2": 2.7},
+                    {"idx": 22, "py2": 2.6, "py3": 3.3},
+                    {"idx": 23, "py2": 2.7, "py3": 3.5},
+                    {"idx": 24, "py2": 2.7, "py3": 3.7},
+                    {"idx": 25, "py2": 2.7, "py3": 3.7, "misc": "foo"},
+                ],
+                "mods": [],
+                "remove": [],
+            },
+            {
+                "name": "Compound test: modify, remove and add inventories",
+                "filter_req": {
+                    "name": "test",
+                    "terms": [
+                        {
+                            "type": "$ne",
+                            "scope": "inventory",
+                            "attribute": "deb",
+                            "value": "buster",
+                        },
+                        {
+                            "type": "$exists",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": True,
+                        },
+                        {
+                            "type": "$gte",
+                            "scope": "inventory",
+                            "attribute": "py3",
+                            "value": 3.7,
+                        },
+                    ],
+                },
+                "filter": lambda dev: dev.inventory["deb"] != "buster"
+                and "py3" in dev.inventory
+                and dev.inventory["py3"] >= 3.7,
+                "mods": [
+                    (
+                        lambda dev: dev.inventory["deb"] == "squeeze",
+                        {"deb": "buster", "py3": 3.8},
+                    ),
+                    (
+                        lambda dev: "py2" in dev.inventory,
+                        {"deb": "jessie", "py2": 2.7, "py3": 3.8},
+                    ),
+                ],
+                "new": [
+                    {"idx": 20, "deb": "squeeze"},
+                    {"idx": 21, "deb": "wheezy"},
+                    {"idx": 22, "deb": "wheezy", "py3": 3.3},
+                    {"idx": 23, "deb": "jessie", "py3": 3.5},
+                    {"idx": 24, "deb": "jessie", "py3": 3.7},
+                    {"idx": 25, "deb": "buster", "py3": 3.8, "misc": "foo"},
+                ],
+                "remove": [
+                    lambda dev: "py3" in dev.inventory and dev.inventory["py3"] < 3.5
+                ],
+            },
+        ]
+
+        for test_case in test_cases:
+            self.logger.info("Running test case: %s" % test_case["name"])
+
+            # Setup tenant and (initial) device set.
+            tenant = create_org(
+                "BobTheEnterprise",
+                username="bob@ent.org",
+                password="password",
+                plan="enterprise",
+            )
+            rsp = usradmm.call(
+                "POST",
+                useradm.URL_LOGIN,
+                auth=(tenant.users[0].name, tenant.users[0].pwd),
+            )
+            assert rsp.status_code == 200
+            tenant.api_token = rsp.text
+
+            # Create accepted devices with inventory.
+            tenant.devices = {}
+            for inv in inventories:
+                device = make_accepted_device(
+                    tenant.api_token, devauthd, tenant.tenant_token
+                )
+                rsp = invd.with_auth(device.token).call(
+                    "PATCH",
+                    inventory.URL_DEVICE_ATTRIBUTES,
+                    body=self.dict_to_inventoryattrs(inv),
+                )
+                assert rsp.status_code == 200
+
+                device.inventory = inv
+                tenant.devices[device.id] = device
+
+            # Save test filter.
+            rsp = invm_v2.with_auth(tenant.api_token).call(
+                "POST",
+                inventory_v2.URL_SAVED_FILTERS,
+                body=test_case["filter_req"],
+                qs_params={"per_page": len(tenant.devices)},
+            )
+            assert rsp.status_code == 201, (
+                "Failed to save filter, received status code: %d" % rsp.status_code
+            )
+            filter_id = rsp.headers.get("Location").split("/")[-1]
+
+            # Check that we get the exected devices from the set.
+            rsp = invm_v2.with_auth(tenant.api_token).call(
+                "GET", inventory_v2.URL_SAVED_FILTER_SEARCH.format(id=filter_id)
+            )
+            assert rsp.status_code == 200
+
+            devs_recv = sorted([dev["id"] for dev in rsp.json()])
+            devs_exct = sorted(
+                [dev.id for dev in filter(test_case["filter"], tenant.devices.values())]
+            )
+            assert devs_recv == devs_exct, (
+                "Unexpected device set returned by saved filters, "
+                + "expected: %s, received: %s" % (devs_recv, devs_exct)
+            )
+
+            # Perform perturbations to the device set.
+            # Starting with modifications
+            for fltr, change in test_case["mods"]:
+                for dev in filter(fltr, tenant.devices.values(),):
+                    for k, v in change.items():
+                        dev.inventory[k] = v
+
+                    rsp = invd.with_auth(dev.token).call(
+                        "PATCH",
+                        inventory.URL_DEVICE_ATTRIBUTES,
+                        body=self.dict_to_inventoryattrs(dev.inventory),
+                    )
+                    assert rsp.status_code == 200
+                    tenant.devices[dev.id] = dev
+
+            # Remove devices
+            for fltr in test_case["remove"]:
+                for dev in filter(fltr, list(tenant.devices.values())):
+                    devauthm.with_auth(tenant.api_token).call(
+                        "DELETE", deviceauth_v2.URL_DEVICE.format(id=dev.id)
+                    )
+                    tenant.devices.pop(dev.id)
+
+            # Add new devices
+            for inv in test_case["new"]:
+                device = make_accepted_device(
+                    tenant.api_token, devauthd, tenant_token=tenant.tenant_token
+                )
+                rsp = invd.with_auth(device.token).call(
+                    "PATCH",
+                    inventory.URL_DEVICE_ATTRIBUTES,
+                    body=self.dict_to_inventoryattrs(inv),
+                )
+                assert rsp.status_code == 200
+                device.inventory = inv
+                tenant.devices[device.id] = device
+
+            # Check that we get the exected devices from the perturbed set.
+            rsp = invm_v2.with_auth(tenant.api_token).call(
+                "GET",
+                inventory_v2.URL_SAVED_FILTER_SEARCH.format(id=filter_id),
+                qs_params={"per_page": len(tenant.devices)},
+            )
+            assert rsp.status_code == 200
+
+            devs_recv = sorted([dev["id"] for dev in rsp.json()])
+            devs_exct = sorted(
+                [dev.id for dev in filter(test_case["filter"], tenant.devices.values())]
+            )
+            assert devs_recv == devs_exct, (
+                "Unexpected device set returned by saved filters, "
+                + "expected: %s, received: %s" % (devs_recv, devs_exct)
+            )
+
+            mongo_cleanup(mongo)

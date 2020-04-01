@@ -42,8 +42,10 @@ class TestMultiTenancyEnterprise(MenderTesting):
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
 
         mender_device.ssh_is_opened()
+        client_service_name = mender_device.get_client_service_name()
         mender_device.run(
-            'journalctl -u mender-client | grep "authentication request rejected server error message: Unauthorized"',
+            'journalctl -u %s | grep "authentication request rejected server error message: Unauthorized"'
+            % client_service_name,
             wait=70,
         )
 
@@ -55,7 +57,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         mender_device.run(
             "sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token)
         )
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart %s" % client_service_name)
 
         auth_v2.get_devices(expected_devices=1)
 
@@ -242,6 +244,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
                 )
             )
             mender_device.run(
-                'journalctl -u mender-client | grep "deployment aborted at the backend"',
+                'journalctl -u %s | grep "deployment aborted at the backend"'
+                % mender_device.get_client_service_name(),
                 wait=600,
             )

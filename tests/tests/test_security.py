@@ -96,7 +96,8 @@ class TestSecurity(MenderTesting):
 
         mender_device = standard_setup_with_short_lived_token.device
         mender_device.run(
-            'journalctl -u mender-client -l --no-pager | grep "received new authorization data"',
+            'journalctl -u %s -l --no-pager | grep "received new authorization data"'
+            % mender_device.get_client_service_name(),
             wait=60,
         )
 

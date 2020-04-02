@@ -532,7 +532,7 @@ class TestDeploymentsEndpointEnterprise(object):
             "GET", "/deployments"
         )
         assert resp.status_code == 200
-        # Store the second tenants user deployemnts, to verify that
+        # Store the second tenants user deployments, to verify that
         # it remains unchanged after the tests have run
         backup_tenant_user_deployments = resp.json()
         request_body, expected_response = test_case

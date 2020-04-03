@@ -5,6 +5,9 @@ services:
     mender-deployments:
         image: registry.mender.io/mendersoftware/deployments-enterprise:master
 
+    mender-useradm:
+        image: registry.mender.io/mendersoftware/useradm-enterprise:master
+
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master
 
@@ -27,13 +30,12 @@ services:
         depends_on:
             - mender-mongo
 
-    # configure the rest
+    # configure services
     mender-device-auth:
         environment:
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:master
         environment:
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
 

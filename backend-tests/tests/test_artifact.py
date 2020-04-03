@@ -507,3 +507,53 @@ class TestUploadArtifactEnterprise:
             assert size == 1024
         finally:
             os.unlink(f.name)
+
+    @pytest.mark.parametrize("plan", ["os", "professional"])
+    def test_provides_depends_ignored_in_lower_plans(self, mongo, clean_mongo, plan):
+        dev = self.setup_upload_artifact_selection(
+            plan=plan,
+            artifacts=(
+                {"artifact_name": "test", "device_types": ["arm1"], "size": 256,},
+                {
+                    "artifact_name": "test",
+                    "device_types": ["arm1"],
+                    "depends": ("foo:fooval","bar:barval",),
+                    "size": 1024,
+                },
+            )
+        )
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+        r = deploymentsd.with_auth(dev.token).call(
+            "POST",
+            deployments.URL_NEXT,
+            body={
+                "device_type": "arm1",
+                "artifact_name": "old-artifact",
+                "foo": "fooval",
+                "bar": "barval",
+            },
+        )
+        assert r.status_code == 200
+        data = r.json()
+        r = requests.get(data["artifact"]["source"]["uri"], verify=False)
+        assert r.status_code == 200
+
+        f = tempfile.NamedTemporaryFile(delete=False)
+        try:
+            f.write(r.content)
+            f.close()
+            #
+            p = subprocess.Popen(
+                ["mender-artifact", "read", f.name], stdout=subprocess.PIPE
+            )
+            stdout = p.stdout.read().decode("utf-8")
+            m_size = re.search(r".*size: *([0-9]+).*", stdout, re.M | re.I)
+            assert m_size is not None
+            size = int(m_size.group(1))
+
+            # if provides/depends wasn't ignored - the matching, larger
+            # artifact should have been selected
+            # that's not the case, and we selected 'smallest of all'
+            assert size == 256
+        finally:
+            os.unlink(f.name)

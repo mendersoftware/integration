@@ -4,13 +4,6 @@
 # and "docker_container". Binary tools that don't have Docker components, will
 # only have the "git" part.
 git:
-  deployments:
-    docker_image:
-    - deployments
-    docker_container:
-    - mender-deployments
-    release_component: true
-
   deployments-enterprise:
     docker_image:
     - deployments-enterprise
@@ -40,13 +33,6 @@ git:
   integration:
     docker_image: []
     docker_container: []
-    release_component: true
-
-  inventory:
-    docker_image:
-    - inventory
-    docker_container:
-    - mender-inventory
     release_component: true
 
   inventory-enterprise:
@@ -82,24 +68,6 @@ git:
     docker_container: []
     release_component: true
 
-  mender-conductor:
-    docker_image:
-    - mender-conductor
-    - email-sender
-    docker_container:
-    - mender-conductor
-    - mender-email-sender
-    release_component: false
-
-  mender-conductor-enterprise:
-    docker_image:
-    - mender-conductor-enterprise
-    - org-welcome-email-preparer
-    docker_container:
-    - mender-conductor
-    - mender-org-welcome-email-preparer
-    release_component: false
-
   tenantadm:
     docker_image:
     - tenantadm
@@ -107,27 +75,11 @@ git:
     - mender-tenantadm
     release_component: true
 
-  useradm:
-    docker_image:
-    - useradm
-    docker_container:
-    - mender-useradm
-    release_component: true
-
   useradm-enterprise:
     docker_image:
     - useradm-enterprise
     docker_container:
     - mender-useradm
-    release_component: true
-
-  workflows:
-    docker_image:
-    - workflows
-    - workflows-worker
-    docker_container:
-    - mender-workflows-server
-    - mender-workflows-worker
     release_component: true
 
   workflows-enterprise:
@@ -147,12 +99,6 @@ git:
     release_component: true
 
 docker_image:
-  deployments:
-    git:
-    - deployments
-    docker_container:
-    - mender-deployments
-    release_component: true
 
   deployments-enterprise:
     git:
@@ -173,13 +119,6 @@ docker_image:
     - gui
     docker_container:
     - mender-gui
-    release_component: true
-
-  inventory:
-    git:
-    - inventory
-    docker_container:
-    - mender-inventory
     release_component: true
 
   inventory-enterprise:
@@ -217,46 +156,11 @@ docker_image:
     - mender-api-gateway
     release_component: true
 
-  mender-conductor:
-    git:
-    - mender-conductor
-    docker_container:
-    - mender-conductor
-    release_component: false
-
-  email-sender:
-    git:
-    - mender-conductor
-    docker_container:
-    - mender-email-sender
-    release_component: false
-
-  mender-conductor-enterprise:
-    git:
-    - mender-conductor-enterprise
-    docker_container:
-    - mender-conductor
-    release_component: false
-
-  org-welcome-email-preparer:
-    git:
-    - mender-conductor-enterprise
-    docker_container:
-    - mender-org-welcome-email-preparer
-    release_component: false
-
   tenantadm:
     git:
     - tenantadm
     docker_container:
     - mender-tenantadm
-    release_component: true
-
-  useradm:
-    git:
-    - useradm
-    docker_container:
-    - mender-useradm
     release_component: true
 
   useradm-enterprise:
@@ -266,25 +170,11 @@ docker_image:
     - mender-useradm
     release_component: true
 
-  workflows:
-    git:
-    - workflows
-    docker_container:
-    - mender-workflows-server
-    release_component: true
-
   workflows-enterprise:
     git:
     - workflows-enterprise
     docker_container:
     - mender-workflows
-    release_component: true
-
-  workflows-worker:
-    git:
-    - workflows
-    docker_container:
-    - mender-workflows-worker
     release_component: true
 
   workflows-enterprise-worker:
@@ -304,10 +194,8 @@ docker_image:
 docker_container:
   mender-deployments:
     git:
-    - deployments
     - deployments-enterprise
     docker_image:
-    - deployments
     - deployments-enterprise
     release_component: true
 
@@ -327,10 +215,8 @@ docker_container:
 
   mender-inventory:
     git:
-    - inventory
     - inventory-enterprise
     docker_image:
-    - inventory
     - inventory-enterprise
     release_component: true
 
@@ -350,29 +236,6 @@ docker_container:
     - api-gateway
     release_component: true
 
-  mender-conductor:
-    git:
-    - mender-conductor
-    - mender-conductor-enterprise
-    docker_image:
-    - mender-conductor
-    - mender-conductor-enterprise
-    release_component: false
-
-  mender-email-sender:
-    git:
-    - mender-conductor
-    docker_image:
-    - email-sender
-    release_component: false
-
-  mender-org-welcome-email-preparer:
-    git:
-    - mender-conductor-enterprise
-    docker_image:
-    - org-welcome-email-preparer
-    release_component: false
-
   mender-tenantadm:
     git:
     - tenantadm
@@ -382,28 +245,22 @@ docker_container:
 
   mender-useradm:
     git:
-    - useradm
     - useradm-enterprise
     docker_image:
-    - useradm
     - useradm-enterprise
     release_component: true
 
   mender-workflows-server:
     git:
-    - workflows
     - workflows-enterprise
     docker_image:
-    - workflows
     - workflows-enterprise
     release_component: true
 
   mender-workflows-worker:
     git:
-    - workflows
     - workflows-enterprise
     docker_image:
-    - workflows-worker
     - workflows-enterprise-worker
     release_component: true
 

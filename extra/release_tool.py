@@ -226,9 +226,6 @@ def get_value_from_password_storage(server, key):
     else:
         keys = key
 
-    # Regex to extract the alphanumeric key from the tree output
-    pass_tree_re = re.compile(r".* (?:\x1b\[[\d;]*m)?([\w\d\.]+).*")
-
     try:
         # Remove https prefix.
         if server.startswith("https://"):
@@ -237,18 +234,34 @@ def get_value_from_password_storage(server, key):
         if "/" in server:
             server = server[:server.index("/")]
 
-        output = subprocess.check_output(["pass", "find", server]).decode()
-        count = 0
-        server_path = []
-        for line in output.split('\n'):
-            if line.lower().startswith("search terms: ") or line == "":
-                continue
-            server_path.append(re.match(pass_tree_re, line).group(1))
-            count += 1
-        if count == 0:
-            return
+        pass_dir = os.getenv("PASSWORD_STORE_DIR")
+        if not pass_dir:
+            pass_dir = os.path.join(os.getenv("HOME"), ".password-store")
 
-        server_path_str = "/".join(server_path)
+        server_path_str = os.getenv("PASS_GITLAB_COM")
+
+        if not server_path_str:
+            output = subprocess.check_output(["find", pass_dir, "-type", "f", "-path", "*%s*" % server]).decode()
+            count = 0
+            server_paths = []
+            for line in output.split('\n'):
+                if line == "":
+                    continue
+                if line.startswith("%s/" % pass_dir):
+                    line = line[len("%s/" % pass_dir):]
+                if line.endswith(".gpg"):
+                    line = line[:-len(".gpg")]
+                server_paths.append(line)
+                count += 1
+            if count == 0:
+                return None
+            elif count > 1:
+                print("More than one eligible candidate in 'pass' storage for %s:\n- %s"
+                    % (server, "\n- ".join(server_paths)))
+                print("Selecting the shortest one. If you wish to override, please set PASS_GITLAB_COM to the correct value.")
+
+            server_path_str = sorted(server_paths, key=len)[0]
+
         print("Attempting to fetch credentials from 'pass' %s..." % (server_path_str))
 
         output = subprocess.check_output(["pass", "show", server_path_str]).decode()

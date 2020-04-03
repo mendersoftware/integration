@@ -69,13 +69,14 @@ class Deployments:
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]
 
-    def trigger_deployment(self, name, artifact_name, devices):
+    def trigger_deployment(self, name, artifact_name, devices, retries=0):
         deployments_path_url = self.get_deployments_base_path() + "deployments"
 
         trigger_data = {
             "name": name,
             "artifact_name": artifact_name,
             "devices": devices,
+            "retries": retries,
         }
 
         headers = {"Content-Type": "application/json"}

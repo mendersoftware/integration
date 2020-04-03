@@ -4,6 +4,8 @@ set -x -e
 MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
+export PYTHONDONTWRITEBYTECODE=1
+
 usage() {
     echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
     echo

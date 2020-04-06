@@ -199,7 +199,9 @@ class Client:
 
     @staticmethod
     def get_logs(device):
-        output_from_journalctl = device.run("journalctl -u mender-client -l")
+        output_from_journalctl = device.run(
+            "journalctl -u %s -l" % device.get_client_service_name()
+        )
         logger.info(output_from_journalctl)
 
     @staticmethod
@@ -233,7 +235,7 @@ class Client:
     def restart(device):
         """Restart the mender service."""
 
-        device.run("systemctl restart mender-client.service")
+        device.run("systemctl restart %s.service" % device.get_client_service_name())
 
     @staticmethod
     def have_authtoken(device):
@@ -246,7 +248,9 @@ class Client:
                 )
                 return out != ""
             except:
-                output_from_journalctl = device.run("journalctl -u mender-client -l")
+                output_from_journalctl = device.run(
+                    "journalctl -u %s -l" % device.get_client_service_name()
+                )
                 logger.info("Logs from client: " + output_from_journalctl)
 
                 time.sleep(10)

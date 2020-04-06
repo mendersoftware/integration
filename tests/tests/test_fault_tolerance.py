@@ -75,8 +75,8 @@ class TestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u mender-client -l --no-pager | grep 'msg=\".*%s' | wc -l"
-                % re.escape(search_string),
+                "journalctl -u %s -l --no-pager | grep 'msg=\".*%s' | wc -l"
+                % (device.get_client_service_name(), re.escape(search_string)),
                 hide=True,
             )
             time.sleep(2)

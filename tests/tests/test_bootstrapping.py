@@ -99,7 +99,8 @@ class TestBootstrapping(MenderTesting):
 
         # Check from client side
         mender_device.run(
-            "journalctl -u mender-client -l -n 3 | grep -q 'authentication request rejected'"
+            "journalctl -u %s -l -n 3 | grep -q 'authentication request rejected'"
+            % mender_device.get_client_service_name()
         )
 
         # Check that we can accept again the device from the server

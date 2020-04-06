@@ -34,7 +34,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
 
         # Create tenant user
         auth.reset_auth_token()
-        auth.new_tenant("admin", "bob@builder.org", "secret-service")
+        auth.new_tenant("admin", "bob@builder.org", "secret-service", "enterprise")
         token = auth.current_tenant["tenant_token"]
 
         # Create client setup with tenant token

@@ -19,6 +19,7 @@ import requests
 import string
 import subprocess
 import tempfile
+import pytest
 
 from contextlib import contextmanager
 
@@ -44,13 +45,13 @@ class TestUploadArtifactEnterprise:
 
         return r.text
 
-    def get_tenant_username_and_password(self):
+    def get_tenant_username_and_password(self, plan):
         tenant, username, password = (
             "test.mender.io",
             "some.user@example.com",
             "secretsecret",
         )
-        tenant = create_org(tenant, username, password)
+        tenant = create_org(tenant, username, password, plan)
         return tenant, username, password
 
     @contextmanager
@@ -96,8 +97,9 @@ class TestUploadArtifactEnterprise:
             os.unlink(filename)
             os.path.exists(artifact) and os.unlink(artifact)
 
-    def test_upload_artifact_depends_provides_valid(self, mongo, clean_mongo):
-        tenant, username, password = self.get_tenant_username_and_password()
+    @pytest.mark.parametrize("plan", ["os", "professional", "enterprise"])
+    def test_upload_artifact_depends_provides_valid(self, mongo, clean_mongo, plan):
+        tenant, username, password = self.get_tenant_username_and_password(plan=plan)
         auth_token = self.get_auth_token(username, password)
 
         api_client = ApiClient(deployments.URL_MGMT)
@@ -160,7 +162,7 @@ class TestUploadArtifactEnterprise:
         }
 
     def test_upload_artifact_depends_conflicting(self, mongo, clean_mongo):
-        tenant, username, password = self.get_tenant_username_and_password()
+        tenant, username, password = self.get_tenant_username_and_password(plan="os")
         auth_token = self.get_auth_token(username, password)
 
         api_client = ApiClient(deployments.URL_MGMT)
@@ -231,8 +233,8 @@ class TestUploadArtifactEnterprise:
             )
         assert r.status_code == 201
 
-    def setup_upload_artifact_selection(self, artifacts=()):
-        tenant, username, password = self.get_tenant_username_and_password()
+    def setup_upload_artifact_selection(self, plan, artifacts=()):
+        tenant, username, password = self.get_tenant_username_and_password(plan=plan)
         auth_token = self.get_auth_token(username, password)
 
         api_client = ApiClient(deployments.URL_MGMT)
@@ -284,6 +286,7 @@ class TestUploadArtifactEnterprise:
 
     def test_upload_artifact_selection_no_match(self, mongo, clean_mongo):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {
                     "artifact_name": "test",
@@ -303,6 +306,7 @@ class TestUploadArtifactEnterprise:
 
     def test_upload_artifact_selection_no_match_wrong_depends(self, mongo, clean_mongo):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {
                     "artifact_name": "test",
@@ -332,6 +336,7 @@ class TestUploadArtifactEnterprise:
 
     def test_upload_artifact_selection_match_depends(self, mongo, clean_mongo):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {
                     "artifact_name": "test",
@@ -355,6 +360,7 @@ class TestUploadArtifactEnterprise:
 
     def test_upload_artifact_selection_already_installed(self, mongo, clean_mongo):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {
                     "artifact_name": "test",
@@ -380,6 +386,7 @@ class TestUploadArtifactEnterprise:
         self, mongo, clean_mongo
     ):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {
                     "artifact_name": "test",
@@ -411,6 +418,7 @@ class TestUploadArtifactEnterprise:
         self, mongo, clean_mongo
     ):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
                 {
@@ -457,6 +465,7 @@ class TestUploadArtifactEnterprise:
         self, mongo, clean_mongo
     ):
         dev = self.setup_upload_artifact_selection(
+            plan="enterprise",
             artifacts=(
                 {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
                 {
@@ -496,5 +505,55 @@ class TestUploadArtifactEnterprise:
             assert m_size is not None
             size = int(m_size.group(1))
             assert size == 1024
+        finally:
+            os.unlink(f.name)
+
+    @pytest.mark.parametrize("plan", ["os", "professional"])
+    def test_provides_depends_ignored_in_lower_plans(self, mongo, clean_mongo, plan):
+        dev = self.setup_upload_artifact_selection(
+            plan=plan,
+            artifacts=(
+                {"artifact_name": "test", "device_types": ["arm1"], "size": 256,},
+                {
+                    "artifact_name": "test",
+                    "device_types": ["arm1"],
+                    "depends": ("foo:fooval","bar:barval",),
+                    "size": 1024,
+                },
+            )
+        )
+        deploymentsd = ApiClient(deployments.URL_DEVICES)
+        r = deploymentsd.with_auth(dev.token).call(
+            "POST",
+            deployments.URL_NEXT,
+            body={
+                "device_type": "arm1",
+                "artifact_name": "old-artifact",
+                "foo": "fooval",
+                "bar": "barval",
+            },
+        )
+        assert r.status_code == 200
+        data = r.json()
+        r = requests.get(data["artifact"]["source"]["uri"], verify=False)
+        assert r.status_code == 200
+
+        f = tempfile.NamedTemporaryFile(delete=False)
+        try:
+            f.write(r.content)
+            f.close()
+            #
+            p = subprocess.Popen(
+                ["mender-artifact", "read", f.name], stdout=subprocess.PIPE
+            )
+            stdout = p.stdout.read().decode("utf-8")
+            m_size = re.search(r".*size: *([0-9]+).*", stdout, re.M | re.I)
+            assert m_size is not None
+            size = int(m_size.group(1))
+
+            # if provides/depends wasn't ignored - the matching, larger
+            # artifact should have been selected
+            # that's not the case, and we selected 'smallest of all'
+            assert size == 256
         finally:
             os.unlink(f.name)

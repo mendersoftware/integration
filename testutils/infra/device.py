@@ -127,7 +127,10 @@ class MenderDevice:
         return RebootDetector(self, host_ip)
 
     def get_client_service_name(self):
-        return self.run("if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi").strip()
+        return self.run(
+            "if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi"
+        ).strip()
+
 
 class RebootDetector:
     # This global one is used to increment each port used.

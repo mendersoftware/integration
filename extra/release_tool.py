@@ -2064,8 +2064,8 @@ def is_repo_on_known_branch(path):
     remote = find_upstream_remote(None, path)
 
     branches = execute_git(None, path, ["for-each-ref", "--format=%(refname:short)", "--points-at", "HEAD",
-                                        "refs/remotes/%s/*" % remote], capture=True).split()
-    return any([re.search(r"/([0-9]+\.[0-9]+\.[0-9x]+|master)$", branch) for branch in branches])
+                                        "refs/remotes/%s/*" % remote, "refs/tags/*"], capture=True).split()
+    return any([re.search(r"([0-9]+\.[0-9]+\.[0-9x]+|master)$", branch) for branch in branches])
 
 def select_test_suite():
     """ Check what backend components are checked out in custom revisions and decide

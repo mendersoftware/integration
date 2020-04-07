@@ -185,12 +185,18 @@ cleanup(){
 parse_args "$@"
 build_backend_tests_runner
 
+echo "running test suites:" 
+echo "${TEST_SUITES[@]}"
+echo "end of test suites list"
 
 for suite in "${TEST_SUITES[@]}"; do
+    echo "(1) running suite: $suite.";
+    [ "$suite" == "open" ] && continue
+    echo "(2) running suite: $suite.";
     case "$suite" in
         open)
             echo "Skipping Open Source test suite for staging testing"
-            continue
+#             continue
             ;;
         enterprise)
             COMPOSE_CMD="$COMPOSE_CMD_ENTERPRISE"
@@ -199,6 +205,7 @@ for suite in "${TEST_SUITES[@]}"; do
             ;;
     esac
 
+    echo "(2) preparing..";
     prepare_pytest_args
     run_tests
 

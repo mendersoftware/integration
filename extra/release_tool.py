@@ -193,9 +193,9 @@ GIT_TO_BUILDPARAM_MAP = {
 
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
-BACKEND_SERVICES_OPEN = {"deviceauth"}
-BACKEND_SERVICES_ENT = {"deployments-enterprise", "inventory-enterprise", "tenantadm", "useradm-enterprise"}
-BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm"}
+BACKEND_SERVICES_OPEN = {"deviceauth", "create-artifact-worker"}
+BACKEND_SERVICES_ENT = {"tenantadm", "deployments-enterprise", "inventory-enterprise", "useradm-enterprise", "workflows-enterprise"}
+BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 
 class BuildParam():
@@ -805,7 +805,7 @@ def version_components(version):
     """Returns a four-tuple containing the version componets major, minor, patch
     and beta, as ints. Beta does not include the "b"."""
 
-    match = re.match("^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
+    match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
     if match is None:
         raise NotAVersionException("Invalid version '%s' passed to version_components." % version)
 
@@ -1114,7 +1114,6 @@ def trigger_build(state, tag_avail):
             params = copy.deepcopy(state['extra_buildparams'])
 
             # Populate parameters with build tags for each repository.
-            postdata = []
             for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
                 if tag_avail[repo.git()].get('build_tag') is None:
                     print("%s doesn't have a build tag yet!" % repo.git())
@@ -1633,8 +1632,8 @@ def determine_version_to_include_in_release(state, repo):
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())
     prev_of_integration = find_prev_version(tag_list, state['version'])
-    (overall_major, overall_minor, overall_patch, overall_beta) = version_components(state['version'])
-    (prev_major, prev_minor, prev_patch, prev_beta) = version_components(prev_of_integration)
+    (overall_major, overall_minor, _, overall_beta) = version_components(state['version'])
+    (prev_major, prev_minor, _, _) = version_components(prev_of_integration)
 
     prev_of_repo = None
     new_repo_version = None
@@ -1649,7 +1648,7 @@ def determine_version_to_include_in_release(state, repo):
         version_list = sorted_final_version_list(os.path.join(state['repo_dir'], repo.git()))
         if len(version_list) > 0:
             prev_of_repo = version_list[0]
-            (major, minor, patch, beta) = version_components(prev_of_repo)
+            (major, minor, _, _) = version_components(prev_of_repo)
             new_repo_version = "%d.%d.0" % (major, minor + 1)
         else:
             # No previous version at all. Start at 1.0.0.
@@ -2065,8 +2064,8 @@ def is_repo_on_known_branch(path):
     remote = find_upstream_remote(None, path)
 
     branches = execute_git(None, path, ["for-each-ref", "--format=%(refname:short)", "--points-at", "HEAD",
-                                        "refs/remotes/%s/*" % remote], capture=True).split()
-    return any([re.search("/([0-9]+\.[0-9]+\.[0-9x]+|master)$", branch) for branch in branches])
+                                        "refs/remotes/%s/*" % remote, "refs/tags/*"], capture=True).split()
+    return any([re.search(r"([0-9]+\.[0-9]+\.[0-9x]+|master)$", branch) for branch in branches])
 
 def select_test_suite():
     """ Check what backend components are checked out in custom revisions and decide

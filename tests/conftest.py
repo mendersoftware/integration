@@ -137,7 +137,9 @@ def pytest_exception_interact(node, call, report):
                 logger.info("Not able to print client deployment log")
             try:
                 logger.info("Printing client systemd log, if possible:")
-                output = device.run("journalctl -u mender-client || true")
+                output = device.run(
+                    "journalctl -u %s || true" % device.get_client_service_name()
+                )
                 logger.info(output)
             except:
                 logger.info("Not able to print client systemd log")

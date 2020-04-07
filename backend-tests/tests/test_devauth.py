@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import base64 
+import base64
 import json
 
 import testutils.api.useradm as useradm
@@ -25,6 +25,7 @@ from common import mongo, clean_mongo, create_org, make_accepted_device, Tenant
 
 dauthd = ApiClient(deviceauth_v1.URL_DEVICES)
 dauthm = ApiClient(deviceauth_v2.URL_MGMT)
+
 
 def make_tenant_and_accepted_dev(name, uname, plan):
     tenant = create_org(name, uname, "correcthorse", plan=plan)
@@ -49,9 +50,13 @@ def make_tenant_and_accepted_dev(name, uname, plan):
 def tenants_and_accepted_devs(clean_mongo):
     tos = make_tenant_and_accepted_dev("tenant-os", "user@tenant-os.com", "os")
 
-    tpro = make_tenant_and_accepted_dev("tenant-pro", "user@tenant-pro.com", "professional")
+    tpro = make_tenant_and_accepted_dev(
+        "tenant-pro", "user@tenant-pro.com", "professional"
+    )
 
-    tent = make_tenant_and_accepted_dev("tenant-ent", "user@tenant-ent.com", "enterprise")
+    tent = make_tenant_and_accepted_dev(
+        "tenant-ent", "user@tenant-ent.com", "enterprise"
+    )
 
     return [tos, tpro, tent]
 
@@ -74,16 +79,16 @@ class TestAuthReqEnterprise:
             token = r.text
 
             payload = token.split(".")[1]
-            payload = base64.b64decode(payload+"==")
+            payload = base64.b64decode(payload + "==")
             payload = json.loads(payload.decode("utf-8"))
 
             # standard claims
             assert payload["sub"] == dev.id
             assert payload["iss"] == "Mender"
-            assert payload["jti"] is not None 
-            assert payload["exp"] is not None 
+            assert payload["jti"] is not None
+            assert payload["exp"] is not None
 
             # custom claims
             assert payload["mender.plan"] == t.plan
             assert payload["mender.tenant"] == t.id
-            assert payload["mender.device"] 
+            assert payload["mender.device"]

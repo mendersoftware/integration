@@ -82,8 +82,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
             return artifact_file
 
         deployment_id, _ = common_update_procedure(
-            make_artifact=prepare_depends_artifact,
-            verify_status=False,
+            make_artifact=prepare_depends_artifact, verify_status=False,
         )
         deploy.check_expected_status("finished", deployment_id)
 

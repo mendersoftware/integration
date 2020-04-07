@@ -294,7 +294,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("rootfs_image_checksum:checksum",),
                     "provides": ("rootfs_image_checksum:provided",),
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -320,7 +320,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("rootfs_image_checksum:another-checksum",),
                     "provides": ("rootfs_image_checksum:provided",),
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -344,7 +344,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("rootfs_image_checksum:checksum",),
                     "provides": ("rootfs_image_checksum:provided",),
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -368,7 +368,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("rootfs_image_checksum:another-checksum",),
                     "provides": ("rootfs_image_checksum:provided",),
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -400,7 +400,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("rootfs_image_checksum:another-checksum",),
                     "provides": ("rootfs_image_checksum:provided",),
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -427,7 +427,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("vcdiff:xdelta",),
                     "size": 256,
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -474,7 +474,7 @@ class TestUploadArtifactEnterprise:
                     "depends": ("vcdiff:xdelta",),
                     "size": 256,
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(
@@ -517,10 +517,10 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("foo:fooval","bar:barval",),
+                    "depends": ("foo:fooval", "bar:barval",),
                     "size": 1024,
                 },
-            )
+            ),
         )
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         r = deploymentsd.with_auth(dev.token).call(

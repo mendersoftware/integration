@@ -119,7 +119,7 @@ class TestUpdateModules(MenderTesting):
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service(
-                mender_device.get_client_service_name()
+                "mender-client"
             )
             assert (
                 "Artifact Payload type 'rootfs-image' is not supported by this Mender Client"

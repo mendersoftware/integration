@@ -60,6 +60,7 @@ class MenderDevice:
             connect_kwargs={"password": "", "banner_timeout": 60, "auth_timeout": 60},
         )
         self._conn.client.set_missing_host_key_policy(IgnorePolicy())
+        self._service_name = None
 
     @property
     def host_string(self):
@@ -127,9 +128,11 @@ class MenderDevice:
         return RebootDetector(self, host_ip)
 
     def get_client_service_name(self):
-        return self.run(
-            "if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi"
-        ).strip()
+        if self._service_name is None:
+            self._service_name = self.run(
+                "if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi"
+            ).strip()
+        return self._service_name
 
 
 class RebootDetector:

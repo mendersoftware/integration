@@ -66,7 +66,7 @@ class TestFaultTolerance(MenderTesting):
                         "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
                     )
         except Exception as e:
-            logger.info("Exception while messing with network connectivity: " + e)
+            logger.info("Exception while messing with network connectivity: %s", str(e))
 
     @staticmethod
     def wait_for_download_retry_attempts(device, search_string):

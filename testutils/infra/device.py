@@ -351,11 +351,11 @@ def _run(conn, cmd, **kw):
             result = conn.run(cmd, **kw)
             break
         except NoValidConnectionsError as e:
-            logger.info("Could not connect to host %s: %s", conn.host, e)
+            logger.info("Could not connect to host %s: %s", conn.host, str(e))
             continue
         except SSHException as e:
             logger.info(
-                "Got SSH exception while connecting to host %s: %s", conn.host, e
+                "Got SSH exception while connecting to host %s: %s", conn.host, str(e)
             )
             if not (
                 "Connection reset by peer" in str(e)
@@ -367,7 +367,9 @@ def _run(conn, cmd, **kw):
         except OSError as e:
             # The OSError is happening while there is no QEMU instance initialized
             logger.info(
-                "Got OSError exception while connecting to host %s: %s", conn.host, e
+                "Got OSError exception while connecting to host %s: %s",
+                conn.host,
+                str(e),
             )
             if not "Cannot assign requested address" in str(e):
                 raise e
@@ -378,17 +380,13 @@ def _run(conn, cmd, **kw):
             logger.info(
                 "Got UnexpectedExit while executing command in host %s: %s",
                 conn.host,
-                e,
+                str(e),
             )
             continue
         except Exception as e:
-            logger.error(
-                "Generic exception happened while connecting to host %s: %s",
-                conn.host,
-                e,
+            logger.exception(
+                "Generic exception happened while connecting to host %s", conn.host,
             )
-            logger.error(type(e))
-            logger.error(e.args)
             raise e
     else:
         raise RuntimeError(

@@ -428,7 +428,12 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
             if data.get(yml_component.yml()) is not None:
-                repo_range.append(remote + data[yml_component.yml()]['version'])
+                version = data[yml_component.yml()]['version']
+                # If it is a tag, do not prepend remote name
+                if re.search(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
+                    repo_range.append(version)
+                else:
+                    repo_range.append(remote + version)
         return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)

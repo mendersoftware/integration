@@ -44,7 +44,7 @@ class TestFaultTolerance(MenderTesting):
         try:
             for h in hosts:
                 gateway_ip = device.run(
-                    "nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+                    r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
                     % (h),
                     hide=True,
                 ).strip()
@@ -66,7 +66,7 @@ class TestFaultTolerance(MenderTesting):
                         "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
                     )
         except Exception as e:
-            logger.info("Exception while messing with network connectivity: " + e)
+            logger.info("Exception while messing with network connectivity: %s", str(e))
 
     @staticmethod
     def wait_for_download_retry_attempts(device, search_string):

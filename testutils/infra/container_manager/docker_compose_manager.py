@@ -109,14 +109,9 @@ class DockerComposeNamespace(DockerNamespace):
         for count in range(1, 6):
             with docker_lock:
                 try:
-                    output = subprocess.check_output(
+                    return subprocess.check_output(
                         cmd, stderr=subprocess.STDOUT, shell=True, env=penv
-                    )
-
-                    # Return as string (Python 2/3 compatible)
-                    if isinstance(output, bytes):
-                        return output.decode("utf-8")
-                    return output
+                    ).decode("utf-8")
 
                 except subprocess.CalledProcessError as e:
                     logger.info(
@@ -128,10 +123,7 @@ class DockerComposeNamespace(DockerNamespace):
                 logger.info("sleeping %d seconds and retrying" % (count * 30))
                 time.sleep(count * 30)
 
-        raise Exception(
-            "failed to start docker-compose (called: %s): exit code: %d, output: %s"
-            % (e.cmd, e.returncode, e.output)
-        )
+        raise Exception("failed to start docker-compose (called: %s)" % cmd)
 
     def _wait_for_containers(self, expected_containers):
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
@@ -231,10 +223,7 @@ class DockerComposeNamespace(DockerNamespace):
             shell=True,
         )
 
-        # Return as list of strings (Python 2/3 compatible)
-        if isinstance(output, bytes):
-            return output.decode().split()
-        return output.split()
+        return output.decode().split()
 
     def get_logs_of_service(self, service):
         """Return logs of service"""
@@ -250,10 +239,7 @@ class DockerComposeNamespace(DockerNamespace):
             "docker inspect --format='{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'",
             shell=True,
         )
-        # Return as string (Python 2/3 compatible)
-        if isinstance(output, bytes):
-            return output.decode().split()[0]
-        return output.split()[0]
+        return output.decode().split()[0]
 
     def get_mender_clients(self):
         """Returns IP address(es) of mender-client cotainer(s)"""
@@ -266,10 +252,7 @@ class DockerComposeNamespace(DockerNamespace):
             % (self.name, image_name)
         )
         output = subprocess.check_output(cmd, shell=True)
-        # Return as string (Python 2/3 compatible)
-        if isinstance(output, bytes):
-            return output.decode().strip() + ":8822"
-        return output.strip() + ":8822"
+        return output.decode().strip() + ":8822"
 
     def get_mender_gateway(self):
         """Returns IP address of mender-api-gateway service"""

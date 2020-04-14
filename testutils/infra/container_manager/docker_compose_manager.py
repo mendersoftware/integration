@@ -74,6 +74,10 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
+    MT_DOCKER_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+    ]
     SMTP_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml",
         COMPOSE_FILES_PATH
@@ -355,6 +359,16 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(45)
+
+    def new_tenant_docker_client(self, name, tenant):
+        if not self.MT_DOCKER_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_DOCKER_CLIENT_FILES
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(5)
 
 
 class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):

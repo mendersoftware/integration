@@ -1899,7 +1899,6 @@ def do_integration_versions_including(args):
                  "refs/tags/*",
                  "refs/remotes/%s/master" % remote,
                  "refs/remotes/%s/staging" % remote,
-                 "refs/remotes/%s/feature/*" % remote,
                  "refs/remotes/%s/[1-9]*" % remote]
     if args.all:
         git_query += ["refs/heads/**"]

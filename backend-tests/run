@@ -104,8 +104,7 @@ get_runner_requirements() {
     echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
 
     curl --fail "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
-         -o "$TOOLS/mender-artifact" \
-         -z "$TOOLS/mender-artifact"
+         -o "$TOOLS/mender-artifact"
 
     chmod +x "$TOOLS/mender-artifact"
 }

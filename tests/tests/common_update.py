@@ -94,11 +94,10 @@ def common_update_procedure(
 def update_image(
     device,
     host_ip,
+    expected_mender_clients=1,
     install_image=None,
     regenerate_image_id=True,
     signed=False,
-    skip_reboot_verification=False,
-    expected_mender_clients=1,
     scripts=[],
     pre_upload_callback=lambda: None,
     pre_deployment_callback=lambda: None,
@@ -122,6 +121,7 @@ def update_image(
             regenerate_image_id,
             signed=signed,
             scripts=scripts,
+            pre_upload_callback=pre_upload_callback,
             pre_deployment_callback=pre_deployment_callback,
             deployment_triggered_callback=deployment_triggered_callback,
             make_artifact=make_artifact,
@@ -130,7 +130,6 @@ def update_image(
         )
         reboot.verify_reboot_performed()
 
-    with device.get_reboot_detector(host_ip) as reboot:
         try:
             assert device.get_active_partition() == previous_inactive_part
         except AssertionError:
@@ -150,9 +149,6 @@ def update_image(
         for d in auth_v2.get_devices():
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
-        if not skip_reboot_verification:
-            reboot.verify_reboot_not_performed()
-
     assert device.yocto_id_installed_on_machine() == expected_image_id
 
     deploy.check_expected_status("finished", deployment_id)
@@ -170,10 +166,10 @@ def update_image(
 def update_image_failed(
     device,
     host_ip,
-    install_image="broken_update.ext4",
-    make_artifact=None,
     expected_mender_clients=1,
     expected_log_message="Reboot to new update failed",
+    install_image="broken_update.ext4",
+    make_artifact=None,
 ):
     """
         Perform a upgrade using a broken image (random data)

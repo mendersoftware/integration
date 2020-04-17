@@ -346,11 +346,12 @@ def get_docker_compose_data_from_json_list(json_list):
             full_image = cont_info.get('image')
             if full_image is None or ("mendersoftware" not in full_image and "mender.io" not in full_image):
                 continue
-            split = full_image.rsplit("/", 1)
-            prefix = split[0]
-            split = split[1].split(":", 1)
-            image = split[0]
+            split = full_image.split(":", 1)
+            prefix_and_image = split[0]
             ver = split[1]
+            split = prefix_and_image.rsplit("/", 1)
+            prefix = split[0]
+            image = split[1]
             if data.get(image) is not None:
                 raise Exception(("More than one container is using the image name '%s'. "
                                  + "The tool currently does not support this.")
@@ -417,13 +418,18 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
             rev_range = in_integration_version.split("..")
             if len(rev_range) > 1:
                 range_type = ".."
+
+        # Figure out if the user string contained a remote or not
+        remote = ""
+        split = rev_range[0].split("/", 1)
+        if len(split) > 1:
+            remote_candidate = split[0]
+            ref_name = split[1]
+            if subprocess.call("git rev-parse -q --verify refs/heads/%s > /dev/null" % ref_name, shell=True) == 0:
+                remote = remote_candidate + "/"
+
         repo_range = []
         for rev in rev_range:
-            match = re.match("^(.*/)", rev)
-            if match is not None:
-                remote = match.group(1)
-            else:
-                remote = ""
             data = get_docker_compose_data_for_rev(integration_dir, rev)
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
@@ -1893,10 +1899,9 @@ def do_integration_versions_including(args):
                  "refs/tags/*",
                  "refs/remotes/%s/master" % remote,
                  "refs/remotes/%s/staging" % remote,
-                 "refs/remotes/%s/feature/*" % remote,
                  "refs/remotes/%s/[1-9]*" % remote]
     if args.all:
-        git_query += ["refs/heads/*"]
+        git_query += ["refs/heads/**"]
     output = execute_git(None, git_dir, git_query, capture=True)
     candidates = []
     for line in output.strip().split('\n'):

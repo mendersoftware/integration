@@ -1893,13 +1893,17 @@ def do_integration_versions_including(args):
 
     git_dir = integration_dir()
     remote = find_upstream_remote(None, git_dir)
+    # The below query will match all tags and the following branches: master, staging and releases (N.M.x)
     git_query = ["for-each-ref",
                  "--format=%(refname:short)",
                  "--sort=-version:refname:short",
                  "refs/tags/*",
                  "refs/remotes/%s/master" % remote,
                  "refs/remotes/%s/staging" % remote,
-                 "refs/remotes/%s/[1-9]*" % remote]
+                 "refs/remotes/%s/[0-9].[0-9].x" % remote,
+                 "refs/remotes/%s/[0-9][0-9].[0-9].x" % remote,
+                 "refs/remotes/%s/[0-9].[0-9][0-9].x" % remote,
+                 "refs/remotes/%s/[0-9][0-9].[0-9][0-9].x" % remote]
     if args.all:
         git_query += ["refs/heads/**"]
     output = execute_git(None, git_dir, git_query, capture=True)

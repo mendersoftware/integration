@@ -14,3 +14,12 @@ services:
             # don't supply a tenant token. If empty, clients without a tenant
             # token will be rejected.
             DEVICEAUTH_DEFAULT_TENANT_TOKEN: ''
+
+    mender-tenantadm:
+        environment:
+            # The TENANTADM_DEVICE_LIMIT_* variables sets the default upper 
+            # limit on number of devices the tenant is able to accept
+            # (0: no limit).
+            TENANTADM_DEVICE_LIMIT_STARTER_DEFAULT: 50
+            TENANTADM_DEVICE_LIMIT_PROFESSIONAL_DEFAULT: 250
+            TENANTADM_DEVICE_LIMIT_ENTERPRISE_DEFAULT: 0

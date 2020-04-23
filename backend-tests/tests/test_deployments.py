@@ -1400,7 +1400,18 @@ class TestDeploymentsStatusUpdateBase:
             substate="bar",
         )
 
-        # second device
+        # Try to retrieve next update and assert expected status code
+        resp = deploymentsd.with_auth(devs[3].token).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={
+                "artifact_name": getattr(
+                    devs[3], "artifact_name", default_artifact_name
+                ),
+                "device_type": getattr(devs[3], "device_type", default_device_type),
+            },
+        )
+        assert resp.status_code == 200
 
         # device deployment: pending -> failure
         # deployment: inprogress -> finished

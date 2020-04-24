@@ -49,10 +49,10 @@ def format_vars(json, names=None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description="Pull and dump interesting env vars from gitlab - ready for sourcing for your local test runs:\n\n"
-        "GITLAB_TOKEN=<your gitlab access token> ./dump-gitlab-env.py\n\n"+
-        "(see: https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description="Pull and dump interesting env vars from gitlab - ready for sourcing for your local test runs:\n\n"
+        "GITLAB_TOKEN=<your gitlab access token> ./dump-gitlab-env.py\n\n"
+        + "(see: https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--all",

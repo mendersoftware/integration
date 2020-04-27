@@ -94,11 +94,13 @@ class TestProvidesDependsEnterprise(MenderTesting):
 
         # Retry for at most 60 seconds checking for deployment status update
         stat = None
+        noartifact = 0
         for i in range(60):
             time.sleep(1)
             stat = deploy.get_statistics(deployment_id)
-            if stat.get("pending") == 0:
+            if stat.get("noartifact") == 1:
+                noartifact = 1
                 break
 
         assert stat is not None
-        assert stat.get("noartifact") == 1
+        assert noartifact == 1

@@ -58,6 +58,8 @@ services:
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
             DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000
+        depends_on:
+            - storage-proxy
 
     minio:
         networks:

@@ -147,11 +147,11 @@ fi
 mkdir -p output
 ret=0
 docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py -g mender-client-qemu) || ret=$?
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu) || ret=$?
 if [ $ret -eq 0 ]; then
     # There is `extract_fs` support. Get the R/O image too.
     docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-           mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py -g mender-client-qemu-rofs)
+           mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs)
     mv output/* .
 else
     # Old style ext4 fetching.

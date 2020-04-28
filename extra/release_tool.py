@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+# Copyright 2020 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        https://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 import argparse
 import copy
@@ -362,8 +375,10 @@ def docker_compose_files_list(dir):
     """Return all docker-compose*.yml files in given directory."""
     list = []
     for entry in os.listdir(dir):
-        if entry == "other-components.yml" or (
-            entry.startswith("docker-compose") and entry.endswith(".yml")
+        if (
+            entry == "git-versions.yml"
+            or entry == "other-components.yml"
+            or (entry.startswith("docker-compose") and entry.endswith(".yml"))
         ):
             list.append(os.path.join(dir, entry))
     return list
@@ -376,37 +391,56 @@ def get_docker_compose_data_from_json_list(json_list):
             "container": container_name,
             "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
             "version": version,
+            "git_version": git_version,
         }
     }
     """
     data = {}
     for json_str in json_list:
         json_elem = yaml.safe_load(json_str)
-        for container, cont_info in json_elem["services"].items():
-            full_image = cont_info.get("image")
-            if full_image is None or (
-                "mendersoftware" not in full_image and "mender.io" not in full_image
+        for service, serv_info in json_elem["services"].items():
+            full_image = serv_info.get("image")
+            if full_image is not None and (
+                "mendersoftware" in full_image or "mender.io" in full_image
             ):
-                continue
-            split = full_image.split(":", 1)
-            prefix_and_image = split[0]
-            ver = split[1]
-            split = prefix_and_image.rsplit("/", 1)
-            prefix = split[0]
-            image = split[1]
-            if data.get(image) is not None:
-                raise Exception(
-                    (
-                        "More than one container is using the image name '%s'. "
-                        + "The tool currently does not support this."
+                split = full_image.split(":", 1)
+                prefix_and_image = split[0]
+                ver = split[1]
+                split = prefix_and_image.rsplit("/", 1)
+                prefix = split[0]
+                image = split[1]
+                if data.get(image) is None:
+                    data[image] = dict()
+                if (
+                    data[image].get("container") is not None
+                    or data[image].get("image_prefix") is not None
+                    or data[image].get("version") is not None
+                ):
+                    raise Exception(
+                        (
+                            "More than one container is using the image name '%s'. "
+                            + "The tool currently does not support this."
+                        )
+                        % image
                     )
-                    % image
+                data[image].update(
+                    {"container": service, "image_prefix": prefix, "version": ver,}
                 )
-            data[image] = {
-                "container": container,
-                "image_prefix": prefix,
-                "version": ver,
-            }
+            git_version = serv_info.get("git-version")
+            if git_version is not None:
+                if data.get(service) is None:
+                    data[service] = dict()
+                if data[service].get("git_version") is not None:
+                    raise Exception(
+                        (
+                            "More than one service specifying git-version for '%s'. "
+                            + "The tool currently does not support this."
+                        )
+                        % service
+                    )
+                data[service].update(
+                    {"git_version": git_version,}
+                )
     return data
 
 
@@ -444,7 +478,9 @@ def get_docker_compose_data_for_rev(git_dir, rev):
     return get_docker_compose_data_from_json_list(yamls)
 
 
-def version_of(integration_dir, yml_component, in_integration_version=None):
+def version_of(
+    integration_dir, yml_component, in_integration_version=None, git_version=True
+):
     if yml_component.yml() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
@@ -512,6 +548,9 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
         return range_type.join(repo_range)
     else:
         data = get_docker_compose_data(integration_dir)
+        # Old release branches will not have git_version (i.e. version matches git_version)
+        if git_version and data[yml_component.yml()].get("git_version") is not None:
+            return data[yml_component.yml()]["git_version"]
         return data[yml_component.yml()]["version"]
 
 
@@ -526,7 +565,18 @@ def do_version_of(args):
 
     yml_component = comp.yml_components()[0]
 
-    print(version_of(integration_dir(), yml_component, args.in_integration_version))
+    assert args.version_type in ["docker", "git"], (
+        "%s is not a valid name type!" % args.version_type
+    )
+
+    print(
+        version_of(
+            integration_dir(),
+            yml_component,
+            args.in_integration_version,
+            git_version=(args.version_type == "git"),
+        )
+    )
 
 
 def do_list_repos(args, optional_too):
@@ -537,7 +587,7 @@ def do_list_repos(args, optional_too):
         "docker": "docker_image",
         "git": "git",
     }
-    assert args.list in cli_types, "%s is not a valid name type!" % args.list
+    assert args.list in cli_types.keys(), "%s is not a valid name type!" % args.list
     type = cli_types[args.list]
 
     repos = [
@@ -2719,6 +2769,14 @@ def main():
         help="Get version of given service",
     )
     parser.add_argument(
+        "-t",
+        "--version-type",
+        dest="version_type",
+        metavar="git|docker",
+        default="git",
+        help="Used together with the above to specify the type of version to query.",
+    )
+    parser.add_argument(
         "-i",
         "--in-integration-version",
         dest="in_integration_version",
@@ -2885,4 +2943,5 @@ def main():
         sys.exit(1)
 
 
-main()
+if __name__ == "__main__":
+    main()

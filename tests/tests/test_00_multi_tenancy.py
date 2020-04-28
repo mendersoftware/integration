@@ -17,7 +17,7 @@ import time
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
-from .common_update import update_image, update_image_failed, common_update_procedure
+from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
 from .mendertesting import MenderTesting
 from . import artifact_lock
@@ -174,14 +174,12 @@ class TestMultiTenancyEnterprise(MenderTesting):
                 "password": "hunter2hunter2",
                 "username": "foo2",
                 "container": "mender-client-deployment-1",
-                "fail": False,
             },
             {
                 "email": "bar2@bar2.com",
                 "password": "hunter2hunter2",
                 "username": "bar2",
                 "container": "mender-client-deployment-2",
-                "fail": True,
             },
         ]
 
@@ -202,15 +200,9 @@ class TestMultiTenancyEnterprise(MenderTesting):
                 )
             )
             host_ip = enterprise_no_client.get_virtual_network_host_ip()
-            if user["fail"]:
-                update_image_failed(mender_device, host_ip)
-            else:
-                update_image(
-                    mender_device,
-                    host_ip,
-                    install_image=valid_image,
-                    skip_reboot_verification=True,
-                )
+            update_image(
+                mender_device, host_ip, install_image=valid_image,
+            )
 
     def test_multi_tenancy_deployment_aborting(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and

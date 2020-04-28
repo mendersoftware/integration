@@ -56,16 +56,17 @@ class Authentication:
         self.multitenancy = Authentication.multitenancy
         self.current_tenant = Authentication.current_tenant
 
-    def set_tenant(self, org_name, username, password):
-        self.new_tenant(org_name, username, password)
+    def set_tenant(self, org_name, username, password, plan="os"):
+        self.new_tenant(org_name, username, password, plan)
 
-    def new_tenant(self, org_name, username, password):
+    def new_tenant(self, org_name, username, password, plan="os"):
         self.multitenancy = True
         self.reset_auth_token()
         self.org_name = org_name
         self.org_create = True
         self.username = username
         self.password = password
+        self.plan = plan
         self.get_auth_token()
 
     def get_auth_token(self, create_new_user=True):
@@ -85,7 +86,7 @@ class Authentication:
             if r.status_code is not 200:
                 if self.multitenancy and self.org_create:
                     tenant_id = self._create_org(
-                        self.org_name, self.username, self.password
+                        self.org_name, self.username, self.password, self.plan
                     )
                     tenant_id = tenant_id.strip()
 
@@ -138,10 +139,10 @@ class Authentication:
             self.auth_header = {"Authorization": "Bearer " + str(r.text)}
         return r
 
-    def _create_org(self, name, username, password):
+    def _create_org(self, name, username, password, plan="os"):
         namespace = get_container_manager().name
         cli = CliTenantadm(containers_namespace=namespace)
-        tenant_id = cli.create_org(name, username, password)
+        tenant_id = cli.create_org(name, username, password, plan)
         return tenant_id
 
     def _get_tenant_data(self, tenant_id):

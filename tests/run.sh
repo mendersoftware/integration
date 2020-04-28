@@ -100,6 +100,22 @@ function get_requirements() {
         exit 1
     fi
 
+    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
+         -o downloaded-tools/directory-artifact-gen \
+         -z downloaded-tools/directory-artifact-gen
+    
+    if [ $? -ne 0 ]; then
+        echo "failed to download directory-artifact-gen"
+        exit 1
+    fi
+
+    chmod +x downloaded-tools/directory-artifact-gen
+
+    if [ $? -ne 0 ]; then
+        echo "failed to download directory-artifact-gen"
+        exit 1
+    fi
+
     export PATH=$PWD/downloaded-tools:$PATH
 
     inject_pre_generated_ssh_keys

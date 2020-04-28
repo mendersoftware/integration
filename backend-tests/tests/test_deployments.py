@@ -189,7 +189,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "One phase, with start time, and full batch size",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [{"batch_size": 100}],
             },
         ),
@@ -213,7 +214,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "One phase, with start time",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
             },
         ),
         # One phase:
@@ -229,7 +231,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "One phase, with no start time, and full batch size",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [{"batch_size": 100}],
             },
         ),
@@ -265,7 +268,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Two phases, with start time and batch, last with start time and batch size",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [{"batch_size": 10}, {"batch_size": 90}],
             },
         ),
@@ -295,7 +299,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Two phases, with no start time and batch, last with start time and batch size",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [{"batch_size": 10}, {"batch_size": 90}],
             },
         ),
@@ -324,7 +329,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Two phases, with no start time and batch, last with start time",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [{"batch_size": 10}, {"batch_size": 90}],
             },
         ),
@@ -367,7 +373,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Three phases, first start and batch, last start and batch",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [
                     {
                         "batch_size": 10,
@@ -412,7 +419,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Three phases, first batch, last start and batch",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [
                     {"batch_size": 10, "device_count": 0},
                     {"batch_size": 45, "device_count": 0},
@@ -453,7 +461,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Three phases, first batch, last start",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [
                     {
                         "batch_size": 10,
@@ -509,7 +518,8 @@ class TestDeploymentsEndpointEnterprise(object):
             {
                 "name": "Five phases, first no start time, last start time, no batch size",
                 "artifact_name": "deployments-phase-testing",
-                "device_count": 100,
+                "device_count": 0,
+                "max_devices": 100,
                 "phases": [
                     {"batch_size": 10, "device_count": 0},
                     {"batch_size": 10, "device_count": 0},
@@ -1400,7 +1410,18 @@ class TestDeploymentsStatusUpdateBase:
             substate="bar",
         )
 
-        # second device
+        # Try to retrieve next update and assert expected status code
+        resp = deploymentsd.with_auth(devs[3].token).call(
+            "GET",
+            deployments.URL_NEXT,
+            qs_params={
+                "artifact_name": getattr(
+                    devs[3], "artifact_name", default_artifact_name
+                ),
+                "device_type": getattr(devs[3], "device_type", default_device_type),
+            },
+        )
+        assert resp.status_code == 200
 
         # device deployment: pending -> failure
         # deployment: inprogress -> finished

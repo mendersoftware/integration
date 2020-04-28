@@ -44,7 +44,7 @@ class TestFaultTolerance(MenderTesting):
         try:
             for h in hosts:
                 gateway_ip = device.run(
-                    "nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+                    r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
                     % (h),
                     hide=True,
                 ).strip()
@@ -66,7 +66,7 @@ class TestFaultTolerance(MenderTesting):
                         "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
                     )
         except Exception as e:
-            logger.info("Exception while messing with network connectivity: " + e)
+            logger.info("Exception while messing with network connectivity: %s", str(e))
 
     @staticmethod
     def wait_for_download_retry_attempts(device, search_string):
@@ -258,10 +258,6 @@ class TestFaultTolerance(MenderTesting):
 
         tmpdir = tempfile.mkdtemp()
         try:
-            orig_image = valid_image
-            image_name = os.path.join(tmpdir, os.path.basename(orig_image))
-            shutil.copyfile(orig_image, image_name)
-
             # With the persistent mender.conf in /data, and the transient
             # mender.conf in /etc, we can simply delete the former (rootfs
             # config) to break the config, and add it back into the transient
@@ -292,8 +288,8 @@ class TestFaultTolerance(MenderTesting):
             update_image_failed(
                 mender_device,
                 host_ip,
-                install_image=image_name,
                 expected_log_message="Unable to roll back with a stub module, but will try to reboot to restore state",
+                install_image=valid_image,
             )
 
         finally:

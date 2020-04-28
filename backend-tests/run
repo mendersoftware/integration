@@ -30,6 +30,8 @@ PYTEST_REPORT_ENTERPRISE="--self-contained-html \
         --html=report_backend_integration_enterprise.html"
 PYTEST_REPORT=""
 
+TOOLS="$INTEGRATION_PATH/backend-tests/downloaded-tools"
+
 usage() {
     echo "runner script for backend-specific integration tests"
     echo ""
@@ -90,7 +92,21 @@ parse_args(){
 }
 
 build_backend_tests_runner() {
+    mkdir -p "$TOOLS"
+
+    get_runner_requirements
+
     docker build -t mender-backend-tests-runner -f $INTEGRATION_PATH/backend-tests/docker/Dockerfile $INTEGRATION_PATH/backend-tests
+}
+
+get_runner_requirements() {
+    MENDER_ARTIFACT_BRANCH=$($INTEGRATION_PATH/extra/release_tool.py --version-of mender-artifact)
+    echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
+
+    curl --fail "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
+         -o "$TOOLS/mender-artifact"
+
+    chmod +x "$TOOLS/mender-artifact"
 }
 
 run_tests() {

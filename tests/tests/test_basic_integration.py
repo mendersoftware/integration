@@ -145,7 +145,7 @@ class TestBasicIntegration(MenderTesting):
 
         # Give the image a really large wait interval.
         sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
-            "\(.*PollInter.*:\)\( *[0-9]*\)",
+            r"\(.*PollInter.*:\)\( *[0-9]*\)",
             "\\1 1800",
         )
         mender_device.run(sedcmd)
@@ -195,7 +195,7 @@ class TestBasicIntegration(MenderTesting):
 
         # Give the image a really large wait interval.
         sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
-            "\(.*PollInter.*:\)\( *[0-9]*\)",
+            r"\(.*PollInter.*:\)\( *[0-9]*\)",
             "\\1 1800",
         )
         mender_device.run(sedcmd)

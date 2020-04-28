@@ -36,6 +36,8 @@ class Artifacts:
         scripts=[],
         global_flags="",
         version=None,
+        depends={},
+        provides={},
     ):
         signed_arg = ""
 
@@ -60,6 +62,12 @@ class Artifacts:
         for script in scripts:
             cmd += " -s %s" % script
 
+        for key, value in depends.items():
+            cmd += " -d %s:%s" % (key, value)
+
+        for key, value in provides.items():
+            cmd += " -p %s:%s" % (key, value)
+
         logger.info("Running: " + cmd)
         subprocess.check_call(cmd, shell=True)
 
@@ -73,7 +81,7 @@ class Artifacts:
         conf = {}
 
         output = subprocess.check_output(
-            "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image, shell=True
+            "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image, shell=True,
         ).decode()
         import json
 

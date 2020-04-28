@@ -189,6 +189,16 @@ class Component:
         Component._initialize_component_maps()
         return self.COMPONENT_MAPS[self.type][self.name]["release_component"]
 
+    def is_independent_component(self):
+        Component._initialize_component_maps()
+        associated_repo = self.associated_components_of_type("git")[0]
+        independent_component = self.COMPONENT_MAPS["git"][associated_repo.name].get(
+            "independent_component"
+        )
+        if independent_component is not None:
+            return independent_component
+        return False
+
 
 # A map from git repo name to build parameter name in CI scripts.
 GIT_TO_BUILDPARAM_MAP = {
@@ -908,14 +918,16 @@ def check_tag_availability(state):
     this as the tag_avail data structure.
 
     The main fields in this one are:
+      image_tag: <highest Docker tag, or final Docker tag (i.e. mender-X.Y.Z)>
       <repo>:
         already_released: <whether this is a final release tag or not (true/false)>
-        build_tag: <highest build tag, or final tag>
+        build_tag: <highest Git build tag, or final Git tag>
         following: <branch we pick next build tag from>
         sha: <SHA of current build tag>
     """
 
     tag_avail = {}
+    highest_overall = -1
     for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
         missing_repos = False
@@ -952,6 +964,8 @@ def check_tag_availability(state):
             if highest >= 0:
                 # Assign highest tag so far.
                 tag_avail[repo.git()]["build_tag"] = highest_tag
+                if highest > highest_overall:
+                    highest_overall = highest
             # Else: Nothing. This repository doesn't have any build tags yet.
 
         if tag_avail[repo.git()].get("build_tag") is not None:
@@ -962,6 +976,12 @@ def check_tag_availability(state):
                 capture=True,
             )
             tag_avail[repo.git()]["sha"] = sha
+
+    if highest_overall > 0:
+        tag_avail["image_tag"] = "mender-%s-build%d" % (
+            state["version"],
+            highest_overall,
+        )
 
     if missing_repos:
         print("Error: missing repos directories.")
@@ -980,6 +1000,11 @@ def report_release_state(state, tag_avail):
     tags."""
 
     print("Mender release: %s" % state["version"])
+    print("Next build image: ", end="")
+    if tag_avail.get("image_tag") is not None:
+        print(tag_avail["image_tag"])
+    else:
+        print("<Needs a new image tag>")
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
@@ -1162,6 +1187,14 @@ def generate_new_tags(state, tag_avail, final):
                 )
             print()
 
+    if final:
+        next_tag_avail["image_tag"] = "mender-" + state["version"]
+    else:
+        next_tag_avail["image_tag"] = "mender-%s-build%d" % (
+            state["version"],
+            highest + 1,
+        )
+
     if not final:
         print("Next build is build %d." % (highest + 1))
     print("Each repository's new tag will be:")
@@ -1188,9 +1221,17 @@ def generate_new_tags(state, tag_avail, final):
             if repo.git() == "integration":
                 continue
 
-            set_docker_compose_version_to(
-                tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
-            )
+            if repo.is_independent_component():
+                set_docker_compose_version_to(
+                    tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
+                )
+            else:
+                set_docker_compose_version_to(
+                    tmpdir,
+                    repo,
+                    next_tag_avail["image_tag"],
+                    git_tag=next_tag_avail[repo.git()]["build_tag"],
+                )
             if prev_version:
                 try:
                     prev_repo_version = version_of(
@@ -1703,13 +1744,13 @@ def do_license_generation(state, tag_avail):
     print("Output is captured in generated-license-text.txt.")
 
 
-def set_docker_compose_version_to(dir, repo, tag):
+def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
     """Modifies docker-compose files in the given directory so that repo_docker
     image points to the given tag."""
 
-    for yml in repo.yml_components():
-        compose_files = docker_compose_files_list(dir)
-        for filename in compose_files:
+    compose_files = docker_compose_files_list(dir)
+    for filename in compose_files:
+        for yml in repo.yml_components():
             old = open(filename)
             new = open(filename + ".tmp", "w")
             for line in old:
@@ -1724,6 +1765,19 @@ def set_docker_compose_version_to(dir, repo, tag):
             new.close()
             old.close()
             os.rename(filename + ".tmp", filename)
+
+        if git_tag is not None:
+            # Replace Git tag with a new one.
+            with open(filename) as fd:
+                full_content = "".join(fd.readlines())
+            with open(filename, "w") as fd:
+                fd.write(
+                    re.sub(
+                        r"(\s*%s:[\n\s]+git-version:\s+)(.*)" % re.escape(repo.git()),
+                        r"\g<1>%s" % git_tag,
+                        full_content,
+                    )
+                )
 
 
 def purge_build_tags(state, tag_avail):
@@ -1847,7 +1901,8 @@ def push_latest_docker_tags(state, tag_avail):
     if not reply.startswith("Y") and not reply.startswith("y"):
         return
 
-    # Only for the message. We need to generate a new one for each repository.
+    # For independent components, we need to generate a new one for each repository;
+    # for backend services, we will use overall_minor_version
     overall_minor_version = state["version"][0 : state["version"].rindex(".")]
 
     compose_data = get_docker_compose_data_for_rev(
@@ -1868,34 +1923,32 @@ def push_latest_docker_tags(state, tag_avail):
             if tip == "latest":
                 minor_version = "latest"
             else:
-                minor_version = state[repo.git()]["version"][
-                    0 : state[repo.git()]["version"].rindex(".")
-                ]
+                if image.is_independent_component():
+                    minor_version = state[repo.git()]["version"][
+                        0 : state[repo.git()]["version"].rindex(".")
+                    ]
+                else:
+                    minor_version = overall_minor_version
 
             prefix = compose_data[image.docker_image()]["image_prefix"]
+
+            if image.is_independent_component():
+                build_tag = tag_avail[repo.git()]["build_tag"]
+            else:
+                build_tag = tag_avail["image_tag"]
 
             exec_list.append(
                 [
                     "docker",
                     "pull",
-                    "%s/%s:%s"
-                    % (
-                        prefix,
-                        image.docker_image(),
-                        tag_avail[repo.git()]["build_tag"],
-                    ),
+                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
                 ]
             )
             exec_list.append(
                 [
                     "docker",
                     "tag",
-                    "%s/%s:%s"
-                    % (
-                        prefix,
-                        image.docker_image(),
-                        tag_avail[repo.git()]["build_tag"],
-                    ),
+                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
                     "%s/%s:%s" % (prefix, image.docker_image(), minor_version),
                 ]
             )
@@ -1987,6 +2040,10 @@ def do_docker_compose_branches_from_follows(state):
         state, "integration", state["integration"]["following"]
     )
 
+    # For the Docker images, use M.N.x as the release branch
+    version_minor = state["version"][0 : state["version"].rindex(".")]
+    mender_branch = "mender-" + version_minor + ".x"
+
     try:
         for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
             branch = state[repo.git()]["following"]
@@ -1996,7 +2053,12 @@ def do_docker_compose_branches_from_follows(state):
             else:
                 bare_branch = branch
 
-            set_docker_compose_version_to(checkout, repo, bare_branch)
+            if repo.is_independent_component():
+                set_docker_compose_version_to(checkout, repo, bare_branch)
+            else:
+                set_docker_compose_version_to(
+                    checkout, repo, tag=mender_branch, git_tag=bare_branch,
+                )
 
         print("This is the diff:")
         execute_git(state, checkout, ["diff"])
@@ -2130,7 +2192,7 @@ def determine_version_to_include_in_release(state, repo):
     version = state_value(state, [repo.git(), "version"])
 
     if version is not None:
-        return version
+        return
 
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())

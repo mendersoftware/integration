@@ -1902,14 +1902,15 @@ def push_latest_docker_tags(state, tag_avail):
         return
 
     # For independent components, we need to generate a new one for each repository;
-    # for backend services, we will use overall_minor_version
+    # for backend services, we will use the overall ones
     overall_minor_version = state["version"][0 : state["version"].rindex(".")]
+    overall_major_version = state["version"][0 : state["version"].index(".")]
 
     compose_data = get_docker_compose_data_for_rev(
         integration_dir(), tag_avail["integration"]["sha"]
     )
 
-    for tip in [overall_minor_version, "latest"]:
+    for tip in [overall_minor_version, overall_major_version, "latest"]:
         reply = ask('Do you want to update ":%s" tags? ' % tip)
         if not reply.startswith("Y") and not reply.startswith("y"):
             continue
@@ -1921,14 +1922,26 @@ def push_latest_docker_tags(state, tag_avail):
             # repository.
             repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
-                minor_version = "latest"
-            else:
+                new_version = "latest"
+            elif tip.count(".") == 1:
                 if image.is_independent_component():
-                    minor_version = state[repo.git()]["version"][
+                    new_version = state[repo.git()]["version"][
                         0 : state[repo.git()]["version"].rindex(".")
                     ]
                 else:
-                    minor_version = overall_minor_version
+                    new_version = overall_minor_version
+            elif tip.count(".") == 0:
+                if image.is_independent_component():
+                    new_version = state[repo.git()]["version"][
+                        0 : state[repo.git()]["version"].index(".")
+                    ]
+                else:
+                    new_version = overall_major_version
+            else:
+                raise Exception(
+                    "Unrecognized tip %s, expected 'latest', minor-like or major-like"
+                    % tip
+                )
 
             prefix = compose_data[image.docker_image()]["image_prefix"]
 
@@ -1949,14 +1962,14 @@ def push_latest_docker_tags(state, tag_avail):
                     "docker",
                     "tag",
                     "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
-                    "%s/%s:%s" % (prefix, image.docker_image(), minor_version),
+                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                 ]
             )
             exec_list.append(
                 [
                     "docker",
                     "push",
-                    "%s/%s:%s" % (prefix, image.docker_image(), minor_version),
+                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                 ]
             )
 

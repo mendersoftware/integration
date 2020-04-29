@@ -1768,16 +1768,19 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
 
         if git_tag is not None:
             # Replace Git tag with a new one.
-            with open(filename) as fd:
-                full_content = "".join(fd.readlines())
-            with open(filename, "w") as fd:
-                fd.write(
-                    re.sub(
-                        r"(\s*%s:[\n\s]+git-version:\s+)(.*)" % re.escape(repo.git()),
-                        r"\g<1>%s" % git_tag,
-                        full_content,
+            assosiated_repos = repo.associated_components_of_type("git")
+            for assosiated_repo in assosiated_repos:
+                with open(filename) as fd:
+                    full_content = "".join(fd.readlines())
+                with open(filename, "w") as fd:
+                    fd.write(
+                        re.sub(
+                            r"(\s*%s:[\n\s]+git-version:\s+)(.*)"
+                            % re.escape(assosiated_repo.git()),
+                            r"\g<1>%s" % git_tag,
+                            full_content,
+                        )
                     )
-                )
 
 
 def purge_build_tags(state, tag_avail):
@@ -2477,7 +2480,9 @@ def do_set_version_to(args):
         sys.exit(1)
 
     repo = Component.get_component_of_any_type(args.set_version_of)
-    set_docker_compose_version_to(integration_dir(), repo, args.version)
+    set_docker_compose_version_to(
+        integration_dir(), repo, args.version, git_tag=args.version
+    )
 
 
 def is_marked_as_releaseable_in_integration_version(

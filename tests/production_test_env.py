@@ -1,13 +1,11 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3
 
 import os
 import sys
 import subprocess
 import argparse
 
-parser = argparse.ArgumentParser(
-    description="Helper script to bring up production env and provision for upgrade testing"
-)
+parser = argparse.ArgumentParser(description="Helper script to bring up production env")
 
 parser.add_argument(
     "--start", dest="start", action="store_true", help="start production environment"

@@ -103,7 +103,7 @@ function get_requirements() {
     curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
          -o downloaded-tools/directory-artifact-gen \
          -z downloaded-tools/directory-artifact-gen
-    
+
     if [ $? -ne 0 ]; then
         echo "failed to download directory-artifact-gen"
         exit 1
@@ -147,11 +147,11 @@ fi
 mkdir -p output
 ret=0
 docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu) || ret=$?
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker) || ret=$?
 if [ $ret -eq 0 ]; then
     # There is `extract_fs` support. Get the R/O image too.
     docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-           mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs)
+           mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
     mv output/* .
 else
     # Old style ext4 fetching.

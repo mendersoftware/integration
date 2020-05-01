@@ -491,6 +491,7 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
                 subprocess.call(
                     "git rev-parse -q --verify refs/heads/%s > /dev/null" % ref_name,
                     shell=True,
+                    cwd=integration_dir,
                 )
                 == 0
             ):

@@ -5,6 +5,8 @@ HERE=$(dirname $(readlink -f "$0"))
 INTEGRATION_PATH=$(dirname "$HERE")
 export INTEGRATION_PATH
 
+DOWNLOAD_REQUIREMENTS="true"
+
 COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
@@ -39,6 +41,7 @@ usage() {
     echo -e "\t-h --help"
     echo -e "\t-s --suite <SUITE>\trun specific test suite"
     echo -e "\t                  \t<SUITE> can be 'open' (default), 'enterprise', 'all'"
+    echo -e "\t--no-download     \tdo not download the external dependencies"
     echo -e "\t-c --skip-cleanup \tleave containers running after tests"
     echo -e "\t other args will be passed to the testing container's py.test command"
     echo ""
@@ -80,6 +83,9 @@ parse_args(){
                 usage
                 exit 1
                 ;;
+            --no-download)
+                DOWNLOAD_REQUIREMENTS=""
+                ;;
             -c | --skip-cleanup)
                 SKIP_CLEANUP=1
                 ;;
@@ -94,7 +100,9 @@ parse_args(){
 build_backend_tests_runner() {
     mkdir -p "$TOOLS"
 
-    get_runner_requirements
+    if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+        get_runner_requirements
+    fi
 
     docker build -t mender-backend-tests-runner -f $INTEGRATION_PATH/backend-tests/docker/Dockerfile $INTEGRATION_PATH/backend-tests
 }

@@ -10,7 +10,7 @@ include:
 stages:
   - test
 
-test:extra-tools:
+test:extra-tools:changelog-generator:
   image: "python:3"
   stage: test
 
@@ -25,3 +25,14 @@ test:extra-tools:
   script:
     # Check changelog-generator test.
     - ( cd extra/changelog-generator && ./test-changelog-generator )
+
+test:extra-tools:release-tool:
+  image: "python:3"
+  stage: test
+
+  before_script:
+    - pip install pytest pyyaml
+
+  script:
+    # Run release-tool unit tests.
+    - python3 -m pytest extra/test_release_tool.py

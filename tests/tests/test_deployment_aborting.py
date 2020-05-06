@@ -49,8 +49,13 @@ class TestDeploymentAborting(MenderTesting):
 
             if abort_step is not None:
                 deploy.check_expected_statistics(deployment_id, abort_step, 1)
+
             deploy.abort(deployment_id)
-            deploy.check_expected_statistics(deployment_id, "aborted", 1)
+
+            # there will be abored deployment only if the deployment
+            # for the device has already started
+            if abort_step is not None:
+                deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
             # no deployment logs are sent by the client, is this expected?
             for d in auth_v2.get_devices():

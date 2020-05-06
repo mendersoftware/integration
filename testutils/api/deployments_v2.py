@@ -13,16 +13,6 @@
 #    limitations under the License.
 import testutils.api.client
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v1/deployments"
-URL_DEVICES = testutils.api.client.GATEWAY_URL + "/api/devices/v1/deployments"
+URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/deployments"
 
-URL_NEXT = "/device/deployments/next"
-URL_LOG = "/device/deployments/{id}/log"
-URL_STATUS = "/device/deployments/{id}/status"
 URL_DEPLOYMENTS = "/deployments"
-URL_DEPLOYMENTS_ID = "/deployments/{id}"
-URL_DEPLOYMENTS_DEVICES = "/deployments/{id}/devices"
-URL_DEPLOYMENTS_STATISTICS = "/deployments/{id}/statistics"
-URL_DEPLOYMENTS_ARTIFACTS = "/artifacts"
-URL_DEPLOYMENTS_ARTIFACTS_GET = "/artifacts/{id}"
-URL_DEPLOYMENTS_ARTIFACTS_GENERATE = "/artifacts/generate"

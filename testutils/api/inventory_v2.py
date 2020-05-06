@@ -1,4 +1,4 @@
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -11,14 +11,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import testutils.api.client
+import testutils
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v1/inventory"
-URL_DEV = testutils.api.client.GATEWAY_URL + "/api/devices/v1/inventory"
-
-URL_DEVICE = "/devices/{id}"
-URL_DEVICES = "/devices"
-
-URL_DEVICE_ATTRIBUTES = "/device/attributes"
+URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/inventory"
 
 URL_FILTERS = "/filters"

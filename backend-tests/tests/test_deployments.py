@@ -14,7 +14,9 @@ import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
+import testutils.api.inventory_v2 as inventory_v2
 import testutils.api.deployments as deployments
+import testutils.api.deployments_v2 as deployments_v2
 
 from testutils.api.client import ApiClient
 from testutils.common import (
@@ -27,7 +29,9 @@ from testutils.common import (
     create_authset,
     change_authset_status,
     clean_mongo,
+    mongo_cleanup,
     mongo,
+    get_mender_artifact,
 )
 
 
@@ -1446,3 +1450,613 @@ class TestDeploymentsStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
         self.do_test_deployment_status_update(clean_mongo, user_token, devs)
+
+
+def create_tenant(name, username, plan):
+    tenant = create_org(name, username, "correcthorse", plan=plan)
+    user = tenant.users[0]
+    r = ApiClient(useradm.URL_MGMT).call(
+        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
+    )
+    assert r.status_code == 200
+    user.utoken = r.text
+
+    return tenant
+
+
+@pytest.fixture(scope="function")
+def setup_tenant(clean_mongo):
+    tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
+    # give workflows time to finish provisioning
+    time.sleep(10)
+    return tenant
+
+
+@pytest.yield_fixture(scope="function")
+def clean_mongo_client(mongo):
+    """Fixture setting up a clean (i.e. empty database). Yields
+    common.MongoClient connected to the DB.
+
+    Useful for tests with multiple testcases:
+    - protects the whole test func as usual 
+    - but also allows calling MongoClient.cleanup() between cases
+    """
+    mongo_cleanup(mongo)
+    yield mongo
+    mongo_cleanup(mongo)
+
+
+def predicate(attr, scope, t, val):
+    return {"attribute": attr, "scope": scope, "type": t, "value": val}
+
+
+def create_filter(name, predicates, utoken):
+    f = {"name": name, "terms": predicates}
+
+    r = (
+        ApiClient(inventory_v2.URL_MGMT)
+        .with_auth(utoken)
+        .call("POST", inventory_v2.URL_FILTERS, f)
+    )
+    assert r.status_code == 201
+
+    f["id"] = r.headers["Location"].split("/")[1]
+    return f
+
+
+def create_dynamic_deployment(
+    name, predicates, utoken, max_devices=None, phases=None, status_code=201
+):
+    f = create_filter(name, predicates, utoken)
+
+    api_dep_v2 = ApiClient(deployments_v2.URL_MGMT)
+    api_dep_v1 = ApiClient(deployments.URL_MGMT)
+
+    depid = None
+    with get_mender_artifact(name) as filename:
+
+        upload_image(filename, utoken)
+
+        deployment_req = {
+            "name": name,
+            "artifact_name": name,
+            "filter_id": f["id"],
+        }
+
+        if max_devices is not None:
+            deployment_req["max_devices"] = max_devices
+
+        if phases is not None:
+            deployment_req["phases"] = phases
+
+        res = api_dep_v2.with_auth(utoken).call(
+            "POST", deployments_v2.URL_DEPLOYMENTS, deployment_req
+        )
+
+        assert res.status_code == status_code
+        if status_code != 201:
+            return None
+
+        depid = res.headers["Location"].split("/")[5]
+
+    newdep = get_deployment(depid, utoken)
+
+    assert newdep["name"] == name
+    assert newdep["filter"]["id"] == f["id"]
+    assert newdep["filter"]["terms"] == predicates
+    assert newdep["status"] == "pending"
+    assert newdep["dynamic"]
+
+    return newdep
+
+
+def get_deployment(depid, utoken):
+    api_dep_v1 = ApiClient(deployments.URL_MGMT)
+    res = api_dep_v1.with_auth(utoken).call(
+        "GET", deployments.URL_DEPLOYMENTS_ID, path_params={"id": depid}
+    )
+    assert res.status_code == 200
+    return res.json()
+
+
+def make_device_with_inventory(attributes, utoken, tenant_token):
+    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+
+    d = make_accepted_device(utoken, devauthd, tenant_token)
+
+    submit_inventory(attributes, d.token)
+
+    d.attributes = attributes
+
+    return d
+
+
+def submit_inventory(attrs, token):
+    invd = ApiClient(inventory.URL_DEV)
+    r = invd.with_auth(token).call("PATCH", inventory.URL_DEVICE_ATTRIBUTES, attrs)
+    assert r.status_code == 200
+
+
+def update_deployment_status(deployment_id, status, token):
+    api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+
+    body = {"status": status}
+
+    resp = api_dev_deploy.with_auth(token).call(
+        "PUT", deployments.URL_STATUS.format(id=deployment_id), body=body,
+    )
+    assert resp.status_code == 204
+
+
+def assert_get_next(code, dtoken, artifact_name=None):
+    api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+
+    resp = api_dev_deploy.with_auth(dtoken).call(
+        "GET",
+        deployments.URL_NEXT,
+        qs_params={"artifact_name": "dontcare", "device_type": "arm1",},
+    )
+
+    assert resp.status_code == code
+    if code == 200:
+        assert resp.json()["artifact"]["artifact_name"] == artifact_name
+
+
+def set_status(depid, status, dtoken):
+    api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+
+    res = api_dev_deploy.with_auth(dtoken).call(
+        "PUT", deployments.URL_STATUS.format(id=depid), body={"status": status},
+    )
+
+    assert res.status_code == 204
+
+
+def get_stats(depid, token):
+    api_dev_deploy = ApiClient(deployments.URL_MGMT)
+
+    res = api_dev_deploy.with_auth(token).call(
+        "GET", deployments.URL_DEPLOYMENTS_STATISTICS.format(id=depid),
+    )
+
+    assert res.status_code == 200
+    return res.json()
+
+
+def verify_stats(stats, expected):
+    for k, v in stats.items():
+        if k in expected:
+            assert stats[k] == expected[k]
+        else:
+            assert stats[k] == 0
+
+
+class TestDynamicDeploymentsEnterprise:
+    def test_assignment_based_on_filters(self, clean_mongo_client):
+        """ Test basic dynamic deployments characteristic:
+            - deployments match on inventory attributes via various filter predicates
+        """
+
+        test_cases = [
+            # single predicate, $eq
+            {
+                "name": "single predicate, $eq",
+                "predicates": [predicate("foo", "inventory", "$eq", "123")],
+                "matches": [
+                    [{"name": "foo", "value": "123"}],
+                    [{"name": "foo", "value": "123"}, {"name": "bar", "value": "1"}],
+                    [
+                        {"name": "foo", "value": ["123", "qwerty"]},
+                        {"name": "bar", "value": "1"},
+                    ],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": "1"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": 1}, {"name": "bar", "value": 123}],
+                    [{"name": "baz", "value": "baz"}],
+                ],
+            },
+            # single predicate, $ne
+            {
+                "name": "single predicate, $ne",
+                "predicates": [predicate("foo", "inventory", "$ne", "123")],
+                "matches": [
+                    [{"name": "foo", "value": "1"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": 1}, {"name": "bar", "value": 123}],
+                    [{"name": "baz", "value": "baz"}],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": "123"}],
+                    [{"name": "foo", "value": "123"}, {"name": "bar", "value": "1"}],
+                    [
+                        {"name": "foo", "value": ["123", "qwerty"]},
+                        {"name": "bar", "value": "1"},
+                    ],
+                ],
+            },
+            # single predicate, $in
+            {
+                "name": "single predicate, $in",
+                "predicates": [predicate("foo", "inventory", "$in", ["1", "2", "3"])],
+                "matches": [
+                    [{"name": "foo", "value": "1"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "2"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "3"}, {"name": "bar", "value": "123"}],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": "4"}, {"name": "bar", "value": 123}],
+                    [{"name": "foo", "value": 1}, {"name": "bar", "value": 123}],
+                    [{"name": "bar", "value": "1"}],
+                ],
+            },
+            # single predicate, $gt
+            {
+                "name": "single predicate, $gt",
+                "predicates": [predicate("foo", "inventory", "$gt", "abc")],
+                "matches": [
+                    [{"name": "foo", "value": "cde"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "def"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "fgh"}, {"name": "bar", "value": "123"}],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": "aaa"}, {"name": "bar", "value": 123}],
+                    [{"name": "foo", "value": "aab"}, {"name": "bar", "value": 123}],
+                    [{"name": "bar", "value": "abb"}],
+                ],
+            },
+            # single predicate, $exists
+            {
+                "name": "single predicate, $exists",
+                "predicates": [predicate("foo", "inventory", "$exists", True)],
+                "matches": [
+                    [{"name": "foo", "value": "cde"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "def"}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": "fgh"}, {"name": "bar", "value": "123"}],
+                ],
+                "nonmatches": [
+                    [{"name": "bar", "value": 123}],
+                    [{"name": "bar", "value": 456}],
+                ],
+            },
+            # combined predicates on single attr
+            {
+                "name": "combined predicates on single attr",
+                "predicates": [
+                    predicate("foo", "inventory", "$gte", 100),
+                    predicate("foo", "inventory", "$lte", 200),
+                ],
+                "matches": [
+                    [{"name": "foo", "value": 100}],
+                    [{"name": "foo", "value": 200}, {"name": "bar", "value": "1"}],
+                    [{"name": "foo", "value": 150}, {"name": "bar", "value": "1"}],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": 99}, {"name": "bar", "value": "123"}],
+                    [{"name": "foo", "value": 201}, {"name": "bar", "value": 123}],
+                ],
+            },
+            # combined predicates on many attrs
+            {
+                "name": "combined predicates on many attrs",
+                "predicates": [
+                    predicate("foo", "inventory", "$eq", "foo"),
+                    predicate("bar", "inventory", "$in", ["bar1", "bar2", "bar3"]),
+                ],
+                "matches": [
+                    [{"name": "foo", "value": "foo"}, {"name": "bar", "value": "bar1"}],
+                    [{"name": "foo", "value": "foo"}, {"name": "bar", "value": "bar2"}],
+                    [
+                        {"name": "foo", "value": ["foo"]},
+                        {"name": "bar", "value": "bar3"},
+                    ],
+                ],
+                "nonmatches": [
+                    [{"name": "foo", "value": "foo"}],
+                    [{"name": "foo", "value": "foo"}],
+                    [{"name": "foo", "value": "bar1"}],
+                ],
+            },
+        ]
+
+        for tc in test_cases:
+            print("test case: {}\n".format(tc["name"]))
+            tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
+            user = tenant.users[0]
+
+            matching_devs = [
+                make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+                for attrs in tc["matches"]
+            ]
+            nonmatching_devs = [
+                make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+                for attrs in tc["nonmatches"]
+            ]
+
+            dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
+            assert dep["initial_device_count"] == len(matching_devs)
+
+            for d in matching_devs:
+                assert_get_next(200, d.token, "foo")
+
+            for d in nonmatching_devs:
+                assert_get_next(204, d.token)
+
+            clean_mongo_client.cleanup()
+
+    def test_unbounded_deployment_lifecycle(self, setup_tenant):
+        """ Check how a dynamic deployment (no bounds) progresses through states
+            based on device activity (status, statistics).
+        """
+        user = setup_tenant.users[0]
+
+        dep = create_dynamic_deployment(
+            "foo", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+        )
+
+        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+
+        devs = [
+            make_device_with_inventory(
+                [{"name": "foo", "value": "foo"}],
+                user.utoken,
+                setup_tenant.tenant_token,
+            )
+            for i in range(10)
+        ]
+        for d in devs:
+            assert_get_next(200, d.token, "foo")
+
+        # just getting a 'next' deployment has no effect on overall status
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "pending"
+
+        # when some devices start activity ('downloading', 'installing', 'rebooting'),
+        # the deployment becomes 'inprogress'
+        for d in devs:
+            if devs.index(d) < 3:
+                set_status(dep["id"], "downloading", d.token)
+            elif devs.index(d) < 6:
+                set_status(dep["id"], "installing", d.token)
+
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "inprogress"
+
+        stats = get_stats(dep["id"], user.utoken)
+        verify_stats(stats, {"downloading": 3, "installing": 3, "pending": 4})
+
+        # when all devices finish, the deployment goes back to 'pending'
+        for d in devs:
+            if devs.index(d) < 5:
+                set_status(dep["id"], "success", d.token)
+            else:
+                set_status(dep["id"], "failure", d.token)
+
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "inprogress"
+
+        stats = get_stats(dep["id"], user.utoken)
+        verify_stats(stats, {"success": 5, "failure": 5})
+
+    def test_bounded_deployment_lifecycle(self, setup_tenant):
+        """ Check how a dynamic deployment with max_devices progresses through states
+            based on device activity (status, statistics).
+        """
+        user = setup_tenant.users[0]
+
+        dep = create_dynamic_deployment(
+            "foo",
+            [predicate("foo", "inventory", "$eq", "foo")],
+            user.utoken,
+            max_devices=10,
+        )
+
+        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+
+        devs = [
+            make_device_with_inventory(
+                [{"name": "foo", "value": "foo"}],
+                user.utoken,
+                setup_tenant.tenant_token,
+            )
+            for i in range(10)
+        ]
+        for d in devs:
+            assert_get_next(200, d.token, "foo")
+
+        # just getting a 'next' deployment has no effect on overall status
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "pending"
+
+        # when devices start activity ('downloading', 'installing', 'rebooting'),
+        # the deployment becomes 'inprogress'
+        for d in devs:
+            if devs.index(d) < 5:
+                set_status(dep["id"], "downloading", d.token)
+            else:
+                set_status(dep["id"], "installing", d.token)
+
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "inprogress"
+
+        stats = get_stats(dep["id"], user.utoken)
+        verify_stats(stats, {"downloading": 5, "installing": 5})
+
+        # all devices finish - and the deployment actually becomes 'finished'
+        for d in devs:
+            set_status(dep["id"], "success", d.token)
+
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "finished"
+
+        stats = get_stats(dep["id"], user.utoken)
+        verify_stats(stats, {"success": 10})
+
+        # an extra dev won't get this deployment
+        extra_dev = make_device_with_inventory(
+            [{"name": "foo", "value": "foo"}], user.utoken, setup_tenant.tenant_token
+        )
+        assert_get_next(204, extra_dev.token, "foo")
+
+        dep = get_deployment(dep["id"], user.utoken)
+        assert dep["status"] == "finished"
+
+        stats = get_stats(dep["id"], user.utoken)
+        verify_stats(stats, {"success": 10})
+
+    def test_deployment_ordering(self, setup_tenant):
+        """ Check that devices only get dynamic deployments fresher than the 
+            latest one it finished.
+
+            In other words, after updating its attributes the device won't accidentally
+            fall into a deployment previous to what it tried already.
+        """
+
+        user = setup_tenant.users[0]
+
+        depfoo1 = create_dynamic_deployment(
+            "foo1", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+        )
+        depfoo2 = create_dynamic_deployment(
+            "foo2", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+        )
+        depbar = create_dynamic_deployment(
+            "bar", [predicate("foo", "inventory", "$eq", "bar")], user.utoken
+        )
+
+        # the device will ignore the 'foo' deployments, because of its inventory
+        dev = make_device_with_inventory(
+            [{"name": "foo", "value": "bar"}], user.utoken, setup_tenant.tenant_token
+        )
+        assert_get_next(200, dev.token, "bar")
+
+        # after finishing 'bar' - no other deployments qualify
+        set_status(depbar["id"], "success", dev.token)
+        assert_get_next(204, dev.token)
+
+        # after updating inventory, the device would qualify for both 'foo' deployments, but
+        # the ordering mechanism will prevent it
+        submit_inventory([{"name": "foo", "value": "foo"}], dev.token)
+        assert_get_next(204, dev.token)
+
+        # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
+        depfoo3 = create_dynamic_deployment(
+            "foo3", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+        )
+        depfoo4 = create_dynamic_deployment(
+            "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+        )
+        assert_get_next(200, dev.token, "foo3")
+
+    def test_phased_rollout(self, clean_mongo_client):
+        """ Check phased rollouts with and without max_devices.
+        """
+
+        # for adjusting start_ts in consecutive cases
+        # each case adds some delay and makes the utcnow() at phase defintion stale
+        start_ts_add_secs = 0
+
+        # note: start_ts are actual datetimes; formatted to str just-in-time
+        # after ts_add_secs adjustments
+        cases = [
+            # without max_devices
+            {
+                "name": "without max_devices",
+                "phases": [
+                    {"batch_size": 20},
+                    {"start_ts": datetime.utcnow() + timedelta(seconds=15)},
+                ],
+                "max_devices": None,
+            },
+            # with max_devices
+            {
+                "name": "with max_devices",
+                "phases": [
+                    {"batch_size": 20},
+                    {"start_ts": datetime.utcnow() + timedelta(seconds=15)},
+                ],
+                "max_devices": 10,
+            },
+        ]
+
+        for tc in cases:
+            print("test case: {}\n".format(tc["name"]))
+            before = datetime.utcnow()
+
+            tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
+            user = tenant.users[0]
+
+            # adjust phase start ts for previous test case duration
+            # format for api consumption
+            for phase in tc["phases"]:
+                if "start_ts" in phase:
+                    phase["start_ts"] += timedelta(seconds=start_ts_add_secs)
+                    phase["start_ts"] = phase["start_ts"].strftime("%Y-%m-%dT%H:%M:%SZ")
+
+            # a phased dynamic deployment must have an initial matching devices count
+            # fails without devices
+            create_dynamic_deployment(
+                "foo",
+                [predicate("foo", "inventory", "$eq", "foo")],
+                user.utoken,
+                phases=tc["phases"],
+                max_devices=tc["max_devices"],
+                status_code=400,
+            )
+
+            # a deployment with initial devs succeeds
+            devs = [
+                make_device_with_inventory(
+                    [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
+                )
+                for i in range(10)
+            ]
+            dep = create_dynamic_deployment(
+                "bar",
+                [predicate("bar", "inventory", "$eq", "bar")],
+                user.utoken,
+                phases=tc["phases"],
+                max_devices=tc["max_devices"],
+            )
+            assert dep["initial_device_count"] == 10
+            assert len(dep["phases"]) == len(tc["phases"])
+
+            # first phase is immediately on
+            for d in devs[:2]:
+                assert_get_next(200, d.token, "bar")
+                set_status(dep["id"], "success", d.token)
+
+            for d in devs[2:]:
+                assert_get_next(204, d.token)
+
+            # rough wait for phase 2
+            time.sleep(16)
+
+            for d in devs[2:]:
+                assert_get_next(200, d.token, "bar")
+                set_status(dep["id"], "success", d.token)
+
+            dep = get_deployment(dep["id"], user.utoken)
+
+            if tc["max_devices"] is None:
+                # no max_devices = deployment remains in progress
+                assert dep["status"] == "inprogress"
+                extra_devs = [
+                    make_device_with_inventory(
+                        [{"name": "bar", "value": "bar"}],
+                        user.utoken,
+                        tenant.tenant_token,
+                    )
+                    for i in range(10)
+                ]
+
+                for extra in extra_devs:
+                    assert_get_next(200, extra.token, "bar")
+            else:
+                # max_devices reached, so deployment is finished
+                assert dep["status"] == "finished"
+
+            clean_mongo_client.cleanup()
+
+            after = datetime.utcnow()
+            start_ts_add_secs = (after - before).seconds

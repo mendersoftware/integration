@@ -303,4 +303,10 @@ echo "Press Enter to show the logs."
 echo "Press Ctrl-C to stop the backend and quit."
 read -se
 
-docker-compose -p ${DOCKER_COMPOSE_PROJECT_NAME} logs --follow
+docker-compose \
+    -f docker-compose.yml \
+    -f docker-compose.storage.minio.yml \
+    -f docker-compose.demo.yml \
+    -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+    $CLIENT \
+    logs --follow

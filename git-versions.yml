@@ -7,33 +7,25 @@ services:
     #
     # backend open source services
     #
-    deployments:
-        git-version: master
     gui:
-        git-version: master
+        git-version: staging
     mender-api-gateway-docker:
-        git-version: master
+        git-version: staging
     deviceauth:
-        git-version: master
-    inventory:
-        git-version: master
-    useradm:
-        git-version: master
-    workflows:
-        git-version: master
+        git-version: staging
     create-artifact-worker:
-        git-version: master
+        git-version: staging
 
     #
     # backend enterprise services
     #
     deployments-enterprise:
-        git-version: master
+        git-version: staging
     inventory-enterprise:
-        git-version: master
+        git-version: staging
     useradm-enterprise:
-        git-version: master
+        git-version: staging
     workflows-enterprise:
-        git-version: master
+        git-version: staging
     tenantadm:
-        git-version: master
+        git-version: staging

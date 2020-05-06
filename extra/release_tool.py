@@ -871,16 +871,22 @@ def cleanup_temp_git_checkout(tmpdir):
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def find_upstream_remote(state, repo_git):
-    """Given a Git repository name, figure out which remote name is the
-    "mendersoftware" upstream."""
+def find_upstream_remote(state, repo_path, repo_name=None):
+    """Given a Git repository, figure out which remote name is the
+    "mendersoftware" upstream.
 
-    config = execute_git(state, repo_git, ["config", "-l"], capture=True)
+    With repo_name None (default), the name is taken from basename(repo_path)
+    """
+
+    if repo_name is None:
+        repo_name = os.path.basename(repo_path)
+
+    config = execute_git(state, repo_path, ["config", "-l"], capture=True)
     remote = None
     for line in config.split("\n"):
         match = re.match(
             r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$"
-            % os.path.basename(repo_git),
+            % repo_name,
             line,
         )
         if match is not None:
@@ -889,7 +895,8 @@ def find_upstream_remote(state, repo_git):
 
     if remote is None:
         raise Exception(
-            "Could not find git remote pointing to mendersoftware in %s" % repo_git
+            "Could not find git remote pointing to mendersoftware in repo %s at %s"
+            % (repo_name, repo_path)
         )
 
     return remote
@@ -2531,7 +2538,7 @@ def do_integration_versions_including(args):
         sys.exit(2)
 
     git_dir = integration_dir()
-    remote = find_upstream_remote(None, git_dir)
+    remote = find_upstream_remote(None, git_dir, "integration")
     # The below query will match all tags and the following branches: master, staging and releases (N.M.x)
     git_query = [
         "for-each-ref",

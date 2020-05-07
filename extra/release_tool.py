@@ -553,7 +553,14 @@ def version_of(
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
             if data.get(yml_component.yml()) is not None:
-                version = data[yml_component.yml()]["version"]
+                # Old release branches will not have git_version (i.e. version matches git_version)
+                if (
+                    git_version
+                    and data[yml_component.yml()].get("git_version") is not None
+                ):
+                    version = data[yml_component.yml()]["git_version"]
+                else:
+                    version = data[yml_component.yml()]["version"]
                 # If it is a tag, do not prepend remote name
                 if re.search(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
                     repo_range.append(version)

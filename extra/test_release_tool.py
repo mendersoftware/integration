@@ -161,6 +161,70 @@ def test_version_of(capsys):
     )
 
 
+def test_version_of_with_in_integration_version(capsys):
+    # In remote master, shall be master
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--in-integration-version", "master"],
+        "master",
+    )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "inventory",
+            "--version-type",
+            "docker",
+            "--in-integration-version",
+            "master",
+        ],
+        "mender-master",
+    )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "inventory",
+            "--version-type",
+            "git",
+            "--in-integration-version",
+            "master",
+        ],
+        "master",
+    )
+
+    # For old releases, --version-type shall be ignored
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--in-integration-version", "2.3.0"],
+        "1.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "inventory",
+            "--version-type",
+            "git",
+            "--in-integration-version",
+            "2.3.0",
+        ],
+        "1.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "inventory",
+            "--version-type",
+            "docker",
+            "--in-integration-version",
+            "2.3.0",
+        ],
+        "1.7.0",
+    )
+
+
 def test_set_version_of(capsys):
     # Using --set-version-of modifies both versions, regardless of using the repo name
     run_main_assert_result(
@@ -210,37 +274,6 @@ def test_set_version_of(capsys):
         capsys,
         ["--version-of", "deployments-enterprise", "--version-type", "git"],
         "4.5.6-test",
-    )
-
-    # For old releases, --version-type shall be ignored
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "inventory", "--in-integration-version", "2.3.0"],
-        "1.7.0",
-    )
-    run_main_assert_result(
-        capsys,
-        [
-            "--version-of",
-            "inventory",
-            "--version-type",
-            "git",
-            "--in-integration-version",
-            "2.3.0",
-        ],
-        "1.7.0",
-    )
-    run_main_assert_result(
-        capsys,
-        [
-            "--version-of",
-            "inventory",
-            "--version-type",
-            "docker",
-            "--in-integration-version",
-            "2.3.0",
-        ],
-        "1.7.0",
     )
 
 

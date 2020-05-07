@@ -32,8 +32,13 @@ test:extra-tools:release-tool:
 
   before_script:
     - pip install pytest pyyaml
+    # Add github remote for tests using --integration-versions-including
     - git remote add github https://github.com/mendersoftware/integration.git
     - git fetch github
+    # Fetch master branch for tests using --in-integration-version
+    - if [ $CI_COMMIT_REF_NAME != "master" ]; then
+    -  git fetch origin master:master
+    - fi
 
   script:
     # Run release-tool unit tests.

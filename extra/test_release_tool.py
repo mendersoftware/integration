@@ -69,13 +69,15 @@ def master_yml_files(request):
     request.addfinalizer(restore)
 
 
-def run_main_assert_result(capsys, args, expect=""):
+def run_main_assert_result(capsys, args, expect=None):
     testargs = [RELEASE_TOOL] + args
     with patch.object(sys, "argv", testargs):
         main()
 
     captured = capsys.readouterr().out.strip()
-    assert captured == expect
+    if expect is not None:
+        assert captured == expect
+    return captured
 
 
 def test_version_of(capsys):
@@ -146,14 +148,6 @@ def test_version_of(capsys):
 
 
 def test_set_version_of(capsys):
-
-    run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "docker"], "master"
-    )
-    run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "git"], "master"
-    )
-
     # Using --set-version-of modifies both versions, regardless of using the repo name
     run_main_assert_result(
         capsys, ["--set-version-of", "inventory", "--version", "1.2.3-test"]
@@ -234,3 +228,25 @@ def test_set_version_of(capsys):
         ],
         "1.7.0",
     )
+
+
+def test_integration_versions_including(capsys):
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "inventory", "--version", "master"],
+        None,
+    )
+    # The output shall be <remote>/master
+    assert captured.endswith("/master")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "inventory", "--version", "1.6.x"],
+        None,
+    )
+    # Three versions: <remote>/2.2.x, <remote>/2.1.x, <remote>/2.0.x
+    versions = captured.split("\n")
+    assert len(versions) == 3
+    assert versions[0].endswith("/2.2.x")
+    assert versions[1].endswith("/2.1.x")
+    assert versions[2].endswith("/2.0.x")

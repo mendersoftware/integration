@@ -35,7 +35,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:master
+        image: mendersoftware/api-gateway:mender-master
         extends:
             file: common.yml
             service: mender-base

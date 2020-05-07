@@ -1,17 +1,17 @@
 # This file lists all software components that are part of a Mender
-# release with their internal versions. The keys represent images
-# rather than "services", but we keep it for the sake of parsing it
-# the same way as other-components and docker-compose files.
+# release with their git versions. The keys represent images rather
+# than "services" (or containers), but we keep it for parsing it the
+# same way as other-components and docker-compose files.
 services:
 
     #
-    # backend open source services
+    # backend open source images
     #
     deployments:
         git-version: master
     gui:
         git-version: master
-    mender-api-gateway-docker:
+    api-gateway:
         git-version: master
     deviceauth:
         git-version: master
@@ -25,7 +25,7 @@ services:
         git-version: master
 
     #
-    # backend enterprise services
+    # backend enterprise images
     #
     deployments-enterprise:
         git-version: master

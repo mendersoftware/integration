@@ -401,7 +401,7 @@ def get_docker_compose_data_from_json_list(json_list):
             "container": container_name,
             "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
             "version": version,
-            "git_version": git_version,
+            "git_version": git version of the assoiated repo,
         }
     }
     """
@@ -448,6 +448,9 @@ def get_docker_compose_data_from_json_list(json_list):
                         )
                         % service
                     )
+                # NOTE: For yaml files containing "git-version" fields (namely git-versions.yml),
+                # these hang on "services" keys representing Docker image names (instead of Docker
+                # containers names). Hence we merge the dicts here assuming "service" == image.
                 data[service].update(
                     {"git_version": git_version,}
                 )
@@ -584,11 +587,18 @@ def do_version_of(args):
         print("Unrecognized repository: %s" % args.version_of)
         sys.exit(1)
 
-    yml_component = comp.yml_components()[0]
-
     assert args.version_type in ["docker", "git"], (
         "%s is not a valid name type!" % args.version_type
     )
+
+    if comp.type in ["docker_image", "docker_container"] and args.version_type == "git":
+        print(
+            "Unsuported %s %s for --version-type git. Use --version-type docker instead"
+            % (comp.type, args.version_of)
+        )
+        sys.exit(1)
+
+    yml_component = comp.yml_components()[0]
 
     print(
         version_of(

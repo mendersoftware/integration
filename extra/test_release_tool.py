@@ -110,15 +110,9 @@ def test_version_of(capsys):
     run_main_assert_result(
         capsys, ["--version-of", "mender", "--version-type", "git"], "master"
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-client-qemu", "--version-type", "docker"],
-        "master",
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "mender-client-qemu", "--version-type", "git"],
         "master",
     )
 
@@ -242,15 +236,9 @@ def test_set_version_of(capsys):
     run_main_assert_result(
         capsys, ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"]
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-deployments"], "4.5.6-test")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-deployments", "--version-type", "docker"],
-        "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "mender-deployments", "--version-type", "git"],
         "4.5.6-test",
     )
     run_main_assert_result(capsys, ["--version-of", "deployments"], "4.5.6-test")
@@ -297,3 +285,73 @@ def test_integration_versions_including(capsys):
     assert versions[0].endswith("/2.2.x")
     assert versions[1].endswith("/2.1.x")
     assert versions[2].endswith("/2.0.x")
+
+
+def test_version_of_all_components_types(capsys):
+    # As git repos (only git version type)
+    list_repos = run_main_assert_result(capsys, ["--list", "git"], None)
+    for repo in list_repos.split("\n"):
+        if repo == "integration":
+            # Skip integration as it will return the current branch (dev branch or PR branch)
+            continue
+        git_version = run_main_assert_result(
+            capsys, ["--version-of", repo, "--version-type", "git"],
+        )
+        assert git_version == "master", "failed for repo %s" % repo
+
+    # As docker images (only docker version type)
+    list_images = run_main_assert_result(capsys, ["--list", "docker"], None)
+    for image in list_images.split("\n"):
+        docker_version = run_main_assert_result(
+            capsys, ["--version-of", image, "--version-type", "docker"],
+        )
+        if image.startswith("mender-client-"):
+            assert docker_version == "master", "failed for image %s" % image
+        else:
+            assert docker_version == "mender-master", "failed for image %s" % image
+
+    # As docker container names (only docker version type)
+    list_containers = run_main_assert_result(capsys, ["--list", "container"], None)
+    for container in list_containers.split("\n"):
+        docker_version = run_main_assert_result(
+            capsys, ["--version-of", container, "--version-type", "docker"], None,
+        )
+        if container == "mender-client":
+            assert docker_version == "master", "failed for container %s" % container
+        else:
+            assert docker_version == "mender-master", (
+                "failed for container %s" % container
+            )
+
+    # Try getting Git version for an ambiguous one: mender-api-gateway-docker/api-gateway/mender-api-gateway
+    # as repo
+    git_version = run_main_assert_result(
+        capsys, ["--version-of", "mender-api-gateway-docker", "--version-type", "git"],
+    )
+    assert git_version == "master", "failed for repo mender-api-gateway-docker"
+    # as image
+    try:
+        run_main_assert_result(
+            capsys, ["--version-of", "api-gateway", "--version-type", "git"],
+        )
+    except SystemExit:
+        err_message = capsys.readouterr().out.strip()
+        assert (
+            err_message
+            == "Unsuported docker_image api-gateway for --version-type git. Use --version-type docker instead"
+        )
+    else:
+        assert False, "expected to fail for image api-gateway; but succeeded"
+    # and as container
+    try:
+        run_main_assert_result(
+            capsys, ["--version-of", "mender-api-gateway", "--version-type", "git"],
+        )
+    except SystemExit:
+        err_message = capsys.readouterr().out.strip()
+        assert (
+            err_message
+            == "Unsuported docker_container mender-api-gateway for --version-type git. Use --version-type docker instead"
+        )
+    else:
+        assert False, "expected to fail for container mender-api-gateway; but succeeded"

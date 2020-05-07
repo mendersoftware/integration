@@ -45,7 +45,17 @@ def master_yml_files(request):
         with open(filename, "w") as fd:
             fd.write(
                 re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/(.+):.*",
+                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender\-client\-.+|mender-artifact|mender-cli).+):.*",
+                    r"image: \g<1>/\g<2>:mender-master",
+                    full_content,
+                )
+            )
+        with open(filename) as fd:
+            full_content = "".join(fd.readlines())
+        with open(filename, "w") as fd:
+            fd.write(
+                re.sub(
+                    r"image:\s+(mendersoftware|.*mender\.io)/(mender\-client\-.+|mender-artifact|mender-cli):.*",
                     r"image: \g<1>/\g<2>:master",
                     full_content,
                 )
@@ -84,7 +94,9 @@ def test_version_of(capsys):
     # On a clean checkout, both will be master
     run_main_assert_result(capsys, ["--version-of", "inventory"], "master")
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "docker"], "master"
+        capsys,
+        ["--version-of", "inventory", "--version-type", "docker"],
+        "mender-master",
     )
     run_main_assert_result(
         capsys, ["--version-of", "inventory", "--version-type", "git"], "master"
@@ -121,7 +133,9 @@ def test_version_of(capsys):
         )
     run_main_assert_result(capsys, ["--version-of", "inventory"], "1.2.3-git")
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "docker"], "master"
+        capsys,
+        ["--version-of", "inventory", "--version-type", "docker"],
+        "mender-master",
     )
     run_main_assert_result(
         capsys, ["--version-of", "inventory", "--version-type", "git"], "1.2.3-git"

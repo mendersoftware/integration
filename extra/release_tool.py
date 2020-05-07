@@ -475,8 +475,12 @@ def get_docker_compose_data_for_rev(git_dir, rev):
         .split("\n")
     )
     for filename in files:
-        if filename != "other-components.yml" and not (
-            filename.startswith("docker-compose") and filename.endswith(".yml")
+        if (
+            filename != "git-versions.yml"
+            and filename != "other-components.yml"
+            and not (
+                filename.startswith("docker-compose") and filename.endswith(".yml")
+            )
         ):
             continue
 
@@ -2576,7 +2580,11 @@ def do_integration_versions_including(args):
             print("Unrecognized repository: %s" % args.integration_versions_including)
             sys.exit(1)
         try:
-            version = data[repo.yml_components()[0].yml()]["version"]
+            # Prefer Git versions
+            if data[repo.yml_components()[0].yml()].get("git_version") is not None:
+                version = data[repo.yml_components()[0].yml()]["git_version"]
+            else:
+                version = data[repo.yml_components()[0].yml()]["version"]
         except KeyError:
             # If key doesn't exist it's because the version is from before
             # that component existed. So definitely not a match.

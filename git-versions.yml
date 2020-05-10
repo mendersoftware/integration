@@ -1,39 +1,35 @@
-# This file lists all software components that are part of a Mender
-# release with their internal versions. The keys represent images
-# rather than "services", but we keep it for the sake of parsing it
-# the same way as other-components and docker-compose files.
+# This file lists software components that are part of a Mender Open Source release
+# which are published with the global Mender product version. The versions here
+# therefore point to the internal Git tags/branches. We keep this information as a
+# docker-compose YAML file for parsing purposes.
 services:
 
     #
     # backend open source services
     #
-    deployments:
-        git-version: master
-    gui:
-        git-version: master
-    mender-api-gateway-docker:
-        git-version: master
-    deviceauth:
-        git-version: master
-    inventory:
-        git-version: master
-    useradm:
-        git-version: master
-    workflows:
-        git-version: master
-    create-artifact-worker:
-        git-version: master
+    mender-deployments:
+        image: mendersoftware/deployments:master
 
-    #
-    # backend enterprise services
-    #
-    deployments-enterprise:
-        git-version: master
-    inventory-enterprise:
-        git-version: master
-    useradm-enterprise:
-        git-version: master
-    workflows-enterprise:
-        git-version: master
-    tenantadm:
-        git-version: master
+    mender-gui:
+        image: mendersoftware/gui:master
+
+    mender-api-gateway:
+        image: mendersoftware/api-gateway:master
+
+    mender-device-auth:
+        image: mendersoftware/deviceauth:master
+
+    mender-inventory:
+        image: mendersoftware/inventory:master
+
+    mender-useradm:
+        image: mendersoftware/useradm:master
+
+    mender-workflows-server:
+        image: mendersoftware/workflows:master
+
+    mender-workflows-worker:
+        image: mendersoftware/workflows-worker:master
+
+    mender-create-artifact-worker:
+        image: mendersoftware/create-artifact-worker:master

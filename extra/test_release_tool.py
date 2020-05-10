@@ -30,16 +30,21 @@ INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 
 @pytest.fixture(scope="function", autouse=True)
 def master_yml_files(request):
-    """Edit all yml files setting them to 'master' versions
+    """Edit all yml files setting them to 'master'/'mender-master' versions
 
     So that the tests can be run from any branch or with any
     local changes in the yml files. The files are restored after
     the test run.
     """
 
-    for filename in docker_compose_files_list(INTEGRATION_DIR):
+    docker_files = docker_compose_files_list(INTEGRATION_DIR, "docker")
+    for filename in docker_files:
         shutil.copyfile(filename, filename + ".bkp")
+    for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
+        if filename not in docker_files:
+            shutil.copyfile(filename, filename + ".bkp")
 
+    for filename in docker_files:
         with open(filename) as fd:
             full_content = "".join(fd.readlines())
         with open(filename, "w") as fd:
@@ -60,21 +65,27 @@ def master_yml_files(request):
                     full_content,
                 )
             )
-        with open(filename) as fd:
-            full_content = "".join(fd.readlines())
-        with open(filename, "w") as fd:
-            fd.write(
-                re.sub(
-                    r"git-version:\s+.*",
-                    r"git-version: master",
-                    full_content,
-                    flags=re.MULTILINE,
+
+    for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
+        if filename not in docker_files:
+            with open(filename) as fd:
+                full_content = "".join(fd.readlines())
+            with open(filename, "w") as fd:
+                fd.write(
+                    re.sub(
+                        r"image:\s+(mendersoftware|.*mender\.io)/(.+):.*",
+                        r"image: \g<1>/\g<2>:master",
+                        full_content,
+                    )
                 )
-            )
 
     def restore():
-        for filename in docker_compose_files_list(INTEGRATION_DIR):
+        docker_files = docker_compose_files_list(INTEGRATION_DIR, "docker")
+        for filename in docker_files:
             os.rename(filename + ".bkp", filename)
+        for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
+            if filename not in docker_files:
+                os.rename(filename + ".bkp", filename)
 
     request.addfinalizer(restore)
 
@@ -127,8 +138,8 @@ def test_version_of(capsys):
     with open(filename, "w") as fd:
         fd.write(
             """services:
-    inventory:
-        git-version: 1.2.3-git
+    mender-inventory:
+        image: mendersoftware/inventory:1.2.3-git
 """
         )
     run_main_assert_result(capsys, ["--version-of", "inventory"], "1.2.3-git")
@@ -297,3 +308,43 @@ def test_integration_versions_including(capsys):
     assert versions[0].endswith("/2.2.x")
     assert versions[1].endswith("/2.1.x")
     assert versions[2].endswith("/2.0.x")
+
+
+def test_docker_compose_files_list():
+    list_git = docker_compose_files_list(INTEGRATION_DIR, version="git")
+    list_git_filenames = [os.path.basename(file) for file in list_git]
+    assert "docker-compose.client.demo.yml" in list_git_filenames
+    assert "docker-compose.no-ssl.yml" in list_git_filenames
+    assert "docker-compose.testing.enterprise.yml" in list_git_filenames
+    assert "other-components.yml" in list_git_filenames
+    assert "docker-compose.storage.minio.yml" in list_git_filenames
+    assert "docker-compose.client.rofs.yml" in list_git_filenames
+    assert "docker-compose.client-dev.yml" in list_git_filenames
+    assert "docker-compose.mt.client.yml" in list_git_filenames
+    assert "docker-compose.demo.yml" in list_git_filenames
+    assert "docker-compose.client.yml" in list_git_filenames
+    assert "docker-compose.docker-client.yml" in list_git_filenames
+
+    assert "git-versions.yml" in list_git_filenames
+    assert "git-versions-enterprise.yml" in list_git_filenames
+    assert "docker-compose.yml" not in list_git_filenames
+    assert "docker-compose.enterprise.yml" not in list_git_filenames
+
+    list_docker = docker_compose_files_list(INTEGRATION_DIR, version="docker")
+    list_docker_filenames = [os.path.basename(file) for file in list_docker]
+    assert "docker-compose.client.demo.yml" in list_docker_filenames
+    assert "docker-compose.no-ssl.yml" in list_docker_filenames
+    assert "docker-compose.testing.enterprise.yml" in list_docker_filenames
+    assert "other-components.yml" in list_docker_filenames
+    assert "docker-compose.storage.minio.yml" in list_docker_filenames
+    assert "docker-compose.client.rofs.yml" in list_docker_filenames
+    assert "docker-compose.client-dev.yml" in list_docker_filenames
+    assert "docker-compose.mt.client.yml" in list_docker_filenames
+    assert "docker-compose.demo.yml" in list_docker_filenames
+    assert "docker-compose.client.yml" in list_docker_filenames
+    assert "docker-compose.docker-client.yml" in list_docker_filenames
+
+    assert "git-versions.yml" not in list_docker_filenames
+    assert "git-versions-enterprise.yml" not in list_docker_filenames
+    assert "docker-compose.yml" in list_docker_filenames
+    assert "docker-compose.enterprise.yml" in list_docker_filenames

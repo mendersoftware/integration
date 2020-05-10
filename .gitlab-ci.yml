@@ -36,9 +36,7 @@ test:extra-tools:release-tool:
     - git remote add github https://github.com/mendersoftware/integration.git
     - git fetch github
     # Fetch master branch for tests using --in-integration-version
-    - if [ $CI_COMMIT_REF_NAME != "master" ]; then
-    -  git fetch origin master:master
-    - fi
+    - git fetch origin master:master
 
   script:
     # Run release-tool unit tests.

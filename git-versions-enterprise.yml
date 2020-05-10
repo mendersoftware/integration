@@ -1,0 +1,26 @@
+# This file lists software components that are part of a Mender Enterprise release
+# which are published with the global Mender product version. The versions here
+# therefore point to the internal Git tags/branches. We keep this information as a
+# docker-compose YAML file for parsing purposes.
+services:
+
+    #
+    # backend enterprise services
+    #
+    mender-deployments:
+        image: registry.mender.io/mendersoftware/deployments-enterprise:master
+
+    mender-inventory:
+        image: registry.mender.io/mendersoftware/inventory-enterprise:master
+
+    mender-workflows-server:
+        image: registry.mender.io/mendersoftware/workflows-enterprise:master
+
+    mender-workflows-worker:
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
+
+    mender-tenantadm:
+        image: registry.mender.io/mendersoftware/tenantadm:master
+
+    mender-useradm:
+        image: registry.mender.io/mendersoftware/useradm-enterprise:master

@@ -1924,8 +1924,12 @@ def push_latest_docker_tags(state, tag_avail):
 
     # For independent components, we need to generate a new one for each repository;
     # for backend services, we will use the overall ones
-    overall_minor_version = state["version"][0 : state["version"].rindex(".")]
-    overall_major_version = state["version"][0 : state["version"].index(".")]
+    overall_minor_version = (
+        "mender-" + state["version"][0 : state["version"].rindex(".")]
+    )
+    overall_major_version = (
+        "mender-" + state["version"][0 : state["version"].index(".")]
+    )
 
     compose_data = get_docker_compose_data_for_rev(
         integration_dir(), tag_avail["integration"]["sha"]
@@ -1944,14 +1948,14 @@ def push_latest_docker_tags(state, tag_avail):
             repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
                 new_version = "latest"
-            elif tip.count(".") == 1:
+            elif tip.startswith("mender-") and tip.count(".") == 1:
                 if image.is_independent_component():
                     new_version = state[repo.git()]["version"][
                         0 : state[repo.git()]["version"].rindex(".")
                     ]
                 else:
                     new_version = overall_minor_version
-            elif tip.count(".") == 0:
+            elif tip.startswith("mender-") and tip.count(".") == 0:
                 if image.is_independent_component():
                     new_version = state[repo.git()]["version"][
                         0 : state[repo.git()]["version"].index(".")
@@ -1960,7 +1964,7 @@ def push_latest_docker_tags(state, tag_avail):
                     new_version = overall_major_version
             else:
                 raise Exception(
-                    "Unrecognized tip %s, expected 'latest', minor-like or major-like"
+                    "Unrecognized tip %s, expected 'latest', mender-M.N or mender-M"
                     % tip
                 )
 

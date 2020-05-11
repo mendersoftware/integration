@@ -381,17 +381,46 @@ def ask(text):
     return reply
 
 
-def docker_compose_files_list(dir):
-    """Return all docker-compose*.yml files in given directory."""
-    list = []
-    for entry in os.listdir(dir):
-        if (
-            entry == "git-versions.yml"
+def filter_docker_compose_files_list(list, version):
+    """Returns a filtered list of known docker-compose files
+
+    version shall be one of "git", "docker".
+    """
+
+    assert version in ["git", "docker"]
+
+    _DOCKER_ONLY_YML = ["docker-compose.yml", "docker-compose.enterprise.yml"]
+    _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
+
+    def _is_known_yml_file(entry):
+        return (
+            entry.startswith("git-versions")
+            and entry.endswith(".yml")
             or entry == "other-components.yml"
             or (entry.startswith("docker-compose") and entry.endswith(".yml"))
-        ):
-            list.append(os.path.join(dir, entry))
-    return list
+        )
+
+    return [
+        entry
+        for entry in list
+        if _is_known_yml_file(entry)
+        and (
+            version == "all"
+            or (
+                (version == "git" and entry in _GIT_ONLY_YML)
+                or (version == "docker" and entry in _DOCKER_ONLY_YML)
+                or (entry not in _GIT_ONLY_YML + _DOCKER_ONLY_YML)
+            )
+        )
+    ]
+
+
+def docker_compose_files_list(dir, version):
+    """Return all docker-compose*.yml files in given directory."""
+    return [
+        os.path.join(dir, entry)
+        for entry in filter_docker_compose_files_list(os.listdir(dir), version)
+    ]
 
 
 def get_docker_compose_data_from_json_list(json_list):
@@ -401,71 +430,52 @@ def get_docker_compose_data_from_json_list(json_list):
             "container": container_name,
             "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
             "version": version,
-            "git_version": git_version,
         }
     }
     """
     data = {}
     for json_str in json_list:
         json_elem = yaml.safe_load(json_str)
-        for service, serv_info in json_elem["services"].items():
-            full_image = serv_info.get("image")
-            if full_image is not None and (
-                "mendersoftware" in full_image or "mender.io" in full_image
+        for container, cont_info in json_elem["services"].items():
+            full_image = cont_info.get("image")
+            if full_image is None or (
+                "mendersoftware" not in full_image and "mender.io" not in full_image
             ):
-                split = full_image.split(":", 1)
-                prefix_and_image = split[0]
-                ver = split[1]
-                split = prefix_and_image.rsplit("/", 1)
-                prefix = split[0]
-                image = split[1]
-                if data.get(image) is None:
-                    data[image] = dict()
-                if (
-                    data[image].get("container") is not None
-                    or data[image].get("image_prefix") is not None
-                    or data[image].get("version") is not None
-                ):
-                    raise Exception(
-                        (
-                            "More than one container is using the image name '%s'. "
-                            + "The tool currently does not support this."
-                        )
-                        % image
+                continue
+            split = full_image.rsplit("/", 1)
+            prefix = split[0]
+            split = split[1].split(":", 1)
+            image = split[0]
+            ver = split[1]
+            if data.get(image) is not None:
+                raise Exception(
+                    (
+                        "More than one container is using the image name '%s'. "
+                        + "The tool currently does not support this."
                     )
-                data[image].update(
-                    {"container": service, "image_prefix": prefix, "version": ver,}
+                    % image
                 )
-            git_version = serv_info.get("git-version")
-            if git_version is not None:
-                if data.get(service) is None:
-                    data[service] = dict()
-                if data[service].get("git_version") is not None:
-                    raise Exception(
-                        (
-                            "More than one service specifying git-version for '%s'. "
-                            + "The tool currently does not support this."
-                        )
-                        % service
-                    )
-                data[service].update(
-                    {"git_version": git_version,}
-                )
+            data[image] = {
+                "container": container,
+                "image_prefix": prefix,
+                "version": ver,
+            }
+
     return data
 
 
-def get_docker_compose_data(dir):
+def get_docker_compose_data(dir, version="git"):
     """Return docker-compose data from all the YML files in the directory.
     See get_docker_compose_data_from_json_list."""
     json_list = []
-    for filename in docker_compose_files_list(dir):
+    for filename in docker_compose_files_list(dir, version):
         with open(filename) as fd:
             json_list.append(fd.read())
 
     return get_docker_compose_data_from_json_list(json_list)
 
 
-def get_docker_compose_data_for_rev(git_dir, rev):
+def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
     """Return docker-compose data from all the YML files in the given revision.
     See get_docker_compose_data_from_json_list."""
     yamls = []
@@ -474,16 +484,7 @@ def get_docker_compose_data_for_rev(git_dir, rev):
         .strip()
         .split("\n")
     )
-    for filename in files:
-        if (
-            filename != "git-versions.yml"
-            and filename != "other-components.yml"
-            and not (
-                filename.startswith("docker-compose") and filename.endswith(".yml")
-            )
-        ):
-            continue
-
+    for filename in filter_docker_compose_files_list(files, version):
         output = execute_git(
             None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
         )
@@ -549,18 +550,20 @@ def version_of(
 
         repo_range = []
         for rev in rev_range:
-            data = get_docker_compose_data_for_rev(integration_dir, rev)
+            if not git_version:
+                data = get_docker_compose_data_for_rev(integration_dir, rev, "docker")
+            else:
+                data = get_docker_compose_data_for_rev(integration_dir, rev, "git")
+                # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+                # would be missing the backend components. Try loading the old "docker" versions.
+                if data.get(yml_component.yml()) is None:
+                    data = get_docker_compose_data_for_rev(
+                        integration_dir, rev, "docker"
+                    )
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
             if data.get(yml_component.yml()) is not None:
-                # Old release branches will not have git_version (i.e. version matches git_version)
-                if (
-                    git_version
-                    and data[yml_component.yml()].get("git_version") is not None
-                ):
-                    version = data[yml_component.yml()]["git_version"]
-                else:
-                    version = data[yml_component.yml()]["version"]
+                version = data[yml_component.yml()]["version"]
                 # If it is a tag, do not prepend remote name
                 if re.search(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
                     repo_range.append(version)
@@ -568,10 +571,10 @@ def version_of(
                     repo_range.append(remote + version)
         return range_type.join(repo_range)
     else:
-        data = get_docker_compose_data(integration_dir)
-        # Old release branches will not have git_version (i.e. version matches git_version)
-        if git_version and data[yml_component.yml()].get("git_version") is not None:
-            return data[yml_component.yml()]["git_version"]
+        if not git_version:
+            data = get_docker_compose_data(integration_dir, "docker")
+        else:
+            data = get_docker_compose_data(integration_dir, "git")
         return data[yml_component.yml()]["version"]
 
 
@@ -1766,39 +1769,32 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
     """Modifies docker-compose files in the given directory so that repo_docker
     image points to the given tag."""
 
-    compose_files = docker_compose_files_list(dir)
-    for filename in compose_files:
-        for yml in repo.yml_components():
-            old = open(filename)
-            new = open(filename + ".tmp", "w")
-            for line in old:
-                # Replace build tag with a new one.
-                line = re.sub(
-                    r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$"
-                    % re.escape(yml.yml()),
-                    r"\g<1>%s\2" % tag,
-                    line,
-                )
-                new.write(line)
-            new.close()
-            old.close()
-            os.rename(filename + ".tmp", filename)
+    def _replace_version_in_file(filename, image, version):
+        old = open(filename)
+        new = open(filename + ".tmp", "w")
+        for line in old:
+            # Replace :version with a new one.
+            line = re.sub(
+                r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$"
+                % re.escape(image),
+                r"\g<1>%s\2" % version,
+                line,
+            )
+            new.write(line)
+        new.close()
+        old.close()
+        os.rename(filename + ".tmp", filename)
+
+    for yml in repo.yml_components():
+        compose_files_docker = docker_compose_files_list(dir, "docker")
+        for filename in compose_files_docker:
+            _replace_version_in_file(filename, yml.yml(), tag)
 
         if git_tag is not None:
-            # Replace Git tag with a new one.
-            assosiated_repos = repo.associated_components_of_type("git")
-            for assosiated_repo in assosiated_repos:
-                with open(filename) as fd:
-                    full_content = "".join(fd.readlines())
-                with open(filename, "w") as fd:
-                    fd.write(
-                        re.sub(
-                            r"(\s*%s:[\n\s]+git-version:\s+)(.*)"
-                            % re.escape(assosiated_repo.git()),
-                            r"\g<1>%s" % git_tag,
-                            full_content,
-                        )
-                    )
+            for filename in docker_compose_files_list(dir, "git"):
+                # Avoid rewriting duplicated files (client and other-components)
+                if filename not in compose_files_docker:
+                    _replace_version_in_file(filename, yml.yml(), git_tag)
 
 
 def purge_build_tags(state, tag_avail):
@@ -1924,11 +1920,15 @@ def push_latest_docker_tags(state, tag_avail):
 
     # For independent components, we need to generate a new one for each repository;
     # for backend services, we will use the overall ones
-    overall_minor_version = state["version"][0 : state["version"].rindex(".")]
-    overall_major_version = state["version"][0 : state["version"].index(".")]
+    overall_minor_version = (
+        "mender-" + state["version"][0 : state["version"].rindex(".")]
+    )
+    overall_major_version = (
+        "mender-" + state["version"][0 : state["version"].index(".")]
+    )
 
     compose_data = get_docker_compose_data_for_rev(
-        integration_dir(), tag_avail["integration"]["sha"]
+        integration_dir(), tag_avail["integration"]["sha"], "docker"
     )
 
     for tip in [overall_minor_version, overall_major_version, "latest"]:
@@ -1944,14 +1944,14 @@ def push_latest_docker_tags(state, tag_avail):
             repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
                 new_version = "latest"
-            elif tip.count(".") == 1:
+            elif tip.startswith("mender-") and tip.count(".") == 1:
                 if image.is_independent_component():
                     new_version = state[repo.git()]["version"][
                         0 : state[repo.git()]["version"].rindex(".")
                     ]
                 else:
                     new_version = overall_minor_version
-            elif tip.count(".") == 0:
+            elif tip.startswith("mender-") and tip.count(".") == 0:
                 if image.is_independent_component():
                     new_version = state[repo.git()]["version"][
                         0 : state[repo.git()]["version"].index(".")
@@ -1960,7 +1960,7 @@ def push_latest_docker_tags(state, tag_avail):
                     new_version = overall_major_version
             else:
                 raise Exception(
-                    "Unrecognized tip %s, expected 'latest', minor-like or major-like"
+                    "Unrecognized tip %s, expected 'latest', mender-M.N or mender-M"
                     % tip
                 )
 
@@ -2548,6 +2548,12 @@ def do_integration_versions_including(args):
         print("--integration-versions-including requires --version argument")
         sys.exit(2)
 
+    try:
+        repo = Component.get_component_of_any_type(args.integration_versions_including)
+    except KeyError:
+        print("Unrecognized repository: %s" % args.integration_versions_including)
+        sys.exit(1)
+
     git_dir = integration_dir()
     remote = find_upstream_remote(None, git_dir, "integration")
     # The below query will match all tags and the following branches: master, staging and releases (N.M.x)
@@ -2578,20 +2584,13 @@ def do_integration_versions_including(args):
     # ones contain the version of the service we are querying.
     matches = []
     for candidate in candidates:
-        data = get_docker_compose_data_for_rev(git_dir, candidate)
+        data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
+        # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+        # would be missing the backend components. Try loading the old "docker" versions.
+        if data.get(repo.yml_components()[0].yml()) is None:
+            data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
-            repo = Component.get_component_of_any_type(
-                args.integration_versions_including
-            )
-        except KeyError:
-            print("Unrecognized repository: %s" % args.integration_versions_including)
-            sys.exit(1)
-        try:
-            # Prefer Git versions
-            if data[repo.yml_components()[0].yml()].get("git_version") is not None:
-                version = data[repo.yml_components()[0].yml()]["git_version"]
-            else:
-                version = data[repo.yml_components()[0].yml()]["version"]
+            version = data[repo.yml_components()[0].yml()]["version"]
         except KeyError:
             # If key doesn't exist it's because the version is from before
             # that component existed. So definitely not a match.
@@ -2691,9 +2690,11 @@ def find_repo_path(name, paths):
 def do_map_name(args):
     int_dir = integration_dir()
     if args.in_integration_version:
-        data = get_docker_compose_data_for_rev(int_dir, args.in_integration_version)
+        data = get_docker_compose_data_for_rev(
+            int_dir, args.in_integration_version, version="docker"
+        )
     else:
-        data = get_docker_compose_data(int_dir)
+        data = get_docker_compose_data(int_dir, version="docker")
 
     cli_types = {
         "container": "docker_container",
@@ -2716,7 +2717,6 @@ def do_map_name(args):
 
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
-    data = get_docker_compose_data(int_dir)
     problem = False
 
     repos = Component.get_components_of_type("git", only_release=(not optional_too))
@@ -2755,6 +2755,12 @@ def do_verify_integration_references(args, optional_too):
             continue
 
         for yml in repo.yml_components():
+            data = get_docker_compose_data(int_dir, version="git")
+            # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+            # would be missing the backend components. Try loading the old "docker" versions.
+            if data.get(yml.yml()) is None:
+                data = get_docker_compose_data(int_dir, version="docker")
+
             version = data[yml.yml()]["version"]
 
             if version not in [ref for ref, reftype in revs]:

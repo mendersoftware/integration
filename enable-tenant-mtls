@@ -1,0 +1,43 @@
+#!/bin/sh
+
+set -e
+
+function usage {
+    echo "usage: enable-tenant-mtls --tenant <name> --proxy-ip <ip>"
+    exit 
+}
+
+if [ $# -lt 4 ]; then
+    usage
+fi
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --tenant) 
+        TENANT_NAME="$2"
+        ;;
+        --proxy-ip)
+        PROXY_IP="$2"
+        ;;
+        *)
+        usage
+        ;;
+    esac
+    shift 2
+done
+
+# step 1: configure tenant's mTLS in tenantadm's Tenant doc
+TENANT_CA_CERT_FILE="tls-poc-generated/$TENANT_NAME.ca.crt"
+TENANT_CA_CERT=$(cat $TENANT_CA_CERT_FILE)
+
+MONGO_UPDATE="db.tenants.update({name: \"$TENANT_NAME\"}, {\$set: {\"mtls_config.mtls_proxy_ip\": \"$PROXY_IP\"}})"
+
+docker exec -it $(docker ps -q -f "name=mongo") mongo --eval "$MONGO_UPDATE" tenantadm
+
+MONGO_FIND="db.tenants.find({name: \"$TENANT_NAME\"})"
+docker exec -it $(docker ps -q -f "name=mongo") mongo --eval "$MONGO_FIND" tenantadm
+
+# step 2: move the cert to Traefik's CA store and config
+cp $TENANT_CA_CERT_FILE "traefik-config/$TENANT_NAME.ca.crt"
+CERTS="caFiles = [$(cd traefik-config && printf '"config/%s",' *.crt)]"
+sed -i "/caFiles/c$CERTS" traefik-config/tls.toml

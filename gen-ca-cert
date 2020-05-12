@@ -1,0 +1,14 @@
+#!/bin/sh
+
+set -e
+
+if [ $# -ne 1 ]; then
+    echo "usage: gen-ca-cert [tenant-name]"
+    exit 1
+fi
+
+CA_KEY="tls-poc-generated/$1.ca.key"
+OUT_CA_CERT="tls-poc-generated/$1.ca.crt"
+
+openssl genrsa -aes256 -out $CA_KEY 4096 
+openssl req -new -x509 -sha256 -days 730 -key $CA_KEY -out $OUT_CA_CERT

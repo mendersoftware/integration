@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+mkdir -p tls-poc-generated
+
+if [ $# -ne 2 ]; then
+    echo "usage: create-tenant [name] [username]"
+    exit 1
+fi
+
+docker exec -it $(docker ps -q -f "name=tenantadm") /usr/bin/tenantadm create-org --name="$1" --username="$2" --password=correcthorse | tr -d '\r' 2>&1 | tee tls-poc-generated/$1.tenant.token

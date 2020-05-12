@@ -1,0 +1,59 @@
+#!/bin/sh
+
+set -e
+set -x
+
+function usage {
+    echo "usage: run-bash-client --tenant <name> --gateway <default | mtls> [--client-cert <client-suffix>]"
+    exit 
+}
+
+
+if [ $# -lt 4 ]; then
+    usage
+fi
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --tenant) 
+        TENANT_NAME="$2"
+        ;;
+        --gateway)
+        GATEWAY="$2"
+        ;;
+        --client-cert)
+        CLIENT_CERT="$2"
+        ;;
+        *)
+        usage
+        ;;
+    esac
+    shift 2
+done
+
+#select tenant token
+TENANT_ID="$(cat tls-poc-generated/$TENANT_NAME.tenant.token)"
+export MENDER_TENANT_TOKEN="$(docker exec $(docker ps -q -f "name=tenantadm") /usr/bin/tenantadm get-tenant --id $TENANT_ID | jq -r .tenant_token)"
+
+# set gateway address
+# ...for 'normal' device communication
+export MENDER_SERVER_URL="https://localhost"
+
+# ...for auth requests:default mender gateway or the mTLS gateway
+if [ $GATEWAY == "mtls" ]; then
+    export MENDER_SERVER_URL_AUTHREQS="https://localhost:1443"
+fi
+if [ $GATEWAY == "default" ]; then
+    export MENDER_SERVER_URL_AUTHREQS=$MENDER_SERVER_URL
+fi
+
+# optionally set client cert
+export MENDER_CLIENT_CERT=${CLIENT_CERT:+"tls-poc-generated/$TENANT_NAME.client.$CLIENT_CERT.crt"}
+export MENDER_CLIENT_KEY=${CLIENT_CERT:+"tls-poc-generated/$TENANT_NAME.client.$CLIENT_CERT.key"}
+
+# keys for mender-client
+mkdir -p keys 
+openssl genpkey -algorithm RSA -out keys/private.key -pkeyopt rsa_keygen_bits:3072 
+openssl rsa -in keys/private.key -out keys/public.key -pubout 
+
+./mender-client.sh

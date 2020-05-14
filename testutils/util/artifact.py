@@ -15,29 +15,50 @@ class Artifact:
 
     _dummySHA = "%064d" % 0
 
-    def __init__(self, artifact_name, device_types, payload=None):
+    def __init__(
+        self,
+        artifact_name,
+        device_types,
+        artifact_group=None,
+        payload=None,
+        payload_type="rootfs_image",
+        provides=None,
+        depends=None,
+    ):
         """
         :param artifact_name: name of the artifact (str)
         :param device_types:  list of compatible device types (list)
         :param payload:       optional payload to initialize the payload
-                              section (file/io.IOBase, str, bytes)
+                              section (file, io.IOBase, str, bytes)
         """
+        if not isinstance(artifact_name, str):
+            raise TypeError("artifact_name must be type str")
         if not isinstance(device_types, list):
-            raise ValueError("device_types must be a list of strings")
+            raise TypeError("device_types must be a list of strings")
+        elif len(device_types) == 0:
+            raise ValueError("device_types cannot be empty")
 
         self._filenames = ["version", "header.tar.gz"]
         self._payloads = {}
         self._provides = {"header-info": {"artifact_name": artifact_name}}
+        self._provide_keys = ["artifact_name"]
         self._depends = {"header-info": {"device_type": device_types}}
+        self._depend_keys = ["device_type"]
+
+        if artifact_group is not None:
+            self._provides["header-info"]["artifact_group"] = artifact_group
+            self._provide_keys.append("artifact_group")
+
         self._payload_types = {}
         self._shasums = {}
 
         if payload is not None:
-            self.add_payload(payload)
+            self.add_payload(payload, payload_type, depends, provides)
 
     def add_payload(self, fd, payload_type="rootfs_image", depends=None, provides=None):
         """
         add_payload adds another payload to the payload section.
+        NOTE: provides- and depends-keys must be unique across payloads.
         :param fd:           "file descriptor" contains the payload
                              (io.IOBase/file, str, bytes)
         :param payload_type: type of payload contained in fd (str)
@@ -49,19 +70,49 @@ class Artifact:
         elif isinstance(fd, bytes):
             fd = io.BytesIO(fd)
         elif not isinstance(fd, io.IOBase):
-            raise ValueError("fd must be an instance of either io.FileIO, str or bytes")
+            raise TypeError("fd must be an instance of either io.FileIO, str or bytes.")
         filename = "data/%04d/%s" % (
             len(self._payloads),
             getattr(fd, "name", "rootfs-%04d.ext4" % random.randint(0, 10000)),
         )
 
+        if isinstance(depends, dict):
+            for key in depends:
+                if key in self._depend_keys:
+                    raise ValueError("Depends key %s already present." % key)
+            self._depends[filename] = depends
+            self._depend_keys.append(*list(depends.keys()))
+        elif depends is not None:
+            raise TypeError("Depends must be a dict or None.")
+
+        if isinstance(provides, dict):
+            for key in provides:
+                if key in self._provide_keys:
+                    raise ValueError("Provides key %s already present." % key)
+            self._provide_keys.append(*list(provides.keys()))
+            self._provides[filename] = provides
+        elif provides is not None:
+            raise TypeError("provides must be a dict or None.")
+
         self._filenames.append(filename)
         self._payloads[filename] = fd
         self._payload_types[filename] = payload_type
-        if isinstance(depends, dict):
-            self._depends[filename] = depends
-        if isinstance(provides, dict):
-            self._provides[filename] = provides
+
+    def make(self):
+        """
+        make compiles the artifact at the current state and returns a
+        file object with the raw binary artifact.
+        :returns: artifact (io.BytesIO)
+        """
+        self._artifact = io.BytesIO()
+        self._tarfact = tarfile.open(fileobj=self._artifact, mode="w")
+        self._add_version()
+        self._initialize_manifest()
+        self._add_header()
+        self._add_payloads()
+        self._complete_manifest()
+        self._artifact.seek(0)
+        return self._artifact
 
     def _compute_checksum(self, filename, fd):
         fd.seek(0)
@@ -189,18 +240,13 @@ class Artifact:
         tarhdr.size = size
         self._tarfact.addfile(tarhdr, hdr_tarbin)
 
-    def make(self):
+    def __del__(self):
         """
-        make compiles the artifact at the current state and returns a
-        file object with the raw binary artifact.
-        :returns: artifact (io.BytesIO)
+        Make sure all files are garbage collected
         """
-        self._artifact = io.BytesIO()
-        self._tarfact = tarfile.open(fileobj=self._artifact, mode="w")
-        self._add_version()
-        self._initialize_manifest()
-        self._add_header()
-        self._add_payloads()
-        self._complete_manifest()
-        self._artifact.seek(0)
-        return self._artifact
+        for filename in self._filenames:
+            try:
+                self._payloads[filename].close()
+                del self._payloads[filename]
+            except Exception:
+                pass

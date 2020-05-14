@@ -30,7 +30,7 @@ class UserPermission:
 
 class UserRole:
     def __init__(self, name, permissions):
-        self._id = name
+        self.name = name
         self.permissions = []
 
         if isinstance(permissions, list):
@@ -54,102 +54,105 @@ class UserRole:
         self.permissions.append(permission.__dict__)
 
 
+def login_tenant_users(tenant):
+    useradm_MGMT = ApiClient(useradm.URL_MGMT)
+    for user in tenant.users:
+        rsp = useradm_MGMT.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        assert rsp.status_code == 200, "Failed to setup test environment"
+        user.token = rsp.text
+
+
+def setup_tenant_devices(tenant, device_groups):
+    """
+    setup_user_devices authenticates the user and creates devices
+    attached to (static) groups given by the proportion map from
+    the groups parameter.
+    :param users:     Users to setup devices for (list).
+    :param n_devices: Number of accepted devices created for each
+                      user (int).
+    :param groups:    Map of group names to device proportions, the
+                      sum of proportion must be less than or equal
+                      to 1 (dict[str] = float)
+    :return: Dict mapping group_name -> list(devices)
+    """
+    devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
+    devauth_MGMT = ApiClient(deviceauth_v2.URL_MGMT)
+    invtry_MGMT = ApiClient(inventory.URL_MGMT)
+    user = tenant.users[0]
+    grouped_devices = {}
+    group_cumulative = []
+    group = None
+
+    login_tenant_users(tenant)
+
+    tenant.devices = []
+    for group, dev_cnt in device_groups.items():
+        grouped_devices[group] = []
+        for i in range(dev_cnt):
+            device = make_accepted_device(
+                devauth_DEV, devauth_MGMT, user.token, tenant.tenant_token
+            )
+            if group is not None:
+                rsp = invtry_MGMT.with_auth(user.token).call(
+                    "PUT",
+                    inventory.URL_DEVICE_GROUP.format(id=device.id),
+                    body={"group": group},
+                )
+                assert rsp.status_code == 204
+
+            device.group = group
+            grouped_devices[group].append(device)
+            tenant.devices.append(device)
+
+    return grouped_devices
+
+
+def add_user_to_role(user, tenant, role):
+    """
+    Ensures that the role exists and adds the user to it.
+    NOTE: if creating a role to limit deployable groups, make sure to add
+          another role that permits usage of the API endpoint for creating
+          deployments.
+    :param user:   the user to which the roles should be added
+                   (common.User)
+    :param tenant: tenant for which the user belongs (common.Tenant)
+                   NOTE: it is assumed that tenant.users[0] has no
+                         RBAC restrictions and can create new roles.
+    :param roles:  the (list) of roles to constrain the user
+                   (UserRole or list{UserRole})
+    :return: None
+    """
+    useradm_MGMT = ApiClient(useradm.URL_MGMT)
+    roles = [role.name]
+    admin_user = tenant.users[0]
+    if getattr(admin_user, "token", None) is None:
+        rsp = useradm_MGMT.call(
+            "POST", useradm.URL_LOGIN, auth=(admin_user.name, admin_user.pwd)
+        )
+        assert rsp.status_code == 200, rsp.text
+        admin_user.token = rsp.text
+
+    rsp = useradm_MGMT.with_auth(admin_user.token).call(
+        "GET", useradm.URL_USERS_ID.format(id=user.id)
+    )
+    assert rsp.status_code == 200
+    roles.append(*rsp.json()["roles"])
+
+    rsp = useradm_MGMT.with_auth(admin_user.token).call(
+        "POST", useradm.URL_ROLES, role.dict
+    )
+    assert rsp.status_code == 201
+
+    rsp = useradm_MGMT.with_auth(admin_user.token).call(
+        "PUT", useradm.URL_USERS_ID.format(id=user.id), body={"roles": roles},
+    )
+    assert rsp.status_code == 204, rsp.text
+
+
 class TestRBACDeviceGroupEnterprise:
     @property
     def logger(self):
         return logging.getLogger(self.__class__.__name__)
-
-    def login_tenant_users(self, tenant):
-        useradm_MGMT = ApiClient(useradm.URL_MGMT)
-        for user in tenant.users:
-            rsp = useradm_MGMT.call(
-                "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-            )
-            assert rsp.status_code == 200, "Failed to setup test environment"
-            user.token = rsp.text
-
-    def setup_tenant_devices(self, tenant, device_groups):
-        """
-        setup_user_devices authenticates the user and creates devices
-        attached to (static) groups given by the proportion map from
-        the groups parameter.
-        :param users:     Users to setup devices for (list).
-        :param n_devices: Number of accepted devices created for each
-                          user (int).
-        :param groups:    Map of group names to device proportions, the
-                          sum of proportion must be less than or equal
-                          to 1 (dict[str] = float)
-        :return: Dict mapping group_name -> list(devices)
-        """
-        devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
-        devauth_MGMT = ApiClient(deviceauth_v2.URL_MGMT)
-        invtry_MGMT = ApiClient(inventory.URL_MGMT)
-        user = tenant.users[0]
-        grouped_devices = {}
-        group_cumulative = []
-        group = None
-
-        self.login_tenant_users(tenant)
-
-        tenant.devices = []
-        for group, dev_cnt in device_groups.items():
-            grouped_devices[group] = []
-            for i in range(dev_cnt):
-                device = make_accepted_device(
-                    devauth_DEV, devauth_MGMT, user.token, tenant.tenant_token
-                )
-                if group is not None:
-                    rsp = invtry_MGMT.with_auth(user.token).call(
-                        "PUT",
-                        inventory.URL_DEVICE_GROUP.format(id=device.id),
-                        body={"group": group},
-                    )
-                    assert rsp.status_code == 204
-
-                device.group = group
-                grouped_devices[group].append(device)
-                tenant.devices.append(device)
-
-        return grouped_devices
-
-    def add_user_to_role(self, mgo_client, user, tenant_id, roles):
-        """
-        Ensures that the role exists and adds the user to it.
-        NOTE: if creating a role to limit deployable groups, make sure to add
-              another role that permits usage of the API endpoint for creating
-              deployments.
-        :param mgo_client: (pymongo.MongoClient)
-        :param user:       the user to which the roles should be added
-                           (common.User)
-        :param tenant_id:  the tenant for which the user belongs (str)
-        :param roles:      the (list) of roles to constrain the user
-                           (UserRole or list{UserRole})
-        :return: None
-        """
-        useradm_MGMT = ApiClient(useradm.URL_MGMT)
-        if getattr(user, "token", None) is None:
-            rsp = useradm_MGMT.call(
-                "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-            )
-            assert rsp.status_code == 200, rsp.text
-            user.token = rsp.text
-
-        if not isinstance(roles, list):
-            roles = [roles]
-        for role in roles:
-            try:
-                coll_roles = getattr(mgo_client, "useradm-%s" % tenant_id).roles
-                coll_roles.insert_one(role.dict)
-            except pymongo.errors.DuplicateKeyError:
-                # Role already exists
-                pass
-
-        rsp = useradm_MGMT.with_auth(user.token).call(
-            "PUT",
-            useradm.URL_USERS_ID.format(id=user.id),
-            body={"roles": [role._id for role in roles]},
-        )
-        assert rsp.status_code == 204, rsp.text
 
     @pytest.mark.parametrize(
         "test_case",
@@ -213,20 +216,14 @@ class TestRBACDeviceGroupEnterprise:
         )
         test_user = create_user(tid=tenant.id, **test_case["user"])
         tenant.users.append(test_user)
+        login_tenant_users(tenant)
 
         # Initialize tenant's devices
-        grouped_devices = self.setup_tenant_devices(tenant, test_case["device_groups"])
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
 
         # Add user to deployment group
         role = UserRole("RBAC_DEVGRP", test_case["permissions"])
-        self.add_user_to_role(
-            clean_mongo,
-            test_user,
-            tenant.id,
-            # Add dummy RBAC_ROLE_PERMIT_ALL - should already be
-            # present in db.
-            [UserRole("RBAC_ROLE_PERMIT_ALL", []), role],
-        )
+        add_user_to_role(test_user, tenant, role)
 
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")

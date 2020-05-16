@@ -277,8 +277,8 @@ class TestDevicePatchAttributes:
 
             api_dev = r.json()
             assert (
-                len(api_dev["attributes"]) == 4
-            )  # 3+1 new scope: identity holding device status pushed from deviceauth
+                len(api_dev["attributes"]) >= 6
+            )  # at least 6 attributes (see below, unexpected attributes will fail)
 
             for a in api_dev["attributes"]:
                 if a["name"] == "mac":
@@ -287,8 +287,13 @@ class TestDevicePatchAttributes:
                     assert a["value"] == ""
                 elif a["name"] == "new-empty":
                     assert a["value"] == ""
-                elif a["name"] == "status":
-                    # new scope: identity, status attribute is present
+                # new scope: identity, status attribute is present
+                elif a["scope"] == "identity" and a["name"] == "status":
+                    assert a["value"] != ""
+                # new scope: system, status attribute is present
+                elif a["scope"] == "system" and a["name"] == "created_ts":
+                    assert a["value"] != ""
+                elif a["scope"] == "system" and a["name"] == "updated_ts":
                     assert a["value"] != ""
                 else:
                     assert False, "unexpected attribute " + a["name"]

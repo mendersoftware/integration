@@ -480,24 +480,25 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
             if len(rev_range) > 1:
                 range_type = ".."
 
-        # Figure out if the user string contained a remote or not
-        remote = ""
-        split = rev_range[0].split("/", 1)
-        if len(split) > 1:
-            remote_candidate = split[0]
-            ref_name = split[1]
-            if (
-                subprocess.call(
-                    "git rev-parse -q --verify refs/heads/%s > /dev/null" % ref_name,
-                    shell=True,
-                    cwd=integration_dir,
-                )
-                == 0
-            ):
-                remote = remote_candidate + "/"
-
         repo_range = []
         for rev in rev_range:
+            # Figure out if the user string contained a remote or not
+            remote = ""
+            split = rev.split("/", 1)
+            if len(split) > 1:
+                remote_candidate = split[0]
+                ref_name = split[1]
+                if (
+                    subprocess.call(
+                        "git rev-parse -q --verify refs/heads/%s > /dev/null"
+                        % ref_name,
+                        shell=True,
+                        cwd=integration_dir,
+                    )
+                    == 0
+                ):
+                    remote = remote_candidate + "/"
+
             data = get_docker_compose_data_for_rev(integration_dir, rev)
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.

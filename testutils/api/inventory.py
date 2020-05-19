@@ -18,6 +18,9 @@ URL_DEV = testutils.api.client.GATEWAY_URL + "/api/devices/v1/inventory"
 
 URL_DEVICE = "/devices/{id}"
 URL_DEVICES = "/devices"
+URL_DEVICE_GROUP = "/devices/{id}/group"
+URL_GROUPS = "/devices/groups"
+URL_GROUP = "/devices/group/{name}/devices"
 
 URL_DEVICE_ATTRIBUTES = "/device/attributes"
 

@@ -174,11 +174,11 @@ def test_version_of(capsys):
 
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master
-    # run_main_assert_result(
-    #     capsys,
-    #     ["--version-of", "inventory", "--in-integration-version", "master"],
-    #     "master",
-    # )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--in-integration-version", "master"],
+        "master",
+    )
     run_main_assert_result(
         capsys,
         [
@@ -191,18 +191,18 @@ def test_version_of_with_in_integration_version(capsys):
         ],
         "mender-master",
     )
-    # run_main_assert_result(
-    #     capsys,
-    #     [
-    #         "--version-of",
-    #         "inventory",
-    #         "--version-type",
-    #         "git",
-    #         "--in-integration-version",
-    #         "master",
-    #     ],
-    #     "master",
-    # )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "inventory",
+            "--version-type",
+            "git",
+            "--in-integration-version",
+            "master",
+        ],
+        "master",
+    )
 
     # For old releases, --version-type shall be ignored
     run_main_assert_result(
@@ -289,13 +289,13 @@ def test_set_version_of(capsys):
 
 
 def test_integration_versions_including(capsys):
-    # captured = run_main_assert_result(
-    #     capsys,
-    #     ["--integration-versions-including", "inventory", "--version", "master"],
-    #     None,
-    # )
-    # # The output shall be <remote>/master
-    # assert captured.endswith("/master")
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "inventory", "--version", "master"],
+        None,
+    )
+    # The output shall be <remote>/master
+    assert captured.endswith("/master")
 
     captured = run_main_assert_result(
         capsys,

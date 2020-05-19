@@ -103,14 +103,14 @@ def run_main_assert_result(capsys, args, expect=None):
 
 def test_version_of(capsys):
     # On a clean checkout, both will be master
-    run_main_assert_result(capsys, ["--version-of", "inventory"], "master")
+    run_main_assert_result(capsys, ["--version-of", "deviceauth"], "master")
     run_main_assert_result(
         capsys,
-        ["--version-of", "inventory", "--version-type", "docker"],
+        ["--version-of", "deviceauth", "--version-type", "docker"],
         "mender-master",
     )
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "git"], "master"
+        capsys, ["--version-of", "deviceauth", "--version-type", "git"], "master"
     )
 
     # For an independent component, it should still accept docker/git type of the query
@@ -138,18 +138,18 @@ def test_version_of(capsys):
     with open(filename, "w") as fd:
         fd.write(
             """services:
-    mender-inventory:
-        image: mendersoftware/inventory:1.2.3-git
+    mender-deviceauth:
+        image: mendersoftware/deviceauth:1.2.3-git
 """
         )
-    run_main_assert_result(capsys, ["--version-of", "inventory"], "1.2.3-git")
+    run_main_assert_result(capsys, ["--version-of", "deviceauth"], "1.2.3-git")
     run_main_assert_result(
         capsys,
-        ["--version-of", "inventory", "--version-type", "docker"],
+        ["--version-of", "deviceauth", "--version-type", "docker"],
         "mender-master",
     )
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "git"], "1.2.3-git"
+        capsys, ["--version-of", "deviceauth", "--version-type", "git"], "1.2.3-git"
     )
 
     # Manually modifying the Docker version:
@@ -157,18 +157,18 @@ def test_version_of(capsys):
     with open(filename, "w") as fd:
         fd.write(
             """services:
-    mender-inventory:
-        image: mendersoftware/inventory:4.5.6-docker
+    mender-deviceauth:
+        image: mendersoftware/deviceauth:4.5.6-docker
 """
         )
-    run_main_assert_result(capsys, ["--version-of", "inventory"], "1.2.3-git")
+    run_main_assert_result(capsys, ["--version-of", "deviceauth"], "1.2.3-git")
     run_main_assert_result(
         capsys,
-        ["--version-of", "inventory", "--version-type", "docker"],
+        ["--version-of", "deviceauth", "--version-type", "docker"],
         "4.5.6-docker",
     )
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "git"], "1.2.3-git"
+        capsys, ["--version-of", "deviceauth", "--version-type", "git"], "1.2.3-git"
     )
 
 
@@ -239,14 +239,14 @@ def test_version_of_with_in_integration_version(capsys):
 def test_set_version_of(capsys):
     # Using --set-version-of modifies both versions, regardless of using the repo name
     run_main_assert_result(
-        capsys, ["--set-version-of", "inventory", "--version", "1.2.3-test"]
+        capsys, ["--set-version-of", "deviceauth", "--version", "1.2.3-test"]
     )
-    run_main_assert_result(capsys, ["--version-of", "inventory"], "1.2.3-test")
+    run_main_assert_result(capsys, ["--version-of", "deviceauth"], "1.2.3-test")
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "docker"], "1.2.3-test"
+        capsys, ["--version-of", "deviceauth", "--version-type", "docker"], "1.2.3-test"
     )
     run_main_assert_result(
-        capsys, ["--version-of", "inventory", "--version-type", "git"], "1.2.3-test"
+        capsys, ["--version-of", "deviceauth", "--version-type", "git"], "1.2.3-test"
     )
 
     # or the container name. However, setting from the container name sets all repos (os + ent)
@@ -264,15 +264,20 @@ def test_set_version_of(capsys):
         ["--version-of", "mender-deployments", "--version-type", "git"],
         "4.5.6-test",
     )
-    run_main_assert_result(capsys, ["--version-of", "deployments"], "4.5.6-test")
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments", "--version-type", "docker"],
-        "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys, ["--version-of", "deployments", "--version-type", "git"], "4.5.6-test"
-    )
+    # NOTE: skip check for OS flavor for branches without it (namely staging)
+    list_repos = run_main_assert_result(capsys, ["--list", "git"], None)
+    if "deployments" in list_repos.split("\n"):
+        run_main_assert_result(capsys, ["--version-of", "deployments"], "4.5.6-test")
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "deployments", "--version-type", "docker"],
+            "4.5.6-test",
+        )
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "deployments", "--version-type", "git"],
+            "4.5.6-test",
+        )
     run_main_assert_result(
         capsys, ["--version-of", "deployments-enterprise"], "4.5.6-test"
     )

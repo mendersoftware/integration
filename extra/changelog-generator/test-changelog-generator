@@ -353,6 +353,17 @@ Signed-off-by: Hacker'
 
 ################################################################################
 
+git commit --allow-empty -m 'Commit with various "<something>-by:" tags
+
+Changelog: Commit
+Only this line should show in changelog N72
+
+Signed-off-by: Test <test@test.com>
+Reviewed-by: Test2 <test2@test.com>
+Acked-by: Test3 <test3@test.com>'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
@@ -391,6 +402,8 @@ _Released xx.xx.xxxx_
 * Changelog with suspicious number in it. N62
   1234
 * Changelog with suspicious number outside of it. N63
+* Commit with various "<something>-by:" tags
+  Only this line should show in changelog N72
 * Complete Fix for changelog N4
   Should be included N5
 * Fix for changelog N1

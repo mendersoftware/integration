@@ -27,3 +27,10 @@ services:
         depends_on:
             minio:
                 condition: service_healthy
+
+    #
+    # mender-deployments depends on storage-proxy if minio is in use
+    #
+    mender-deployments:
+        depends_on:
+            - storage-proxy

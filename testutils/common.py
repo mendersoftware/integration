@@ -16,6 +16,10 @@ import pytest
 import random
 import time
 import string
+import tempfile
+import os
+import subprocess
+from contextlib import contextmanager
 
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
@@ -251,3 +255,46 @@ def randstr():
     """
     charset = string.ascii_letters + string.digits
     return "".join(random.choice(charset) for i in range(5))
+
+
+@contextmanager
+def get_mender_artifact(
+    artifact_name="test",
+    update_module="dummy",
+    device_types=("arm1",),
+    size=256,
+    depends=(),
+    provides=(),
+):
+    data = "".join(random.choices(string.ascii_uppercase + string.digits, k=size))
+    f = tempfile.NamedTemporaryFile(delete=False)
+    f.write(data.encode("utf-8"))
+    f.close()
+    #
+    filename = f.name
+    artifact = "%s.mender" % filename
+    args = [
+        "mender-artifact",
+        "write",
+        "module-image",
+        "-o",
+        artifact,
+        "--artifact-name",
+        artifact_name,
+        "-T",
+        update_module,
+        "-f",
+        filename,
+    ]
+    for device_type in device_types:
+        args.extend(["-t", device_type])
+    for depend in depends:
+        args.extend(["--depends", depend])
+    for provide in provides:
+        args.extend(["--provides", provide])
+    try:
+        subprocess.call(args)
+        yield artifact
+    finally:
+        os.unlink(filename)
+        os.path.exists(artifact) and os.unlink(artifact)

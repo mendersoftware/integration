@@ -1,0 +1,35 @@
+# This file lists software components that are part of a Mender Open Source release
+# which are published with the global Mender product version. The versions here
+# therefore point to the internal Git tags/branches. We keep this information as a
+# docker-compose YAML file for parsing purposes.
+services:
+
+    #
+    # backend open source services
+    #
+    mender-deployments:
+        image: mendersoftware/deployments:master
+
+    mender-gui:
+        image: mendersoftware/gui:master
+
+    mender-api-gateway:
+        image: mendersoftware/api-gateway:master
+
+    mender-device-auth:
+        image: mendersoftware/deviceauth:master
+
+    mender-inventory:
+        image: mendersoftware/inventory:master
+
+    mender-useradm:
+        image: mendersoftware/useradm:master
+
+    mender-workflows-server:
+        image: mendersoftware/workflows:master
+
+    mender-workflows-worker:
+        image: mendersoftware/workflows-worker:master
+
+    mender-create-artifact-worker:
+        image: mendersoftware/create-artifact-worker:master

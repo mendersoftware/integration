@@ -57,7 +57,7 @@ done
 # Check if the demo-Artifact has been downloaded,
 # or if there exists a newer one in storage.
 DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
-curl -sz mender-demo-artifact.mender -o mender-demo-artifact.mender https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
+curl -q -sz mender-demo-artifact.mender -o mender-demo-artifact.mender https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
 
 retval=$?
 if [ $retval -ne 0 ]; then

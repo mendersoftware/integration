@@ -129,6 +129,26 @@ then
     MENDER_SERVER_URI="http://localhost"
 fi
 
+EXTRA_FILES=""
+EXTRA_FILES_NEXT=0
+for i in "$@"; do
+    case $i in
+        -f=*|--file=*)
+            EXTRA_FILES="$EXTRA_FILES $i"
+            ;;
+        -f|--file)
+            EXTRA_FILES="$EXTRA_FILES $i"
+            EXTRA_FILES_NEXT=1
+            ;;
+        *)
+            if [ $EXTRA_FILES_NEXT -eq 1 ]; then
+                EXTRA_FILES="$EXTRA_FILES $i"
+                EXTRA_FILES_NEXT=0
+            fi
+            ;;
+    esac
+done
+
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
     retval=$(docker-compose \
@@ -137,6 +157,7 @@ exitfunc() {
          -f docker-compose.demo.yml \
          -p ${DOCKER_COMPOSE_PROJECT_NAME} \
          $CLIENT \
+         $EXTRA_FILES \
          stop)
     exit $retval
 }

@@ -1818,7 +1818,6 @@ def purge_build_tags(state, tag_avail):
             ):
                 to_purge.append(tag)
         if len(to_purge) > 0:
-            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
             git_list.append(
                 (
                     state,
@@ -1826,6 +1825,7 @@ def purge_build_tags(state, tag_avail):
                     ["push", remote] + [":%s" % tag for tag in to_purge],
                 )
             )
+            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
 
     query_execute_git_list(git_list)
 

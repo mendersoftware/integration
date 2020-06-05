@@ -277,19 +277,19 @@ class TestDevicePatchAttributes:
 
             api_dev = r.json()
             # Expected inventory count per scope:
-            # {"inventory": 3, "identity": 1, "system": 2}
-            assert len(api_dev["attributes"]) == 6
+            # {"inventory": 3, "identity": 1+2, "system": 2} # +2 comes from the id_data see MEN-3637
+            assert len(api_dev["attributes"]) == 8
             # new scopes: identity and system holding authset status and
             #             time-stamp values respectively
 
             for a in api_dev["attributes"]:
-                if a["name"] == "mac":
+                if a["name"] == "mac" and a["scope"] == "inventory":
                     assert a["value"] == "mac-new-" + str(api_dev["id"])
-                elif a["name"] == "sn":
+                elif a["name"] == "sn" and a["scope"] == "inventory":
                     assert a["value"] == ""
-                elif a["name"] == "new-empty":
+                elif a["name"] == "new-empty" and a["scope"] == "inventory":
                     assert a["value"] == ""
-                elif a["name"] == "status":
+                elif a["name"] == "status" and a["scope"] == "identity":
                     assert a["value"] in ["accepted", "pending"]
                 elif a["scope"] != "inventory":
                     # Check that the value is present

@@ -1,0 +1,23 @@
+version: '2'
+services:
+
+    #
+    # mender-deployments
+    #
+
+    #
+    # storage backend proxy used in conjunction with minio, applies
+    # rate & connection limiting
+    #
+
+    mender-deployments:
+        # S3 access configuration - override with your own values
+        # Keys have to grant access to default bucket: mender-artifact-storage
+        environment:
+            DEPLOYMENTS_AWS_TAG_ARTIFACT: "true"
+            DEPLOYMENTS_AWS_AUTH_KEY: ${AWS_ACCESS_KEY_ID}
+            DEPLOYMENTS_AWS_AUTH_SECRET: ${AWS_SECRET_ACCESS_KEY}
+            DEPLOYMENTS_AWS_REGION: us-west-1
+            DEPLOYMENTS_AWS_URI: https://s3-us-west-1.amazonaws.com
+            DEPLOYMENTS_AWS_BUCKET: mender-artifacts-int-testing-us
+

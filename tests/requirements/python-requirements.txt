@@ -5,7 +5,7 @@
 pyyaml                     ; python_version >= "3.0"
 # test_full_integration
 docker-compose==1.25.4     ; python_version >= "3.0"
-requests==2.22.0           ; python_version >= "3.0"
+requests==2.23.0           ; python_version >= "3.0"
 pytest==5.3.4              ; python_version >= "3.0"
 pytest-html==2.0.1         ; python_version >= "3.0"
 pytest-xdist               ; python_version >= "3.0"

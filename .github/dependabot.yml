@@ -1,19 +1,19 @@
 version: 2
 updates:
   - commit-message:
-      prefix: "Changelog: Commit\n"
+      prefix: "Changelog:All\n"
     directory: /backend-tests
     package-ecosystem: pip
     schedule:
       interval: weekly
   - commit-message:
-      prefix: "Changelog: Commit\n"
+      prefix: "Changelog:All\n"
     directory: /tests/requirements
     package-ecosystem: pip
     schedule:
       interval: weekly
   - commit-message:
-      prefix: "Changelog: Commit\n"
+      prefix: "Changelog:All\n"
     directory: /backend-tests/docker
     package-ecosystem: docker
     schedule:

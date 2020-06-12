@@ -1,4 +1,4 @@
-requests==2.22.0
+requests==2.23.0
 pymongo==3.10.1
 cryptography==2.8
 pytest==5.3.4

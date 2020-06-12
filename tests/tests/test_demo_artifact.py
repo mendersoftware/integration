@@ -71,7 +71,7 @@ class TestDemoArtifact(MenderTesting):
             logger.info("Started the demo script")
             password = ""
             time.sleep(60)
-            for line in iter(proc.stdout.readline, ""):
+            for line in proc.stdout:
                 line = line.decode()
                 logger.info(line)
                 if exit_cond in line.strip():

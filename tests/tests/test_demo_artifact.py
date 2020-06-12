@@ -27,6 +27,8 @@ from .mendertesting import MenderTesting
 class TestDemoArtifact(MenderTesting):
     """A simple class for testing the demo-Artifact upload."""
 
+    EXTRA_ARGS = []
+
     # NOTE - The password is set on a per test-basis,
     # as it is generated on the fly by the demo script.
     auth = authentication.Authentication(
@@ -55,14 +57,17 @@ class TestDemoArtifact(MenderTesting):
             test_env[
                 "DOCKER_COMPOSE_PROJECT_NAME"
             ] = running_custom_production_setup.name
+            args = [
+                "./demo",
+                "--client",
+                "-p",
+                running_custom_production_setup.name,
+            ]
+            args += self.EXTRA_ARGS
+            args.append("up")
+
             proc = subprocess.Popen(
-                [
-                    "./demo",
-                    "--client",
-                    "-p",
-                    running_custom_production_setup.name,
-                    "up",
-                ],
+                args,
                 cwd="..",
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -170,3 +175,10 @@ class TestDemoArtifact(MenderTesting):
         # the environment up a second time
         self.demo_artifact_upload(run_demo_script, exit_cond="The user already exists")
         logger.info("Finished")
+
+
+class TestDemoArtifactEnterprise(TestDemoArtifact):
+    """A subclass of the TestDemoArtifact class for testing the demo-Artifact
+    upload in Enterprise mode."""
+
+    EXTRA_ARGS = ["--enterprise-testing"]

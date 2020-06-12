@@ -25,8 +25,15 @@ fi
 # that aren't allowed.
 DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME:-$(tr -d ".-" <<<${PWD##*/})}
 
-CLIENT=
-CLIENT_ARGS="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
+EXTRA_FILES=
+
+CLIENT_FILES="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
+ENTERPRISE_FILES="-f docker-compose.enterprise.yml"
+
+CLIENT=0
+ENTERPRISE=0
+RUN_UP=0
+
 # The demo environment has some external dependencies upon: curl, jq
 hash curl 2>/dev/null || { echo >&2 "The demo script requires the 'curl' tool to be available. Aborting."; exit 1; }
 hash jq 2>/dev/null || { echo >&2 "The demo script requires the 'jq' tool to be available. Aborting."; exit 1; }
@@ -35,17 +42,25 @@ while [ -n "$1" ]; do
     if [ "$1" = "--no-client" ]; then
         echo "--no-client argument is deprecated. Client is now disabled by default and can be enabled with --client"
     elif [ "$1" = "--client" ]; then
-        CLIENT="$CLIENT_ARGS"
+        CLIENT=1
         echo "-- enabling client container"
     elif [ "$1" = "-p" ] || [ "$1" = "--project-name" ]; then
         shift
         DOCKER_COMPOSE_PROJECT_NAME="$1"
     elif [ "$1" = "--kvm" ]; then
         echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
+    elif [ "$1" = "--enterprise-testing" ]; then
+        # Undocumented flag, we use this for internal testing.
+        EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_FILES"
+        ENTERPRISE=1
     elif [ "$1" = "down" ] || [ "$1" = "rm" ] || [ "$1" = "stop" ]; then
         # If the argument is either "down" or "rm", enable the client so that it
         # gets cleaned up, no matter if `--client` is passed or not.
-        CLIENT="$CLIENT_ARGS"
+        CLIENT=1
+        # Not a flag, so we should break out of the loop.
+        break
+    elif [ "$1" = "up" ]; then
+        RUN_UP=1
         # Not a flag, so we should break out of the loop.
         break
     else
@@ -53,6 +68,14 @@ while [ -n "$1" ]; do
     fi
     shift
 done
+
+if [ $CLIENT = 1 ]; then
+    if [ $ENTERPRISE != 1 -o $RUN_UP != 1 ]; then
+        # For Enterprise we need to take special care and fetch the tenant token
+        # first. For Open Source, we can add the client container immediately.
+        EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
+    fi
+fi
 
 # Check if the demo-Artifact has been downloaded,
 # or if there exists a newer one in storage.
@@ -101,8 +124,7 @@ export MENDER_ARTIFACT_VERSION=$(awk -F':' '/mendersoftware\/mender-artifact/ {p
 export MENDER_VERSION=$(awk -F':' '/mendersoftware\/mender-client/ {print $3}' docker-compose.client.yml)
 export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
-RUN_UP=$(echo "$@" | grep '\bup\b')
-if [[ "$RUN_UP" == "" ]]; then
+if [ $RUN_UP != 1 ]; then
     # exec steals the shell, so unless docker-compose is not found,
     # exit 1 will never happen.
     exec docker-compose \
@@ -110,7 +132,7 @@ if [[ "$RUN_UP" == "" ]]; then
          -f docker-compose.storage.minio.yml \
          -f docker-compose.demo.yml \
          -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-         $CLIENT \
+         $EXTRA_FILES \
          "$@"
     exit 1
 fi
@@ -129,21 +151,21 @@ then
     MENDER_SERVER_URI="http://localhost"
 fi
 
-EXTRA_FILES=""
-EXTRA_FILES_NEXT=0
+USER_EXTRA_FILES=""
+USER_EXTRA_FILES_NEXT=0
 for i in "$@"; do
     case $i in
         -f=*|--file=*)
-            EXTRA_FILES="$EXTRA_FILES $i"
+            USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
             ;;
         -f|--file)
-            EXTRA_FILES="$EXTRA_FILES $i"
-            EXTRA_FILES_NEXT=1
+            USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
+            USER_EXTRA_FILES_NEXT=1
             ;;
         *)
-            if [ $EXTRA_FILES_NEXT -eq 1 ]; then
-                EXTRA_FILES="$EXTRA_FILES $i"
-                EXTRA_FILES_NEXT=0
+            if [ $USER_EXTRA_FILES_NEXT -eq 1 ]; then
+                USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
+                USER_EXTRA_FILES_NEXT=0
             fi
             ;;
     esac
@@ -156,8 +178,8 @@ exitfunc() {
          -f docker-compose.storage.minio.yml \
          -f docker-compose.demo.yml \
          -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-         $CLIENT \
          $EXTRA_FILES \
+         $USER_EXTRA_FILES \
          stop)
     exit $retval
 }
@@ -172,7 +194,7 @@ docker-compose \
     -f docker-compose.storage.minio.yml \
     -f docker-compose.demo.yml \
     -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-    $CLIENT \
+    $EXTRA_FILES \
     "$@" -d
 
 retval=$?
@@ -211,45 +233,72 @@ done
 
 
 echo "Creating a new user..."
-UPLOAD_ARTIFACT="true"
-RETRIES=0
-while :
-do
-    docker exec \
-             ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
-             /usr/bin/useradm create-user \
-             --username=${USER} \
-             --password=${PASSWORD} \
-             > /dev/null
+UPLOAD_ARTIFACT=1
+PRINT_LOGIN_INFO=0
+PRINT_USER_EXISTS=1
+if [ $ENTERPRISE = 1 ]; then
+    TENANT_ID=$(docker exec \
+            ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+            /usr/bin/tenantadm create-org \
+            --name=DemoOrganization \
+            --username=${USER} \
+            --password=${PASSWORD})
     retval=$?
-    case $retval in
-        0)
-            echo "****************************************"
-            echo
-            echo "Username: mender-demo@example.com"
-            echo  "Login password: ${PASSWORD}"
-            echo
-            echo "****************************************"
-            echo "Please keep the password available, it will not be cached by the login script."
-            break ;;
-        5) # If the user exists, skip uploading the Artifact
-            UPLOAD_ARTIFACT=""
-            echo "The user already exists. Skipping"
-            echo "If you don't remember the password, you can run '$(basename $0) down' to delete"
-            echo "the old user and rerun '$(basename $0) up' to create a new one."
-            echo "Please note that all data will be deleted from the old demo server."
-            break ;;
-        *) echo "docker exec error: " $retval; exit $retval ;;
-    esac
-    if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
-        echo "Retried $RETRIES times without success. Giving up."
-        exit 1
+    EXISTS_ERROR=1
+    if [ $retval -eq 0 ]; then
+        TENANT_ID=$(echo "$TENANT_ID" | tr -d '\r')
+    else
+        TENANT_ID=
     fi
-    RETRIES=$((RETRIES+1))
-    sleep 5
-done
+else
+    docker exec \
+            ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
+            /usr/bin/useradm create-user \
+            --username=${USER} \
+            --password=${PASSWORD} \
+            > /dev/null
+    retval=$?
+    EXISTS_ERROR=5
+fi
+if [ $retval -eq 0 ]; then
+    PRINT_LOGIN_INFO=1
+elif [ $retval -eq $EXISTS_ERROR ]; then
+    # If the user exists, skip uploading the Artifact
+    UPLOAD_ARTIFACT=0
+    PRINT_USER_EXISTS=1
+else
+    echo "docker exec error: " $retval
+    exit $retval
+fi
 
-if [[ $UPLOAD_ARTIFACT == "true" ]]; then
+if [ $ENTERPRISE = 1 -a $CLIENT = 1 ]; then
+    if [ $(docker ps -q -f name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-client_1 | wc -l) -gt 0 ]; then
+        # If already launched, we don't need to do anything.
+        :
+    elif [ -n "$TENANT_ID" ]; then
+        TENANT_TOKEN=$(docker exec \
+                ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+                /usr/bin/tenantadm get-tenant \
+                --id $TENANT_ID \
+                | jq -r .tenant_token)
+        # Now that we have the tenant token we can enable the client.
+        EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
+        TENANT_TOKEN=$TENANT_TOKEN docker-compose \
+                -f docker-compose.yml \
+                -f docker-compose.storage.minio.yml \
+                -f docker-compose.demo.yml \
+                -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+                $EXTRA_FILES \
+                "$@" -d mender-client
+    else
+        echo "WARNING: Ignoring request to launch the Mender client."
+        echo "In Enterprise mode, the client can only be launched the first time the server"
+        echo "is started, when the first user is created. If you wish to start from scratch,"
+        echo "replace \`up\` with \`down -v\` first to reset, then rerun."
+    fi
+fi
+
+if [[ $UPLOAD_ARTIFACT -eq 1 ]]; then
 
     RETRIES=0
     until [[ "$JWT" != "" ]]; do
@@ -318,6 +367,21 @@ if [[ $UPLOAD_ARTIFACT == "true" ]]; then
 
 fi
 
+if [ $PRINT_LOGIN_INFO -eq 1 ]; then
+    echo "****************************************"
+    echo
+    echo "Username: mender-demo@example.com"
+    echo "Login password: ${PASSWORD}"
+    echo
+    echo "****************************************"
+    echo "Please keep the password available, it will not be cached by the login script."
+elif [ $PRINT_USER_EXISTS -eq 1 ]; then
+    echo "The user already exists. Skipping"
+    echo "If you don't remember the password, you can run '$(basename $0) down' to delete"
+    echo "the old user and rerun '$(basename $0) up' to create a new one."
+    echo "Please note that all data will be deleted from the old demo server."
+fi
+
 echo "Mender demo server ready and running in the background. Copy credentials above and log in at $MENDER_SERVER_URI"
 
 echo "Press Enter to show the logs."
@@ -329,5 +393,5 @@ docker-compose \
     -f docker-compose.storage.minio.yml \
     -f docker-compose.demo.yml \
     -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-    $CLIENT \
+    $EXTRA_FILES \
     logs --follow

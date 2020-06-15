@@ -19,7 +19,6 @@ import pytest
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
-import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 from testutils.infra.cli import CliTenantadm, CliUseradm, CliDeviceauth
@@ -70,7 +69,7 @@ def user(clean_migrated_mongo):
 @pytest.yield_fixture(scope="function")
 def devices(clean_migrated_mongo, user):
     useradmm = ApiClient(useradm.URL_MGMT)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -103,7 +102,7 @@ def tenants(clean_migrated_mongo_mt):
 @pytest.fixture(scope="function")
 def tenants_users_devices(tenants, clean_migrated_mongo_mt):
     useradmm = ApiClient(useradm.URL_MGMT)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     for t in tenants:
         user = t.users[0]
@@ -123,7 +122,7 @@ def tenants_users_devices(tenants, clean_migrated_mongo_mt):
 class TestDeviceDecomissioningBase:
     def do_test_ok(self, user, device, tenant_token=None):
         devauthd = ApiClient(deviceauth.URL_DEVICES)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
         deploymentsd = ApiClient(deployments.URL_DEVICES)
         inventoryd = ApiClient(inventory.URL_DEV)
@@ -168,7 +167,7 @@ class TestDeviceDecomissioningBase:
 
         # decommission
         r = devauthm.with_auth(utoken).call(
-            "DELETE", deviceauth_v2.URL_DEVICE.format(id=aset.did)
+            "DELETE", deviceauth.URL_DEVICE.format(id=aset.did)
         )
 
         # check device is rejected
@@ -198,7 +197,7 @@ class TestDeviceDecomissioningBase:
         timeout = time.time() + 60
         while time.time() < timeout:
             r = devauthm.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_DEVICE.format(id=aset.did)
+                "GET", deviceauth.URL_DEVICE.format(id=aset.did)
             )
             if r.status_code == 404:
                 break
@@ -225,7 +224,7 @@ class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
         self.verify_devices_unmodified(t1.users[0], t1.devices)
 
     def verify_devices_unmodified(self, user, in_devices):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
 
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -233,7 +232,7 @@ class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
 
         utoken = r.text
 
-        r = devauthm.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 

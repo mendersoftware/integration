@@ -18,7 +18,6 @@ import time
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
-import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 from testutils.infra.cli import CliTenantadm, CliUseradm
@@ -51,7 +50,7 @@ def tenants(clean_mongo):
 @pytest.fixture(scope="function")
 def tenants_users_devices(tenants, mongo):
     uc = ApiClient(useradm.URL_MGMT)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     for t in tenants:
         user = t.users[0]
@@ -109,7 +108,7 @@ class TestAccountSuspensionEnterprise:
     def test_authenticated_user_is_rejected(self, tenants):
         tc = ApiClient(tenantadm.URL_INTERNAL)
         uc = ApiClient(useradm.URL_MGMT)
-        dc = ApiClient(deviceauth_v2.URL_MGMT)
+        dc = ApiClient(deviceauth.URL_MGMT)
 
         u = tenants[0].users[0]
 
@@ -120,7 +119,7 @@ class TestAccountSuspensionEnterprise:
         token = r.text
 
         # check can access an api
-        r = dc.with_auth(token).call("GET", deviceauth_v2.URL_DEVICES)
+        r = dc.with_auth(token).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
 
         # suspend tenant
@@ -135,12 +134,12 @@ class TestAccountSuspensionEnterprise:
         time.sleep(10)
 
         # check token is rejected
-        r = dc.with_auth(token).call("GET", deviceauth_v2.URL_DEVICES)
+        r = dc.with_auth(token).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 401
 
     def test_accepted_dev_cant_authenticate(self, tenants_users_devices):
         dacd = ApiClient(deviceauth.URL_DEVICES)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
         tc = ApiClient(tenantadm.URL_INTERNAL)
 
@@ -181,7 +180,7 @@ class TestAccountSuspensionEnterprise:
 
     def test_authenticated_dev_is_rejected(self, tenants_users_devices):
         dacd = ApiClient(deviceauth.URL_DEVICES)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
         tc = ApiClient(tenantadm.URL_INTERNAL)
         dc = ApiClient(deployments.URL_DEVICES)

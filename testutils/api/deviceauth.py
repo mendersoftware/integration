@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,9 +18,28 @@ import testutils.util.crypto
 
 URL_DEVICES = testutils.api.client.GATEWAY_URL + "/api/devices/v1/authentication"
 URL_INTERNAL = "http://mender-device-auth:8080/api/internal/v1/devauth"
+URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/devauth"
 
 URL_AUTH_REQS = "/auth_requests"
-URL_LIMITS_MAX_DEVICES = "/tenant/{tid}/limits/max_devices"
+
+URL_AUTHSET = "/devices/{did}/auth/{aid}"
+URL_AUTHSET_STATUS = "/devices/{did}/auth/{aid}/status"
+
+URL_MGMT_DEVICES = "/devices"
+
+URL_DEVICE = "/devices/{id}"
+URL_DEVICES_COUNT = "/devices/count"
+
+URL_LIMITS_MAX_DEVICES = "/limits/max_devices"
+URL_INTERNAL_LIMITS_MAX_DEVICES = "/tenant/{tid}/limits/max_devices"
+
+
+def preauth_req(id_data, pubkey):
+    return {"identity_data": id_data, "pubkey": pubkey}
+
+
+def req_status(status):
+    return {"status": status}
 
 
 def auth_req(id_data, pubkey, privkey, tenant_token=""):

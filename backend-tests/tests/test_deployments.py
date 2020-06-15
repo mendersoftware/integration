@@ -10,8 +10,7 @@ import testutils.util.crypto
 from datetime import datetime, timedelta
 
 import testutils.api.client
-import testutils.api.deviceauth as deviceauth_v1
-import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
 import testutils.api.inventory_v2 as inventory_v2
@@ -43,8 +42,8 @@ def rand_id_data():
 
 
 def make_pending_device(utoken, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     id_data = rand_id_data()
 
@@ -63,7 +62,7 @@ def make_pending_device(utoken, tenant_token=""):
 
 
 def make_accepted_device(utoken, devauthd, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     dev = make_pending_device(utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
@@ -73,11 +72,11 @@ def make_accepted_device(utoken, devauthd, tenant_token=""):
     aset.status = "accepted"
 
     # obtain auth token
-    body, sighdr = deviceauth_v1.auth_req(
+    body, sighdr = deviceauth.auth_req(
         aset.id_data, aset.pubkey, aset.privkey, tenant_token
     )
 
-    r = devauthd.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+    r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
     assert r.status_code == 200
     dev.token = r.text
@@ -607,7 +606,7 @@ def setup_devices_and_management_st(nr_devices=100):
     """
     user = create_user("bugs@bunny.org", "correcthorse")
     useradmm = ApiClient(useradm.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
     invm = ApiClient(inventory.URL_MGMT)
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
@@ -639,7 +638,7 @@ def setup_devices_and_management_mt(nr_devices=100):
     tenant = create_org("acme", "bugs@bunny.org", "correcthorse", plan="enterprise")
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
     invm = ApiClient(inventory.URL_MGMT)
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
@@ -1560,8 +1559,8 @@ def get_deployment(depid, utoken):
 
 
 def make_device_with_inventory(attributes, utoken, tenant_token):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     d = make_accepted_device(utoken, devauthd, tenant_token)
 

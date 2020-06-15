@@ -103,7 +103,7 @@ class TestCreateOrganizationEnterprise:
         # the default plan is "os" so the device limit should be set to 50
         r = devauthi.call(
             "GET",
-            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            deviceauth_v1.URL_INTERNAL_LIMITS_MAX_DEVICES,
             path_params={"tid": api_tenants[0]["id"]},
         )
         assert r.status_code == 200
@@ -163,7 +163,7 @@ class TestCreateOrganizationEnterprise:
         # the device limit for professional plan should be 250
         r = devauthi.call(
             "GET",
-            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            deviceauth_v1.URL_INTERNAL_LIMITS_MAX_DEVICES,
             path_params={"tid": api_tenants[0]["id"]},
         )
         assert r.status_code == 200

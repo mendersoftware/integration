@@ -17,8 +17,7 @@ import time
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
-import testutils.api.deviceauth as deviceauth_v1
-import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
 import testutils.api.tenantadm as tenantadm
@@ -89,8 +88,8 @@ def rand_id_data():
 
 
 def make_pending_device(utoken, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     id_data = rand_id_data()
 
@@ -109,7 +108,7 @@ def make_pending_device(utoken, tenant_token=""):
 
 
 def make_accepted_device(utoken, devauthd, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     dev = make_pending_device(utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
@@ -119,11 +118,11 @@ def make_accepted_device(utoken, devauthd, tenant_token=""):
     aset.status = "accepted"
 
     # obtain auth token
-    body, sighdr = deviceauth_v1.auth_req(
+    body, sighdr = deviceauth.auth_req(
         aset.id_data, aset.pubkey, aset.privkey, tenant_token
     )
 
-    r = devauthd.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+    r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
     assert r.status_code == 200
     dev.token = r.text
@@ -149,7 +148,7 @@ def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=""):
 class TestGetDevicesBase:
     def do_test_get_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -173,7 +172,7 @@ class TestGetDevicesBase:
 
     def do_test_filter_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -236,7 +235,7 @@ class TestGetDevicesEnterprise(TestGetDevicesBase):
 class TestDevicePatchAttributes:
     def test_ok(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -300,7 +299,7 @@ class TestDevicePatchAttributes:
 
     def test_fail_no_attr_value(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 

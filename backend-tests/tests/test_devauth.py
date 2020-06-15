@@ -19,8 +19,7 @@ import json
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
-import testutils.api.deviceauth as deviceauth_v1
-import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
@@ -73,8 +72,8 @@ def user(clean_migrated_mongo):
 @pytest.yield_fixture(scope="function")
 def devices(clean_migrated_mongo, user):
     uc = ApiClient(useradm.URL_MGMT)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -109,8 +108,8 @@ def tenants_users(clean_migrated_mongo_mt):
 @pytest.yield_fixture(scope="function")
 def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
     uc = ApiClient(useradm.URL_MGMT)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     for t in tenants_users:
         user = t.users[0]
@@ -129,8 +128,8 @@ def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
 class TestPreauthBase:
     def do_test_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
 
         # log in user
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -141,12 +140,12 @@ class TestPreauthBase:
         # preauth device
         priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = {"mac": "pretenditsamac"}
-        body = deviceauth_v2.preauth_req(id_data, pub)
-        r = devauthm.with_auth(utoken).call("POST", deviceauth_v2.URL_DEVICES, body)
+        body = deviceauth.preauth_req(id_data, pub)
+        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 201
 
         # device appears in device list
-        r = devauthm.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
@@ -163,15 +162,15 @@ class TestPreauthBase:
         assert aset["status"] == "preauthorized"
 
         # actual device can obtain auth token
-        body, sighdr = deviceauth_v1.auth_req(id_data, pub, priv, tenant_token)
+        body, sighdr = deviceauth.auth_req(id_data, pub, priv, tenant_token)
 
-        r = devauthd.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
         assert r.status_code == 200
 
         # device and authset changed status to 'accepted'
         r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES, path_params={"id": api_dev["id"]}
+            "GET", deviceauth.URL_MGMT_DEVICES, path_params={"id": api_dev["id"]}
         )
 
         api_devs = r.json()
@@ -186,7 +185,7 @@ class TestPreauthBase:
 
     def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
 
         # log in user
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -197,12 +196,12 @@ class TestPreauthBase:
         # preauth duplicate device
         priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = devices[0].id_data
-        body = deviceauth_v2.preauth_req(id_data, pub)
-        r = devauthm.with_auth(utoken).call("POST", deviceauth_v2.URL_DEVICES, body)
+        body = deviceauth.preauth_req(id_data, pub)
+        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 409
 
         # device list is unmodified
-        r = devauthm.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
@@ -228,7 +227,7 @@ class TestPreauth(TestPreauthBase):
 
     def test_fail_bad_request(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
 
         # log in user
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -239,14 +238,14 @@ class TestPreauth(TestPreauthBase):
         # id data not json
         priv, pub = testutils.util.crypto.rsa_get_keypair()
         id_data = '{"mac": "foo"}'
-        body = deviceauth_v2.preauth_req(id_data, pub)
-        r = devauthm.with_auth(utoken).call("POST", deviceauth_v2.URL_DEVICES, body)
+        body = deviceauth.preauth_req(id_data, pub)
+        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 400
 
         # not a valid key
         id_data = {"mac": "foo"}
-        body = deviceauth_v2.preauth_req(id_data, "not a public key")
-        r = devauthm.with_auth(utoken).call("POST", deviceauth_v2.URL_DEVICES, body)
+        body = deviceauth.preauth_req(id_data, "not a public key")
+        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 400
 
 
@@ -273,7 +272,7 @@ class TestPreauthEnterprise(TestPreauthBase):
         self.verify_devices_unmodified(user1, devs1)
 
     def verify_devices_unmodified(self, user, in_devices):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
 
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -281,7 +280,7 @@ class TestPreauthEnterprise(TestPreauthBase):
 
         utoken = r.text
 
-        r = devauthm.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
@@ -379,8 +378,8 @@ def rand_id_data():
 
 
 def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     id_data = rand_id_data()
 
@@ -404,7 +403,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 def make_accepted_device_with_multiple_authsets(
     utoken, num_auth_sets=1, num_accepted=1, tenant_token=""
 ):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
@@ -420,7 +419,7 @@ def make_accepted_device_with_multiple_authsets(
 
 
 def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
 
@@ -436,13 +435,13 @@ def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
 
 
 def make_preauthd_device(utoken):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     priv, pub = testutils.util.crypto.rsa_get_keypair()
     id_data = rand_id_data()
 
-    body = deviceauth_v2.preauth_req(id_data, pub)
-    r = devauthm.with_auth(utoken).call("POST", deviceauth_v2.URL_DEVICES, body)
+    body = deviceauth.preauth_req(id_data, pub)
+    r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
     assert r.status_code == 201
 
     api_dev = get_device_by_id_data(devauthm, id_data, utoken)
@@ -460,8 +459,8 @@ def make_preauthd_device(utoken):
 
 
 def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     dev = make_preauthd_device(utoken)
 
@@ -485,7 +484,7 @@ def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
 
 class TestDeviceMgmtBase:
     def do_test_ok_get_devices(self, devs_authsets, user):
-        da = ApiClient(deviceauth_v2.URL_MGMT)
+        da = ApiClient(deviceauth.URL_MGMT)
         ua = ApiClient(useradm.URL_MGMT)
 
         # log in user
@@ -519,7 +518,7 @@ class TestDeviceMgmtBase:
                 qs_params["per_page"] = per_page
 
             r = da.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_DEVICES, qs_params=qs_params
+                "GET", deviceauth.URL_MGMT_DEVICES, qs_params=qs_params
             )
             assert r.status_code == 200
             api_devs = r.json()
@@ -531,7 +530,7 @@ class TestDeviceMgmtBase:
             self._compare_devs(ref_devs, api_devs)
 
     def do_test_get_device(self, devs_authsets, user):
-        da = ApiClient(deviceauth_v2.URL_MGMT)
+        da = ApiClient(deviceauth.URL_MGMT)
         ua = ApiClient(useradm.URL_MGMT)
 
         # log in user
@@ -543,7 +542,7 @@ class TestDeviceMgmtBase:
         # existing devices
         for dev in devs_authsets:
             r = da.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_DEVICE, path_params={"id": dev.id}
+                "GET", deviceauth.URL_DEVICE, path_params={"id": dev.id}
             )
             assert r.status_code == 200
             api_dev = r.json()
@@ -553,13 +552,13 @@ class TestDeviceMgmtBase:
         # non-existent devices
         for id in ["foo", "bar"]:
             r = da.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_DEVICE, path_params={"id": id}
+                "GET", deviceauth.URL_DEVICE, path_params={"id": id}
             )
             assert r.status_code == 404
 
     def do_test_delete_device_ok(self, devs_authsets, user, tenant_token=""):
-        devapim = ApiClient(deviceauth_v2.URL_MGMT)
-        devapid = ApiClient(deviceauth_v1.URL_DEVICES)
+        devapim = ApiClient(deviceauth.URL_MGMT)
+        devapid = ApiClient(deviceauth.URL_DEVICES)
         userapi = ApiClient(useradm.URL_MGMT)
         depapi = ApiClient(deployments.URL_DEVICES)
 
@@ -572,33 +571,33 @@ class TestDeviceMgmtBase:
         # decommission a pending device
         dev_pending = filter_and_page_devs(devs_authsets, status="pending")[0]
         r = devapim.with_auth(utoken).call(
-            "DELETE", deviceauth_v2.URL_DEVICE, path_params={"id": dev_pending.id}
+            "DELETE", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
         )
         assert r.status_code == 204
 
         # only verify the device is gone
         r = devapim.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICE, path_params={"id": dev_pending.id}
+            "GET", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
         )
         assert r.status_code == 404
 
         # log in an accepted device
         dev_acc = filter_and_page_devs(devs_authsets, status="accepted")[0]
 
-        body, sighdr = deviceauth_v1.auth_req(
+        body, sighdr = deviceauth.auth_req(
             dev_acc.id_data,
             dev_acc.authsets[0].pubkey,
             dev_acc.authsets[0].privkey,
             tenant_token,
         )
 
-        r = devapid.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+        r = devapid.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
         assert r.status_code == 200
         dtoken = r.text
 
         # decommission the accepted device
         r = devapim.with_auth(utoken).call(
-            "DELETE", deviceauth_v2.URL_DEVICE, path_params={"id": dev_acc.id}
+            "DELETE", deviceauth.URL_DEVICE, path_params={"id": dev_acc.id}
         )
         assert r.status_code == 204
 
@@ -612,13 +611,13 @@ class TestDeviceMgmtBase:
 
         # verify the device is gone
         r = devapim.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICE, path_params={"id": dev_acc.id}
+            "GET", deviceauth.URL_DEVICE, path_params={"id": dev_acc.id}
         )
         assert r.status_code == 404
 
     def do_test_delete_device_not_found(self, devs_authsets, user):
         ua = ApiClient(useradm.URL_MGMT)
-        da = ApiClient(deviceauth_v2.URL_MGMT)
+        da = ApiClient(deviceauth.URL_MGMT)
 
         # log in user
         r = ua.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -628,12 +627,12 @@ class TestDeviceMgmtBase:
 
         # try delete
         r = da.with_auth(utoken).call(
-            "DELETE", deviceauth_v2.URL_DEVICE, path_params={"id": "foo"}
+            "DELETE", deviceauth.URL_DEVICE, path_params={"id": "foo"}
         )
         assert r.status_code == 404
 
         # check device list unmodified
-        r = da.with_auth(utoken).call("GET", deviceauth_v2.URL_DEVICES)
+        r = da.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
 
         assert r.status_code == 200
         api_devs = r.json()
@@ -642,7 +641,7 @@ class TestDeviceMgmtBase:
 
     def do_test_device_count(self, devs_authsets, user):
         ua = ApiClient(useradm.URL_MGMT)
-        da = ApiClient(deviceauth_v2.URL_MGMT)
+        da = ApiClient(deviceauth.URL_MGMT)
 
         # log in user
         r = ua.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -657,7 +656,7 @@ class TestDeviceMgmtBase:
                 qs_params = {"status": status}
 
             r = da.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_DEVICES_COUNT, qs_params=qs_params
+                "GET", deviceauth.URL_DEVICES_COUNT, qs_params=qs_params
             )
             assert r.status_code == 200
             count = r.json()
@@ -670,7 +669,7 @@ class TestDeviceMgmtBase:
 
         # fail: bad request
         r = da.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES_COUNT, qs_params={"status": "foo"}
+            "GET", deviceauth.URL_DEVICES_COUNT, qs_params={"status": "foo"}
         )
         assert r.status_code == 400
 
@@ -757,9 +756,9 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             self.do_test_device_count(t.devices, t.users[0])
 
     def test_limits_max_devices(self, tenants_devs_authsets):
-        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthi = ApiClient(deviceauth.URL_INTERNAL)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
 
         for t in tenants_devs_authsets:
@@ -769,7 +768,7 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             # set limit to that
             r = devauthi.call(
                 "PUT",
-                deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+                deviceauth.URL_INTERNAL_LIMITS_MAX_DEVICES,
                 {"limit": num_acc},
                 path_params={"tid": t.id},
             )
@@ -777,7 +776,9 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
 
             # get limit via internal api
             r = devauthi.call(
-                "GET", deviceauth_v1.URL_LIMITS_MAX_DEVICES, path_params={"tid": t.id}
+                "GET",
+                deviceauth.URL_INTERNAL_LIMITS_MAX_DEVICES,
+                path_params={"tid": t.id},
             )
             assert r.status_code == 200
 
@@ -792,7 +793,7 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             utoken = r.text
 
             r = devauthm.with_auth(utoken).call(
-                "GET", deviceauth_v2.URL_LIMITS_MAX_DEVICES
+                "GET", deviceauth.URL_LIMITS_MAX_DEVICES
             )
             assert r.status_code == 200
 
@@ -803,8 +804,8 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
 
             r = devauthm.with_auth(utoken).call(
                 "PUT",
-                deviceauth_v2.URL_AUTHSET_STATUS,
-                deviceauth_v2.req_status("accepted"),
+                deviceauth.URL_AUTHSET_STATUS,
+                deviceauth.req_status("accepted"),
                 path_params={"did": pending.id, "aid": pending.authsets[0].id},
             )
             assert r.status_code == 422
@@ -812,20 +813,20 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             # try exceed the limit via preauth'd device
             preauthd = filter_and_page_devs(t.devices, status="preauthorized")[0]
 
-            body, sighdr = deviceauth_v1.auth_req(
+            body, sighdr = deviceauth.auth_req(
                 preauthd.id_data,
                 preauthd.authsets[0].pubkey,
                 preauthd.authsets[0].privkey,
                 t.tenant_token,
             )
 
-            r = devauthd.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
             assert r.status_code == 401
 
 
 class TestAuthsetMgmtBase:
     def do_test_get_authset_status(self, devs_authsets, user):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         useradmm = ApiClient(useradm.URL_MGMT)
 
         # log in user
@@ -839,7 +840,7 @@ class TestAuthsetMgmtBase:
             for a in d.authsets:
                 r = devauthm.with_auth(utoken).call(
                     "GET",
-                    deviceauth_v2.URL_AUTHSET_STATUS,
+                    deviceauth.URL_AUTHSET_STATUS,
                     path_params={"did": d.id, "aid": a.id},
                 )
                 assert r.status_code == 200
@@ -849,14 +850,14 @@ class TestAuthsetMgmtBase:
         for did, aid in [(devs_authsets[0].id, "foo"), ("foo", "bar")]:
             r = devauthm.with_auth(utoken).call(
                 "GET",
-                deviceauth_v2.URL_AUTHSET_STATUS,
+                deviceauth.URL_AUTHSET_STATUS,
                 path_params={"did": did, "aid": aid},
             )
             assert r.status_code == 404
 
     def do_test_put_status_accept(self, devs_authsets, user, tenant_token=""):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
         deploymentsd = ApiClient(deployments.URL_DEVICES)
 
@@ -880,12 +881,12 @@ class TestAuthsetMgmtBase:
             dtoken = None
             if dev.status == "accepted":
                 accepted = [a for a in dev.authsets if a.status == "accepted"][0]
-                body, sighdr = deviceauth_v1.auth_req(
+                body, sighdr = deviceauth.auth_req(
                     accepted.id_data, accepted.pubkey, accepted.privkey, tenant_token
                 )
 
                 r = devauthd.call(
-                    "POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr
+                    "POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr
                 )
 
                 assert r.status_code == 200
@@ -928,8 +929,8 @@ class TestAuthsetMgmtBase:
             self.verify_dev_provisioned(dev, utoken)
 
     def do_test_put_status_reject(self, devs_authsets, user, tenant_token=""):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
         deploymentsd = ApiClient(deployments.URL_DEVICES)
 
@@ -958,12 +959,12 @@ class TestAuthsetMgmtBase:
 
             # for accepted devs, also have an active device and check it loses api access
             if dev.status == "accepted":
-                body, sighdr = deviceauth_v1.auth_req(
+                body, sighdr = deviceauth.auth_req(
                     aset.id_data, aset.pubkey, aset.privkey, tenant_token
                 )
 
                 r = devauthd.call(
-                    "POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr
+                    "POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr
                 )
 
                 assert r.status_code == 200
@@ -1000,7 +1001,7 @@ class TestAuthsetMgmtBase:
 
     def do_test_put_status_failed(self, devs_authsets, user):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
 
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
@@ -1009,8 +1010,8 @@ class TestAuthsetMgmtBase:
         # not found: valid device, bogus authset
         r = devauthm.with_auth(utoken).call(
             "PUT",
-            deviceauth_v2.URL_AUTHSET_STATUS,
-            deviceauth_v2.req_status("accepted"),
+            deviceauth.URL_AUTHSET_STATUS,
+            deviceauth.req_status("accepted"),
             path_params={"did": devs_authsets[0].id, "aid": "foo"},
         )
         assert r.status_code == 404
@@ -1018,8 +1019,8 @@ class TestAuthsetMgmtBase:
         # not found: bogus device
         r = devauthm.with_auth(utoken).call(
             "PUT",
-            deviceauth_v2.URL_AUTHSET_STATUS,
-            deviceauth_v2.req_status("accepted"),
+            deviceauth.URL_AUTHSET_STATUS,
+            deviceauth.req_status("accepted"),
             path_params={"did": "foo", "aid": "bar"},
         )
         assert r.status_code == 404
@@ -1027,8 +1028,8 @@ class TestAuthsetMgmtBase:
         # bad request - invalid status
         r = devauthm.with_auth(utoken).call(
             "PUT",
-            deviceauth_v2.URL_AUTHSET_STATUS,
-            deviceauth_v2.req_status("invalid"),
+            deviceauth.URL_AUTHSET_STATUS,
+            deviceauth.req_status("invalid"),
             path_params={
                 "did": devs_authsets[0].id,
                 "aid": devs_authsets[0].authsets[0].id,
@@ -1039,7 +1040,7 @@ class TestAuthsetMgmtBase:
         # bad request - invalid payload
         r = devauthm.with_auth(utoken).call(
             "PUT",
-            deviceauth_v2.URL_AUTHSET_STATUS,
+            deviceauth.URL_AUTHSET_STATUS,
             '{"foo": "bar"}',
             path_params={
                 "did": devs_authsets[0].id,
@@ -1049,8 +1050,8 @@ class TestAuthsetMgmtBase:
         assert r.status_code == 400
 
     def do_test_delete_status(self, devs_authsets, user, tenant_token=""):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)
         deploymentsd = ApiClient(deployments.URL_DEVICES)
 
@@ -1074,12 +1075,12 @@ class TestAuthsetMgmtBase:
 
             # for accepted devs, also have an active device and check it loses api access
             if dev.status == "accepted":
-                body, sighdr = deviceauth_v1.auth_req(
+                body, sighdr = deviceauth.auth_req(
                     aset.id_data, aset.pubkey, aset.privkey, tenant_token
                 )
 
                 r = devauthd.call(
-                    "POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr
+                    "POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr
                 )
 
                 assert r.status_code == 200
@@ -1088,7 +1089,7 @@ class TestAuthsetMgmtBase:
             # delete authset
             r = devauthm.with_auth(utoken).call(
                 "DELETE",
-                deviceauth_v2.URL_AUTHSET,
+                deviceauth.URL_AUTHSET,
                 path_params={"did": dev.id, "aid": aset.id},
             )
             assert r.status_code == 204
@@ -1099,7 +1100,7 @@ class TestAuthsetMgmtBase:
             # removing preauth authset - the device should be completely gone
             if dev.status == "preauthorized":
                 r = devauthm.with_auth(utoken).call(
-                    "GET", deviceauth_v2.URL_DEVICE, path_params={"id": dev.id}
+                    "GET", deviceauth.URL_DEVICE, path_params={"id": dev.id}
                 )
                 assert r.status_code == 404
                 return
@@ -1121,7 +1122,7 @@ class TestAuthsetMgmtBase:
 
     def do_test_delete_status_failed(self, devs_authsets, user):
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
 
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
@@ -1130,24 +1131,22 @@ class TestAuthsetMgmtBase:
         # not found: valid device, bogus authset
         r = devauthm.with_auth(utoken).call(
             "DELETE",
-            deviceauth_v2.URL_AUTHSET,
+            deviceauth.URL_AUTHSET,
             path_params={"did": devs_authsets[0].id, "aid": "foo"},
         )
         assert r.status_code == 404
 
         # not found: bogus device
         r = devauthm.with_auth(utoken).call(
-            "DELETE",
-            deviceauth_v2.URL_AUTHSET,
-            path_params={"did": "foo", "aid": "bar"},
+            "DELETE", deviceauth.URL_AUTHSET, path_params={"did": "foo", "aid": "bar"},
         )
         assert r.status_code == 404
 
     def verify_dev_after_status_update(self, dev, utoken):
-        devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
 
         r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICE, path_params={"id": dev.id}
+            "GET", deviceauth.URL_DEVICE, path_params={"id": dev.id}
         )
         assert r.status_code == 200
         api_dev = r.json()
@@ -1262,8 +1261,8 @@ def compare_aset(authset, api_authset):
 class TestDefaultTenantTokenEnterprise(object):
 
     uc = ApiClient(useradm.URL_MGMT)
-    devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-    devauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
 
     def test_default_tenant_token(self, clean_mongo):
         """Connect with a device without a tenant-token, and make sure it shows up in the default tenant account"""
@@ -1293,7 +1292,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device must show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1337,7 +1336,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device should show up in the 'tenant1's account
         r = self.devauthm.with_auth(tenant1_utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1347,7 +1346,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device must not show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1390,7 +1389,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Double check that it is not added to tenant1
         r = self.devauthm.with_auth(tenant1_utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1398,7 +1397,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device must show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1406,8 +1405,8 @@ class TestDefaultTenantTokenEnterprise(object):
 
 
 def make_tenant_and_accepted_dev(name, uname, plan):
-    dauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-    dauthm = ApiClient(deviceauth_v2.URL_MGMT)
+    dauthd = ApiClient(deviceauth.URL_DEVICES)
+    dauthm = ApiClient(deviceauth.URL_MGMT)
     tenant = create_org(name, uname, "correcthorse", plan=plan)
     user = tenant.users[0]
     tenant.users = [user]
@@ -1445,16 +1444,16 @@ class TestAuthReqEnterprise:
     def test_ok(self, tenants_and_accepted_devs):
         """ Basic JWT inspection: are we getting the right claims?
         """
-        dauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        dauthd = ApiClient(deviceauth.URL_DEVICES)
         for t in tenants_and_accepted_devs:
             dev = t.devices[0]
             aset = dev.authsets[0]
 
-            body, sighdr = deviceauth_v1.auth_req(
+            body, sighdr = deviceauth.auth_req(
                 aset.id_data, aset.pubkey, aset.privkey, t.tenant_token
             )
 
-            r = dauthd.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+            r = dauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
             assert r.status_code == 200
             token = r.text

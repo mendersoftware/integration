@@ -15,7 +15,7 @@ docker-compose, if you want to run the demo, run:
 EOF
 }
 
-if [ "$#" -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+if [[ "$#" -eq 0 ]] || [[ "$1" = "-h" ]] || [[ "$1" = "--help" ]]; then
     usage
     exit 1
 fi
@@ -38,28 +38,28 @@ RUN_UP=0
 hash curl 2>/dev/null || { echo >&2 "The demo script requires the 'curl' tool to be available. Aborting."; exit 1; }
 hash jq 2>/dev/null || { echo >&2 "The demo script requires the 'jq' tool to be available. Aborting."; exit 1; }
 
-while [ -n "$1" ]; do
-    if [ "$1" = "--no-client" ]; then
+while [[ -n "$1" ]]; do
+    if [[ "$1" = "--no-client" ]]; then
         echo "--no-client argument is deprecated. Client is now disabled by default and can be enabled with --client"
-    elif [ "$1" = "--client" ]; then
+    elif [[ "$1" = "--client" ]]; then
         CLIENT=1
         echo "-- enabling client container"
-    elif [ "$1" = "-p" ] || [ "$1" = "--project-name" ]; then
+    elif [[ "$1" = "-p" ]] || [[ "$1" = "--project-name" ]]; then
         shift
         DOCKER_COMPOSE_PROJECT_NAME="$1"
-    elif [ "$1" = "--kvm" ]; then
+    elif [[ "$1" = "--kvm" ]]; then
         echo "--kvm argument is deprecated. KVM will be enabled automatically if available"
-    elif [ "$1" = "--enterprise-testing" ]; then
+    elif [[ "$1" = "--enterprise-testing" ]]; then
         # Undocumented flag, we use this for internal testing.
         EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_FILES"
         ENTERPRISE=1
-    elif [ "$1" = "down" ] || [ "$1" = "rm" ] || [ "$1" = "stop" ]; then
+    elif [[ "$1" = "down" ]] || [[ "$1" = "rm" ]] || [[ "$1" = "stop" ]]; then
         # If the argument is either "down" or "rm", enable the client so that it
         # gets cleaned up, no matter if `--client` is passed or not.
         CLIENT=1
         # Not a flag, so we should break out of the loop.
         break
-    elif [ "$1" = "up" ]; then
+    elif [[ "$1" = "up" ]]; then
         RUN_UP=1
         # Not a flag, so we should break out of the loop.
         break
@@ -69,8 +69,8 @@ while [ -n "$1" ]; do
     shift
 done
 
-if [ $CLIENT = 1 ]; then
-    if [ $ENTERPRISE != 1 -o $RUN_UP != 1 ]; then
+if [[ $CLIENT -eq 1 ]]; then
+    if [[ $ENTERPRISE -eq 0 ]] || [[ $RUN_UP -eq 0 ]]; then
         # For Enterprise we need to take special care and fetch the tenant token
         # first. For Open Source, we can add the client container immediately.
         EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
@@ -83,7 +83,7 @@ DEMO_ARTIFACT_NAME="mender-demo-artifact.mender"
 curl -q -sz mender-demo-artifact.mender -o mender-demo-artifact.mender https://dgsbl4vditpls.cloudfront.net/${DEMO_ARTIFACT_NAME}
 
 retval=$?
-if [ $retval -ne 0 ]; then
+if [[ $retval -ne 0 ]]; then
     echo "Failed to download the demo Artifact"
     exit $retval
 fi
@@ -124,7 +124,7 @@ export MENDER_ARTIFACT_VERSION=$(awk -F':' '/mendersoftware\/mender-artifact/ {p
 export MENDER_VERSION=$(awk -F':' '/mendersoftware\/mender-client/ {print $3}' docker-compose.client.yml)
 export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
-if [ $RUN_UP != 1 ]; then
+if [[ $RUN_UP -eq 0 ]]; then
     # exec steals the shell, so unless docker-compose is not found,
     # exit 1 will never happen.
     exec docker-compose \
@@ -139,7 +139,7 @@ fi
 
 # ------------------------------------------------------------------------------
 #
-#       The following code will only be run in the case ./demo up [args]
+#       The following code will only be run in the case ./demo up [[args]]
 #
 # ------------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ for i in "$@"; do
             USER_EXTRA_FILES_NEXT=1
             ;;
         *)
-            if [ $USER_EXTRA_FILES_NEXT -eq 1 ]; then
+            if [[ $USER_EXTRA_FILES_NEXT -eq 1 ]]; then
                 USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
                 USER_EXTRA_FILES_NEXT=0
             fi
@@ -236,7 +236,7 @@ echo "Creating a new user..."
 UPLOAD_ARTIFACT=1
 PRINT_LOGIN_INFO=0
 PRINT_USER_EXISTS=1
-if [ $ENTERPRISE = 1 ]; then
+if [[ $ENTERPRISE -eq 1 ]]; then
     TENANT_ID=$(docker exec \
             ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
             /usr/bin/tenantadm create-org \
@@ -245,7 +245,7 @@ if [ $ENTERPRISE = 1 ]; then
             --password=${PASSWORD})
     retval=$?
     EXISTS_ERROR=1
-    if [ $retval -eq 0 ]; then
+    if [[ $retval -eq 0 ]]; then
         TENANT_ID=$(echo "$TENANT_ID" | tr -d '\r')
     else
         TENANT_ID=
@@ -260,9 +260,9 @@ else
     retval=$?
     EXISTS_ERROR=5
 fi
-if [ $retval -eq 0 ]; then
+if [[ $retval -eq 0 ]]; then
     PRINT_LOGIN_INFO=1
-elif [ $retval -eq $EXISTS_ERROR ]; then
+elif [[ $retval -eq $EXISTS_ERROR ]]; then
     # If the user exists, skip uploading the Artifact
     UPLOAD_ARTIFACT=0
     PRINT_USER_EXISTS=1
@@ -271,11 +271,11 @@ else
     exit $retval
 fi
 
-if [ $ENTERPRISE = 1 -a $CLIENT = 1 ]; then
-    if [ $(docker ps -q -f name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-client_1 | wc -l) -gt 0 ]; then
+if [[ $ENTERPRISE -eq 1 ]] && [[ $CLIENT -eq 1 ]]; then
+    if [[ $(docker ps -q -f name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-client_1 | wc -l) -gt 0 ]]; then
         # If already launched, we don't need to do anything.
         :
-    elif [ -n "$TENANT_ID" ]; then
+    elif [[ -n "$TENANT_ID" ]]; then
         TENANT_TOKEN=$(docker exec \
                 ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
                 /usr/bin/tenantadm get-tenant \
@@ -301,7 +301,7 @@ fi
 if [[ $UPLOAD_ARTIFACT -eq 1 ]]; then
 
     RETRIES=0
-    until [[ "$JWT" != "" ]]; do
+    until [[ -n "$JWT" ]]; do
         JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
             --fail\
             --connect-timeout 5\
@@ -367,7 +367,7 @@ if [[ $UPLOAD_ARTIFACT -eq 1 ]]; then
 
 fi
 
-if [ $PRINT_LOGIN_INFO -eq 1 ]; then
+if [[ $PRINT_LOGIN_INFO -eq 1 ]]; then
     echo "****************************************"
     echo
     echo "Username: mender-demo@example.com"
@@ -375,7 +375,7 @@ if [ $PRINT_LOGIN_INFO -eq 1 ]; then
     echo
     echo "****************************************"
     echo "Please keep the password available, it will not be cached by the login script."
-elif [ $PRINT_USER_EXISTS -eq 1 ]; then
+elif [[ $PRINT_USER_EXISTS -eq 1 ]]; then
     echo "The user already exists. Skipping"
     echo "If you don't remember the password, you can run '$(basename $0) down' to delete"
     echo "the old user and rerun '$(basename $0) up' to create a new one."

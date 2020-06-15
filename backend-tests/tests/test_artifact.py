@@ -29,7 +29,12 @@ from testutils.api import (
     useradm,
     deviceauth as deviceauth_v1,
 )
-from testutils.common import create_org, mongo, clean_mongo, get_mender_artifact
+from testutils.common import (
+    create_org,
+    mongo,
+    clean_mongo,
+    get_mender_artifact,
+)
 
 from .test_deployments import make_accepted_device
 

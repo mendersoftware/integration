@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@ import pytest
 import random
 import time
 
-from testutils.common import mongo, clean_mongo
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
@@ -28,6 +27,8 @@ from testutils.common import (
     User,
     Device,
     Tenant,
+    mongo,
+    clean_mongo,
     create_org,
     create_random_authset,
     get_device_by_id_data,

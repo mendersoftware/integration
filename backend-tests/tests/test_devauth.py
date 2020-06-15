@@ -20,7 +20,13 @@ from testutils.api.client import ApiClient
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.api.deviceauth_v2 as deviceauth_v2
 
-from common import mongo, clean_mongo, create_org, make_accepted_device, Tenant
+from testutils.common import (
+    mongo,
+    clean_mongo,
+    create_org,
+    make_accepted_device,
+    Tenant,
+)
 
 
 dauthd = ApiClient(deviceauth_v1.URL_DEVICES)

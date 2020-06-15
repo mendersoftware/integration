@@ -16,7 +16,6 @@ import time
 import logging
 import pytest
 
-from testutils.common import mongo, clean_mongo
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
@@ -26,6 +25,8 @@ import testutils.api.inventory as inventory
 from testutils.infra.cli import CliTenantadm, CliUseradm, CliDeviceauth
 from testutils.common import (
     Device,
+    mongo,
+    clean_mongo,
     create_org,
     create_random_authset,
     change_authset_status,

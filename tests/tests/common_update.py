@@ -19,7 +19,7 @@ import pytest
 
 from .. import conftest
 from ..helpers import Helpers
-from ..MenderAPI import auth_v2, deploy, image, logger
+from ..MenderAPI import devauth, deploy, image, logger
 from . import artifact_lock
 
 
@@ -71,7 +71,7 @@ def common_update_procedure(
                         set(
                             [
                                 device["id"]
-                                for device in auth_v2.get_devices_status("accepted")
+                                for device in devauth.get_devices_status("accepted")
                             ]
                         )
                     )
@@ -134,7 +134,7 @@ def update_image(
             assert device.get_active_partition() == previous_inactive_part
         except AssertionError:
             logs = []
-            for d in auth_v2.get_devices():
+            for d in devauth.get_devices():
                 logs.append(deploy.get_logs(d["id"], deployment_id))
 
             pytest.fail(
@@ -146,7 +146,7 @@ def update_image(
             deployment_id, "success", expected_mender_clients
         )
 
-        for d in auth_v2.get_devices():
+        for d in devauth.get_devices():
             deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
     assert device.yocto_id_installed_on_machine() == expected_image_id
@@ -201,7 +201,7 @@ def update_image_failed(
             deployment_id, "failure", expected_mender_clients
         )
 
-        for d in auth_v2.get_devices():
+        for d in devauth.get_devices():
             assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
 
         assert device.yocto_id_installed_on_machine() == original_image_id

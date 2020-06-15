@@ -20,7 +20,7 @@ from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting
-from ..MenderAPI import auth, auth_v2, deploy, image, logger
+from ..MenderAPI import auth, devauth, deploy, image, logger
 
 from testutils.infra.device import MenderDevice
 
@@ -45,9 +45,9 @@ class TestProvidesDependsEnterprise(MenderTesting):
         # Wait for ssh to be open
         mender_device.ssh_is_opened()
         # Check that the device has authorized with the backend.
-        auth_v2.get_devices(expected_devices=1)
-        auth_v2.accept_devices(1)
-        assert len(auth_v2.get_devices_status("accepted")) == 1
+        devauth.get_devices(expected_devices=1)
+        devauth.accept_devices(1)
+        assert len(devauth.get_devices_status("accepted")) == 1
 
         # Update client with and artifact with custom provides
         def prepare_provides_artifact(artifact_file, artifact_id):

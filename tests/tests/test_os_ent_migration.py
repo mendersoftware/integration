@@ -21,7 +21,7 @@ from testutils.common import create_user, make_accepted_device, User, Tenant
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliTenantadm
 import testutils.api.deviceauth as deviceauth_v1
-import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.devicedevauth as devicedevauth
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
 from testutils.infra.container_manager import factory
@@ -219,7 +219,7 @@ class TestEntMigration:
             assert r.status_code == 401
 
         r = dauthm.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES, path_params={"id": d.id}
+            "GET", devicedevauth.URL_DEVICES, path_params={"id": d.id}
         )
 
         assert r.status_code == 200

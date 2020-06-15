@@ -19,7 +19,7 @@ import pytest
 
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
-from ..MenderAPI import auth_v2, inv, logger
+from ..MenderAPI import devauth, inv, logger
 from .mendertesting import MenderTesting
 
 
@@ -35,7 +35,7 @@ class TestInventory(MenderTesting):
             attempts = attempts - 1
             try:
                 inv_json = inv.get_devices()
-                auth_json = auth_v2.get_devices()
+                auth_json = devauth.get_devices()
 
                 auth_ids = [device["id"] for device in auth_json]
 

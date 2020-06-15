@@ -28,10 +28,10 @@ class Deployments:
     # track the last statistic for a deployment id
     last_statistic = {}
 
-    def __init__(self, auth, auth_v2):
+    def __init__(self, auth, devauth):
         self.reset()
         self.auth = auth
-        self.auth_v2 = auth_v2
+        self.devauth = devauth
 
     def reset(self):
         # Reset all temporary values.
@@ -192,7 +192,7 @@ class Deployments:
 
             if int(data["failure"]) > 0 and expected_status != "failure":
                 all_failed_logs = ""
-                for device in self.auth_v2.get_devices():
+                for device in self.devauth.get_devices():
                     try:
                         all_failed_logs += (
                             self.get_logs(device["id"], deployment_id) + "\n" * 5

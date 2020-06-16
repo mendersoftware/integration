@@ -69,6 +69,25 @@ while [[ -n "$1" ]]; do
     shift
 done
 
+EXTRA_FILES_NEXT=0
+for i in "$@"; do
+    case $i in
+        -f=*|--file=*)
+            EXTRA_FILES="$EXTRA_FILES $i"
+            ;;
+        -f|--file)
+            EXTRA_FILES="$EXTRA_FILES $i"
+            EXTRA_FILES_NEXT=1
+            ;;
+        *)
+            if [[ $EXTRA_FILES_NEXT -eq 1 ]]; then
+                EXTRA_FILES="$EXTRA_FILES $i"
+                EXTRA_FILES_NEXT=0
+            fi
+            ;;
+    esac
+done
+
 if [[ $CLIENT -eq 1 ]]; then
     if [[ $ENTERPRISE -eq 0 ]] || [[ $RUN_UP -eq 0 ]]; then
         # For Enterprise we need to take special care and fetch the tenant token
@@ -151,26 +170,6 @@ then
     MENDER_SERVER_URI="http://localhost"
 fi
 
-USER_EXTRA_FILES=""
-USER_EXTRA_FILES_NEXT=0
-for i in "$@"; do
-    case $i in
-        -f=*|--file=*)
-            USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
-            ;;
-        -f|--file)
-            USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
-            USER_EXTRA_FILES_NEXT=1
-            ;;
-        *)
-            if [[ $USER_EXTRA_FILES_NEXT -eq 1 ]]; then
-                USER_EXTRA_FILES="$USER_EXTRA_FILES $i"
-                USER_EXTRA_FILES_NEXT=0
-            fi
-            ;;
-    esac
-done
-
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
     retval=$(docker-compose \
@@ -179,7 +178,6 @@ exitfunc() {
          -f docker-compose.demo.yml \
          -p ${DOCKER_COMPOSE_PROJECT_NAME} \
          $EXTRA_FILES \
-         $USER_EXTRA_FILES \
          stop)
     exit $retval
 }

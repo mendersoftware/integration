@@ -5,10 +5,14 @@ import time
 
 import pymongo
 
-from testutils.common import mongo, mongo_cleanup
-from testutils.common import User, Device
 from testutils.infra import cli
 from testutils import api
+from testutils.common import (
+    User,
+    Device,
+    mongo,
+    mongo_cleanup,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,6 @@ import pytest
 
 import testutils.api.deployments as deployments
 import testutils.api.deviceauth as deviceauth
-import testutils.api.deviceauth_v2 as deviceauth_v2
 import testutils.api.inventory as inventory
 import testutils.api.useradm as useradm
 
@@ -76,7 +75,7 @@ def setup_tenant_devices(tenant, device_groups):
     :return: Dict mapping group_name -> list(devices)
     """
     devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
-    devauth_MGMT = ApiClient(deviceauth_v2.URL_MGMT)
+    devauth_MGMT = ApiClient(deviceauth.URL_MGMT)
     invtry_MGMT = ApiClient(inventory.URL_MGMT)
     user = tenant.users[0]
     grouped_devices = {}

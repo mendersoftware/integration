@@ -18,7 +18,7 @@ import time
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
-from ..MenderAPI import auth, auth_v2, deploy, image, logger, inv
+from ..MenderAPI import auth, devauth, deploy, image, logger, inv
 from .mendertesting import MenderTesting
 from . import artifact_lock
 
@@ -51,7 +51,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         for _ in range(5):
             time.sleep(5)
-            auth_v2.get_devices(expected_devices=0)  # make sure device not seen
+            devauth.get_devices(expected_devices=0)  # make sure device not seen
 
         # setting the correct token makes the client visible to the backend
         mender_device.run(
@@ -59,7 +59,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         )
         mender_device.run("systemctl restart %s" % client_service_name)
 
-        auth_v2.get_devices(expected_devices=1)
+        devauth.get_devices(expected_devices=1)
 
     def test_artifacts_exclusive_to_user(self, enterprise_no_client, valid_image):
         # extra long sleep to make sure all services ran their migrations
@@ -126,12 +126,12 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
             t = auth.current_tenant["tenant_token"]
             enterprise_no_client.new_tenant_client(user["container"], t)
-            auth_v2.accept_devices(1)
+            devauth.accept_devices(1)
 
             # get the new devices client_id and setting it to the our test parameter
             assert len(inv.get_devices()) == 1
             user["client_id"] = inv.get_devices()[0]["id"]
-            user["device_id"] = auth_v2.get_devices()[0]["id"]
+            user["device_id"] = devauth.get_devices()[0]["id"]
 
         for user in users:
             # make sure that the correct number of clients appear for the given tenant
@@ -142,11 +142,11 @@ class TestMultiTenancyEnterprise(MenderTesting):
         for user in users:
             # wait until inventory is populated
             auth.set_tenant(user["username"], user["email"], user["password"])
-            auth_v2.decommission(user["client_id"])
+            devauth.decommission(user["client_id"])
             timeout = time.time() + (60 * 5)
             device_id = user["device_id"]
             while time.time() < timeout:
-                newAdmissions = auth_v2.get_devices()[0]
+                newAdmissions = devauth.get_devices()[0]
                 if (
                     device_id != newAdmissions["id"]
                     and user["client_id"] != newAdmissions["id"]
@@ -187,7 +187,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             enterprise_no_client.new_tenant_client(user["container"], t)
-            auth_v2.accept_devices(1)
+            devauth.accept_devices(1)
 
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
@@ -223,7 +223,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
             enterprise_no_client.new_tenant_client(user["container"], t)
-            auth_v2.accept_devices(1)
+            devauth.accept_devices(1)
 
         for user in users:
             deployment_id, _ = common_update_procedure(valid_image)

@@ -15,7 +15,7 @@
 import pytest
 from . import conftest
 
-from .MenderAPI import auth, auth_v2, reset_mender_api
+from .MenderAPI import auth, devauth, reset_mender_api
 from .helpers import Helpers
 
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
@@ -50,7 +50,7 @@ def standard_setup_one_client_bootstrapped(request):
     env.device.ssh_is_opened()
 
     reset_mender_api(env)
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -66,7 +66,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     env.device.ssh_is_opened()
 
     reset_mender_api(env)
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -82,7 +82,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
     env.device.ssh_is_opened()
 
     reset_mender_api(env)
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -98,7 +98,7 @@ def standard_setup_two_clients_bootstrapped(request):
     env.device_group.ssh_is_opened()
 
     reset_mender_api(env)
-    auth_v2.accept_devices(2)
+    devauth.accept_devices(2)
 
     return env
 
@@ -132,7 +132,7 @@ def setup_with_legacy_client(request):
     env.device.ssh_is_opened()
 
     reset_mender_api(env)
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -149,7 +149,7 @@ def standard_setup_with_signed_artifact_client(request):
 
     reset_mender_api(env)
     auth.reset_auth_token()
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -166,7 +166,7 @@ def standard_setup_with_short_lived_token(request):
 
     reset_mender_api(env)
     auth.reset_auth_token()
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 
@@ -183,7 +183,7 @@ def setup_failover(request):
     env.device.ssh_is_opened()
 
     auth.reset_auth_token()
-    auth_v2.accept_devices(1)
+    devauth.accept_devices(1)
 
     return env
 

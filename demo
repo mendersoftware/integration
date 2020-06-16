@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -u
 
 ./verify-docker-versions
 
@@ -315,6 +315,7 @@ maybe_upload_artifact() {
 
         local RETRIES=0
         local retval=0
+        local JWT=
         until [[ -n "$JWT" ]]; do
             JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
                        --fail\

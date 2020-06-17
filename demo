@@ -180,12 +180,12 @@ run_non_up_commands() {
         # exec steals the shell, so unless docker-compose is not found,
         # exit 1 will never happen.
         exec docker-compose \
-             -f docker-compose.yml \
-             -f docker-compose.storage.minio.yml \
-             -f docker-compose.demo.yml \
-             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-             $EXTRA_FILES \
-             "${ARGS[@]}"
+                -f docker-compose.yml \
+                -f docker-compose.storage.minio.yml \
+                -f docker-compose.demo.yml \
+                -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+                $EXTRA_FILES \
+                "${ARGS[@]}"
         exit 1
     fi
 }
@@ -193,12 +193,12 @@ run_non_up_commands() {
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
     retval=$(docker-compose \
-         -f docker-compose.yml \
-         -f docker-compose.storage.minio.yml \
-         -f docker-compose.demo.yml \
-         -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-         $EXTRA_FILES \
-         stop)
+            -f docker-compose.yml \
+            -f docker-compose.storage.minio.yml \
+            -f docker-compose.demo.yml \
+            -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+            $EXTRA_FILES \
+            stop)
     exit $retval
 }
 
@@ -206,12 +206,12 @@ start_server() {
     echo "Starting the Mender demo environment..."
 
     docker-compose \
-        -f docker-compose.yml \
-        -f docker-compose.storage.minio.yml \
-        -f docker-compose.demo.yml \
-        -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-        $EXTRA_FILES \
-        "${ARGS[@]}" -d
+            -f docker-compose.yml \
+            -f docker-compose.storage.minio.yml \
+            -f docker-compose.demo.yml \
+            -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+            $EXTRA_FILES \
+            "${ARGS[@]}" -d
 
     local retval=$?
     if [[ $retval -ne 0 ]]; then
@@ -224,9 +224,9 @@ start_server() {
     while :
     do
         curl --silent -k -X POST -u ${USER}:${PASSWORD} \
-             --fail\
-             --connect-timeout 5\
-             $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
+                --fail \
+                --connect-timeout 5 \
+                $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
         retval=$?
         case $retval in
             0)  break ;; # User exists - continue.
@@ -247,11 +247,11 @@ create_user() {
 
     if [[ $ENTERPRISE -eq 1 ]]; then
         TENANT_ID=$(docker exec \
-                           ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
-                           /usr/bin/tenantadm create-org \
-                           --name=DemoOrganization \
-                           --username=${USER} \
-                           --password=${PASSWORD})
+                ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+                /usr/bin/tenantadm create-org \
+                --name=DemoOrganization \
+                --username=${USER} \
+                --password=${PASSWORD})
         retval=$?
         EXISTS_ERROR=1
         if [[ $retval -eq 0 ]]; then
@@ -261,11 +261,11 @@ create_user() {
         fi
     else
         docker exec \
-               ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
-               /usr/bin/useradm create-user \
-               --username=${USER} \
-               --password=${PASSWORD} \
-               > /dev/null
+                ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
+                /usr/bin/useradm create-user \
+                --username=${USER} \
+                --password=${PASSWORD} \
+                > /dev/null
         retval=$?
         EXISTS_ERROR=5
     fi
@@ -288,19 +288,19 @@ maybe_launch_enterprise_client() {
             :
         elif [[ -n "$TENANT_ID" ]]; then
             TENANT_TOKEN=$(docker exec \
-                                  ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
-                                  /usr/bin/tenantadm get-tenant \
-                                  --id $TENANT_ID \
-                               | jq -r .tenant_token)
+                    ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+                    /usr/bin/tenantadm get-tenant \
+                    --id $TENANT_ID \
+                    | jq -r .tenant_token)
             # Now that we have the tenant token we can enable the client.
             EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
             TENANT_TOKEN=$TENANT_TOKEN docker-compose \
-                        -f docker-compose.yml \
-                        -f docker-compose.storage.minio.yml \
-                        -f docker-compose.demo.yml \
-                        -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-                        $EXTRA_FILES \
-                        "${ARGS[@]}" -d mender-client
+                    -f docker-compose.yml \
+                    -f docker-compose.storage.minio.yml \
+                    -f docker-compose.demo.yml \
+                    -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+                    $EXTRA_FILES \
+                    "${ARGS[@]}" -d mender-client
         else
             echo "WARNING: Ignoring request to launch the Mender client."
             echo "In Enterprise mode, the client can only be launched the first time the server"
@@ -317,10 +317,10 @@ maybe_upload_artifact() {
         local retval=0
         local JWT=
         until [[ -n "$JWT" ]]; do
-            JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD}\
-                       --fail\
-                       --connect-timeout 5\
-                       $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
+            JWT=$(curl --silent -k -X POST -u ${USER}:${PASSWORD} \
+                    --fail \
+                    --connect-timeout 5 \
+                    $MENDER_SERVER_URI/api/management/v1/useradm/auth/login)
             retval=$?
             if [[ $retval -ne 0 ]]; then
                 echo "Failed to get the 'JWT' token from the useradm service."
@@ -341,13 +341,13 @@ maybe_upload_artifact() {
         while :
         do
             cout=$(curl --silent -k -X POST \
-                        --fail\
-                        --show-error\
-                        --connect-timeout 5\
-                        --header "Authorization: Bearer ${JWT}"\
-                        --form "size=${ARTIFACT_SIZE_BYTES}"\
-                        --form "artifact=@${DEMO_ARTIFACT_NAME}"\
-                        $MENDER_SERVER_URI/api/management/v1/deployments/artifacts)
+                    --fail \
+                    --show-error \
+                    --connect-timeout 5 \
+                    --header "Authorization: Bearer ${JWT}" \
+                    --form "size=${ARTIFACT_SIZE_BYTES}" \
+                    --form "artifact=@${DEMO_ARTIFACT_NAME}" \
+                    $MENDER_SERVER_URI/api/management/v1/deployments/artifacts)
             retval=$?
             if [[ $retval -ne 0 ]]; then
                 echo "Failed to upload the Artifact to the demo server. curl error code: " $retval
@@ -410,12 +410,12 @@ wait_for_user() {
 
 follow_logs() {
     docker-compose \
-        -f docker-compose.yml \
-        -f docker-compose.storage.minio.yml \
-        -f docker-compose.demo.yml \
-        -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-        $EXTRA_FILES \
-        logs --follow
+            -f docker-compose.yml \
+            -f docker-compose.storage.minio.yml \
+            -f docker-compose.demo.yml \
+            -p ${DOCKER_COMPOSE_PROJECT_NAME} \
+            $EXTRA_FILES \
+            logs --follow
 }
 
 #-------------------------------------------------------------------------------

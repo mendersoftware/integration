@@ -148,14 +148,20 @@ for repo in repos:
                 title = line
                 title_fetched = True
 
-            match = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
-            if match:
+            match_changelog = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
+            if match_changelog:
                 if log_entry:
                     add_entry(sha, log_entry)
                     log_entry = ""
                 log_entry_local = False
 
-                if re.match("^(Title|Commit|None)[ .]*$", match.group(1), re.IGNORECASE):
+                # The logic of this regex is:
+                # - Shall start with Title|Commit|All|None
+                # - From here, if [.:]+ then capture the rest in a new group
+                # - Else just expect end line
+                match_keyword = re.match("^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)", match_changelog.group(1), re.IGNORECASE)
+
+                if match_keyword:
                     if exclusive_tag_seen:
                         # This doesn't really mean that the tags are exclusive, but rather that it
                         # is quite uncommon to see any of them together, and might indicate a
@@ -166,15 +172,20 @@ for repo in repos:
                                                  % sha)
                     exclusive_tag_seen = True
 
-                if re.match("^Title[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry = title
-                elif re.match("^Commit[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry_commit = True
-                elif re.match("^None[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry_commit = False
+                    if match_keyword.group(1).lower() == "title":
+                        log_entry = title
+                    elif match_keyword.group(1).lower() == "none":
+                        log_entry_commit = False
+                    elif match_keyword.group(1).lower() in ["commit", "all"]:
+                        log_entry_commit = True
+                        if match_keyword.group(2):
+                            # Log the rest of the line
+                            if commit_msg:
+                                commit_msg += "\n"
+                            commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    log_entry = match.group(1)
+                    log_entry = match_changelog.group(1)
                 continue
 
             for cancel_expr in ["^ *Cancel-Changelog: *([0-9a-f]+).*",

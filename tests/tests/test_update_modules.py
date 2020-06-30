@@ -70,7 +70,7 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             deploy.check_expected_status("finished", deployment_id)
 
-            output = run("mender -show-artifact").strip()
+            output = run("mender -no-syslog -show-artifact").strip()
             assert output == "original"
 
             # Remove path block.
@@ -85,7 +85,7 @@ class TestUpdateModules(MenderTesting):
                 output = run("cat /tmp/test_file_update_module/%s" % file_and_content).strip()
                 assert output == file_and_content
 
-            output = run("mender -show-artifact").strip()
+            output = run("mender -no-syslog -show-artifact").strip()
             assert output == expected_image_id
 
         finally:
@@ -121,7 +121,7 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-            output = run("mender -show-artifact").strip()
+            output = run("mender -no-syslog -show-artifact").strip()
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service("mender-client")

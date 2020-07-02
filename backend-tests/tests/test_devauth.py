@@ -25,6 +25,7 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 import testutils.util.crypto
+
 from testutils.common import (
     User,
     Device,
@@ -138,7 +139,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth device
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.get_keypair_rsa()
         id_data = {"mac": "pretenditsamac"}
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -194,7 +195,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth duplicate device
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.get_keypair_rsa()
         id_data = devices[0].id_data
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -236,7 +237,7 @@ class TestPreauth(TestPreauthBase):
         utoken = r.text
 
         # id data not json
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.get_keypair_rsa()
         id_data = '{"mac": "foo"}'
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -385,7 +386,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
     dev = None
     for i in range(num_auth_sets):
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.get_keypair_rsa()
         new_set = create_authset(
             devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
         )
@@ -437,7 +438,7 @@ def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
 def make_preauthd_device(utoken):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
     id_data = rand_id_data()
 
     body = deviceauth.preauth_req(id_data, pub)
@@ -465,7 +466,7 @@ def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
     dev = make_preauthd_device(utoken)
 
     for i in range(num_pending):
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = testutils.util.crypto.get_keypair_rsa()
         aset = create_authset(
             devauthd,
             devauthm,

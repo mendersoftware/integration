@@ -60,7 +60,7 @@ def make_pending_device(utoken, tenant_token=""):
 
     id_data = rand_id_data()
 
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
     new_set = create_authset(
         devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
     )

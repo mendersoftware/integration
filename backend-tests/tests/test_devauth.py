@@ -141,50 +141,76 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth device
-        priv, pub = crypto.get_keypair_rsa()
-        id_data = {"mac": "pretenditsamac"}
-        body = deviceauth.preauth_req(id_data, pub)
-        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
-        assert r.status_code == 201
+        devs = [
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_224),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_384),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
+            },
+        ]
 
-        # device appears in device list
+        for d in devs:
+            body = deviceauth.preauth_req(d["id_data"], d["keypair"][1])
+            r = devauthm.with_auth(utoken).call(
+                "POST", deviceauth.URL_MGMT_DEVICES, body
+            )
+            assert r.status_code == 201
+
+        # all devices appear in device list as 'preauthorized'
         r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
-        assert len(api_devs) == 1
-        api_dev = api_devs[0]
+        assert len(api_devs) == len(devs)
 
-        assert api_dev["status"] == "preauthorized"
-        assert api_dev["identity_data"] == id_data
-        assert len(api_dev["auth_sets"]) == 1
-        aset = api_dev["auth_sets"][0]
+        for d in devs:
+            adev = [
+                ad
+                for ad in api_devs
+                if crypto.compare_keys(ad["auth_sets"][0]["pubkey"], d["keypair"][1])
+            ]
+            assert len(adev) == 1
+            adev = adev[0]
 
-        assert aset["identity_data"] == id_data
-        assert crypto.compare_keys(aset["pubkey"], pub)
-        assert aset["status"] == "preauthorized"
+            assert adev["status"] == "preauthorized"
+            assert len(adev["auth_sets"]) == 1
+            aset = adev["auth_sets"][0]
 
-        # actual device can obtain auth token
-        body, sighdr = deviceauth.auth_req(id_data, pub, priv, tenant_token)
+            assert aset["identity_data"] == d["id_data"]
+            assert aset["status"] == "preauthorized"
 
-        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+            # actual device can obtain auth token
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token
+            )
 
-        assert r.status_code == 200
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
-        # device and authset changed status to 'accepted'
-        r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES, path_params={"id": api_dev["id"]}
-        )
+            assert r.status_code == 200
 
-        api_devs = r.json()
-        assert len(api_devs) == 1
+            # device and authset changed status to 'accepted'
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": adev["id"]}
+            )
 
-        api_dev = api_devs[0]
-        assert api_dev["status"] == "accepted"
-        assert len(api_dev["auth_sets"]) == 1
+            outdev = r.json()
+            assert outdev["status"] == "accepted"
+            assert len(outdev["auth_sets"]) == 1
 
-        aset = api_dev["auth_sets"][0]
-        assert aset["status"] == "accepted"
+            aset = outdev["auth_sets"][0]
+            assert aset["status"] == "accepted"
 
     def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)

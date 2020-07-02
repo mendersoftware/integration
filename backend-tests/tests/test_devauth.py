@@ -1407,47 +1407,32 @@ class TestDefaultTenantTokenEnterprise(object):
         assert len(api_devs) == 1
 
 
-def make_tenant_and_accepted_dev(name, uname, plan):
-    dauthd = ApiClient(deviceauth.URL_DEVICES)
-    dauthm = ApiClient(deviceauth.URL_MGMT)
-    tenant = create_org(name, uname, "correcthorse", plan=plan)
-    user = tenant.users[0]
-    tenant.users = [user]
-
-    r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert r.status_code == 200
-    utok = r.text
-
-    dev = make_accepted_device(dauthd, dauthm, utok, tenant.tenant_token)
-
-    tenant.devices = [dev]
-    tenant.plan = plan
-
-    return tenant
-
-
 @pytest.fixture(scope="function")
-def tenants_and_accepted_devs(clean_mongo):
-    tos = make_tenant_and_accepted_dev("tenant-os", "user@tenant-os.com", "os")
-
-    tpro = make_tenant_and_accepted_dev(
-        "tenant-pro", "user@tenant-pro.com", "professional"
+def tenants_with_plans(clean_mongo):
+    tos = create_org("tenant-os", "user@tenant-os.com", "correcthorse", plan="os")
+    tos.plan = "os"
+    tpro = create_org(
+        "tenant-pro", "user@tenant-pro.com", "correcthorse", plan="professional"
     )
+    tpro.plan = "professional"
 
-    tent = make_tenant_and_accepted_dev(
-        "tenant-ent", "user@tenant-ent.com", "enterprise"
+    tent = create_org(
+        "tenant-ent", "user@tenant-ent.com", "correcthorse", plan="enterprise"
     )
+    tent.plan = "enterprise"
 
     return [tos, tpro, tent]
 
 
 class TestAuthReqBase:
-    def do_test_submit(self, user, tenant_token=""):
+    def do_test_submit_accept(self, user, tenant=None):
         devauthd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uadm = ApiClient(useradm.URL_MGMT)
+
+        tenant_token=""
+        if tenant is not None:
+            tenant_token=tenant.tenant_token
 
         devs = [
             {
@@ -1513,33 +1498,18 @@ class TestAuthReqBase:
             assert adev["identity_data"] == d["id_data"]
             assert adev["auth_sets"][0]["status"] == "pending"
 
-
-class TestAuthReq(TestAuthReqBase):
-    def test_submit(self, user):
-        self.do_test_submit(user)
-
-
-class TestAuthReqEnterprise(TestAuthReqBase):
-    def test_submit(self, tenants_users):
-        for tenant in tenants_users:
-            user = tenant.users[0]
-            self.do_test_submit(user, tenant.tenant_token)
-
-    def test_ok(self, tenants_and_accepted_devs):
-        """ Basic JWT inspection: are we getting the right claims?
-        """
-        dauthd = ApiClient(deviceauth.URL_DEVICES)
-        for t in tenants_and_accepted_devs:
-            dev = t.devices[0]
-            aset = dev.authsets[0]
-
-            body, sighdr = deviceauth.auth_req(
-                aset.id_data, aset.pubkey, aset.privkey, t.tenant_token
+            # accept and get/verify token
+            change_authset_status(
+                devauthm, adev["id"], adev["auth_sets"][0]["id"], "accepted", utoken
             )
 
-            r = dauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
+            )
 
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
             assert r.status_code == 200
+
             token = r.text
 
             payload = token.split(".")[1]
@@ -1547,12 +1517,26 @@ class TestAuthReqEnterprise(TestAuthReqBase):
             payload = json.loads(payload.decode("utf-8"))
 
             # standard claims
-            assert payload["sub"] == dev.id
+            assert payload["sub"] == adev["id"]
             assert payload["iss"] == "Mender"
             assert payload["jti"] is not None
             assert payload["exp"] is not None
 
             # custom claims
-            assert payload["mender.plan"] == t.plan
-            assert payload["mender.tenant"] == t.id
             assert payload["mender.device"]
+
+            if tenant is not None:
+                assert payload["mender.plan"] == tenant.plan
+                assert payload["mender.tenant"] == tenant.id
+
+
+class TestAuthReq(TestAuthReqBase):
+    def test_submit_accept(self, user):
+        self.do_test_submit_accept(user)
+
+
+class TestAuthReqEnterprise(TestAuthReqBase):
+    def test_submit_accept(self, tenants_with_plans):
+        for tenant in tenants_with_plans:
+            user = tenant.users[0]
+            self.do_test_submit_accept(user, tenant)

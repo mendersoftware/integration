@@ -660,7 +660,11 @@ class TestDeviceMgmtBase:
         assert r.status_code == 404
 
         # check device list unmodified
-        r = da.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        r = da.with_auth(utoken).call(
+            "GET",
+            deviceauth.URL_MGMT_DEVICES,
+            qs_params={"per_page": len(devs_authsets)},
+        )
 
         assert r.status_code == 200
         api_devs = r.json()
@@ -689,7 +693,9 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             count = r.json()
 
-            ref_devs = filter_and_page_devs(devs_authsets, status=status)
+            ref_devs = filter_and_page_devs(
+                devs_authsets, per_page=len(devs_authsets), status=status
+            )
 
             ref_count = len(ref_devs)
 

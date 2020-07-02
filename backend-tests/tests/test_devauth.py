@@ -25,7 +25,7 @@ import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
-import testutils.util.crypto
+import testutils.util.crypto as crypto
 from cryptography.hazmat.primitives.asymmetric import dsa
 
 from testutils.common import (
@@ -141,7 +141,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth device
-        priv, pub = testutils.util.crypto.get_keypair_rsa()
+        priv, pub = crypto.get_keypair_rsa()
         id_data = {"mac": "pretenditsamac"}
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -161,7 +161,7 @@ class TestPreauthBase:
         aset = api_dev["auth_sets"][0]
 
         assert aset["identity_data"] == id_data
-        assert testutils.util.crypto.compare_keys(aset["pubkey"], pub)
+        assert crypto.compare_keys(aset["pubkey"], pub)
         assert aset["status"] == "preauthorized"
 
         # actual device can obtain auth token
@@ -197,7 +197,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth duplicate device
-        priv, pub = testutils.util.crypto.get_keypair_rsa()
+        priv, pub = crypto.get_keypair_rsa()
         id_data = devices[0].id_data
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -217,7 +217,7 @@ class TestPreauthBase:
 
         assert len(existing["auth_sets"]) == 1
         aset = existing["auth_sets"][0]
-        assert testutils.util.crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
+        assert crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
         assert aset["status"] == "pending"
 
 
@@ -239,7 +239,7 @@ class TestPreauth(TestPreauthBase):
         utoken = r.text
 
         # id data not json
-        priv, pub = testutils.util.crypto.get_keypair_rsa()
+        priv, pub = crypto.get_keypair_rsa()
         id_data = '{"mac": "foo"}'
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -297,9 +297,7 @@ class TestPreauthEnterprise(TestPreauthBase):
 
             assert len(ad["auth_sets"]) == 1
             aset = ad["auth_sets"][0]
-            assert testutils.util.crypto.compare_keys(
-                aset["pubkey"], orig_device.pubkey
-            )
+            assert crypto.compare_keys(aset["pubkey"], orig_device.pubkey)
 
 
 def make_devs_with_authsets(user, tenant_token=""):
@@ -388,7 +386,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
     dev = None
     for i in range(num_auth_sets):
-        priv, pub = testutils.util.crypto.get_keypair_rsa()
+        priv, pub = crypto.get_keypair_rsa()
         new_set = create_authset(
             devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
         )
@@ -440,7 +438,7 @@ def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
 def make_preauthd_device(utoken):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    priv, pub = testutils.util.crypto.get_keypair_rsa()
+    priv, pub = crypto.get_keypair_rsa()
     id_data = rand_id_data()
 
     body = deviceauth.preauth_req(id_data, pub)
@@ -468,7 +466,7 @@ def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
     dev = make_preauthd_device(utoken)
 
     for i in range(num_pending):
-        priv, pub = testutils.util.crypto.get_keypair_rsa()
+        priv, pub = crypto.get_keypair_rsa()
         aset = create_authset(
             devauthd,
             devauthm,
@@ -695,7 +693,7 @@ class TestDeviceMgmtBase:
             aset = [
                 a
                 for a in dev.authsets
-                if testutils.util.crypto.compare_keys(a.pubkey, api_aset["pubkey"])
+                if crypto.compare_keys(a.pubkey, api_aset["pubkey"])
             ]
             assert len(aset) == 1
             aset = aset[0]
@@ -1257,7 +1255,7 @@ def filter_and_page_devs(devs, page=None, per_page=None, status=None):
 def compare_aset(authset, api_authset):
     assert authset.id == api_authset["id"]
     assert authset.id_data == api_authset["identity_data"]
-    assert testutils.util.crypto.compare_keys(authset.pubkey, api_authset["pubkey"])
+    assert crypto.compare_keys(authset.pubkey, api_authset["pubkey"])
     assert authset.status == api_authset["status"]
 
 
@@ -1430,38 +1428,27 @@ class TestAuthReqBase:
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uadm = ApiClient(useradm.URL_MGMT)
 
-        tenant_token=""
+        tenant_token = ""
         if tenant is not None:
-            tenant_token=tenant.tenant_token
+            tenant_token = tenant.tenant_token
 
         devs = [
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
             {
                 "id_data": rand_id_data(),
-                "keypair": testutils.util.crypto.get_keypair_rsa(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
             },
             {
                 "id_data": rand_id_data(),
-                "keypair": testutils.util.crypto.get_keypair_ec(
-                    testutils.util.crypto.EC_CURVE_256
-                ),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_224),
             },
             {
                 "id_data": rand_id_data(),
-                "keypair": testutils.util.crypto.get_keypair_ec(
-                    testutils.util.crypto.EC_CURVE_224
-                ),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_384),
             },
             {
                 "id_data": rand_id_data(),
-                "keypair": testutils.util.crypto.get_keypair_ec(
-                    testutils.util.crypto.EC_CURVE_384
-                ),
-            },
-            {
-                "id_data": rand_id_data(),
-                "keypair": testutils.util.crypto.get_keypair_ec(
-                    testutils.util.crypto.EC_CURVE_521
-                ),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
             },
         ]
 
@@ -1488,9 +1475,7 @@ class TestAuthReqBase:
             adev = [
                 ad
                 for ad in api_devs
-                if testutils.util.crypto.compare_keys(
-                    ad["auth_sets"][0]["pubkey"], d["keypair"][1]
-                )
+                if crypto.compare_keys(ad["auth_sets"][0]["pubkey"], d["keypair"][1])
             ]
             assert len(adev) == 1
             adev = adev[0]

@@ -313,33 +313,60 @@ def make_devs_with_authsets(user, tenant_token=""):
 
     devices = []
 
+    keygen_rsa = lambda: crypto.get_keypair_rsa()
+    keygen_ec_256 = lambda: crypto.get_keypair_ec(crypto.EC_CURVE_256)
+
     # some vanilla 'pending' devices, single authset
-    for _ in range(5):
-        dev = make_pending_device(utoken, 1, tenant_token=tenant_token)
+    for _ in range(3):
+        dev = make_pending_device(utoken, keygen_rsa, 1, tenant_token=tenant_token)
+        devices.append(dev)
+
+    for _ in range(2):
+        dev = make_pending_device(utoken, keygen_ec_256, 1, tenant_token=tenant_token)
         devices.append(dev)
 
     # some pending devices with > 1 authsets
     for i in range(2):
-        dev = make_pending_device(utoken, 3, tenant_token=tenant_token)
+        dev = make_pending_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
+        devices.append(dev)
+
+    for i in range(2):
+        dev = make_pending_device(utoken, keygen_ec_256, 3, tenant_token=tenant_token)
         devices.append(dev)
 
     # some 'accepted' devices, single authset
     for _ in range(3):
         dev = make_accepted_device_with_multiple_authsets(
-            utoken, 1, tenant_token=tenant_token
+            utoken, keygen_rsa, 1, tenant_token=tenant_token
+        )
+        devices.append(dev)
+
+    for _ in range(2):
+        dev = make_accepted_device_with_multiple_authsets(
+            utoken, keygen_ec_256, 1, tenant_token=tenant_token
         )
         devices.append(dev)
 
     # some 'accepted' devices with >1 authsets
     for _ in range(2):
         dev = make_accepted_device_with_multiple_authsets(
-            utoken, 3, tenant_token=tenant_token
+            utoken, keygen_rsa, 3, tenant_token=tenant_token
+        )
+        devices.append(dev)
+
+    for _ in range(2):
+        dev = make_accepted_device_with_multiple_authsets(
+            utoken, keygen_ec_256, 2, tenant_token=tenant_token
         )
         devices.append(dev)
 
     # some rejected devices
     for _ in range(2):
-        dev = make_rejected_device(utoken, 3, tenant_token=tenant_token)
+        dev = make_rejected_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
+        devices.append(dev)
+
+    for _ in range(2):
+        dev = make_rejected_device(utoken, keygen_ec_256, 2, tenant_token=tenant_token)
         devices.append(dev)
 
     # preauth'd devices
@@ -378,7 +405,7 @@ def rand_id_data():
     return {"mac": mac, "sn": sn}
 
 
-def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
+def make_pending_device(utoken, keygen, num_auth_sets=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
@@ -386,7 +413,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
     dev = None
     for i in range(num_auth_sets):
-        priv, pub = crypto.get_keypair_rsa()
+        priv, pub = keygen()
         new_set = create_authset(
             devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
         )
@@ -402,11 +429,11 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
 
 def make_accepted_device_with_multiple_authsets(
-    utoken, num_auth_sets=1, num_accepted=1, tenant_token=""
+    utoken, keygen, num_auth_sets=1, num_accepted=1, tenant_token=""
 ):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
+    dev = make_pending_device(utoken, keygen, num_auth_sets, tenant_token=tenant_token)
 
     for i in range(num_accepted):
         aset_id = dev.authsets[i].id
@@ -419,10 +446,10 @@ def make_accepted_device_with_multiple_authsets(
     return dev
 
 
-def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
+def make_rejected_device(utoken, keygen, num_auth_sets=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
+    dev = make_pending_device(utoken, keygen, num_auth_sets, tenant_token=tenant_token)
 
     for i in range(num_auth_sets):
         aset_id = dev.authsets[i].id

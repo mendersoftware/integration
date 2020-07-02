@@ -29,7 +29,7 @@ EC_CURVE_384 = ec.SECP384R1
 EC_CURVE_521 = ec.SECP521R1
 
 
-def rsa_compare_keys(a, b):
+def compare_keys(a, b):
     """
     Compares the base64 encoded DER structure of the keys
     """

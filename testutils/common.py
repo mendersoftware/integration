@@ -107,7 +107,7 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     aset = [
         a
         for a in api_dev["auth_sets"]
-        if testutils.util.crypto.rsa_compare_keys(a["pubkey"], pubkey)
+        if testutils.util.crypto.compare_keys(a["pubkey"], pubkey)
     ]
     assert len(aset) == 1, str(aset)
 

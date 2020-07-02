@@ -159,7 +159,7 @@ class TestPreauthBase:
         aset = api_dev["auth_sets"][0]
 
         assert aset["identity_data"] == id_data
-        assert testutils.util.crypto.rsa_compare_keys(aset["pubkey"], pub)
+        assert testutils.util.crypto.compare_keys(aset["pubkey"], pub)
         assert aset["status"] == "preauthorized"
 
         # actual device can obtain auth token
@@ -215,7 +215,7 @@ class TestPreauthBase:
 
         assert len(existing["auth_sets"]) == 1
         aset = existing["auth_sets"][0]
-        assert testutils.util.crypto.rsa_compare_keys(aset["pubkey"], devices[0].pubkey)
+        assert testutils.util.crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
         assert aset["status"] == "pending"
 
 
@@ -295,7 +295,7 @@ class TestPreauthEnterprise(TestPreauthBase):
 
             assert len(ad["auth_sets"]) == 1
             aset = ad["auth_sets"][0]
-            assert testutils.util.crypto.rsa_compare_keys(
+            assert testutils.util.crypto.compare_keys(
                 aset["pubkey"], orig_device.pubkey
             )
 
@@ -693,7 +693,7 @@ class TestDeviceMgmtBase:
             aset = [
                 a
                 for a in dev.authsets
-                if testutils.util.crypto.rsa_compare_keys(a.pubkey, api_aset["pubkey"])
+                if testutils.util.crypto.compare_keys(a.pubkey, api_aset["pubkey"])
             ]
             assert len(aset) == 1
             aset = aset[0]
@@ -1255,7 +1255,7 @@ def filter_and_page_devs(devs, page=None, per_page=None, status=None):
 def compare_aset(authset, api_authset):
     assert authset.id == api_authset["id"]
     assert authset.id_data == api_authset["identity_data"]
-    assert testutils.util.crypto.rsa_compare_keys(authset.pubkey, api_authset["pubkey"])
+    assert testutils.util.crypto.compare_keys(authset.pubkey, api_authset["pubkey"])
     assert authset.status == api_authset["status"]
 
 

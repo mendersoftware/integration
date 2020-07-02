@@ -96,7 +96,7 @@ collect_changes() {
             esac
         fi
         if [ -z "$1" ]; then
-            GIT_ARGS="-p -M -C -C"
+            GIT_ARGS="-p -M -C -C --no-merges"
         else
             GIT_ARGS=
         fi

@@ -1,4 +1,4 @@
-# Copyright 2019 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -23,11 +23,17 @@ from pyzbar.pyzbar import decode
 import pyotp
 
 from testutils.api.client import ApiClient
-from testutils.common import mongo, clean_mongo
 from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
-from testutils.common import User, Tenant, create_org, create_user
+from testutils.common import (
+    User,
+    Tenant,
+    mongo,
+    clean_mongo,
+    create_org,
+    create_user,
+)
 
 uadm = ApiClient(useradm.URL_MGMT)
 

@@ -950,6 +950,7 @@ def check_tag_availability(state):
 
     tag_avail = {}
     highest_overall = -1
+    all_released = True
     for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
         missing_repos = False
@@ -972,6 +973,7 @@ def check_tag_availability(state):
             # Exception happened during Git call. This tag doesn't exist, and
             # we must look for and/or create build tags.
             tag_avail[repo.git()]["already_released"] = False
+            all_released = False
 
             # Find highest <version>-buildX tag, where X is a number.
             tags = execute_git(state, repo.git(), ["tag"], capture=True)
@@ -1004,6 +1006,8 @@ def check_tag_availability(state):
             state["version"],
             highest_overall,
         )
+    elif all_released:
+        tag_avail["image_tag"] = "mender-%s" % state["version"]
 
     if missing_repos:
         print("Error: missing repos directories.")
@@ -1814,7 +1818,6 @@ def purge_build_tags(state, tag_avail):
             ):
                 to_purge.append(tag)
         if len(to_purge) > 0:
-            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
             git_list.append(
                 (
                     state,
@@ -1822,6 +1825,7 @@ def purge_build_tags(state, tag_avail):
                     ["push", remote] + [":%s" % tag for tag in to_purge],
                 )
             )
+            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
 
     query_execute_git_list(git_list)
 

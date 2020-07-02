@@ -18,8 +18,6 @@ import logging
 import asyncore
 from threading import Thread
 
-from testutils.infra.smtpd_mock import SMTPServerMock
-
 from testutils.common import mongo, clean_mongo, randstr
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
@@ -48,11 +46,6 @@ class TestCreateOrganizationEnterprise:
         devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
 
         logging.info("Starting TestCreateOrganizationEnterprise")
-        smtp_mock = SMTPMock()
-
-        thread = Thread(target=smtp_mock.start)
-        thread.daemon = True
-        thread.start()
 
         tenant = "tenant{}".format(randstr())
         email = "some.user@{}.com".format(tenant)
@@ -67,17 +60,6 @@ class TestCreateOrganizationEnterprise:
         }
         r = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert r.status_code == 202
-
-        for i in range(60 * 5):
-            if len(smtp_mock.filtered_messages(email)) > 0:
-                break
-            time.sleep(1)
-
-        logging.info("TestCreateOrganizationEnterprise: Waiting finished. Stoping mock")
-        smtp_mock.stop()
-        logging.info("TestCreateOrganizationEnterprise: Mock stopped.")
-        smtp_mock.assert_called(email)
-        logging.info("TestCreateOrganizationEnterprise: Assert ok.")
 
         # Try log in every second for 3 minutes.
         # - There usually is a slight delay (in order of ms) for propagating
@@ -103,7 +85,7 @@ class TestCreateOrganizationEnterprise:
         # the default plan is "os" so the device limit should be set to 50
         r = devauthi.call(
             "GET",
-            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            deviceauth_v1.URL_INTERNAL_LIMITS_MAX_DEVICES,
             path_params={"tid": api_tenants[0]["id"]},
         )
         assert r.status_code == 200
@@ -163,7 +145,7 @@ class TestCreateOrganizationEnterprise:
         # the device limit for professional plan should be 250
         r = devauthi.call(
             "GET",
-            deviceauth_v1.URL_LIMITS_MAX_DEVICES,
+            deviceauth_v1.URL_INTERNAL_LIMITS_MAX_DEVICES,
             path_params={"tid": api_tenants[0]["id"]},
         )
         assert r.status_code == 200
@@ -249,24 +231,3 @@ class TestCreateOrganizationEnterprise:
         }
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 400
-
-
-class SMTPMock:
-    def start(self):
-        self.server = SMTPServerMock(("0.0.0.0", 4444), None, enable_SMTPUTF8=True)
-        asyncore.loop()
-
-    def stop(self):
-        self.server.close()
-
-    def filtered_messages(self, email):
-        return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
-
-    def assert_called(self, email):
-        msgs = self.filtered_messages(email)
-        assert len(msgs) == 1
-        m = msgs[0]
-        assert m.mailfrom.rsplit("@", 1)[-1] == "mender.io"
-        assert m.rcpttos[0] == email
-
-        assert len(m.data) > 0

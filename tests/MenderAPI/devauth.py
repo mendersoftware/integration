@@ -31,13 +31,13 @@ class DeviceAuthV2:
         # Reset all temporary values.
         pass
 
-    def get_auth_v2_base_path(self):
+    def get_devauth_base_path(self):
         return "https://%s/api/management/v2/devauth/" % (
             get_container_manager().get_mender_gateway()
         )
 
     def get_device(self, device_id):
-        url = self.get_auth_v2_base_path() + device_id
+        url = self.get_devauth_base_path() + device_id
         return requests_retry().get(
             url, verify=False, headers=self.auth.get_auth_token()
         )
@@ -47,7 +47,7 @@ class DeviceAuthV2:
 
     # return devices with the specified status
     def get_devices_status(self, status=None, expected_devices=1):
-        device_status_path = self.get_auth_v2_base_path() + "devices"
+        device_status_path = self.get_devauth_base_path() + "devices"
         devices = None
         max_wait = 10 * 60
         starttime = time.time()
@@ -98,7 +98,7 @@ class DeviceAuthV2:
         headers.update(self.auth.get_auth_token())
 
         r = requests_retry().put(
-            self.get_auth_v2_base_path()
+            self.get_devauth_base_path()
             + "devices/%s/auth/%s/status" % (device_id, auth_set_id),
             verify=False,
             headers=headers,
@@ -191,7 +191,7 @@ class DeviceAuthV2:
 
     def decommission(self, deviceID, expected_http_code=204):
         decommission_path_url = (
-            self.get_auth_v2_base_path() + "devices/" + str(deviceID)
+            self.get_devauth_base_path() + "devices/" + str(deviceID)
         )
         r = requests_retry().delete(
             decommission_path_url, verify=False, headers=self.auth.get_auth_token()

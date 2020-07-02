@@ -17,7 +17,7 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_with_signed_artifact_client
 from .common_update import update_image, common_update_procedure
-from ..MenderAPI import auth_v2, deploy
+from ..MenderAPI import devauth, deploy
 from .mendertesting import MenderTesting
 
 
@@ -55,7 +55,7 @@ class TestSignedUpdates(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-        for d in auth_v2.get_devices():
+        for d in devauth.get_devices():
             assert (
                 "expecting signed artifact, but no signature file found"
                 in deploy.get_logs(d["id"], deployment_id)

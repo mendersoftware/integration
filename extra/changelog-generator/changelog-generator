@@ -89,7 +89,7 @@ for repo in repos:
     ENTRIES = {}
     LINKED_SHAS = {}
     SHA_TO_TRACKER = {}
-    POSSIBLE_PROBLEMATIC_SHAS = []
+    POSSIBLE_PROBLEMS = []
 
     try:
         os.chdir(repo)
@@ -99,6 +99,12 @@ for repo in repos:
         raise
     if args.all and not repo.endswith("integration"):
         range = get_range_for_repo(os.path.basename(repo), args.range)
+        if args.range.find("..") >= 0 and range.find("..") < 0:
+            POSSIBLE_PROBLEMS.append(("*** The changelog for the %s repository contains the entire history. "
+                                      + "This can happen for repositories that are new in this release. "
+                                      + "Please double check that this is not a mistake, and consider a "
+                                      + "simpler changelog if appropriate.")
+                                     % repo)
     else:
         range = args.range
     sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range] + args.gitargs,
@@ -142,33 +148,44 @@ for repo in repos:
                 title = line
                 title_fetched = True
 
-            match = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
-            if match:
+            match_changelog = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
+            if match_changelog:
                 if log_entry:
                     add_entry(sha, log_entry)
                     log_entry = ""
                 log_entry_local = False
 
-                if re.match("^(Title|Commit|None)[ .]*$", match.group(1), re.IGNORECASE):
+                # The logic of this regex is:
+                # - Shall start with Title|Commit|All|None
+                # - From here, if [.:]+ then capture the rest in a new group
+                # - Else just expect end line
+                match_keyword = re.match("^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)", match_changelog.group(1), re.IGNORECASE)
+
+                if match_keyword:
                     if exclusive_tag_seen:
                         # This doesn't really mean that the tags are exclusive, but rather that it
                         # is quite uncommon to see any of them together, and might indicate a
                         # squashed commit.
-                        POSSIBLE_PROBLEMATIC_SHAS.append("*** Commit %s had conflicting changelog tags. "
-                                                         "This might be a squashed commit which will not work correctly with changelogs. "
-                                                         "Should be manually checked."
-                                                         % sha)
+                        POSSIBLE_PROBLEMS.append("*** Commit %s had conflicting changelog tags. "
+                                                 "This might be a squashed commit which will not work correctly with changelogs. "
+                                                 "Should be manually checked."
+                                                 % sha)
                     exclusive_tag_seen = True
 
-                if re.match("^Title[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry = title
-                elif re.match("^Commit[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry_commit = True
-                elif re.match("^None[ .]*$", match.group(1), re.IGNORECASE):
-                    log_entry_commit = False
+                    if match_keyword.group(1).lower() == "title":
+                        log_entry = title
+                    elif match_keyword.group(1).lower() == "none":
+                        log_entry_commit = False
+                    elif match_keyword.group(1).lower() in ["commit", "all"]:
+                        log_entry_commit = True
+                        if match_keyword.group(2):
+                            # Log the rest of the line
+                            if commit_msg:
+                                commit_msg += "\n"
+                            commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    log_entry = match.group(1)
+                    log_entry = match_changelog.group(1)
                 continue
 
             for cancel_expr in ["^ *Cancel-Changelog: *([0-9a-f]+).*",
@@ -206,7 +223,9 @@ for repo in repos:
                 LINKED_SHAS[match.group(1)].append(sha)
                 continue
 
-            match = re.match("^Signed-off-by:.*", line, re.IGNORECASE)
+            # Use a slightly stricter filter for other "<something>-by:"
+            # messages than for "Signed-off-by:", to avoid false positives.
+            match = re.match("^(Signed-off-by:|\S+-by:.*>\s*$)", line, re.IGNORECASE)
             if match:
                 # Ignore such lines.
                 continue
@@ -242,8 +261,8 @@ for repo in repos:
             # we missed.
             match = re.search("[0-9]{4,}", entry)
             if match:
-                POSSIBLE_PROBLEMATIC_SHAS.append("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
-                                                 % (sha_entry, match.group(0)))
+                POSSIBLE_PROBLEMS.append("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
+                                         % (sha_entry, match.group(0)))
             entry = entry.strip("\n")
             if tracker:
                 if len(entry) - entry.rfind("\n") + len(tracker) >= 70:
@@ -277,7 +296,7 @@ for repo in repos:
     if len(entry_list) > 0:
         print()
 
-    for problem in POSSIBLE_PROBLEMATIC_SHAS:
+    for problem in POSSIBLE_PROBLEMS:
         sys.stderr.write("%s\n" % (problem))
 
 sys.exit(0)

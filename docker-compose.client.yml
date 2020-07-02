@@ -5,9 +5,11 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:2.2.0
+        image: mendersoftware/mender-client-qemu:2.2.x
         networks:
             - mender
         stdin_open: true
         tty: true
         privileged: true
+        environment:
+          TENANT_TOKEN:

@@ -99,14 +99,14 @@ class TestDeploymentRetryEnterprise(MenderTesting):
         auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
         auth.create_org = False
         auth.reset_auth_token()
-        auth_v2 = DeviceAuthV2(auth)
-        deploy = Deployments(auth, auth_v2)
+        devauth = DeviceAuthV2(auth)
+        deploy = Deployments(auth, devauth)
 
         # Add a client to the tenant
         enterprise_no_client.new_tenant_client(
             "retry-test-container", tenant.tenant_token
         )
-        auth_v2.accept_devices(1)
+        devauth.accept_devices(1)
         device = MenderDevice(env.get_mender_clients()[0])
 
         with tempfile.NamedTemporaryFile() as tf:
@@ -118,7 +118,7 @@ class TestDeploymentRetryEnterprise(MenderTesting):
             deploy.upload_image(artifact)
 
             devices = list(
-                set([device["id"] for device in auth_v2.get_devices_status("accepted")])
+                set([device["id"] for device in devauth.get_devices_status("accepted")])
             )
             assert len(devices) == 1
 

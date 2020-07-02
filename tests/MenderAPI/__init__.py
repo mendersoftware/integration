@@ -36,11 +36,11 @@ from .authentication import Authentication
 from .deployments import Deployments
 from .artifacts import Artifacts
 from .inventory import Inventory
-from .auth_v2 import DeviceAuthV2
+from .devauth import DeviceAuthV2
 
 auth = Authentication()
-auth_v2 = DeviceAuthV2(auth)
-deploy = Deployments(auth, auth_v2)
+devauth = DeviceAuthV2(auth)
+deploy = Deployments(auth, devauth)
 image = Artifacts()
 inv = Inventory(auth)
 # -- When adding something here, also add a reset method and add it below --
@@ -48,7 +48,7 @@ inv = Inventory(auth)
 
 def reset_mender_api(manager=None):
     auth.reset()
-    auth_v2.reset()
+    devauth.reset()
     deploy.reset()
     image.reset()
     inv.reset()

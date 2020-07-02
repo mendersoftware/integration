@@ -16,9 +16,12 @@ import pytest
 import random
 import time
 import string
+import tempfile
+import os
+import subprocess
+from contextlib import contextmanager
 
-import testutils.api.deviceauth as deviceauth_v1
-import testutils.api.deviceauth_v2 as deviceauth_v2
+import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
@@ -91,10 +94,10 @@ def create_random_authset(dauthd1, dauthm, utoken, tenant_token=""):
 
 
 def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=""):
-    body, sighdr = deviceauth_v1.auth_req(id_data, pubkey, privkey, tenant_token)
+    body, sighdr = deviceauth.auth_req(id_data, pubkey, privkey, tenant_token)
 
     # submit auth req
-    r = dauthd1.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+    r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
     assert r.status_code == 401, r.text
 
     # dev must exist and have *this* aset
@@ -170,7 +173,7 @@ def get_device_by_id_data(dauthm, id_data, utoken):
         qs_params["page"] = page
         qs_params["per_page"] = per_page
         r = dauthm.with_auth(utoken).call(
-            "GET", deviceauth_v2.URL_DEVICES, qs_params=qs_params
+            "GET", deviceauth.URL_MGMT_DEVICES, qs_params=qs_params
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -190,8 +193,8 @@ def get_device_by_id_data(dauthm, id_data, utoken):
 def change_authset_status(dauthm, did, aid, status, utoken):
     r = dauthm.with_auth(utoken).call(
         "PUT",
-        deviceauth_v2.URL_AUTHSET_STATUS,
-        deviceauth_v2.req_status(status),
+        deviceauth.URL_AUTHSET_STATUS,
+        deviceauth.req_status(status),
         path_params={"did": did, "aid": aid},
     )
     assert r.status_code == 204
@@ -230,11 +233,11 @@ def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
     aset.status = "accepted"
 
     # obtain auth token
-    body, sighdr = deviceauth_v1.auth_req(
+    body, sighdr = deviceauth.auth_req(
         aset.id_data, aset.pubkey, aset.privkey, tenant_token
     )
 
-    r = dauthd1.call("POST", deviceauth_v1.URL_AUTH_REQS, body, headers=sighdr)
+    r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
     assert r.status_code == 200
     dev.token = r.text
@@ -251,3 +254,46 @@ def randstr():
     """
     charset = string.ascii_letters + string.digits
     return "".join(random.choice(charset) for i in range(5))
+
+
+@contextmanager
+def get_mender_artifact(
+    artifact_name="test",
+    update_module="dummy",
+    device_types=("arm1",),
+    size=256,
+    depends=(),
+    provides=(),
+):
+    data = "".join(random.choices(string.ascii_uppercase + string.digits, k=size))
+    f = tempfile.NamedTemporaryFile(delete=False)
+    f.write(data.encode("utf-8"))
+    f.close()
+    #
+    filename = f.name
+    artifact = "%s.mender" % filename
+    args = [
+        "mender-artifact",
+        "write",
+        "module-image",
+        "-o",
+        artifact,
+        "--artifact-name",
+        artifact_name,
+        "-T",
+        update_module,
+        "-f",
+        filename,
+    ]
+    for device_type in device_types:
+        args.extend(["-t", device_type])
+    for depend in depends:
+        args.extend(["--depends", depend])
+    for provide in provides:
+        args.extend(["--provides", provide])
+    try:
+        subprocess.call(args)
+        yield artifact
+    finally:
+        os.unlink(filename)
+        os.path.exists(artifact) and os.unlink(artifact)

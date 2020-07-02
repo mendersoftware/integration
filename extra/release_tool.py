@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+# Copyright 2020 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        https://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 import argparse
 import copy
@@ -175,6 +188,16 @@ class Component:
     def is_release_component(self):
         Component._initialize_component_maps()
         return self.COMPONENT_MAPS[self.type][self.name]["release_component"]
+
+    def is_independent_component(self):
+        Component._initialize_component_maps()
+        associated_repo = self.associated_components_of_type("git")[0]
+        independent_component = self.COMPONENT_MAPS["git"][associated_repo.name].get(
+            "independent_component"
+        )
+        if independent_component is not None:
+            return independent_component
+        return False
 
 
 # A map from git repo name to build parameter name in CI scripts.
@@ -358,15 +381,46 @@ def ask(text):
     return reply
 
 
-def docker_compose_files_list(dir):
+def filter_docker_compose_files_list(list, version):
+    """Returns a filtered list of known docker-compose files
+
+    version shall be one of "git", "docker".
+    """
+
+    assert version in ["git", "docker"]
+
+    _DOCKER_ONLY_YML = ["docker-compose.yml", "docker-compose.enterprise.yml"]
+    _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
+
+    def _is_known_yml_file(entry):
+        return (
+            entry.startswith("git-versions")
+            and entry.endswith(".yml")
+            or entry == "other-components.yml"
+            or (entry.startswith("docker-compose") and entry.endswith(".yml"))
+        )
+
+    return [
+        entry
+        for entry in list
+        if _is_known_yml_file(entry)
+        and (
+            version == "all"
+            or (
+                (version == "git" and entry in _GIT_ONLY_YML)
+                or (version == "docker" and entry in _DOCKER_ONLY_YML)
+                or (entry not in _GIT_ONLY_YML + _DOCKER_ONLY_YML)
+            )
+        )
+    ]
+
+
+def docker_compose_files_list(dir, version):
     """Return all docker-compose*.yml files in given directory."""
-    list = []
-    for entry in os.listdir(dir):
-        if entry == "other-components.yml" or (
-            entry.startswith("docker-compose") and entry.endswith(".yml")
-        ):
-            list.append(os.path.join(dir, entry))
-    return list
+    return [
+        os.path.join(dir, entry)
+        for entry in filter_docker_compose_files_list(os.listdir(dir), version)
+    ]
 
 
 def get_docker_compose_data_from_json_list(json_list):
@@ -388,12 +442,11 @@ def get_docker_compose_data_from_json_list(json_list):
                 "mendersoftware" not in full_image and "mender.io" not in full_image
             ):
                 continue
-            split = full_image.split(":", 1)
-            prefix_and_image = split[0]
-            ver = split[1]
-            split = prefix_and_image.rsplit("/", 1)
+            split = full_image.rsplit("/", 1)
             prefix = split[0]
-            image = split[1]
+            split = split[1].split(":", 1)
+            image = split[0]
+            ver = split[1]
             if data.get(image) is not None:
                 raise Exception(
                     (
@@ -407,21 +460,22 @@ def get_docker_compose_data_from_json_list(json_list):
                 "image_prefix": prefix,
                 "version": ver,
             }
+
     return data
 
 
-def get_docker_compose_data(dir):
+def get_docker_compose_data(dir, version="git"):
     """Return docker-compose data from all the YML files in the directory.
     See get_docker_compose_data_from_json_list."""
     json_list = []
-    for filename in docker_compose_files_list(dir):
+    for filename in docker_compose_files_list(dir, version):
         with open(filename) as fd:
             json_list.append(fd.read())
 
     return get_docker_compose_data_from_json_list(json_list)
 
 
-def get_docker_compose_data_for_rev(git_dir, rev):
+def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
     """Return docker-compose data from all the YML files in the given revision.
     See get_docker_compose_data_from_json_list."""
     yamls = []
@@ -430,12 +484,7 @@ def get_docker_compose_data_for_rev(git_dir, rev):
         .strip()
         .split("\n")
     )
-    for filename in files:
-        if filename != "other-components.yml" and not (
-            filename.startswith("docker-compose") and filename.endswith(".yml")
-        ):
-            continue
-
+    for filename in filter_docker_compose_files_list(files, version):
         output = execute_git(
             None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
         )
@@ -444,7 +493,9 @@ def get_docker_compose_data_for_rev(git_dir, rev):
     return get_docker_compose_data_from_json_list(yamls)
 
 
-def version_of(integration_dir, yml_component, in_integration_version=None):
+def version_of(
+    integration_dir, yml_component, in_integration_version=None, git_version=True
+):
     if yml_component.yml() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
@@ -481,24 +532,35 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
             if len(rev_range) > 1:
                 range_type = ".."
 
-        # Figure out if the user string contained a remote or not
-        remote = ""
-        split = rev_range[0].split("/", 1)
-        if len(split) > 1:
-            remote_candidate = split[0]
-            ref_name = split[1]
-            if (
-                subprocess.call(
-                    "git rev-parse -q --verify refs/heads/%s > /dev/null" % ref_name,
-                    shell=True,
-                )
-                == 0
-            ):
-                remote = remote_candidate + "/"
-
         repo_range = []
         for rev in rev_range:
-            data = get_docker_compose_data_for_rev(integration_dir, rev)
+            # Figure out if the user string contained a remote or not
+            remote = ""
+            split = rev.split("/", 1)
+            if len(split) > 1:
+                remote_candidate = split[0]
+                ref_name = split[1]
+                if (
+                    subprocess.call(
+                        "git rev-parse -q --verify refs/heads/%s > /dev/null"
+                        % ref_name,
+                        shell=True,
+                        cwd=integration_dir,
+                    )
+                    == 0
+                ):
+                    remote = remote_candidate + "/"
+
+            if not git_version:
+                data = get_docker_compose_data_for_rev(integration_dir, rev, "docker")
+            else:
+                data = get_docker_compose_data_for_rev(integration_dir, rev, "git")
+                # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+                # would be missing the backend components. Try loading the old "docker" versions.
+                if data.get(yml_component.yml()) is None:
+                    data = get_docker_compose_data_for_rev(
+                        integration_dir, rev, "docker"
+                    )
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
             if data.get(yml_component.yml()) is not None:
@@ -510,7 +572,10 @@ def version_of(integration_dir, yml_component, in_integration_version=None):
                     repo_range.append(remote + version)
         return range_type.join(repo_range)
     else:
-        data = get_docker_compose_data(integration_dir)
+        if not git_version:
+            data = get_docker_compose_data(integration_dir, "docker")
+        else:
+            data = get_docker_compose_data(integration_dir, "git")
         return data[yml_component.yml()]["version"]
 
 
@@ -525,7 +590,18 @@ def do_version_of(args):
 
     yml_component = comp.yml_components()[0]
 
-    print(version_of(integration_dir(), yml_component, args.in_integration_version))
+    assert args.version_type in ["docker", "git"], (
+        "%s is not a valid name type!" % args.version_type
+    )
+
+    print(
+        version_of(
+            integration_dir(),
+            yml_component,
+            args.in_integration_version,
+            git_version=(args.version_type == "git"),
+        )
+    )
 
 
 def do_list_repos(args, optional_too):
@@ -536,7 +612,7 @@ def do_list_repos(args, optional_too):
         "docker": "docker_image",
         "git": "git",
     }
-    assert args.list in cli_types, "%s is not a valid name type!" % args.list
+    assert args.list in cli_types.keys(), "%s is not a valid name type!" % args.list
     type = cli_types[args.list]
 
     repos = [
@@ -810,16 +886,22 @@ def cleanup_temp_git_checkout(tmpdir):
     shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def find_upstream_remote(state, repo_git):
-    """Given a Git repository name, figure out which remote name is the
-    "mendersoftware" upstream."""
+def find_upstream_remote(state, repo_path, repo_name=None):
+    """Given a Git repository, figure out which remote name is the
+    "mendersoftware" upstream.
 
-    config = execute_git(state, repo_git, ["config", "-l"], capture=True)
+    With repo_name None (default), the name is taken from basename(repo_path)
+    """
+
+    if repo_name is None:
+        repo_name = os.path.basename(repo_path)
+
+    config = execute_git(state, repo_path, ["config", "-l"], capture=True)
     remote = None
     for line in config.split("\n"):
         match = re.match(
             r"^remote\.([^.]+)\.url=.*github\.com[/:]mendersoftware/%s(\.git)?$"
-            % os.path.basename(repo_git),
+            % repo_name,
             line,
         )
         if match is not None:
@@ -828,7 +910,8 @@ def find_upstream_remote(state, repo_git):
 
     if remote is None:
         raise Exception(
-            "Could not find git remote pointing to mendersoftware in %s" % repo_git
+            "Could not find git remote pointing to mendersoftware in repo %s at %s"
+            % (repo_name, repo_path)
         )
 
     return remote
@@ -857,14 +940,17 @@ def check_tag_availability(state):
     this as the tag_avail data structure.
 
     The main fields in this one are:
+      image_tag: <highest Docker tag, or final Docker tag (i.e. mender-X.Y.Z)>
       <repo>:
         already_released: <whether this is a final release tag or not (true/false)>
-        build_tag: <highest build tag, or final tag>
+        build_tag: <highest Git build tag, or final Git tag>
         following: <branch we pick next build tag from>
         sha: <SHA of current build tag>
     """
 
     tag_avail = {}
+    highest_overall = -1
+    all_released = True
     for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
         missing_repos = False
@@ -887,6 +973,7 @@ def check_tag_availability(state):
             # Exception happened during Git call. This tag doesn't exist, and
             # we must look for and/or create build tags.
             tag_avail[repo.git()]["already_released"] = False
+            all_released = False
 
             # Find highest <version>-buildX tag, where X is a number.
             tags = execute_git(state, repo.git(), ["tag"], capture=True)
@@ -901,6 +988,8 @@ def check_tag_availability(state):
             if highest >= 0:
                 # Assign highest tag so far.
                 tag_avail[repo.git()]["build_tag"] = highest_tag
+                if highest > highest_overall:
+                    highest_overall = highest
             # Else: Nothing. This repository doesn't have any build tags yet.
 
         if tag_avail[repo.git()].get("build_tag") is not None:
@@ -911,6 +1000,14 @@ def check_tag_availability(state):
                 capture=True,
             )
             tag_avail[repo.git()]["sha"] = sha
+
+    if highest_overall > 0:
+        tag_avail["image_tag"] = "mender-%s-build%d" % (
+            state["version"],
+            highest_overall,
+        )
+    elif all_released:
+        tag_avail["image_tag"] = "mender-%s" % state["version"]
 
     if missing_repos:
         print("Error: missing repos directories.")
@@ -929,6 +1026,11 @@ def report_release_state(state, tag_avail):
     tags."""
 
     print("Mender release: %s" % state["version"])
+    print("Next build image: ", end="")
+    if tag_avail.get("image_tag") is not None:
+        print(tag_avail["image_tag"])
+    else:
+        print("<Needs a new image tag>")
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
@@ -1111,6 +1213,14 @@ def generate_new_tags(state, tag_avail, final):
                 )
             print()
 
+    if final:
+        next_tag_avail["image_tag"] = "mender-" + state["version"]
+    else:
+        next_tag_avail["image_tag"] = "mender-%s-build%d" % (
+            state["version"],
+            highest + 1,
+        )
+
     if not final:
         print("Next build is build %d." % (highest + 1))
     print("Each repository's new tag will be:")
@@ -1137,9 +1247,17 @@ def generate_new_tags(state, tag_avail, final):
             if repo.git() == "integration":
                 continue
 
-            set_docker_compose_version_to(
-                tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
-            )
+            if repo.is_independent_component():
+                set_docker_compose_version_to(
+                    tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
+                )
+            else:
+                set_docker_compose_version_to(
+                    tmpdir,
+                    repo,
+                    next_tag_avail["image_tag"],
+                    git_tag=next_tag_avail[repo.git()]["build_tag"],
+                )
             if prev_version:
                 try:
                     prev_repo_version = version_of(
@@ -1652,27 +1770,36 @@ def do_license_generation(state, tag_avail):
     print("Output is captured in generated-license-text.txt.")
 
 
-def set_docker_compose_version_to(dir, repo, tag):
+def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
     """Modifies docker-compose files in the given directory so that repo_docker
     image points to the given tag."""
 
+    def _replace_version_in_file(filename, image, version):
+        old = open(filename)
+        new = open(filename + ".tmp", "w")
+        for line in old:
+            # Replace :version with a new one.
+            line = re.sub(
+                r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$"
+                % re.escape(image),
+                r"\g<1>%s\2" % version,
+                line,
+            )
+            new.write(line)
+        new.close()
+        old.close()
+        os.rename(filename + ".tmp", filename)
+
     for yml in repo.yml_components():
-        compose_files = docker_compose_files_list(dir)
-        for filename in compose_files:
-            old = open(filename)
-            new = open(filename + ".tmp", "w")
-            for line in old:
-                # Replace build tag with a new one.
-                line = re.sub(
-                    r"^(\s*image:.*(?:mendersoftware|mender\.io).*/%s:)\S+(\s*)$"
-                    % re.escape(yml.yml()),
-                    r"\g<1>%s\2" % tag,
-                    line,
-                )
-                new.write(line)
-            new.close()
-            old.close()
-            os.rename(filename + ".tmp", filename)
+        compose_files_docker = docker_compose_files_list(dir, "docker")
+        for filename in compose_files_docker:
+            _replace_version_in_file(filename, yml.yml(), tag)
+
+        if git_tag is not None:
+            for filename in docker_compose_files_list(dir, "git"):
+                # Avoid rewriting duplicated files (client and other-components)
+                if filename not in compose_files_docker:
+                    _replace_version_in_file(filename, yml.yml(), git_tag)
 
 
 def purge_build_tags(state, tag_avail):
@@ -1691,7 +1818,6 @@ def purge_build_tags(state, tag_avail):
             ):
                 to_purge.append(tag)
         if len(to_purge) > 0:
-            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
             git_list.append(
                 (
                     state,
@@ -1699,6 +1825,7 @@ def purge_build_tags(state, tag_avail):
                     ["push", remote] + [":%s" % tag for tag in to_purge],
                 )
             )
+            git_list.append((state, repo.git(), ["tag", "-d"] + to_purge))
 
     query_execute_git_list(git_list)
 
@@ -1796,14 +1923,20 @@ def push_latest_docker_tags(state, tag_avail):
     if not reply.startswith("Y") and not reply.startswith("y"):
         return
 
-    # Only for the message. We need to generate a new one for each repository.
-    overall_minor_version = state["version"][0 : state["version"].rindex(".")]
-
-    compose_data = get_docker_compose_data_for_rev(
-        integration_dir(), tag_avail["integration"]["sha"]
+    # For independent components, we need to generate a new one for each repository;
+    # for backend services, we will use the overall ones
+    overall_minor_version = (
+        "mender-" + state["version"][0 : state["version"].rindex(".")]
+    )
+    overall_major_version = (
+        "mender-" + state["version"][0 : state["version"].index(".")]
     )
 
-    for tip in [overall_minor_version, "latest"]:
+    compose_data = get_docker_compose_data_for_rev(
+        integration_dir(), tag_avail["integration"]["sha"], "docker"
+    )
+
+    for tip in [overall_minor_version, overall_major_version, "latest"]:
         reply = ask('Do you want to update ":%s" tags? ' % tip)
         if not reply.startswith("Y") and not reply.startswith("y"):
             continue
@@ -1815,44 +1948,54 @@ def push_latest_docker_tags(state, tag_avail):
             # repository.
             repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
-                minor_version = "latest"
+                new_version = "latest"
+            elif tip.startswith("mender-") and tip.count(".") == 1:
+                if image.is_independent_component():
+                    new_version = state[repo.git()]["version"][
+                        0 : state[repo.git()]["version"].rindex(".")
+                    ]
+                else:
+                    new_version = overall_minor_version
+            elif tip.startswith("mender-") and tip.count(".") == 0:
+                if image.is_independent_component():
+                    new_version = state[repo.git()]["version"][
+                        0 : state[repo.git()]["version"].index(".")
+                    ]
+                else:
+                    new_version = overall_major_version
             else:
-                minor_version = state[repo.git()]["version"][
-                    0 : state[repo.git()]["version"].rindex(".")
-                ]
+                raise Exception(
+                    "Unrecognized tip %s, expected 'latest', mender-M.N or mender-M"
+                    % tip
+                )
 
             prefix = compose_data[image.docker_image()]["image_prefix"]
+
+            if image.is_independent_component():
+                build_tag = tag_avail[repo.git()]["build_tag"]
+            else:
+                build_tag = tag_avail["image_tag"]
 
             exec_list.append(
                 [
                     "docker",
                     "pull",
-                    "%s/%s:%s"
-                    % (
-                        prefix,
-                        image.docker_image(),
-                        tag_avail[repo.git()]["build_tag"],
-                    ),
+                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
                 ]
             )
             exec_list.append(
                 [
                     "docker",
                     "tag",
-                    "%s/%s:%s"
-                    % (
-                        prefix,
-                        image.docker_image(),
-                        tag_avail[repo.git()]["build_tag"],
-                    ),
-                    "%s/%s:%s" % (prefix, image.docker_image(), minor_version),
+                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                 ]
             )
             exec_list.append(
                 [
                     "docker",
                     "push",
-                    "%s/%s:%s" % (prefix, image.docker_image(), minor_version),
+                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                 ]
             )
 
@@ -1936,6 +2079,10 @@ def do_docker_compose_branches_from_follows(state):
         state, "integration", state["integration"]["following"]
     )
 
+    # For the Docker images, use M.N.x as the release branch
+    version_minor = state["version"][0 : state["version"].rindex(".")]
+    mender_branch = "mender-" + version_minor + ".x"
+
     try:
         for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
             branch = state[repo.git()]["following"]
@@ -1945,7 +2092,12 @@ def do_docker_compose_branches_from_follows(state):
             else:
                 bare_branch = branch
 
-            set_docker_compose_version_to(checkout, repo, bare_branch)
+            if repo.is_independent_component():
+                set_docker_compose_version_to(checkout, repo, bare_branch)
+            else:
+                set_docker_compose_version_to(
+                    checkout, repo, tag=mender_branch, git_tag=bare_branch,
+                )
 
         print("This is the diff:")
         execute_git(state, checkout, ["diff"])
@@ -2079,7 +2231,7 @@ def determine_version_to_include_in_release(state, repo):
     version = state_value(state, [repo.git(), "version"])
 
     if version is not None:
-        return version
+        return
 
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())
@@ -2351,7 +2503,9 @@ def do_set_version_to(args):
         sys.exit(1)
 
     repo = Component.get_component_of_any_type(args.set_version_of)
-    set_docker_compose_version_to(integration_dir(), repo, args.version)
+    set_docker_compose_version_to(
+        integration_dir(), repo, args.version, git_tag=args.version
+    )
 
 
 def is_marked_as_releaseable_in_integration_version(
@@ -2399,8 +2553,14 @@ def do_integration_versions_including(args):
         print("--integration-versions-including requires --version argument")
         sys.exit(2)
 
+    try:
+        repo = Component.get_component_of_any_type(args.integration_versions_including)
+    except KeyError:
+        print("Unrecognized repository: %s" % args.integration_versions_including)
+        sys.exit(1)
+
     git_dir = integration_dir()
-    remote = find_upstream_remote(None, git_dir)
+    remote = find_upstream_remote(None, git_dir, "integration")
     # The below query will match all tags and the following branches: master, staging and releases (N.M.x)
     git_query = [
         "for-each-ref",
@@ -2429,14 +2589,11 @@ def do_integration_versions_including(args):
     # ones contain the version of the service we are querying.
     matches = []
     for candidate in candidates:
-        data = get_docker_compose_data_for_rev(git_dir, candidate)
-        try:
-            repo = Component.get_component_of_any_type(
-                args.integration_versions_including
-            )
-        except KeyError:
-            print("Unrecognized repository: %s" % args.integration_versions_including)
-            sys.exit(1)
+        data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
+        # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+        # would be missing the backend components. Try loading the old "docker" versions.
+        if data.get(repo.yml_components()[0].yml()) is None:
+            data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
             version = data[repo.yml_components()[0].yml()]["version"]
         except KeyError:
@@ -2538,9 +2695,11 @@ def find_repo_path(name, paths):
 def do_map_name(args):
     int_dir = integration_dir()
     if args.in_integration_version:
-        data = get_docker_compose_data_for_rev(int_dir, args.in_integration_version)
+        data = get_docker_compose_data_for_rev(
+            int_dir, args.in_integration_version, version="docker"
+        )
     else:
-        data = get_docker_compose_data(int_dir)
+        data = get_docker_compose_data(int_dir, version="docker")
 
     cli_types = {
         "container": "docker_container",
@@ -2563,7 +2722,6 @@ def do_map_name(args):
 
 def do_verify_integration_references(args, optional_too):
     int_dir = integration_dir()
-    data = get_docker_compose_data(int_dir)
     problem = False
 
     repos = Component.get_components_of_type("git", only_release=(not optional_too))
@@ -2602,6 +2760,12 @@ def do_verify_integration_references(args, optional_too):
             continue
 
         for yml in repo.yml_components():
+            data = get_docker_compose_data(int_dir, version="git")
+            # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
+            # would be missing the backend components. Try loading the old "docker" versions.
+            if data.get(yml.yml()) is None:
+                data = get_docker_compose_data(int_dir, version="docker")
+
             version = data[yml.yml()]["version"]
 
             if version not in [ref for ref, reftype in revs]:
@@ -2716,6 +2880,14 @@ def main():
         dest="version_of",
         metavar="SERVICE",
         help="Get version of given service",
+    )
+    parser.add_argument(
+        "-t",
+        "--version-type",
+        dest="version_type",
+        metavar="git|docker",
+        default="git",
+        help="Used together with the above to specify the type of version to query.",
     )
     parser.add_argument(
         "-i",
@@ -2884,4 +3056,5 @@ def main():
         sys.exit(1)
 
 
-main()
+if __name__ == "__main__":
+    main()

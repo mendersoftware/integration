@@ -17,7 +17,7 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..MenderAPI import auth_v2, deploy
+from ..MenderAPI import devauth, deploy
 from .mendertesting import MenderTesting
 
 
@@ -39,7 +39,7 @@ class TestFailures(MenderTesting):
             reboot.verify_reboot_performed()
 
         devices_accepted_id = [
-            device["id"] for device in auth_v2.get_devices_status("accepted")
+            device["id"] for device in devauth.get_devices_status("accepted")
         ]
         deployment_id = deploy.trigger_deployment(
             name="New valid update",

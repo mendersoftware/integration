@@ -22,7 +22,7 @@ from ..common_setup import (
     standard_setup_one_client_bootstrapped,
 )
 from .common_update import common_update_procedure
-from ..MenderAPI import auth_v2, logger
+from ..MenderAPI import devauth, logger
 from .mendertesting import MenderTesting
 
 
@@ -35,17 +35,17 @@ class TestBootstrapping(MenderTesting):
 
         mender_device = standard_setup_one_client.device
 
-        auth_v2.check_expected_status("pending", 1)
+        devauth.check_expected_status("pending", 1)
 
         # iterate over devices and accept them
-        for d in auth_v2.get_devices():
-            auth_v2.set_device_auth_set_status(
+        for d in devauth.get_devices():
+            devauth.set_device_auth_set_status(
                 d["id"], d["auth_sets"][0]["id"], "accepted"
             )
             logger.info("Accepting DeviceID: %s" % d["id"])
 
         # make sure all devices are accepted
-        auth_v2.check_expected_status("accepted", 1)
+        devauth.check_expected_status("accepted", 1)
 
         # make sure mender-store contains authtoken after sometime, else fail test
         HAVE_TOKEN_TIMEOUT = 60 * 5
@@ -64,7 +64,7 @@ class TestBootstrapping(MenderTesting):
         assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"
 
         # print all device ids
-        for device in auth_v2.get_devices_status("accepted"):
+        for device in devauth.get_devices_status("accepted"):
             logger.info("Accepted DeviceID: %s" % device["id"])
 
     @MenderTesting.slow
@@ -76,13 +76,13 @@ class TestBootstrapping(MenderTesting):
         mender_device = standard_setup_one_client_bootstrapped.device
 
         # iterate over devices and reject them
-        for device in auth_v2.get_devices():
-            auth_v2.set_device_auth_set_status(
+        for device in devauth.get_devices():
+            devauth.set_device_auth_set_status(
                 device["id"], device["auth_sets"][0]["id"], "rejected"
             )
             logger.info("Rejecting DeviceID: %s" % device["id"])
 
-        auth_v2.check_expected_status("rejected", 1)
+        devauth.check_expected_status("rejected", 1)
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
@@ -104,4 +104,4 @@ class TestBootstrapping(MenderTesting):
         )
 
         # Check that we can accept again the device from the server
-        auth_v2.accept_devices(1)
+        devauth.accept_devices(1)

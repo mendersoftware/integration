@@ -61,27 +61,48 @@ collect_changes() {
     if [ "$REPO_ONLY" = 1 ]; then
         REPO_LIST=.
     else
-        REPO_LIST="$("$RELEASE_TOOL" --list git)"
+        # Sorting is important because we need "*-enterprise" repositories to
+        # come after their Open Source counterparts (see below).
+        REPO_LIST="$("$RELEASE_TOOL" --list git | sort)"
     fi
+
+    declare -A os_commits
+
+    local given_range="$1"
+    # Everything after is Git options, if any.
+    shift
+
     for repo in $REPO_LIST; do
-        (
-            if [ "$REPO_ONLY" = 1 ]; then
-                CHANGES="$1"
-            else
-                CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$1")"
-            fi
-            shift
-            if [ -z "$1" ]; then
-                GIT_ARGS="-p -M -C -C"
-            else
-                GIT_ARGS=
-            fi
-            echo "Fetching changes for $repo, rev $CHANGES" 1>&2
-            if [ "$REPO_ONLY" != 1 ]; then
-                cd "$BASE_DIR/$repo"
-            fi
-            git --no-pager log --use-mailmap $GIT_ARGS "$CHANGES" "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json' ':!**/__snapshots__/**'
-        )
+        if [ "$REPO_ONLY" = 1 ]; then
+            CHANGES="$given_range"
+            pushd .
+        else
+            CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$given_range")"
+            pushd "$BASE_DIR/$repo"
+            case "$repo" in
+                *-enterprise)
+                    # Use the information from the Open Source repository we
+                    # encountered earlier (see both next comment and also
+                    # sorting above).
+                    CHANGES="$CHANGES ^${os_commits[${repo%-enterprise}]}"
+                    ;;
+                *)
+                    # Save the topmost commit of current range. This will be
+                    # used later when encountering an Enterprise repository, to
+                    # exclude the commits from there, so that the code is not
+                    # counted twice.
+                    os_commits[$repo]="$(git rev-list -n 1 $CHANGES)"
+                    ;;
+            esac
+        fi
+        if [ -z "$1" ]; then
+            GIT_ARGS="-p -M -C -C --no-merges"
+        else
+            GIT_ARGS=
+        fi
+        echo "Fetching changes for $repo, rev $CHANGES" 1>&2
+        git --no-pager log --use-mailmap $GIT_ARGS $CHANGES "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json' ':!**/__snapshots__/**'
+        popd
     done
 }
 

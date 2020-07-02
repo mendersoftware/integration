@@ -21,9 +21,7 @@ GATEWAY_URL = "https://mender-api-gateway"
 class ApiClient:
     def __init__(self, base_url=GATEWAY_URL):
         self.base_url = base_url
-
-        # default content type should be ok for 99% of requests
-        self.headers = {"Content-Type": "application/json"}
+        self.headers = {}
 
     def with_auth(self, token):
         return self.with_header("Authorization", "Bearer " + token)

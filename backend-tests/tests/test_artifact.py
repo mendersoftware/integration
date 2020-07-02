@@ -29,7 +29,12 @@ from testutils.api import (
     useradm,
     deviceauth as deviceauth_v1,
 )
-from testutils.common import create_org, mongo, clean_mongo
+from testutils.common import (
+    create_org,
+    mongo,
+    clean_mongo,
+    get_mender_artifact,
+)
 
 from .test_deployments import make_accepted_device
 
@@ -54,49 +59,6 @@ class TestUploadArtifactEnterprise:
         tenant = create_org(tenant, username, password, plan)
         return tenant, username, password
 
-    @contextmanager
-    def get_mender_artifact(
-        self,
-        artifact_name="test",
-        update_module="dummy",
-        device_types=("arm1",),
-        size=256,
-        depends=(),
-        provides=(),
-    ):
-        data = "".join(random.choices(string.ascii_uppercase + string.digits, k=size))
-        f = tempfile.NamedTemporaryFile(delete=False)
-        f.write(data.encode("utf-8"))
-        f.close()
-        #
-        filename = f.name
-        artifact = "%s.mender" % filename
-        args = [
-            "mender-artifact",
-            "write",
-            "module-image",
-            "-o",
-            artifact,
-            "--artifact-name",
-            artifact_name,
-            "-T",
-            update_module,
-            "-f",
-            filename,
-        ]
-        for device_type in device_types:
-            args.extend(["-t", device_type])
-        for depend in depends:
-            args.extend(["--depends", depend])
-        for provide in provides:
-            args.extend(["--provides", provide])
-        try:
-            subprocess.call(args)
-            yield artifact
-        finally:
-            os.unlink(filename)
-            os.path.exists(artifact) and os.unlink(artifact)
-
     @pytest.mark.parametrize("plan", ["os", "professional", "enterprise"])
     def test_upload_artifact_depends_provides_valid(self, mongo, clean_mongo, plan):
         tenant, username, password = self.get_tenant_username_and_password(plan=plan)
@@ -107,7 +69,7 @@ class TestUploadArtifactEnterprise:
         api_client.with_auth(auth_token)
 
         # create and upload the mender artifact
-        with self.get_mender_artifact(
+        with get_mender_artifact(
             artifact_name="test",
             device_types=["arm1"],
             depends=("key1:value1", "key2:value2"),
@@ -170,7 +132,7 @@ class TestUploadArtifactEnterprise:
         api_client.with_auth(auth_token)
 
         # create and upload the mender artifact
-        with self.get_mender_artifact(
+        with get_mender_artifact(
             artifact_name="test",
             device_types=["arm1", "arm2"],
             depends=("key1:value1", "key2:value2"),
@@ -192,7 +154,7 @@ class TestUploadArtifactEnterprise:
 
         # create and upload a conflicting mender artifact
         # conflict because (arm2 / key:value1 / key:value2) are duplicated
-        with self.get_mender_artifact(
+        with get_mender_artifact(
             artifact_name="test",
             device_types=["arm2", "arm3"],
             depends=("key1:value1", "key2:value2"),
@@ -213,7 +175,7 @@ class TestUploadArtifactEnterprise:
         assert r.status_code == 409
 
         # create and upload a non-conflicting mender artifact
-        with self.get_mender_artifact(
+        with get_mender_artifact(
             artifact_name="test",
             device_types=["arm4"],
             depends=("key1:value1", "key2:value2"),
@@ -246,7 +208,7 @@ class TestUploadArtifactEnterprise:
             artifact_kw.setdefault("artifact_name", "test")
             artifact_kw.setdefault("device_types", ["arm1"])
             print(artifact_kw)
-            with self.get_mender_artifact(**artifact_kw) as artifact:
+            with get_mender_artifact(**artifact_kw) as artifact:
                 r = api_client.with_auth(auth_token).call(
                     "POST",
                     deployments.URL_DEPLOYMENTS_ARTIFACTS,

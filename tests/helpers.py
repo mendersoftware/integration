@@ -23,7 +23,7 @@ import socket
 import json
 from . import conftest
 
-from .MenderAPI import auth_v2
+from .MenderAPI import devauth
 
 logger = logging.getLogger()
 
@@ -66,7 +66,7 @@ class Helpers:
     @staticmethod
     def ip_to_device_id_map(device_group):
         # Get deviceauth data, which includes device identity.
-        devauth_devices = auth_v2.get_devices(expected_devices=len(device_group))
+        devauth_devices = devauth.get_devices(expected_devices=len(device_group))
 
         # Collect identity of each client.
         ret = device_group.run("/usr/share/mender/identity/mender-device-identity")

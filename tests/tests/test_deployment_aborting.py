@@ -19,7 +19,7 @@ import pytest
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
-from ..MenderAPI import auth_v2, deploy
+from ..MenderAPI import devauth, deploy
 from .mendertesting import MenderTesting
 
 
@@ -49,11 +49,16 @@ class TestDeploymentAborting(MenderTesting):
 
             if abort_step is not None:
                 deploy.check_expected_statistics(deployment_id, abort_step, 1)
+
             deploy.abort(deployment_id)
-            deploy.check_expected_statistics(deployment_id, "aborted", 1)
+
+            # there will be abored deployment only if the deployment
+            # for the device has already started
+            if abort_step is not None:
+                deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
             # no deployment logs are sent by the client, is this expected?
-            for d in auth_v2.get_devices():
+            for d in devauth.get_devices():
                 deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
             if mender_performs_reboot:

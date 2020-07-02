@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives import serialization
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from .mendertesting import MenderTesting
-from ..MenderAPI import auth, auth_v2, inv, logger
+from ..MenderAPI import auth, devauth, inv, logger
 from testutils.infra.device import MenderDevice
 
 
@@ -39,11 +39,11 @@ class TestPreauthBase(MenderTesting):
         # serialize manually to avoid an extra space (id data helper doesn't insert one)
         preauth_iddata_str = '{"mac":"mac-preauth"}'
 
-        r = auth_v2.preauth(json.loads(preauth_iddata_str), preauth_key)
+        r = devauth.preauth(json.loads(preauth_iddata_str), preauth_key)
         assert r.status_code == 201
 
         # verify the device appears correctly in api results
-        devs = auth_v2.get_devices(2)
+        devs = devauth.get_devices(2)
 
         dev_preauth = [d for d in devs if d["status"] == "preauthorized"]
         assert len(dev_preauth) == 1
@@ -61,7 +61,7 @@ class TestPreauthBase(MenderTesting):
         # verify api results - after some time the device should be 'accepted'
         for _ in range(120):
             time.sleep(15)
-            dev_accepted = auth_v2.get_devices_status(
+            dev_accepted = devauth.get_devices_status(
                 status="accepted", expected_devices=2
             )
             if len([d for d in dev_accepted if d["status"] == "accepted"]) == 1:
@@ -101,28 +101,28 @@ UwIDAQAB
 -----END PUBLIC KEY-----
 """
 
-        r = auth_v2.preauth(preauth_iddata, preauth_key)
+        r = devauth.preauth(preauth_iddata, preauth_key)
         assert r.status_code == 201
 
-        devs = auth_v2.get_devices(2)
+        devs = devauth.get_devices(2)
 
         dev_preauth = [d for d in devs if d["identity_data"] == preauth_iddata]
         assert len(dev_preauth) == 1
         dev_preauth = dev_preauth[0]
 
         # remove from deviceauth
-        r = auth_v2.delete_auth_set(
+        r = devauth.delete_auth_set(
             dev_preauth["id"], dev_preauth["auth_sets"][0]["id"]
         )
         assert r.status_code == 204
 
         # verify removed from deviceauth
-        devs = auth_v2.get_devices(1)
+        devs = devauth.get_devices(1)
         dev_removed = [d for d in devs if d["identity_data"] == preauth_iddata]
         assert len(dev_removed) == 0
 
         # verify removed from deviceauth
-        r = auth_v2.get_device(dev_preauth["id"])
+        r = devauth.get_device(dev_preauth["id"])
         assert r.status_code == 404
 
         # verify removed from inventory
@@ -134,7 +134,7 @@ UwIDAQAB
            Test 'conflict' response when an identity data set already exists.
         """
         # wait for the device to appear
-        devs = auth_v2.get_devices(1)
+        devs = devauth.get_devices(1)
         dev = devs[0]
 
         # try to preauthorize the same id data, new key
@@ -148,7 +148,7 @@ iyYyh1852rti3Afw4mDxuVSD7sd9ggvYMc0QHIpQNkD4YWOhNiE1AB0zH57VbUYG
 UwIDAQAB
 -----END PUBLIC KEY-----
 """
-        r = auth_v2.preauth(dev["identity_data"], preauth_key)
+        r = devauth.preauth(dev["identity_data"], preauth_key)
         assert r.status_code == 409
 
 

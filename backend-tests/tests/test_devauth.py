@@ -17,6 +17,7 @@ import time
 import base64
 import json
 
+
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import testutils.api.deviceauth as deviceauth
@@ -25,6 +26,7 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 import testutils.util.crypto
+from cryptography.hazmat.primitives.asymmetric import dsa
 
 from testutils.common import (
     User,
@@ -1441,7 +1443,88 @@ def tenants_and_accepted_devs(clean_mongo):
     return [tos, tpro, tent]
 
 
-class TestAuthReqEnterprise:
+class TestAuthReqBase:
+    def do_test_submit(self, user, tenant_token=""):
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        uadm = ApiClient(useradm.URL_MGMT)
+
+        devs = [
+            {
+                "id_data": rand_id_data(),
+                "keypair": testutils.util.crypto.get_keypair_rsa(),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": testutils.util.crypto.get_keypair_ec(
+                    testutils.util.crypto.EC_CURVE_256
+                ),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": testutils.util.crypto.get_keypair_ec(
+                    testutils.util.crypto.EC_CURVE_224
+                ),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": testutils.util.crypto.get_keypair_ec(
+                    testutils.util.crypto.EC_CURVE_384
+                ),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": testutils.util.crypto.get_keypair_ec(
+                    testutils.util.crypto.EC_CURVE_521
+                ),
+            },
+        ]
+
+        r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        for d in devs:
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
+            )
+
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+
+            assert r.status_code == 401
+
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        assert r.status_code == 200
+
+        api_devs = r.json()
+        assert len(api_devs) == len(devs)
+
+        for d in devs:
+            adev = [
+                ad
+                for ad in api_devs
+                if testutils.util.crypto.compare_keys(
+                    ad["auth_sets"][0]["pubkey"], d["keypair"][1]
+                )
+            ]
+            assert len(adev) == 1
+            adev = adev[0]
+
+            assert adev["identity_data"] == d["id_data"]
+            assert adev["auth_sets"][0]["status"] == "pending"
+
+
+class TestAuthReq(TestAuthReqBase):
+    def test_submit(self, user):
+        self.do_test_submit(user)
+
+
+class TestAuthReqEnterprise(TestAuthReqBase):
+    def test_submit(self, tenants_users):
+        for tenant in tenants_users:
+            user = tenant.users[0]
+            self.do_test_submit(user, tenant.tenant_token)
+
     def test_ok(self, tenants_and_accepted_devs):
         """ Basic JWT inspection: are we getting the right claims?
         """

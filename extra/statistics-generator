@@ -91,7 +91,7 @@ collect_changes() {
                     # used later when encountering an Enterprise repository, to
                     # exclude the commits from there, so that the code is not
                     # counted twice.
-                    os_commits[$repo]="$(git rev-list -n 1 $CHANGES)"
+                    os_commits[$repo]="$(git rev-list -n 1 $(sed -e 's/.*\.\.//' <<<$CHANGES))"
                     ;;
             esac
         fi

@@ -370,16 +370,24 @@ def make_devs_with_authsets(user, tenant_token=""):
         devices.append(dev)
 
     # preauth'd devices
-    for i in range(2):
-        dev = make_preauthd_device(utoken)
-        devices.append(dev)
+    dev = make_preauthd_device(utoken, keygen_rsa)
+    devices.append(dev)
+
+    dev = make_preauthd_device(utoken, keygen_ec_256)
+    devices.append(dev)
 
     # preauth'd devices with extra 'pending' sets
     for i in range(2):
         dev = make_preauthd_device_with_pending(
-            utoken, num_pending=2, tenant_token=tenant_token
+            utoken, keygen_rsa, num_pending=2, tenant_token=tenant_token
         )
         devices.append(dev)
+
+    dev = make_preauthd_device_with_pending(
+        utoken, keygen_ec_256, num_pending=2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
     devices.sort(key=lambda dev: dev.id)
     return devices
 
@@ -462,10 +470,10 @@ def make_rejected_device(utoken, keygen, num_auth_sets=1, tenant_token=""):
     return dev
 
 
-def make_preauthd_device(utoken):
+def make_preauthd_device(utoken, keygen):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    priv, pub = crypto.get_keypair_rsa()
+    priv, pub = keygen()
     id_data = rand_id_data()
 
     body = deviceauth.preauth_req(id_data, pub)
@@ -486,11 +494,11 @@ def make_preauthd_device(utoken):
     return dev
 
 
-def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
+def make_preauthd_device_with_pending(utoken, keygen, num_pending=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
-    dev = make_preauthd_device(utoken)
+    dev = make_preauthd_device(utoken, keygen)
 
     for i in range(num_pending):
         priv, pub = crypto.get_keypair_rsa()
@@ -554,6 +562,9 @@ class TestDeviceMgmtBase:
             ref_devs = filter_and_page_devs(
                 devs_authsets, page=page, per_page=per_page, status=status
             )
+
+            print("XXXXXXXXXXXX api_devs {}\n".format(api_devs))
+            print("XXXXXXXXXXXX ref_devs {}\n".format(ref_devs))
 
             self._compare_devs(ref_devs, api_devs)
 

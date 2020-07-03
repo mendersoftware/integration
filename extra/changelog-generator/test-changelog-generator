@@ -344,6 +344,44 @@ Signed-off-by: Joe Average <joe@average.com>'
 
 ################################################################################
 
+git commit --allow-empty -m 'Commit with no changelog N70
+
+Changelog: None
+This line should not generate a changelog entry N71
+
+Signed-off-by: Hacker'
+
+################################################################################
+
+git commit --allow-empty -m 'Commit with various "<something>-by:" tags
+
+Changelog: Commit
+Only this line should show in changelog N72
+
+Signed-off-by: Test <test@test.com>
+Reviewed-by: Test2 <test2@test.com>
+Acked-by: Test3 <test3@test.com>'
+
+################################################################################
+
+git commit --allow-empty -m 'Changelog:All : Complete commit with inline entry N73
+
+Should be included N74'
+
+################################################################################
+
+git commit --allow-empty -m 'Changelog: All bugs fixed N75
+
+Should not be included N76'
+
+################################################################################
+
+git commit --allow-empty -m 'Changelog: AllSomethingElse N77
+
+Should not be included N78'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
@@ -361,6 +399,8 @@ _Released xx.xx.xxxx_
 
 #### test-changelog-generator.$$ (HEAD)
 
+* All bugs fixed N75
+* AllSomethingElse N77
 * As well as this. N34
 * Changelog commit with trailing dot. N53
 * Changelog title with trailing dot. N54
@@ -382,8 +422,12 @@ _Released xx.xx.xxxx_
 * Changelog with suspicious number in it. N62
   1234
 * Changelog with suspicious number outside of it. N63
+* Commit with various "<something>-by:" tags
+  Only this line should show in changelog N72
 * Complete Fix for changelog N4
   Should be included N5
+* Complete commit with inline entry N73
+  Should be included N74
 * Fix for changelog N1
 * Jira duplicate (commit) N51
   More stuff. N52

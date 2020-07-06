@@ -17,6 +17,7 @@ import time
 import base64
 import json
 
+
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
 import testutils.api.deviceauth as deviceauth
@@ -24,7 +25,9 @@ import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
-import testutils.util.crypto
+import testutils.util.crypto as crypto
+from cryptography.hazmat.primitives.asymmetric import dsa
+
 from testutils.common import (
     User,
     Device,
@@ -138,50 +141,77 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth device
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
-        id_data = {"mac": "pretenditsamac"}
-        body = deviceauth.preauth_req(id_data, pub)
-        r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
-        assert r.status_code == 201
+        devs = [
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_224),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_384),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
+            },
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
+        ]
 
-        # device appears in device list
+        for d in devs:
+            body = deviceauth.preauth_req(d["id_data"], d["keypair"][1])
+            r = devauthm.with_auth(utoken).call(
+                "POST", deviceauth.URL_MGMT_DEVICES, body
+            )
+            assert r.status_code == 201
+
+        # all devices appear in device list as 'preauthorized'
         r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
 
-        assert len(api_devs) == 1
-        api_dev = api_devs[0]
+        assert len(api_devs) == len(devs)
 
-        assert api_dev["status"] == "preauthorized"
-        assert api_dev["identity_data"] == id_data
-        assert len(api_dev["auth_sets"]) == 1
-        aset = api_dev["auth_sets"][0]
+        for d in devs:
+            adev = [
+                ad
+                for ad in api_devs
+                if crypto.compare_keys(ad["auth_sets"][0]["pubkey"], d["keypair"][1])
+            ]
+            assert len(adev) == 1
+            adev = adev[0]
 
-        assert aset["identity_data"] == id_data
-        assert testutils.util.crypto.rsa_compare_keys(aset["pubkey"], pub)
-        assert aset["status"] == "preauthorized"
+            assert adev["status"] == "preauthorized"
+            assert len(adev["auth_sets"]) == 1
+            aset = adev["auth_sets"][0]
 
-        # actual device can obtain auth token
-        body, sighdr = deviceauth.auth_req(id_data, pub, priv, tenant_token)
+            assert aset["identity_data"] == d["id_data"]
+            assert aset["status"] == "preauthorized"
 
-        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+            # actual device can obtain auth token
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token
+            )
 
-        assert r.status_code == 200
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
-        # device and authset changed status to 'accepted'
-        r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES, path_params={"id": api_dev["id"]}
-        )
+            assert r.status_code == 200
 
-        api_devs = r.json()
-        assert len(api_devs) == 1
+            # device and authset changed status to 'accepted'
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": adev["id"]}
+            )
 
-        api_dev = api_devs[0]
-        assert api_dev["status"] == "accepted"
-        assert len(api_dev["auth_sets"]) == 1
+            outdev = r.json()
+            assert outdev["status"] == "accepted"
+            assert len(outdev["auth_sets"]) == 1
 
-        aset = api_dev["auth_sets"][0]
-        assert aset["status"] == "accepted"
+            aset = outdev["auth_sets"][0]
+            assert aset["status"] == "accepted"
 
     def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -194,7 +224,7 @@ class TestPreauthBase:
         utoken = r.text
 
         # preauth duplicate device
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = crypto.get_keypair_rsa()
         id_data = devices[0].id_data
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -214,7 +244,7 @@ class TestPreauthBase:
 
         assert len(existing["auth_sets"]) == 1
         aset = existing["auth_sets"][0]
-        assert testutils.util.crypto.rsa_compare_keys(aset["pubkey"], devices[0].pubkey)
+        assert crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
         assert aset["status"] == "pending"
 
 
@@ -236,7 +266,7 @@ class TestPreauth(TestPreauthBase):
         utoken = r.text
 
         # id data not json
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = crypto.get_keypair_rsa()
         id_data = '{"mac": "foo"}'
         body = deviceauth.preauth_req(id_data, pub)
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
@@ -294,9 +324,7 @@ class TestPreauthEnterprise(TestPreauthBase):
 
             assert len(ad["auth_sets"]) == 1
             aset = ad["auth_sets"][0]
-            assert testutils.util.crypto.rsa_compare_keys(
-                aset["pubkey"], orig_device.pubkey
-            )
+            assert crypto.compare_keys(aset["pubkey"], orig_device.pubkey)
 
 
 def make_devs_with_authsets(user, tenant_token=""):
@@ -312,46 +340,109 @@ def make_devs_with_authsets(user, tenant_token=""):
 
     devices = []
 
+    keygen_rsa = lambda: crypto.get_keypair_rsa()
+    keygen_ec_256 = lambda: crypto.get_keypair_ec(crypto.EC_CURVE_256)
+    keygen_ed = lambda: crypto.get_keypair_ed()
+
     # some vanilla 'pending' devices, single authset
-    for _ in range(5):
-        dev = make_pending_device(utoken, 1, tenant_token=tenant_token)
+    for _ in range(3):
+        dev = make_pending_device(utoken, keygen_rsa, 1, tenant_token=tenant_token)
         devices.append(dev)
+
+    for _ in range(2):
+        dev = make_pending_device(utoken, keygen_ec_256, 1, tenant_token=tenant_token)
+        devices.append(dev)
+
+    dev = make_pending_device(utoken, keygen_ed, 1, tenant_token=tenant_token)
+    devices.append(dev)
 
     # some pending devices with > 1 authsets
     for i in range(2):
-        dev = make_pending_device(utoken, 3, tenant_token=tenant_token)
+        dev = make_pending_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
         devices.append(dev)
+
+    for i in range(2):
+        dev = make_pending_device(utoken, keygen_ec_256, 3, tenant_token=tenant_token)
+        devices.append(dev)
+
+    dev = make_pending_device(utoken, keygen_ed, 3, tenant_token=tenant_token)
+    devices.append(dev)
 
     # some 'accepted' devices, single authset
     for _ in range(3):
         dev = make_accepted_device_with_multiple_authsets(
-            utoken, 1, tenant_token=tenant_token
+            utoken, keygen_rsa, 1, tenant_token=tenant_token
         )
         devices.append(dev)
+
+    for _ in range(2):
+        dev = make_accepted_device_with_multiple_authsets(
+            utoken, keygen_ec_256, 1, tenant_token=tenant_token
+        )
+        devices.append(dev)
+
+    dev = make_accepted_device_with_multiple_authsets(
+        utoken, keygen_ed, 1, tenant_token=tenant_token
+    )
+    devices.append(dev)
 
     # some 'accepted' devices with >1 authsets
     for _ in range(2):
         dev = make_accepted_device_with_multiple_authsets(
-            utoken, 3, tenant_token=tenant_token
+            utoken, keygen_rsa, 3, tenant_token=tenant_token
         )
         devices.append(dev)
 
-    # some rejected devices
     for _ in range(2):
-        dev = make_rejected_device(utoken, 3, tenant_token=tenant_token)
+        dev = make_accepted_device_with_multiple_authsets(
+            utoken, keygen_ec_256, 2, tenant_token=tenant_token
+        )
         devices.append(dev)
 
-    # preauth'd devices
-    for i in range(2):
-        dev = make_preauthd_device(utoken)
+    dev = make_accepted_device_with_multiple_authsets(
+        utoken, keygen_ed, 2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
+    # some rejected devices
+    for _ in range(2):
+        dev = make_rejected_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
         devices.append(dev)
+
+    for _ in range(2):
+        dev = make_rejected_device(utoken, keygen_ec_256, 2, tenant_token=tenant_token)
+        devices.append(dev)
+
+    dev = make_rejected_device(utoken, keygen_ed, 2, tenant_token=tenant_token)
+    devices.append(dev)
+
+    # preauth'd devices
+    dev = make_preauthd_device(utoken, keygen_rsa)
+    devices.append(dev)
+
+    dev = make_preauthd_device(utoken, keygen_ec_256)
+    devices.append(dev)
+
+    dev = make_preauthd_device(utoken, keygen_ed)
+    devices.append(dev)
 
     # preauth'd devices with extra 'pending' sets
     for i in range(2):
         dev = make_preauthd_device_with_pending(
-            utoken, num_pending=2, tenant_token=tenant_token
+            utoken, keygen_rsa, num_pending=2, tenant_token=tenant_token
         )
         devices.append(dev)
+
+    dev = make_preauthd_device_with_pending(
+        utoken, keygen_ec_256, num_pending=2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
+    dev = make_preauthd_device_with_pending(
+        utoken, keygen_ed, num_pending=2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
     devices.sort(key=lambda dev: dev.id)
     return devices
 
@@ -377,7 +468,7 @@ def rand_id_data():
     return {"mac": mac, "sn": sn}
 
 
-def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
+def make_pending_device(utoken, keygen, num_auth_sets=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
@@ -385,7 +476,7 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
     dev = None
     for i in range(num_auth_sets):
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = keygen()
         new_set = create_authset(
             devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
         )
@@ -401,11 +492,11 @@ def make_pending_device(utoken, num_auth_sets=1, tenant_token=""):
 
 
 def make_accepted_device_with_multiple_authsets(
-    utoken, num_auth_sets=1, num_accepted=1, tenant_token=""
+    utoken, keygen, num_auth_sets=1, num_accepted=1, tenant_token=""
 ):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
+    dev = make_pending_device(utoken, keygen, num_auth_sets, tenant_token=tenant_token)
 
     for i in range(num_accepted):
         aset_id = dev.authsets[i].id
@@ -418,10 +509,10 @@ def make_accepted_device_with_multiple_authsets(
     return dev
 
 
-def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
+def make_rejected_device(utoken, keygen, num_auth_sets=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    dev = make_pending_device(utoken, num_auth_sets, tenant_token=tenant_token)
+    dev = make_pending_device(utoken, keygen, num_auth_sets, tenant_token=tenant_token)
 
     for i in range(num_auth_sets):
         aset_id = dev.authsets[i].id
@@ -434,10 +525,10 @@ def make_rejected_device(utoken, num_auth_sets=1, tenant_token=""):
     return dev
 
 
-def make_preauthd_device(utoken):
+def make_preauthd_device(utoken, keygen):
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = keygen()
     id_data = rand_id_data()
 
     body = deviceauth.preauth_req(id_data, pub)
@@ -458,14 +549,14 @@ def make_preauthd_device(utoken):
     return dev
 
 
-def make_preauthd_device_with_pending(utoken, num_pending=1, tenant_token=""):
+def make_preauthd_device_with_pending(utoken, keygen, num_pending=1, tenant_token=""):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
-    dev = make_preauthd_device(utoken)
+    dev = make_preauthd_device(utoken, keygen)
 
     for i in range(num_pending):
-        priv, pub = testutils.util.crypto.rsa_get_keypair()
+        priv, pub = crypto.get_keypair_rsa()
         aset = create_authset(
             devauthd,
             devauthm,
@@ -526,6 +617,9 @@ class TestDeviceMgmtBase:
             ref_devs = filter_and_page_devs(
                 devs_authsets, page=page, per_page=per_page, status=status
             )
+
+            print("XXXXXXXXXXXX api_devs {}\n".format(api_devs))
+            print("XXXXXXXXXXXX ref_devs {}\n".format(ref_devs))
 
             self._compare_devs(ref_devs, api_devs)
 
@@ -632,7 +726,11 @@ class TestDeviceMgmtBase:
         assert r.status_code == 404
 
         # check device list unmodified
-        r = da.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        r = da.with_auth(utoken).call(
+            "GET",
+            deviceauth.URL_MGMT_DEVICES,
+            qs_params={"per_page": len(devs_authsets)},
+        )
 
         assert r.status_code == 200
         api_devs = r.json()
@@ -661,7 +759,9 @@ class TestDeviceMgmtBase:
             assert r.status_code == 200
             count = r.json()
 
-            ref_devs = filter_and_page_devs(devs_authsets, status=status)
+            ref_devs = filter_and_page_devs(
+                devs_authsets, per_page=len(devs_authsets), status=status
+            )
 
             ref_count = len(ref_devs)
 
@@ -692,7 +792,7 @@ class TestDeviceMgmtBase:
             aset = [
                 a
                 for a in dev.authsets
-                if testutils.util.crypto.rsa_compare_keys(a.pubkey, api_aset["pubkey"])
+                if crypto.compare_keys(a.pubkey, api_aset["pubkey"])
             ]
             assert len(aset) == 1
             aset = aset[0]
@@ -1254,7 +1354,7 @@ def filter_and_page_devs(devs, page=None, per_page=None, status=None):
 def compare_aset(authset, api_authset):
     assert authset.id == api_authset["id"]
     assert authset.id_data == api_authset["identity_data"]
-    assert testutils.util.crypto.rsa_compare_keys(authset.pubkey, api_authset["pubkey"])
+    assert crypto.compare_keys(authset.pubkey, api_authset["pubkey"])
     assert authset.status == api_authset["status"]
 
 
@@ -1404,58 +1504,97 @@ class TestDefaultTenantTokenEnterprise(object):
         assert len(api_devs) == 1
 
 
-def make_tenant_and_accepted_dev(name, uname, plan):
-    dauthd = ApiClient(deviceauth.URL_DEVICES)
-    dauthm = ApiClient(deviceauth.URL_MGMT)
-    tenant = create_org(name, uname, "correcthorse", plan=plan)
-    user = tenant.users[0]
-    tenant.users = [user]
-
-    r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert r.status_code == 200
-    utok = r.text
-
-    dev = make_accepted_device(dauthd, dauthm, utok, tenant.tenant_token)
-
-    tenant.devices = [dev]
-    tenant.plan = plan
-
-    return tenant
-
-
 @pytest.fixture(scope="function")
-def tenants_and_accepted_devs(clean_mongo):
-    tos = make_tenant_and_accepted_dev("tenant-os", "user@tenant-os.com", "os")
-
-    tpro = make_tenant_and_accepted_dev(
-        "tenant-pro", "user@tenant-pro.com", "professional"
+def tenants_with_plans(clean_mongo):
+    tos = create_org("tenant-os", "user@tenant-os.com", "correcthorse", plan="os")
+    tos.plan = "os"
+    tpro = create_org(
+        "tenant-pro", "user@tenant-pro.com", "correcthorse", plan="professional"
     )
+    tpro.plan = "professional"
 
-    tent = make_tenant_and_accepted_dev(
-        "tenant-ent", "user@tenant-ent.com", "enterprise"
+    tent = create_org(
+        "tenant-ent", "user@tenant-ent.com", "correcthorse", plan="enterprise"
     )
+    tent.plan = "enterprise"
 
     return [tos, tpro, tent]
 
 
-class TestAuthReqEnterprise:
-    def test_ok(self, tenants_and_accepted_devs):
-        """ Basic JWT inspection: are we getting the right claims?
-        """
-        dauthd = ApiClient(deviceauth.URL_DEVICES)
-        for t in tenants_and_accepted_devs:
-            dev = t.devices[0]
-            aset = dev.authsets[0]
+class TestAuthReqBase:
+    def do_test_submit_accept(self, user, tenant=None):
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        uadm = ApiClient(useradm.URL_MGMT)
 
+        tenant_token = ""
+        if tenant is not None:
+            tenant_token = tenant.tenant_token
+
+        devs = [
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_224),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_384),
+            },
+            {
+                "id_data": rand_id_data(),
+                "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
+            },
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
+        ]
+
+        r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        for d in devs:
             body, sighdr = deviceauth.auth_req(
-                aset.id_data, aset.pubkey, aset.privkey, t.tenant_token
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
             )
 
-            r = dauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
 
+            assert r.status_code == 401
+
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        assert r.status_code == 200
+
+        api_devs = r.json()
+        assert len(api_devs) == len(devs)
+
+        for d in devs:
+            adev = [
+                ad
+                for ad in api_devs
+                if crypto.compare_keys(ad["auth_sets"][0]["pubkey"], d["keypair"][1])
+            ]
+            assert len(adev) == 1
+            adev = adev[0]
+
+            assert adev["identity_data"] == d["id_data"]
+            assert adev["auth_sets"][0]["status"] == "pending"
+
+            # accept and get/verify token
+            change_authset_status(
+                devauthm, adev["id"], adev["auth_sets"][0]["id"], "accepted", utoken
+            )
+
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
+            )
+
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
             assert r.status_code == 200
+
             token = r.text
 
             payload = token.split(".")[1]
@@ -1463,12 +1602,26 @@ class TestAuthReqEnterprise:
             payload = json.loads(payload.decode("utf-8"))
 
             # standard claims
-            assert payload["sub"] == dev.id
+            assert payload["sub"] == adev["id"]
             assert payload["iss"] == "Mender"
             assert payload["jti"] is not None
             assert payload["exp"] is not None
 
             # custom claims
-            assert payload["mender.plan"] == t.plan
-            assert payload["mender.tenant"] == t.id
             assert payload["mender.device"]
+
+            if tenant is not None:
+                assert payload["mender.plan"] == tenant.plan
+                assert payload["mender.tenant"] == tenant.id
+
+
+class TestAuthReq(TestAuthReqBase):
+    def test_submit_accept(self, user):
+        self.do_test_submit_accept(user)
+
+
+class TestAuthReqEnterprise(TestAuthReqBase):
+    def test_submit_accept(self, tenants_with_plans):
+        for tenant in tenants_with_plans:
+            user = tenant.users[0]
+            self.do_test_submit_accept(user, tenant)

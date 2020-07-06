@@ -48,5 +48,5 @@ def auth_req(id_data, pubkey, privkey, tenant_token=""):
         "tenant_token": tenant_token,
         "pubkey": pubkey,
     }
-    signature = testutils.util.crypto.rsa_sign_data(json.dumps(payload), privkey)
+    signature = testutils.util.crypto.auth_req_sign(json.dumps(payload), privkey)
     return payload, {"X-MEN-Signature": signature}

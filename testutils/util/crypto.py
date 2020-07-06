@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.asymmetric import padding
 
 # enum for EC curve types to avoid naming confusion, e.g.
@@ -53,6 +54,11 @@ def get_keypair_ec(curve):
     return keypair_pem(private_key, private_key.public_key())
 
 
+def get_keypair_ed():
+    private_key = ed25519.Ed25519PrivateKey.generate()
+    return keypair_pem(private_key, private_key.public_key())
+
+
 def keypair_pem(private_key, public_key):
     private_pem = private_key.private_bytes(
         encoding=serialization.Encoding.PEM,
@@ -83,6 +89,11 @@ def auth_req_sign_ec(data, private_key):
     return b64encode(signature).decode()
 
 
+def auth_req_sign_ed(data, private_key):
+    signature = private_key.sign(data if isinstance(data, bytes) else data.encode(),)
+    return b64encode(signature).decode()
+
+
 def auth_req_sign(data, private_key):
     key = serialization.load_pem_private_key(
         private_key if isinstance(private_key, bytes) else private_key.encode(),
@@ -94,5 +105,7 @@ def auth_req_sign(data, private_key):
         return auth_req_sign_rsa(data, key)
     elif isinstance(key, ec.EllipticCurvePrivateKey):
         return auth_req_sign_ec(data, key)
+    elif isinstance(key, ed25519.Ed25519PrivateKey):
+        return auth_req_sign_ed(data, key)
     else:
         raise RuntimeError("unsupported key type")

@@ -159,6 +159,7 @@ class TestPreauthBase:
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
             },
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
         ]
 
         for d in devs:
@@ -341,6 +342,7 @@ def make_devs_with_authsets(user, tenant_token=""):
 
     keygen_rsa = lambda: crypto.get_keypair_rsa()
     keygen_ec_256 = lambda: crypto.get_keypair_ec(crypto.EC_CURVE_256)
+    keygen_ed = lambda: crypto.get_keypair_ed()
 
     # some vanilla 'pending' devices, single authset
     for _ in range(3):
@@ -351,6 +353,9 @@ def make_devs_with_authsets(user, tenant_token=""):
         dev = make_pending_device(utoken, keygen_ec_256, 1, tenant_token=tenant_token)
         devices.append(dev)
 
+    dev = make_pending_device(utoken, keygen_ed, 1, tenant_token=tenant_token)
+    devices.append(dev)
+
     # some pending devices with > 1 authsets
     for i in range(2):
         dev = make_pending_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
@@ -359,6 +364,9 @@ def make_devs_with_authsets(user, tenant_token=""):
     for i in range(2):
         dev = make_pending_device(utoken, keygen_ec_256, 3, tenant_token=tenant_token)
         devices.append(dev)
+
+    dev = make_pending_device(utoken, keygen_ed, 3, tenant_token=tenant_token)
+    devices.append(dev)
 
     # some 'accepted' devices, single authset
     for _ in range(3):
@@ -373,6 +381,11 @@ def make_devs_with_authsets(user, tenant_token=""):
         )
         devices.append(dev)
 
+    dev = make_accepted_device_with_multiple_authsets(
+        utoken, keygen_ed, 1, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
     # some 'accepted' devices with >1 authsets
     for _ in range(2):
         dev = make_accepted_device_with_multiple_authsets(
@@ -386,6 +399,11 @@ def make_devs_with_authsets(user, tenant_token=""):
         )
         devices.append(dev)
 
+    dev = make_accepted_device_with_multiple_authsets(
+        utoken, keygen_ed, 2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
     # some rejected devices
     for _ in range(2):
         dev = make_rejected_device(utoken, keygen_rsa, 3, tenant_token=tenant_token)
@@ -395,11 +413,17 @@ def make_devs_with_authsets(user, tenant_token=""):
         dev = make_rejected_device(utoken, keygen_ec_256, 2, tenant_token=tenant_token)
         devices.append(dev)
 
+    dev = make_rejected_device(utoken, keygen_ed, 2, tenant_token=tenant_token)
+    devices.append(dev)
+
     # preauth'd devices
     dev = make_preauthd_device(utoken, keygen_rsa)
     devices.append(dev)
 
     dev = make_preauthd_device(utoken, keygen_ec_256)
+    devices.append(dev)
+
+    dev = make_preauthd_device(utoken, keygen_ed)
     devices.append(dev)
 
     # preauth'd devices with extra 'pending' sets
@@ -411,6 +435,11 @@ def make_devs_with_authsets(user, tenant_token=""):
 
     dev = make_preauthd_device_with_pending(
         utoken, keygen_ec_256, num_pending=2, tenant_token=tenant_token
+    )
+    devices.append(dev)
+
+    dev = make_preauthd_device_with_pending(
+        utoken, keygen_ed, num_pending=2, tenant_token=tenant_token
     )
     devices.append(dev)
 
@@ -1520,6 +1549,7 @@ class TestAuthReqBase:
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
             },
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
         ]
 
         r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))

@@ -86,7 +86,7 @@ class Tenant:
 
 def create_random_authset(dauthd1, dauthm, utoken, tenant_token=""):
     """ create_device with random id data and keypair"""
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), "x") for i in range(6)])
     id_data = {"mac": mac}
 
@@ -107,7 +107,7 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     aset = [
         a
         for a in api_dev["auth_sets"]
-        if testutils.util.crypto.rsa_compare_keys(a["pubkey"], pubkey)
+        if testutils.util.crypto.compare_keys(a["pubkey"], pubkey)
     ]
     assert len(aset) == 1, str(aset)
 
@@ -210,7 +210,7 @@ def rand_id_data():
 def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
     id_data = rand_id_data()
 
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
     new_set = create_authset(
         dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
     )

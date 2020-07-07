@@ -3,13 +3,15 @@
 This tool is for internal consumption only, and should not be used outside of
 Mender development.
 
-The `release_tool.py` script has three main modes of operation:
+The `release_tool.py` script has four main modes of operation:
 
 * Querying the version of a component in the docker-compose environment.
 
 * Setting the version of a component in the docker-compose environment.
 
-* Tagging, building, and releasing.
+* Tagging, building, and releasing Mender stable releases
+
+* Tagging Hosted Mender releases
 
 
 ## Querying docker-compose versions
@@ -353,3 +355,30 @@ List of YAML files that are checked:
 
 * `docker-compose*.yml`
 * `other-components.yml` (non-Docker components)
+
+## Tagging for Hosted Mender
+
+For the hosted Mender release workflow, the `release_tool.py` script is only
+used for tagging the final versions. The build and test is carried out outside
+of the tool.
+
+Once the software versions deployed in staging have passed all our QA and is
+ready to be deployed into production, `release_tool.py` can be used to generate
+the production tags.
+
+This process can only be done from `staging` version in integration repo.
+
+Running the command:
+
+```
+$ ./release_tool --hosted-release
+```
+
+The tool will generate tags of the form `saas-vYYYY.MM` for all backend
+repositories from their respective `staging` branches.
+
+Alternatively, a custom version can be specified with:
+
+```
+$ ./release_tool --hosted-release --version my-custom-version
+```

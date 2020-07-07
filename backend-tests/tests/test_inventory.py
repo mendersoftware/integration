@@ -22,6 +22,7 @@ import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
 import testutils.api.tenantadm as tenantadm
 import testutils.util.crypto
+
 from testutils.common import (
     User,
     Device,
@@ -93,7 +94,7 @@ def make_pending_device(utoken, tenant_token=""):
 
     id_data = rand_id_data()
 
-    priv, pub = testutils.util.crypto.rsa_get_keypair()
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
     new_set = create_authset(
         devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
     )

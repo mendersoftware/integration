@@ -1206,10 +1206,11 @@ def generate_new_tags(state, tag_avail, final):
         cleanup_temp_git_checkout(tmpdir)
 
     # Prepare Git tag and push commands.
-    git_list = []
+    git_tag_list = []
+    git_push_list = []
     for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"]:
-            git_list.append(
+            git_tag_list.append(
                 (
                     state,
                     repo.git(),
@@ -1224,7 +1225,7 @@ def generate_new_tags(state, tag_avail, final):
                 )
             )
             remote = find_upstream_remote(state, repo.git())
-            git_list.append(
+            git_push_list.append(
                 (
                     state,
                     repo.git(),
@@ -1232,7 +1233,7 @@ def generate_new_tags(state, tag_avail, final):
                 )
             )
 
-    if not query_execute_git_list(git_list):
+    if not query_execute_git_list(git_tag_list + git_push_list):
         return tag_avail
 
     # If this was the final tag, reflect that in our data.

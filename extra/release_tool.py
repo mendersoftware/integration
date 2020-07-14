@@ -222,6 +222,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "meta-mender": "META_MENDER_REV",
     "integration": "INTEGRATION_REV",
     "mender-qa": "MENDER_QA_REV",
+    "auditlogs": "AUDITLOGS_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -233,6 +234,7 @@ BACKEND_SERVICES_ENT = {
     "inventory-enterprise",
     "useradm-enterprise",
     "workflows-enterprise",
+    "auditlogs",
 }
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = (
@@ -390,7 +392,11 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = ["docker-compose.yml", "docker-compose.enterprise.yml"]
+    _DOCKER_ONLY_YML = [
+        "docker-compose.yml",
+        "docker-compose.enterprise.yml",
+        "docker-compose.auditlogs.yml",
+    ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
 
     def _is_known_yml_file(entry):

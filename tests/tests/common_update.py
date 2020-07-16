@@ -167,7 +167,7 @@ def update_image_failed(
     device,
     host_ip,
     expected_mender_clients=1,
-    expected_log_message="Reboot to new update failed",
+    expected_log_message="Reboot to the new update failed",
     install_image="broken_update.ext4",
     make_artifact=None,
 ):

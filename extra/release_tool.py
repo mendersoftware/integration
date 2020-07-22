@@ -2735,14 +2735,16 @@ def do_map_name(args):
 
 
 def get_next_hosted_release_version(state):
-    """Return next tag like "saas-vYYYY.MM" (saas-vYEAR.MONTH)
+    """Return next tag like "saas-vYYYY.MM.DD" (saas-vYEAR.MONTH.DAY)
 
-    If no tag for the current month exists, returns saas-vYYYY.MM
-    If a tag like saas-vYYYY.MM, returns saas-vYYYY.MM.02
-    If a tag like saas-vYYYY.MM.NN exists, returns saas-vYYYY.MM.(NN+1)
+    If no tag for the current month exists, returns saas-vYYYY.MM.DD
+    If a tag like saas-vYYYY.MM.DD, returns saas-vYYYY.MM.DD.02
+    If a tag like saas-vYYYY.MM.DD.NN exists, returns saas-vYYYY.MM.DD.(NN+1)
     """
     today = datetime.datetime.today()
-    version = "saas-v{y}.{m:02d}".format(y=today.year, m=today.month)
+    version = "saas-v{y}.{m:02d}.{d:02d}".format(
+        y=today.year, m=today.month, d=today.day
+    )
 
     highest = -1
     for repo in Component.get_components_of_type("git"):
@@ -3126,7 +3128,7 @@ def main():
         "--hosted-release",
         action="store_true",
         help="Tag versions from staging for production release. "
-        + "If --version is not suplied, the tags will be 'saas-v<YYYY>.<MM>'",
+        + "If --version is not suplied, the tags will be 'saas-v<YYYY>.<MM>.<DD>'",
     )
     parser.add_argument(
         "--simulate-push", action="store_true", help="Simulate (don't do) pushes"

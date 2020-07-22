@@ -8,19 +8,19 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:staging
+        image: registry.mender.io/mendersoftware/deployments-enterprise:saas-v2020.07.22
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:staging
+        image: registry.mender.io/mendersoftware/inventory-enterprise:saas-v2020.07.22
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:staging
+        image: registry.mender.io/mendersoftware/workflows-enterprise:saas-v2020.07.22
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:staging
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:saas-v2020.07.22
 
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:staging
+        image: registry.mender.io/mendersoftware/tenantadm:saas-v2020.07.22
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:staging
+        image: registry.mender.io/mendersoftware/useradm-enterprise:saas-v2020.07.22

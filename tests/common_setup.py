@@ -33,6 +33,7 @@ def standard_setup_one_client(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
 
@@ -48,6 +49,7 @@ def standard_setup_one_client_bootstrapped(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     devauth.accept_devices(1)
@@ -64,6 +66,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     devauth.accept_devices(1)
@@ -80,6 +83,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     devauth.accept_devices(1)
@@ -96,6 +100,7 @@ def standard_setup_two_clients_bootstrapped(request):
 
     env.device_group = MenderDeviceGroup(env.get_mender_clients())
     env.device_group.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     devauth.accept_devices(2)
@@ -130,6 +135,7 @@ def setup_with_legacy_client(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+#     env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     devauth.accept_devices(1)
@@ -146,6 +152,7 @@ def standard_setup_with_signed_artifact_client(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     auth.reset_auth_token()
@@ -163,6 +170,7 @@ def standard_setup_with_short_lived_token(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     reset_mender_api(env)
     auth.reset_auth_token()
@@ -181,6 +189,7 @@ def setup_failover(request):
 
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
+    env.device.run("sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
 
     auth.reset_auth_token()
     devauth.accept_devices(1)

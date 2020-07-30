@@ -90,6 +90,15 @@ class TestMultiTenancyEnterprise(MenderTesting):
         )
         mender_device.run("systemctl restart %s" % client_service_name)
 
+        logger.info("men3730 %s logs 0 {" % client_service_name)
+        clientlogs=mender_device.run(
+            'journalctl -u %s'
+            % client_service_name,
+            wait=70,
+        )
+        logger.info(clientlogs)
+        logger.info("} men3730 %s logs 0" % client_service_name)
+
         devauth.get_devices(expected_devices=1)
 
     def test_artifacts_exclusive_to_user(self, enterprise_no_client, valid_image):

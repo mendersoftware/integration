@@ -208,7 +208,7 @@ class Client:
         logger.info(output_from_cat)
         logger.info("}/etc/ssl/openssl.cnf")
         output_from_sed = device.run(
-            "sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
+            "sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf"
         )
         logger.info(output_from_sed)
         logger.info("/etc/ssl/openssl.cnf{ after sed")

@@ -59,7 +59,7 @@ class ApiClient:
     def post(self, url, path_params={}, body=None, data=None):
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
-        return requests.request("POST", url, json=body, data=data)
+        return requests.request("POST", url, json=body, data=data, verify=False)
 
     def __make_url(self, path):
         return os.path.join(

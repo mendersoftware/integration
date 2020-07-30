@@ -66,16 +66,27 @@ class TestMultiTenancyEnterprise(MenderTesting):
         logger.info(result)
         logger.info("1 } test_token_validity cat /etc/ssl/openssl.cnf")
 
+        logger.info("men3730 ps axuw 120 {")
+        clientlogs=mender_device.run(
+            "ps axuw",
+            wait=120,
+        )
+        logger.info(clientlogs)
+        logger.info("} men3730 ps axuw 120")
+
+        logger.info("men3730 mender-client logs 120 {")
+        clientlogs=mender_device.run(
+            "journalctl -u mender-client",
+            wait=120,
+        )
+        logger.info(clientlogs)
+        logger.info("} men3730 mender-client logs 120")
+
 
 
         client_service_name = mender_device.get_client_service_name()
         mender_device.run(
             'journalctl -u %s | grep "authentication request rejected server error message: Unauthorized"'
-            % client_service_name,
-            wait=70,
-        )
-        mender_device.run(
-            'journalctl -u %s'
             % client_service_name,
             wait=70,
         )

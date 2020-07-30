@@ -88,6 +88,8 @@ class TestPreauthBase(MenderTesting):
         """
             Test the removal of a preauthorized auth set, verify it's gone from all API results.
         """
+        Client.set_sslcnf()
+
         # preauthorize
         preauth_iddata = json.loads('{"mac":"preauth-mac"}')
         preauth_key = """-----BEGIN PUBLIC KEY-----
@@ -196,6 +198,25 @@ class Client:
     KEYGEN_TIMEOUT = 300
     DEVICE_ACCEPTED_TIMEOUT = 600
     MENDER_STORE_TIMEOUT = 600
+
+    @staticmethod
+    def set_sslcnf(device):
+        logger.info("/etc/ssl/openssl.cnf{ before sed")
+        output_from_cat = device.run(
+            "cat /etc/ssl/openssl.cnf"
+        )
+        logger.info(output_from_cat)
+        logger.info("}/etc/ssl/openssl.cnf")
+        output_from_sed = device.run(
+            "sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf")
+        )
+        logger.info(output_from_sed)
+        logger.info("/etc/ssl/openssl.cnf{ after sed")
+        output_from_cat = device.run(
+            "cat /etc/ssl/openssl.cnf"
+        )
+        logger.info(output_from_cat)
+        logger.info("}/etc/ssl/openssl.cnf")
 
     @staticmethod
     def get_logs(device):

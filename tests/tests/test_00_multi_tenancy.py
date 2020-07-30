@@ -51,7 +51,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         logger.info("0 } test_token_validity cat /etc/ssl/openssl.cnf")
 
         result=mender_device.run(
-            "sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf",
+            "echo 'CipherString = DEFAULT@SECLEVEL=-1' >> /etc/ssl/openssl.cnf",
             wait=70,
         )
         logger.info("test_token_validity sed /etc/ssl/openssl.cnf { 0")

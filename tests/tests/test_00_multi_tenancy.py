@@ -42,9 +42,40 @@ class TestMultiTenancyEnterprise(MenderTesting):
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
 
         mender_device.ssh_is_opened()
+        result=mender_device.run(
+            'cat /etc/ssl/openssl.cnf',
+            wait=70,
+        )
+        logger.info("test_token_validity cat /etc/ssl/openssl.cnf { 0")
+        logger.info(result)
+        logger.info("0 } test_token_validity cat /etc/ssl/openssl.cnf")
+
+        result=mender_device.run(
+            "sed -i    -e 's/CipherString = DEFAULT@SECLEVEL=.*/CipherString = DEFAULT@SECLEVEL=-1/' /etc/ssl/openssl.cnf",
+            wait=70,
+        )
+        logger.info("test_token_validity sed /etc/ssl/openssl.cnf { 0")
+        logger.info(result)
+        logger.info("0 } test_token_validity sed /etc/ssl/openssl.cnf")
+
+        result=mender_device.run(
+            'cat /etc/ssl/openssl.cnf',
+            wait=70,
+        )
+        logger.info("test_token_validity cat /etc/ssl/openssl.cnf { 1")
+        logger.info(result)
+        logger.info("1 } test_token_validity cat /etc/ssl/openssl.cnf")
+
+
+
         client_service_name = mender_device.get_client_service_name()
         mender_device.run(
             'journalctl -u %s | grep "authentication request rejected server error message: Unauthorized"'
+            % client_service_name,
+            wait=70,
+        )
+        mender_device.run(
+            'journalctl -u %s'
             % client_service_name,
             wait=70,
         )

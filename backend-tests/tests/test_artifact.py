@@ -27,16 +27,15 @@ from testutils.api.client import ApiClient
 from testutils.api import (
     deployments,
     useradm,
-    deviceauth as deviceauth_v1,
+    deviceauth,
 )
 from testutils.common import (
     create_org,
     mongo,
     clean_mongo,
     get_mender_artifact,
+    make_accepted_device,
 )
-
-from .test_deployments import make_accepted_device
 
 
 class TestUploadArtifactEnterprise:
@@ -228,8 +227,9 @@ class TestUploadArtifactEnterprise:
             assert r.status_code == 201
 
         # create a new accepted device
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        dev = make_accepted_device(auth_token, devauthd, tenant.tenant_token)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        dev = make_accepted_device(devauthd, devauthm, auth_token, tenant.tenant_token)
         assert dev is not None
 
         # create a deployment

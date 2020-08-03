@@ -38,6 +38,8 @@ from testutils.common import (
     create_authset,
     get_device_by_id_data,
     change_authset_status,
+    make_accepted_device,
+    make_accepted_devices,
 )
 
 
@@ -89,68 +91,11 @@ def rand_id_data():
     return {"mac": mac, "sn": sn}
 
 
-def make_pending_device(utoken, tenant_token=""):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-    devauthd = ApiClient(deviceauth.URL_DEVICES)
-
-    id_data = rand_id_data()
-
-    priv, pub = testutils.util.crypto.get_keypair_rsa()
-    new_set = create_authset(
-        devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token,
-    )
-
-    dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
-
-    dev.authsets.append(new_set)
-
-    dev.status = "pending"
-
-    return dev
-
-
-def make_accepted_device(utoken, devauthd, tenant_token=""):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-
-    dev = make_pending_device(utoken, tenant_token=tenant_token)
-    aset_id = dev.authsets[0].id
-    change_authset_status(devauthm, dev.id, aset_id, "accepted", utoken)
-
-    aset = dev.authsets[0]
-    aset.status = "accepted"
-
-    # obtain auth token
-    body, sighdr = deviceauth.auth_req(
-        aset.id_data, aset.pubkey, aset.privkey, tenant_token
-    )
-
-    r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
-
-    assert r.status_code == 200
-    dev.token = r.text
-
-    dev.status = "accepted"
-
-    return dev
-
-
-def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=""):
-    """ Create accepted devices.
-        returns list of Device objects."""
-    devices = []
-
-    # some 'accepted' devices, single authset
-    for _ in range(num_devices):
-        dev = make_accepted_device(utoken, devauthd, tenant_token=tenant_token)
-        devices.append(dev)
-
-    return devices
-
-
 class TestGetDevicesBase:
     def do_test_get_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -160,7 +105,7 @@ class TestGetDevicesBase:
         utoken = r.text
 
         # prepare accepted devices
-        devs = make_accepted_devices(utoken, devauthd, 40, tenant_token)
+        devs = make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
         # wait for devices to be provisioned
         time.sleep(3)
@@ -175,6 +120,7 @@ class TestGetDevicesBase:
     def do_test_filter_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -184,7 +130,7 @@ class TestGetDevicesBase:
         utoken = r.text
 
         # prepare accepted devices
-        devs = make_accepted_devices(utoken, devauthd, 40, tenant_token)
+        devs = make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
         # wait for devices to be provisioned
         time.sleep(3)
@@ -238,6 +184,7 @@ class TestDevicePatchAttributes:
     def test_ok(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -247,7 +194,7 @@ class TestDevicePatchAttributes:
         utoken = r.text
 
         # prepare accepted devices
-        devs = make_accepted_devices(utoken, devauthd, 3)
+        devs = make_accepted_devices(devauthd, devauthm, utoken, "", 3)
 
         # wait for devices to be provisioned
         time.sleep(3)
@@ -302,6 +249,7 @@ class TestDevicePatchAttributes:
     def test_fail_no_attr_value(self, user):
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
@@ -311,7 +259,7 @@ class TestDevicePatchAttributes:
         utoken = r.text
 
         # prepare accepted devices
-        devs = make_accepted_devices(utoken, devauthd, 1)
+        devs = make_accepted_devices(devauthd, devauthm, utoken, "", 1)
 
         # wait for devices to be provisioned
         time.sleep(3)
@@ -347,7 +295,8 @@ class TestDeviceFilteringEnterprise:
         NUM_DEVICES = 100
 
         useradmm = ApiClient(useradm.URL_MGMT)
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
         invm_v2 = ApiClient(inventory_v2.URL_MGMT)
 

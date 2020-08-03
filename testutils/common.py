@@ -247,6 +247,19 @@ def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
     return dev
 
 
+def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devices=1):
+    """ Create accepted devices.
+        returns list of Device objects."""
+    devices = []
+
+    # some 'accepted' devices, single authset
+    for _ in range(num_devices):
+        dev = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
+        devices.append(dev)
+
+    return devices
+
+
 def randstr():
     """ Random suffix generation.
         Useful when we need e.g. unique object ids so that

@@ -17,6 +17,8 @@ import testutils.api.client
 URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v1/useradm"
 
 URL_LOGIN = "/auth/login"
+URL_PASSWORD_RESET_START = "/auth/password-reset/start"
+URL_PASSWORD_RESET_COMPLETE = "/auth/password-reset/complete"
 URL_SETTINGS = "/settings"
 URL_2FAQR = "/2faqr"
 URL_2FAVERIFY = "/2faverify"

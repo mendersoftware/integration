@@ -374,7 +374,7 @@ Running the command:
 $ ./release_tool --hosted-release
 ```
 
-The tool will generate tags of the form `saas-vYYYY.MM` for all backend
+The tool will generate tags of the form `saas-vYYYY.MM.DD` for all backend
 repositories from their respective `staging` branches.
 
 Alternatively, a custom version can be specified with:

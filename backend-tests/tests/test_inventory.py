@@ -70,9 +70,6 @@ def user(clean_migrated_mongo):
 
 @pytest.fixture(scope="function")
 def tenants_users(clean_migrated_mongo_mt):
-    cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL)
-
     names = ["tenant1", "tenant2"]
     tenants = []
 
@@ -336,30 +333,6 @@ class TestDeviceFilteringEnterprise:
             self._logger = logging.getLogger(self.__class__.__name__)
         return self._logger
 
-    def is_subset(self, value, subset):
-        if type(value) != type(subset):
-            self.logger.error("type(%s) != type(%s)" % (value, subset))
-            return False
-
-        if isinstance(subset, list):
-            for i, item in enumerate(subset):
-                if not self.is_subset(value[i], item):
-                    return False
-
-        elif isinstance(subset, dict):
-            for k, v in subset.items():
-                if k not in value:
-                    self.logger.error("%s not in %s" % (k, list(value.keys())))
-                    return False
-                elif not self.is_subset(value[k], v):
-                    return False
-
-        elif value != subset:
-            self.logger.error("%s != %s" % (value, subset))
-            return False
-
-        return True
-
     def dict_to_inventoryattrs(self, d, scope=None):
         attr_list = []
         for key, value in d.items():
@@ -379,8 +352,7 @@ class TestDeviceFilteringEnterprise:
         invm_v2 = ApiClient(inventory_v2.URL_MGMT)
 
         # Initialize devices and API tokens
-        tenants = [t for t in tenants_users]
-        users = [tenant.users[0] for tenant in tenants]
+        users = [tenant.users[0] for tenant in tenants_users]
         inventories = [
             {"version": "v1.0", "grp1": "foo", "idx": 0},
             {"version": "v2.0", "grp1": "bar", "idx": 1},
@@ -393,30 +365,28 @@ class TestDeviceFilteringEnterprise:
             {"version": "v3.0", "grp3": "baz", "idx": 8},
         ]
 
-        # Setup an identical inventory environment for both tenants.
-        for tenant in tenants:
-            tenant.devices = []
-            for inv in inventories:
-                user = tenant.users[0]
-                utoken = useradmm.call(
-                    "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-                ).text
-                assert utoken != ""
+        tenant = tenants_users[0]
+        tenant.devices = []
+        for inv in inventories:
+            user = tenant.users[0]
+            utoken = useradmm.call(
+                "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
+            ).text
+            assert utoken != ""
 
-                tenant.api_token = utoken
-                device = make_accepted_device(
-                    utoken, devauthd, tenant_token=tenant.tenant_token
-                )
-                tenant.devices.append(device)
+            tenant.api_token = utoken
+            device = make_accepted_device(
+                devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
+            )
+            tenant.devices.append(device)
 
-                attrs = self.dict_to_inventoryattrs(inv)
-                rsp = invd.with_auth(device.token).call(
-                    "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
-                )
-                assert rsp.status_code == 200
-                device.inventory = inv
+            attrs = self.dict_to_inventoryattrs(inv)
+            rsp = invd.with_auth(device.token).call(
+                "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
+            )
+            assert rsp.status_code == 200
+            device.inventory = inv
 
-        tenant = tenants[0]
         test_cases = [
             {
                 "name": "Test $eq single match",
@@ -433,7 +403,7 @@ class TestDeviceFilteringEnterprise:
                 "status_code": 200,
                 "response": [
                     {
-                        "id": str(tenants[0].devices[1].id),
+                        "id": str(tenant.devices[1].id),
                         "attributes": self.dict_to_inventoryattrs(
                             tenant.devices[1].inventory, scope="inventory"
                         ),
@@ -611,14 +581,18 @@ class TestDeviceFilteringEnterprise:
                 )
 
                 if len(body) > 0:
-                    # There are no guarantee on the order the attributes
-                    # are returned.
-                    for dev in body:
-                        dev["attributes"].sort(key=lambda d: d["name"])
                     for dev in test_case["response"]:
-                        dev["attributes"].sort(key=lambda d: d["name"])
+                        found = False
+                        for api_dev in body:
+                            if dev["id"] == api_dev["id"]:
+                                assert_device_attributes(dev, api_dev)
+                                found = True
+                        assert found, "Missing device with id: %s" % dev["id"]
 
-                    assert self.is_subset(body, test_case["response"]), (
-                        "Unexpected result from search: %s not in response %s"
-                        % (test_case["response"], body)
-                    )
+
+def assert_device_attributes(dev, api_dev):
+    for attr in dev["attributes"]:
+        assert attr in api_dev["attributes"], (
+            "Missing inventory attribute: %s; device attributes: %s"
+            % (attr, api_dev["attributes"])
+        )

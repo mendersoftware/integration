@@ -61,67 +61,6 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         devauth.get_devices(expected_devices=1)
 
-    def test_clients_exclusive_to_user(self, enterprise_no_client):
-        users = [
-            {
-                "email": "foo1@foo1.com",
-                "password": "hunter2hunter2",
-                "username": "foo1",
-                "container": "mender-client-exclusive-1",
-                "client_id": "",
-                "device_id": "",
-            },
-            {
-                "email": "bar1@bar1.com",
-                "password": "hunter2hunter2",
-                "username": "bar1",
-                "container": "mender-client-exclusive-2",
-                "client_id": "",
-                "device_id": "",
-            },
-        ]
-
-        for user in users:
-            auth.set_tenant(user["username"], user["email"], user["password"])
-
-            t = auth.current_tenant["tenant_token"]
-            enterprise_no_client.new_tenant_client(user["container"], t)
-            devauth.accept_devices(1)
-
-            # get the new devices client_id and setting it to the our test parameter
-            assert len(inv.get_devices()) == 1
-            user["client_id"] = inv.get_devices()[0]["id"]
-            user["device_id"] = devauth.get_devices()[0]["id"]
-
-        for user in users:
-            # make sure that the correct number of clients appear for the given tenant
-            auth.set_tenant(user["username"], user["email"], user["password"])
-            assert len(inv.get_devices()) == 1
-            assert inv.get_devices()[0]["id"] == user["client_id"]
-
-        for user in users:
-            # wait until inventory is populated
-            auth.set_tenant(user["username"], user["email"], user["password"])
-            devauth.decommission(user["client_id"])
-            timeout = time.time() + (60 * 5)
-            device_id = user["device_id"]
-            while time.time() < timeout:
-                newAdmissions = devauth.get_devices()[0]
-                if (
-                    device_id != newAdmissions["id"]
-                    and user["client_id"] != newAdmissions["id"]
-                ):
-                    logger.info(
-                        "device [%s] not found in inventory [%s]"
-                        % (device_id, str(newAdmissions))
-                    )
-                    break
-                else:
-                    logger.info("device [%s] found in inventory..." % (device_id))
-                time.sleep(0.5)
-            else:
-                assert False, "decommissioned device still available in inventory"
-
     def test_multi_tenancy_deployment(self, enterprise_no_client, valid_image):
         """ Simply make sure we are able to run the multi tenancy setup and
            bootstrap 2 different devices to different tenants """

@@ -222,6 +222,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "meta-mender": "META_MENDER_REV",
     "integration": "INTEGRATION_REV",
     "mender-qa": "MENDER_QA_REV",
+    "auditlogs": "AUDITLOGS_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -233,6 +234,7 @@ BACKEND_SERVICES_ENT = {
     "inventory-enterprise",
     "useradm-enterprise",
     "workflows-enterprise",
+    "auditlogs",
 }
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = (
@@ -390,7 +392,11 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = ["docker-compose.yml", "docker-compose.enterprise.yml"]
+    _DOCKER_ONLY_YML = [
+        "docker-compose.yml",
+        "docker-compose.enterprise.yml",
+        "docker-compose.auditlogs.yml",
+    ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
 
     def _is_known_yml_file(entry):
@@ -1330,10 +1336,11 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         cleanup_temp_git_checkout(tmpdir)
 
     # Prepare Git tag and push commands.
-    git_list = []
+    git_tag_list = []
+    git_push_list = []
     for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"]:
-            git_list.append(
+            git_tag_list.append(
                 (
                     state,
                     repo.git(),
@@ -1348,7 +1355,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 )
             )
             remote = find_upstream_remote(state, repo.git())
-            git_list.append(
+            git_push_list.append(
                 (
                     state,
                     repo.git(),
@@ -1356,7 +1363,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 )
             )
 
-    if not query_execute_git_list(git_list):
+    if not query_execute_git_list(git_tag_list + git_push_list):
         return tag_avail
 
     # If this was the final tag, reflect that in our data.
@@ -2728,14 +2735,16 @@ def do_map_name(args):
 
 
 def get_next_hosted_release_version(state):
-    """Return next tag like "saas-vYYYY.MM" (saas-vYEAR.MONTH)
+    """Return next tag like "saas-vYYYY.MM.DD" (saas-vYEAR.MONTH.DAY)
 
-    If no tag for the current month exists, returns saas-vYYYY.MM
-    If a tag like saas-vYYYY.MM, returns saas-vYYYY.MM.02
-    If a tag like saas-vYYYY.MM.NN exists, returns saas-vYYYY.MM.(NN+1)
+    If no tag for the current month exists, returns saas-vYYYY.MM.DD
+    If a tag like saas-vYYYY.MM.DD, returns saas-vYYYY.MM.DD.02
+    If a tag like saas-vYYYY.MM.DD.NN exists, returns saas-vYYYY.MM.DD.(NN+1)
     """
     today = datetime.datetime.today()
-    version = "saas-v{y}.{m:02d}".format(y=today.year, m=today.month)
+    version = "saas-v{y}.{m:02d}.{d:02d}".format(
+        y=today.year, m=today.month, d=today.day
+    )
 
     highest = -1
     for repo in Component.get_components_of_type("git"):
@@ -3119,7 +3128,7 @@ def main():
         "--hosted-release",
         action="store_true",
         help="Tag versions from staging for production release. "
-        + "If --version is not suplied, the tags will be 'saas-v<YYYY>.<MM>'",
+        + "If --version is not suplied, the tags will be 'saas-v<YYYY>.<MM>.<DD>'",
     )
     parser.add_argument(
         "--simulate-push", action="store_true", help="Simulate (don't do) pushes"

@@ -24,3 +24,7 @@ services:
 
     mender-useradm:
         image: registry.mender.io/mendersoftware/useradm-enterprise:staging
+
+    mender-auditlogs:
+        image: registry.mender.io/mendersoftware/auditlogs:master
+

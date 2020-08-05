@@ -61,46 +61,6 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         devauth.get_devices(expected_devices=1)
 
-    def test_artifacts_exclusive_to_user(self, enterprise_no_client, valid_image):
-        # extra long sleep to make sure all services ran their migrations
-        # maybe conductor fails because some services are still in a migration phase,
-        # and not serving the API yet?
-        time.sleep(30)
-
-        users = [
-            {
-                "email": "foo1@foo1.com",
-                "password": "hunter2hunter2",
-                "username": "foo1",
-            },
-            {
-                "email": "bar2@bar2.com",
-                "password": "hunter2hunter2",
-                "username": "bar2",
-            },
-        ]
-
-        for user in users:
-            auth.set_tenant(user["username"], user["email"], user["password"])
-            with artifact_lock:
-                with tempfile.NamedTemporaryFile() as artifact_file:
-                    artifact = image.make_rootfs_artifact(
-                        valid_image,
-                        conftest.machine_name,
-                        user["email"],
-                        artifact_file,
-                    )
-
-                    deploy.upload_image(artifact)
-
-        for user in users:
-            auth.set_tenant(user["username"], user["email"], user["password"])
-            artifacts_for_user = deploy.get_artifacts()
-
-            # make sure that one a single artifact exist for a given tenant
-            assert len(artifacts_for_user)
-            assert artifacts_for_user[0]["name"] == user["email"]
-
     def test_clients_exclusive_to_user(self, enterprise_no_client):
         users = [
             {

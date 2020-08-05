@@ -519,3 +519,52 @@ class TestUploadArtifactEnterprise:
             assert size == 256
         finally:
             os.unlink(f.name)
+
+    def test_artifacts_exclusive_to_user(self, mongo, clean_mongo):
+        tenants = []
+        tenant = create_org("foo", "foo@foo.com", "correcthorse", "enterprise")
+        tenants.append(tenant)
+        tenant = create_org("bar", "bar@bar.com", "correcthorse", "enterprise")
+        tenants.append(tenant)
+
+        api_client = ApiClient(deployments.URL_MGMT)
+        api_client.headers = {}  # avoid default Content-Type: application/json
+
+        for tenant in tenants:
+            user = tenant.users[0]
+            auth_token = self.get_auth_token(user.name, user.pwd)
+
+            # create and upload the mender artifact
+            with get_mender_artifact(
+                artifact_name=user.name,
+                device_types=["arm1"],
+                depends=("key1:value1", "key2:value2"),
+                provides=("key3:value3", "key4:value4", "key5:value5"),
+            ) as artifact:
+                r = api_client.with_auth(auth_token).call(
+                    "POST",
+                    deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                    files=(
+                        ("description", (None, "description")),
+                        ("size", (None, str(os.path.getsize(artifact)))),
+                        (
+                            "artifact",
+                            (
+                                artifact,
+                                open(artifact, "rb"),
+                                "application/octet-stream",
+                            ),
+                        ),
+                    ),
+                )
+                assert r.status_code == 201
+
+        for tenant in tenants:
+            user = tenant.users[0]
+            auth_token = self.get_auth_token(user.name, user.pwd)
+            api_client.with_auth(auth_token)
+            r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+            assert r.status_code == 200
+            artifacts = r.json()
+            assert len(artifacts) == 1
+            assert artifacts[0]["name"] == user.name

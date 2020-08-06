@@ -44,72 +44,9 @@ from testutils.common import (
     mongo_cleanup,
     mongo,
     get_mender_artifact,
+    make_accepted_device,
+    make_accepted_devices,
 )
-
-
-def rand_id_data():
-    mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), "x") for i in range(6)])
-    sn = "".join(["{}".format(random.randint(0x00, 0xFF)) for i in range(6)])
-
-    return {"mac": mac, "sn": sn}
-
-
-def make_pending_device(utoken, tenant_token=""):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-    devauthd = ApiClient(deviceauth.URL_DEVICES)
-
-    id_data = rand_id_data()
-
-    priv, pub = testutils.util.crypto.get_keypair_rsa()
-    new_set = create_authset(
-        devauthd, devauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
-    )
-
-    dev = Device(new_set.did, new_set.id_data, utoken, tenant_token)
-
-    dev.authsets.append(new_set)
-
-    dev.status = "pending"
-
-    return dev
-
-
-def make_accepted_device(utoken, devauthd, tenant_token=""):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-
-    dev = make_pending_device(utoken, tenant_token=tenant_token)
-    aset_id = dev.authsets[0].id
-    change_authset_status(devauthm, dev.id, aset_id, "accepted", utoken)
-
-    aset = dev.authsets[0]
-    aset.status = "accepted"
-
-    # obtain auth token
-    body, sighdr = deviceauth.auth_req(
-        aset.id_data, aset.pubkey, aset.privkey, tenant_token
-    )
-
-    r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
-
-    assert r.status_code == 200
-    dev.token = r.text
-
-    dev.status = "accepted"
-
-    return dev
-
-
-def make_accepted_devices(utoken, devauthd, num_devices=1, tenant_token=""):
-    """ Create accepted devices.
-        returns list of Device objects."""
-    devices = []
-
-    # some 'accepted' devices, single authset
-    for _ in range(num_devices):
-        dev = make_accepted_device(utoken, devauthd, tenant_token=tenant_token)
-        devices.append(dev)
-
-    return devices
 
 
 def upload_image(filename, auth_token, description="abc"):
@@ -620,6 +557,7 @@ def setup_devices_and_management_st(nr_devices=100):
     user = create_user("bugs@bunny.org", "correcthorse")
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
@@ -629,7 +567,7 @@ def setup_devices_and_management_st(nr_devices=100):
     # Upload a dummy artifact to the server
     upload_image("/tests/test-artifact.mender", utoken)
     # prepare accepted devices
-    devs = make_accepted_devices(utoken, devauthd, nr_devices)
+    devs = make_accepted_devices(devauthd, devauthm, utoken, "", nr_devices)
     # wait for devices to be provisioned
     time.sleep(3)
 
@@ -652,6 +590,7 @@ def setup_devices_and_management_mt(nr_devices=100):
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
@@ -661,7 +600,9 @@ def setup_devices_and_management_mt(nr_devices=100):
     # Upload a dummy artifact to the server
     upload_image("/tests/test-artifact.mender", utoken)
     # prepare accepted devices
-    devs = make_accepted_devices(utoken, devauthd, nr_devices, tenant.tenant_token)
+    devs = make_accepted_devices(
+        devauthd, devauthm, utoken, tenant.tenant_token, nr_devices
+    )
     # wait for devices to be provisioned
     time.sleep(3)
 
@@ -1575,7 +1516,7 @@ def make_device_with_inventory(attributes, utoken, tenant_token):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
-    d = make_accepted_device(utoken, devauthd, tenant_token)
+    d = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
 
     submit_inventory(attributes, d.token)
 

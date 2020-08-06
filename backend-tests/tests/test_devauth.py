@@ -1243,6 +1243,7 @@ class TestAuthsetMgmtBase:
         assert r.status_code == 404
 
     def verify_dev_after_status_update(self, dev, utoken):
+        # verify in devauth
         devauthm = ApiClient(deviceauth.URL_MGMT)
 
         r = devauthm.with_auth(utoken).call(
@@ -1261,7 +1262,35 @@ class TestAuthsetMgmtBase:
 
             compare_aset(aset, api_aset)
 
+        # verify in inventory
+        wait_sec = 5
+        while wait_sec > 0:
+            try:
+                time.sleep(1)
+                invm = ApiClient(inventory.URL_MGMT)
+
+                r = invm.with_auth(utoken).call(
+                    "GET", inventory.URL_DEVICE, path_params={"id": dev.id}
+                )
+                assert r.status_code == 200
+
+                inv_dev = r.json()
+                status = [a for a in inv_dev["attributes"] if a["name"] == "status"]
+                assert len(status) == 1
+
+                assert status[0]["value"] == dev.status
+
+                break
+            except AssertionError:
+                wait_sec -= 1
+                continue
+
+        assert wait_sec != 0, "waiting for state 'noauth' in inventory timed out"
+
     def compute_dev_status(self, authsets):
+        if len(authsets) == 0:
+            return "noauth"
+
         accepted = [a for a in authsets if a.status == "accepted"]
 
         if len(accepted) > 0:

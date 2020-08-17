@@ -127,12 +127,27 @@ def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
     return User(uid, name, pwd)
 
 
-def create_org(name, username, password, plan="os"):
-    cli = CliTenantadm()
+def create_org(
+    name,
+    username,
+    password,
+    plan="os",
+    containers_namespace="backend-tests",
+    container_manager=None,
+):
+    cli = CliTenantadm(
+        containers_namespace=containers_namespace, container_manager=container_manager
+    )
     user_id = None
     tenant_id = cli.create_org(name, username, password, plan=plan)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
-    api = ApiClient(useradm.URL_MGMT)
+    url_useradm = useradm.URL_MGMT
+    if container_manager is not None:
+        url_useradm = url_useradm.replace(
+            "mender-api-gateway",
+            container_manager.get_ip_of_service("mender-api-gateway")[0],
+        )
+    api = ApiClient(url_useradm)
     # Try log in every second for 3 minutes.
     # - There usually is a slight delay (in order of ms) for propagating
     #   the created user to the db.

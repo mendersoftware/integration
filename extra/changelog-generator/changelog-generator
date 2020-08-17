@@ -22,6 +22,7 @@ SHA_TO_TRACKER = {}
 JIRA_REGEX = r"(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)"
 TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
 
+
 def add_entry(sha, msg):
     if msg.lower().strip() == "none":
         return
@@ -32,28 +33,50 @@ def add_entry(sha, msg):
     sha_list.append(msg)
     ENTRIES[sha] = sha_list
 
-parser = argparse.ArgumentParser(description='Generates a changelog for Mender repositories.')
-parser.add_argument('--repo', dest='repo', action='store_true',
-                    default=False,
-                    help='Includes only the current repository. '
-                    + 'Mutually exclusive with --all')
-parser.add_argument('--all', dest='all', action='store_true',
-                    help='(Default) Includes all versioned Mender repositories. '
-                    + 'Commit range should be given relative to the integration '
-                    + 'repository, and the generator will use release_tool.py '
-                    + 'to figure out versions of other repositories. '
-                    + 'Mutually exclusive with --repo')
-parser.add_argument('--base-dir', dest='base_dir',
-                    help="Base directory containing all the Mender repositories. "
-                    + "Ignored if using --repo")
-parser.add_argument('--sort-changelog', dest='sort_changelog', action='store_true',
-                    # Not used except in the test.
-                    help=argparse.SUPPRESS)
-parser.add_argument('range', metavar='<commit-range> [--]',
-                    help='Range of commits to generate log for')
-parser.add_argument('gitargs', metavar='git-argument', nargs='*',
-                    help='Additional git arguments to tailor the commit range. '
-                    + 'Note that for technical reasons these must come last.')
+
+parser = argparse.ArgumentParser(
+    description="Generates a changelog for Mender repositories."
+)
+parser.add_argument(
+    "--repo",
+    dest="repo",
+    action="store_true",
+    default=False,
+    help="Includes only the current repository. " + "Mutually exclusive with --all",
+)
+parser.add_argument(
+    "--all",
+    dest="all",
+    action="store_true",
+    help="(Default) Includes all versioned Mender repositories. "
+    + "Commit range should be given relative to the integration "
+    + "repository, and the generator will use release_tool.py "
+    + "to figure out versions of other repositories. "
+    + "Mutually exclusive with --repo",
+)
+parser.add_argument(
+    "--base-dir",
+    dest="base_dir",
+    help="Base directory containing all the Mender repositories. "
+    + "Ignored if using --repo",
+)
+parser.add_argument(
+    "--sort-changelog",
+    dest="sort_changelog",
+    action="store_true",
+    # Not used except in the test.
+    help=argparse.SUPPRESS,
+)
+parser.add_argument(
+    "range", metavar="<commit-range> [--]", help="Range of commits to generate log for"
+)
+parser.add_argument(
+    "gitargs",
+    metavar="git-argument",
+    nargs="*",
+    help="Additional git arguments to tailor the commit range. "
+    + "Note that for technical reasons these must come last.",
+)
 
 args = parser.parse_args()
 
@@ -70,19 +93,47 @@ else:
     base_dir = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "../../.."))
 
 if args.all:
-    repo_list = subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                         "--list"]).decode().strip()
+    repo_list = (
+        subprocess.check_output(
+            [os.path.join(base_dir, "integration/extra/release_tool.py"), "--list"]
+        )
+        .decode()
+        .strip()
+    )
     repos += [os.path.join(base_dir, repo) for repo in repo_list.split()]
 else:
     repos.append(".")
 
-def get_range_for_repo(repo, range):
-    return subprocess.check_output([os.path.join(base_dir, "integration/extra/release_tool.py"),
-                                    "--version-of", repo, "--in-integration-version", range]).decode().strip()
 
-print("## %s %s\n"
-      % ("Mender" if args.all else os.path.basename(subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip()),
-         args.range.split("..")[1] if ".." in args.range else args.range))
+def get_range_for_repo(repo, range):
+    return (
+        subprocess.check_output(
+            [
+                os.path.join(base_dir, "integration/extra/release_tool.py"),
+                "--version-of",
+                repo,
+                "--in-integration-version",
+                range,
+            ]
+        )
+        .decode()
+        .strip()
+    )
+
+
+print(
+    "## %s %s\n"
+    % (
+        "Mender"
+        if args.all
+        else os.path.basename(
+            subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+            .decode()
+            .strip()
+        ),
+        args.range.split("..")[1] if ".." in args.range else args.range,
+    )
+)
 print("_Released xx.xx.xxxx_\n")
 
 for repo in repos:
@@ -94,23 +145,33 @@ for repo in repos:
     try:
         os.chdir(repo)
     except FileNotFoundError:
-        print(("Could not find %s. Maybe use --base-dir option and point to a "
-               + "directory containing all repositories") % repo)
+        print(
+            (
+                "Could not find %s. Maybe use --base-dir option and point to a "
+                + "directory containing all repositories"
+            )
+            % repo
+        )
         raise
     if args.all and not repo.endswith("integration"):
         range = get_range_for_repo(os.path.basename(repo), args.range)
         if args.range.find("..") >= 0 and range.find("..") < 0:
-            POSSIBLE_PROBLEMS.append(("*** The changelog for the %s repository contains the entire history. "
-                                      + "This can happen for repositories that are new in this release. "
-                                      + "Please double check that this is not a mistake, and consider a "
-                                      + "simpler changelog if appropriate.")
-                                     % repo)
+            POSSIBLE_PROBLEMS.append(
+                (
+                    "*** The changelog for the %s repository contains the entire history. "
+                    + "This can happen for repositories that are new in this release. "
+                    + "Please double check that this is not a mistake, and consider a "
+                    + "simpler changelog if appropriate."
+                )
+                % repo
+            )
     else:
         range = args.range
-    sha_list = subprocess.Popen(["git", "rev-list", "--reverse", range] + args.gitargs,
-                                stdout=subprocess.PIPE)
+    sha_list = subprocess.Popen(
+        ["git", "rev-list", "--reverse", range] + args.gitargs, stdout=subprocess.PIPE
+    )
     for sha in sha_list.stdout:
-        sha = sha.decode().rstrip('\n')
+        sha = sha.decode().rstrip("\n")
         blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)
 
         msg_started = False
@@ -122,7 +183,7 @@ for repo in repos:
         log_entry = ""
         exclusive_tag_seen = False
         for line in blob.stdout:
-            line = line.decode().rstrip('\r\n')
+            line = line.decode().rstrip("\r\n")
             if line == "":
                 if not msg_started:
                     msg_started = True
@@ -142,7 +203,7 @@ for repo in repos:
                     SHA_TO_TRACKER[sha] = set()
                 SHA_TO_TRACKER[sha].add("".join(match.groups("")))
                 tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
-                line = tracker_removed.strip(' ')
+                line = tracker_removed.strip(" ")
 
             if not title_fetched:
                 title = line
@@ -159,17 +220,22 @@ for repo in repos:
                 # - Shall start with Title|Commit|All|None
                 # - From here, if [.:]+ then capture the rest in a new group
                 # - Else just expect end line
-                match_keyword = re.match("^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)", match_changelog.group(1), re.IGNORECASE)
+                match_keyword = re.match(
+                    "^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
+                    match_changelog.group(1),
+                    re.IGNORECASE,
+                )
 
                 if match_keyword:
                     if exclusive_tag_seen:
                         # This doesn't really mean that the tags are exclusive, but rather that it
                         # is quite uncommon to see any of them together, and might indicate a
                         # squashed commit.
-                        POSSIBLE_PROBLEMS.append("*** Commit %s had conflicting changelog tags. "
-                                                 "This might be a squashed commit which will not work correctly with changelogs. "
-                                                 "Should be manually checked."
-                                                 % sha)
+                        POSSIBLE_PROBLEMS.append(
+                            "*** Commit %s had conflicting changelog tags. "
+                            "This might be a squashed commit which will not work correctly with changelogs. "
+                            "Should be manually checked." % sha
+                        )
                     exclusive_tag_seen = True
 
                     if match_keyword.group(1).lower() == "title":
@@ -188,8 +254,10 @@ for repo in repos:
                     log_entry = match_changelog.group(1)
                 continue
 
-            for cancel_expr in ["^ *Cancel-Changelog: *([0-9a-f]+).*",
-                                "^This reverts commit ([0-9a-f]+).*"]:
+            for cancel_expr in [
+                "^ *Cancel-Changelog: *([0-9a-f]+).*",
+                "^This reverts commit ([0-9a-f]+).*",
+            ]:
                 match = re.match(cancel_expr, line, re.IGNORECASE)
                 if match:
                     if log_entry:
@@ -208,7 +276,9 @@ for repo in repos:
                             del ENTRIES[linked_sha]
                     continue
 
-            match = re.match("^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE)
+            match = re.match(
+                "^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE
+            )
             if match:
                 if log_entry:
                     add_entry(sha, log_entry)
@@ -250,8 +320,11 @@ for repo in repos:
     for sha_entry in ENTRIES:
         tracker = ""
         if SHA_TO_TRACKER.get(sha_entry):
-            jiras = ["[%s](https://tracker.mender.io/browse/%s)"
-                     % (ticket.upper(), ticket.upper()) for ticket in SHA_TO_TRACKER[sha_entry]]
+            jiras = [
+                "[%s](https://tracker.mender.io/browse/%s)"
+                % (ticket.upper(), ticket.upper())
+                for ticket in SHA_TO_TRACKER[sha_entry]
+            ]
             tracker = ""
             if len(jiras) > 0:
                 tracker += "(" + ", ".join(sorted(jiras)) + ")"
@@ -261,8 +334,10 @@ for repo in repos:
             # we missed.
             match = re.search("[0-9]{4,}", entry)
             if match:
-                POSSIBLE_PROBLEMS.append("*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
-                                         % (sha_entry, match.group(0)))
+                POSSIBLE_PROBLEMS.append(
+                    "*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
+                    % (sha_entry, match.group(0))
+                )
             entry = entry.strip("\n")
             if tracker:
                 if len(entry) - entry.rfind("\n") + len(tracker) >= 70:
@@ -278,10 +353,18 @@ for repo in repos:
         if args.all:
             service_header = "#### %s" % os.path.basename(repo)
         else:
-            service_header = "#### %s" % os.path.basename(subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).decode().strip())
+            service_header = "#### %s" % os.path.basename(
+                subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
+                .decode()
+                .strip()
+            )
         if range.find("..") >= 0:
             v_from, v_to = range.split("..", 1)
-            service_header += " (%s)\n\nNew changes in %s since %s:\n" % (v_to, os.path.basename(os.path.realpath(repo)), v_from)
+            service_header += " (%s)\n\nNew changes in %s since %s:\n" % (
+                v_to,
+                os.path.basename(os.path.realpath(repo)),
+                v_from,
+            )
         else:
             service_header += " (%s)\n" % range
         print(service_header)

@@ -23,6 +23,7 @@ from .docker_compose_manager import DockerComposeFailoverServerSetup
 from .docker_compose_manager import DockerComposeEnterpriseSetup
 from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
 from .docker_compose_manager import DockerComposeCustomSetup
+from .docker_compose_manager import DockerComposeCompatibilitySetup
 
 
 class ContainerManagerFactory:
@@ -105,6 +106,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseSMTPSetup(self, name=None):
         return DockerComposeEnterpriseSMTPSetup(name)
+
+    def getCompatibilitySetup(self, name=None, **kwargs):
+        return DockerComposeCompatibilitySetup(name, **kwargs)
 
     def getCustomSetup(self, name=None):
         return DockerComposeCustomSetup(name)

@@ -23,6 +23,23 @@ JIRA_REGEX = r"(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHI
 TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
 
 
+def aggregate_dependabot_changelogs(entry_list):
+    new_entry_list = []
+    aggregated_dependabot_changelogs = ""
+    for entry in entry_list:
+        if re.match("[Bb]umps? .* from .* to .*", entry):
+            aggregated_dependabot_changelogs += "\n* " + "\n  ".join(
+                [s for n, s in enumerate(entry.split("\n")) if s != "" and n != 0]
+            )
+        else:
+            new_entry_list.append(entry)
+    if aggregated_dependabot_changelogs != "":
+        new_entry_list.append(
+            "Aggregated Dependabot Changelogs:" + aggregated_dependabot_changelogs
+        )
+    return new_entry_list
+
+
 def add_entry(sha, msg):
     if msg.lower().strip() == "none":
         return
@@ -347,6 +364,7 @@ for repo in repos:
                 entry += tracker
             entry_list.append(entry)
 
+    entry_list = aggregate_dependabot_changelogs(entry_list)
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:

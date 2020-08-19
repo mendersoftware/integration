@@ -35,8 +35,8 @@ import testutils.api.tenantadm_v2 as tenantadm_v2
 import testutils.integration.stripe as stripeutils
 from testutils.api.client import ApiClient
 
-api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT)
-api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT)
+api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT, host=tenantadm_v1.HOST, schema="http://")
+api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT, host=tenantadm_v2.HOST, schema="http://")
 
 api_uadm = ApiClient(useradm.URL_MGMT)
 stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")

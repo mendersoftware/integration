@@ -12,9 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-URL = "http://mender-tenantadm:8080/api"
-URL_INTERNAL = URL + "/internal/v1/tenantadm"
-URL_MGMT = URL + "/management/v1/tenantadm"
+HOST = "mender-tenantadm:8080"
+URL_INTERNAL = "/api/internal/v1/tenantadm"
+URL_MGMT = "/api/management/v1/tenantadm"
 
 URL_INTERNAL_SUSPEND = "/tenants/{tid}/status"
 URL_INTERNAL_TENANTS = "/tenants"

@@ -25,7 +25,7 @@ import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
-from testutils.api.client import ApiClient
+from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 
@@ -141,13 +141,12 @@ def create_org(
     user_id = None
     tenant_id = cli.create_org(name, username, password, plan=plan)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
-    url_useradm = useradm.URL_MGMT
+
+    host = GATEWAY_HOSTNAME
     if container_manager is not None:
-        url_useradm = url_useradm.replace(
-            "mender-api-gateway",
-            container_manager.get_ip_of_service("mender-api-gateway")[0],
-        )
-    api = ApiClient(url_useradm)
+        host = container_manager.get_mender_gateway()
+    api = ApiClient(useradm.URL_MGMT, host=host)
+
     # Try log in every second for 3 minutes.
     # - There usually is a slight delay (in order of ms) for propagating
     #   the created user to the db.

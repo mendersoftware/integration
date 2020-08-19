@@ -201,17 +201,10 @@ class TestClientCompatibilityBase:
          - Perform a noop rootfs update and verify the update was successful
         """
         gateway_addr = env.get_mender_gateway()
-        URL_MGMT_USERADM = useradm.URL_MGMT.replace("mender-api-gateway", gateway_addr)
-        URL_MGMT_DEVAUTH = deviceauth.URL_MGMT.replace(
-            "mender-api-gateway", gateway_addr
-        )
-        URL_MGMT_INVNTRY = inventory.URL_MGMT.replace(
-            "mender-api-gateway", gateway_addr
-        )
-        URL_MGMT_DPLMNTS = deployments.URL_MGMT.replace(
-            "mender-api-gateway", gateway_addr
-        )
-        api_useradmm = ApiClient(base_url=URL_MGMT_USERADM)
+        api_useradmm = ApiClient(useradm.URL_MGMT, host=gateway_addr)
+        api_devauthm = ApiClient(deviceauth.URL_MGMT, host=gateway_addr)
+        api_inventory = ApiClient(inventory.URL_MGMT, host=gateway_addr)
+        api_deployments = ApiClient(deployments.URL_MGMT, host=gateway_addr)
 
         rsp = api_useradmm.call(
             "POST", useradm.URL_LOGIN, auth=(env.user.name, env.user.pwd)
@@ -220,9 +213,9 @@ class TestClientCompatibilityBase:
         api_token = rsp.text
 
         api_useradmm = api_useradmm.with_auth(api_token)
-        api_devauthm = ApiClient(base_url=URL_MGMT_DEVAUTH).with_auth(api_token)
-        api_inventory = ApiClient(base_url=URL_MGMT_INVNTRY).with_auth(api_token)
-        api_deployments = ApiClient(base_url=URL_MGMT_DPLMNTS).with_auth(api_token)
+        api_devauthm = api_devauthm.with_auth(api_token)
+        api_inventory = api_inventory.with_auth(api_token)
+        api_deployments = api_deployments.with_auth(api_token)
 
         deadline = datetime.now() + TIMEOUT
         devices = []

@@ -93,15 +93,9 @@ def initialize_os_setup(env):
     """ Seed the OS setup with all operational data - users and devices.
         Return {"os_devs": [...], "os_users": [...]}
     """
-    uadmm = ApiClient(
-        "https://{}/api/management/v1/useradm".format(env.get_mender_gateway())
-    )
-    dauthd = ApiClient(
-        "https://{}/api/devices/v1/authentication".format(env.get_mender_gateway())
-    )
-    dauthm = ApiClient(
-        "https://{}/api/management/v2/devauth".format(env.get_mender_gateway())
-    )
+    uadmm = ApiClient(useradm.URL_MGMT, host=env.get_mender_gateway())
+    dauthd = ApiClient(deviceauth.URL_DEVICES, host=env.get_mender_gateway())
+    dauthm = ApiClient(deviceauth.URL_MGMT, host=env.get_mender_gateway())
 
     users = [
         create_user("foo@tenant.com", "correcthorse", containers_namespace=env.name),
@@ -162,7 +156,7 @@ def migrate_ent_setup(env):
 class TestEntMigration:
     def test_users_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()
-        uadmm = ApiClient("https://{}/api/management/v1/useradm".format(mender_gateway))
+        uadmm = ApiClient(useradm.URL_MGMT, host=mender_gateway)
 
         # os users can't log in
         for u in migrated_enterprise_setup.init_data["os_users"]:
@@ -176,16 +170,10 @@ class TestEntMigration:
 
     def test_devs_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()
-        uadmm = ApiClient("https://{}/api/management/v1/useradm".format(mender_gateway))
-        dauthd = ApiClient(
-            "https://{}/api/devices/v1/authentication".format(mender_gateway)
-        )
-        dauthm = ApiClient(
-            "https://{}/api/management/v2/devauth".format(mender_gateway)
-        )
-        depld = ApiClient(
-            "https://{}/api/devices/v1/deployments".format(mender_gateway)
-        )
+        uadmm = ApiClient(useradm.URL_MGMT, host=mender_gateway)
+        dauthd = ApiClient(deviceauth.URL_DEVICES, host=mender_gateway)
+        dauthm = ApiClient(deviceauth.URL_MGMT, host=mender_gateway)
+        depld = ApiClient(deployments.URL_DEVICES, host=mender_gateway)
 
         # current dev tokens don't work right off the bat
         # the deviceauth db is empty

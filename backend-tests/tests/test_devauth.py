@@ -95,7 +95,7 @@ def devices(clean_migrated_mongo, user):
 @pytest.yield_fixture(scope="function")
 def tenants_users(clean_migrated_mongo_mt):
     cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL)
+    api = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
     names = ["tenant1", "tenant2"]
     tenants = []
@@ -618,9 +618,6 @@ class TestDeviceMgmtBase:
                 devs_authsets, page=page, per_page=per_page, status=status
             )
 
-            print("XXXXXXXXXXXX api_devs {}\n".format(api_devs))
-            print("XXXXXXXXXXXX ref_devs {}\n".format(ref_devs))
-
             self._compare_devs(ref_devs, api_devs)
 
     def do_test_get_device(self, devs_authsets, user):
@@ -856,7 +853,9 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             self.do_test_device_count(t.devices, t.users[0])
 
     def test_limits_max_devices(self, tenants_devs_authsets):
-        devauthi = ApiClient(deviceauth.URL_INTERNAL)
+        devauthi = ApiClient(
+            deviceauth.URL_INTERNAL, host=deviceauth.HOST, schema="http://"
+        )
         devauthm = ApiClient(deviceauth.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
         useradmm = ApiClient(useradm.URL_MGMT)

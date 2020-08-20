@@ -13,6 +13,8 @@
 #    limitations under the License.
 
 import pytest
+import queue
+import threading
 import time
 
 from datetime import datetime, timedelta, timezone
@@ -187,6 +189,42 @@ def assert_successful_deployment(api_deployments, deployment_id, timeout=TIMEOUT
             time.sleep(1)
 
 
+def _watch_clients(host_addr, clients, timeout=TIMEOUT):
+    """
+    Watches for clients to reboot in separate threads
+    """
+
+    class _RebootThread(threading.Thread):
+        def __init__(self, host_ip, client, timeout, **kwargs):
+            super().__init__(**kwargs)
+            self._host_ip = host_ip
+            self._client = client
+            self._timeout = timeout
+            self._exception_q = queue.Queue(maxsize=1)
+
+        def run(self):
+            try:
+                detector = self._client.get_reboot_detector(self._host_ip)
+                with detector as rd:
+                    rd.verify_reboot_performed(max_wait=self._timeout.total_seconds())
+            except Exception as e:
+                self._exception_q.put_nowait(e)
+
+        def join(self, timeout=None):
+            super().join(timeout)
+            if not self._exception_q.empty():
+                exc = self._exception_q.get_nowait()
+                if isinstance(exc, Exception):
+                    raise exc
+
+    threads = []
+    for client in clients:
+        thread = _RebootThread(host_addr, client, timeout)
+        thread.start()
+        threads.append(thread)
+    return threads
+
+
 class TestClientCompatibilityBase:
     """
     This class contains compatibility tests implementation for assessing
@@ -264,6 +302,9 @@ class TestClientCompatibilityBase:
         )
         assert rsp.status_code == 201
 
+        # Start watching clients in parallel threads.
+        threads = _watch_clients(env.get_virtual_network_host_ip(), env.devices)
+
         rsp = api_deployments.call(
             "POST",
             deployments.URL_DEPLOYMENTS,
@@ -277,6 +318,9 @@ class TestClientCompatibilityBase:
 
         deployment_id = rsp.headers.get("Location").split("/")[-1]
         assert_successful_deployment(api_deployments, deployment_id)
+
+        for thread in threads:
+            thread.join((deadline - datetime.now()).total_seconds() + 1)
 
 
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):

@@ -11,8 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import testutils.api.client
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/deployments"
+URL_MGMT = "/api/management/v2/deployments"
 
 URL_DEPLOYMENTS = "/deployments"

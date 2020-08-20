@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@ import os.path
 
 import requests
 
-GATEWAY_URL = "https://mender-api-gateway"
+GATEWAY_HOSTNAME = "mender-api-gateway"
 
 
 class ApiClient:
-    def __init__(self, base_url=GATEWAY_URL):
-        self.base_url = base_url
+    def __init__(self, base_url="", host=GATEWAY_HOSTNAME, schema="https://"):
+        self.base_url = schema + host + base_url
         self.headers = {}
 
     def with_auth(self, token):
@@ -56,10 +56,8 @@ class ApiClient:
             files=files,
         )
 
-    def post(self, url, path_params={}, body=None, data=None):
-        url = self.__make_url(url)
-        url = self.__subst_path_params(url, path_params)
-        return requests.request("POST", url, json=body, data=data, verify=False)
+    def post(self, url, *pargs, **kwargs):
+        return self.call("POST", url, *pargs, **kwargs)
 
     def __make_url(self, path):
         return os.path.join(

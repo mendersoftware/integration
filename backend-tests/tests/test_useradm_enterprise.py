@@ -55,7 +55,7 @@ def tenants_users(clean_migrated_mongo):
     tenants = []
 
     cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL)
+    api = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
     for n in ["tenant1", "tenant2"]:
         username = "user%d@%s.com"  # user[12]@tenant[12].com

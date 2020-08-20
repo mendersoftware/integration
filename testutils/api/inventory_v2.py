@@ -13,10 +13,10 @@
 #    limitations under the License.
 import testutils.api.client
 
-SERVICE_URL = "http://mender-inventory:8080"
+HOST = "mender-inventory:8080"
 
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/inventory"
-URL_INTERNAL = SERVICE_URL + "/api/internal/v2/inventory"
+URL_MGMT = "/api/management/v2/inventory"
+URL_INTERNAL = "/api/internal/v2/inventory"
 
 URL_SEARCH = "/filters/search"
 URL_FILTERS = "/filters"

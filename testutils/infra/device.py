@@ -18,6 +18,7 @@ import traceback
 import os
 import socket
 import subprocess
+import threading
 
 from fabric import Connection
 from paramiko import SSHException
@@ -138,10 +139,17 @@ class MenderDevice:
 class RebootDetector:
     # This global one is used to increment each port used.
     port = 8181
+    # lock to protect global data
+    lock = threading.Lock()
 
     def __init__(self, device, host_ip):
-        self.port = RebootDetector.port
-        RebootDetector.port += 1
+        try:
+            RebootDetector.lock.acquire()
+            self.port = RebootDetector.port
+            RebootDetector.port += 1
+        finally:
+            RebootDetector.lock.release()
+
         self.host_ip = host_ip
         self.device = device
         self.server = None

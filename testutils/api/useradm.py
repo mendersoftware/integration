@@ -1,4 +1,4 @@
-# Copyright 2018 Northern.tech AS
+# Copyright 2020 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,9 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import testutils.api.client
-
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v1/useradm"
+URL_MGMT = "/api/management/v1/useradm"
 
 URL_LOGIN = "/auth/login"
 URL_PASSWORD_RESET_START = "/auth/password-reset/start"

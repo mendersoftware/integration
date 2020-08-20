@@ -1,0 +1,44 @@
+version: '2.1'
+services:
+  #
+  # Setup including older clients: 2.3 -> 2.0
+  #
+  mender-client-2-3:
+    image: mendersoftware/mender-client-qemu:2.3
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+
+  mender-client-2-2:
+    image: mendersoftware/mender-client-qemu:2.2
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+
+  mender-client-2-1:
+    image: mendersoftware/mender-client-qemu:2.1
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+
+  mender-client-2-0:
+    image: mendersoftware/mender-client-qemu:2.0
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""

@@ -19,8 +19,8 @@ GATEWAY_HOSTNAME = "mender-api-gateway"
 
 
 class ApiClient:
-    def __init__(self, base_url="", host=GATEWAY_HOSTNAME, schema="https://"):
-        self.base_url = schema + host + base_url
+    def __init__(self, base_url="", host=GATEWAY_HOSTNAME, scheme="https://"):
+        self.base_url = scheme + host + base_url
         self.headers = {}
 
     def with_auth(self, token):

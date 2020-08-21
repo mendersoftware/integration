@@ -795,9 +795,7 @@ class TestDeviceFilteringEnterprise:
                 "status_code": 400,
             },
         ]
-        invm_v2 = ApiClient(
-            inventory_v2.URL_INTERNAL, host=inventory_v2.HOST, schema="http://"
-        )
+        invm_v2 = inventory_v2.InternalApiClient()
 
         for test_case in test_cases:
             self.logger.info("Running test case: %s" % test_case["name"])

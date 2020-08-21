@@ -15,6 +15,8 @@ import json
 
 import testutils.util.crypto
 
+from testutils.api.client import ApiClient as _ApiClient
+
 HOST = "mender-device-auth:8080"
 
 URL_DEVICES = "/api/devices/v1/authentication"
@@ -51,3 +53,8 @@ def auth_req(id_data, pubkey, privkey, tenant_token=""):
     }
     signature = testutils.util.crypto.auth_req_sign(json.dumps(payload), privkey)
     return payload, {"X-MEN-Signature": signature}
+
+
+class InternalApiClient(_ApiClient):
+    def __init__(self, host=HOST, scheme="http://"):
+        super().__init__(URL_INTERNAL, host, scheme)

@@ -12,9 +12,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from testutils.api.client import ApiClient as _ApiClient
+
 HOST = "mender-tenantadm:8080"
 URL_MGMT = "/api/management/v2/tenantadm"
 
 URL_CREATE_ORG_TENANT = "/tenants"
 URL_TENANT_STATUS = "/tenants/{id}/status"
 URL_TENANT_SECRET = "/secret"
+
+
+class ManagementApiClient(_ApiClient):
+    def __init__(self, host=HOST, scheme="http://"):
+        super().__init__(URL_MGMT, host, scheme)

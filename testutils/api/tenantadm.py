@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from testutils.api.client import ApiClient as _ApiClient
+
 HOST = "mender-tenantadm:8080"
 URL_INTERNAL = "/api/internal/v1/tenantadm"
 URL_MGMT = "/api/management/v1/tenantadm"
@@ -24,3 +26,13 @@ URL_MGMT_THIS_TENANT = "/user/tenant"
 
 def req_status(status):
     return {"status": status}
+
+
+class InternalApiClient(_ApiClient):
+    def __init__(self, host=HOST, scheme="http://"):
+        super().__init__(URL_INTERNAL, host, scheme)
+
+
+class ManagementApiClient(_ApiClient):
+    def __init__(self, host=HOST, scheme="http://"):
+        super().__init__(URL_MGMT, host, scheme)

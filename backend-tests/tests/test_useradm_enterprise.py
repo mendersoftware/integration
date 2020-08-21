@@ -12,8 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import random
-import time
 import base64
 import io
 from urllib import parse
@@ -25,7 +23,6 @@ import pyotp
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
-import testutils.api.tenantadm as tenantadm
 from testutils.common import (
     User,
     Tenant,
@@ -53,9 +50,6 @@ def clean_migrated_mongo(clean_mongo):
 @pytest.yield_fixture(scope="function")
 def tenants_users(clean_migrated_mongo):
     tenants = []
-
-    cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
     for n in ["tenant1", "tenant2"]:
         username = "user%d@%s.com"  # user[12]@tenant[12].com

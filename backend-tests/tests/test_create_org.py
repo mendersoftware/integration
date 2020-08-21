@@ -15,8 +15,6 @@
 import pytest
 import time
 import logging
-import asyncore
-from threading import Thread
 
 from testutils.common import mongo, clean_mongo, randstr
 from testutils.api.client import ApiClient
@@ -40,14 +38,10 @@ class TestCreateOrganizationEnterprise:
         stripeutils.delete_cust(cust["id"])
 
     def test_success(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.ManagementApiClient()
         uc = ApiClient(useradm.URL_MGMT)
-        tenantadmi = ApiClient(
-            tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://"
-        )
-        devauthi = ApiClient(
-            deviceauth_v1.URL_INTERNAL, host=deviceauth_v1.HOST, schema="http://"
-        )
+        tenantadmi = tenantadm.InternalApiClient()
+        devauthi = deviceauth_v1.InternalApiClient()
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
@@ -103,14 +97,10 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_success_with_plan(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.ManagementApiClient()
         uc = ApiClient(useradm.URL_MGMT)
-        tenantadmi = ApiClient(
-            tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://"
-        )
-        devauthi = ApiClient(
-            deviceauth_v1.URL_INTERNAL, host=deviceauth_v1.HOST, schema="http://"
-        )
+        tenantadmi = tenantadm.InternalApiClient()
+        devauthi = deviceauth_v1.InternalApiClient()
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
@@ -162,7 +152,7 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_duplicate_organization_name(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.ManagementApiClient()
 
         tenant = "tenant{}".format(randstr())
         email = "some.user@{}.com".format(tenant)
@@ -195,7 +185,7 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email2)
 
     def test_duplicate_email(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.ManagementApiClient()
 
         tenant = "tenant{}".format(randstr())
         email = "some.user@{}.com".format(tenant)
@@ -227,7 +217,7 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_plan_invalid(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.ManagementApiClient()
         payload = {
             "request_id": "123456",
             "organization": "tenant-foo",

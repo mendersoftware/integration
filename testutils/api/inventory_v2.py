@@ -11,7 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import testutils.api.client
+from testutils.api.client import ApiClient as _ApiClient
 
 HOST = "mender-inventory:8080"
 
@@ -25,3 +25,8 @@ URL_SAVED_FILTER = "/filters/{id}"
 URL_SAVED_FILTER_SEARCH = "/filters/{id}/search"
 
 URL_SEARCH_INTERNAL = "/tenants/{tenant_id}/filters/search"
+
+
+class InternalApiClient(_ApiClient):
+    def __init__(self, host=HOST, scheme="http://"):
+        super().__init__(URL_INTERNAL, host, scheme)

@@ -69,7 +69,7 @@ def tenants_users_devices(tenants, mongo):
 
 class TestAccountSuspensionEnterprise:
     def test_user_cannot_log_in(self, tenants):
-        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.InternalApiClient()
 
         uc = ApiClient(useradm.URL_MGMT)
 
@@ -106,7 +106,7 @@ class TestAccountSuspensionEnterprise:
             assert r.status_code == 200
 
     def test_authenticated_user_is_rejected(self, tenants):
-        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.InternalApiClient()
         uc = ApiClient(useradm.URL_MGMT)
         dc = ApiClient(deviceauth.URL_MGMT)
 
@@ -141,7 +141,7 @@ class TestAccountSuspensionEnterprise:
         dacd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
-        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
+        tc = tenantadm.InternalApiClient()
 
         # accept a dev
         device = tenants_users_devices[0].devices[0]
@@ -182,8 +182,8 @@ class TestAccountSuspensionEnterprise:
         dacd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
-        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
         dc = ApiClient(deployments.URL_DEVICES)
+        tc = tenantadm.InternalApiClient()
 
         # accept a dev
         user = tenants_users_devices[0].users[0]

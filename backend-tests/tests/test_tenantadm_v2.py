@@ -11,22 +11,16 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import logging
 import time
 import os
 import pytest
-import subprocess
-import time
 import stripe
-
-import pymongo
 
 from testutils.common import (
     User,
     mongo,
     mongo_cleanup,
     clean_mongo,
-    create_org,
     randstr,
 )
 import testutils.api.useradm as useradm
@@ -35,8 +29,8 @@ import testutils.api.tenantadm_v2 as tenantadm_v2
 import testutils.integration.stripe as stripeutils
 from testutils.api.client import ApiClient
 
-api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT, host=tenantadm_v1.HOST, schema="http://")
-api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT, host=tenantadm_v2.HOST, schema="http://")
+api_tadm_v1 = tenantadm_v1.ManagementApiClient()
+api_tadm_v2 = tenantadm_v2.ManagementApiClient()
 
 api_uadm = ApiClient(useradm.URL_MGMT)
 stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
@@ -46,7 +40,7 @@ if stripe.api_key is None:
 
 class TestCreateOrganizationV2EnterpriseNew:
     """ Test the 'new tenant' workflow.
-    
+
     - registration on v2 endpoint -> tenant secret
     - UI collects card, does extra SCA confirmation as necessary (with secret)
     - account is completely unusable for now

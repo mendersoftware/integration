@@ -15,7 +15,7 @@ COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         "
 COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} -f $INTEGRATION_PATH/docker-compose.enterprise.yml \
         -f $INTEGRATION_PATH/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
-        -f $INTEGRATION_PATH/extra/smtp-testing/conductor-workers-smtp-test.yml \
+        -f $INTEGRATION_PATH/extra/smtp-testing/workflows-worker-smtp-test.yml \
         -f $INTEGRATION_PATH/extra/stripe-testing/stripe-test.docker-compose.yml
         "
 COMPOSE_CMD=""

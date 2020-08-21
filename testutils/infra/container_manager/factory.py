@@ -24,6 +24,7 @@ from .docker_compose_manager import DockerComposeEnterpriseSetup
 from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
 from .docker_compose_manager import DockerComposeCustomSetup
 from .docker_compose_manager import DockerComposeCompatibilitySetup
+from .docker_compose_manager import DockerComposeMTLSSetup
 
 
 class ContainerManagerFactory:
@@ -109,6 +110,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getCompatibilitySetup(self, name=None, **kwargs):
         return DockerComposeCompatibilitySetup(name, **kwargs)
+
+    def getMTLSSetup(self, name=None, **kwargs):
+        return DockerComposeMTLSSetup(name, **kwargs)
 
     def getCustomSetup(self, name=None):
         return DockerComposeCustomSetup(name)

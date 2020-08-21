@@ -1,0 +1,3 @@
+- `/server` - example self-signed server cert
+- `tenant-ca` - example self-signed tenant certificate authority ( key pass: root)
+- `client` - example client certs, using different algorithms, signed by `tenant-ca`

@@ -1,0 +1,15 @@
+version: '2.1'
+services:
+  mtls-ambassador:
+    image: registry.mender.io/mendersoftware/mtls-ambassador:master
+    networks:
+      - mender
+    volumes:
+      - ${MTLS_CERT:-./extra/mtls/certs/server/server.crt}:/etc/mtls/certs/server/server.crt
+      - ${MTLS_KEY:-./extra/mtls/certs/server/server.key}:/etc/mtls/certs/server/server.key
+    environment:
+      MTLS_MENDER_USER: "mtls@mender.io"
+      MTLS_MENDER_PASS: "correcthorsebatterystaple"
+      MTLS_MENDER_BACKEND: "https://mender-api-gateway"
+      MTLS_DEBUG_LOG: "true"
+      MTLS_INSECURE_SKIP_VERIFY: "true"

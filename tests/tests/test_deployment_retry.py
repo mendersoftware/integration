@@ -14,7 +14,6 @@
 
 import pytest
 
-import subprocess
 import tempfile
 import json
 
@@ -24,6 +23,7 @@ from ..MenderAPI import logger, Authentication, DeviceAuthV2, Deployments
 from testutils.infra.device import MenderDevice
 from testutils.infra.cli import CliTenantadm
 from testutils.common import Tenant, User
+from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 
 
@@ -50,19 +50,7 @@ fi
 # Successful update after three attempts
 exit 0
 """
-
-    with tempfile.NamedTemporaryFile(suffix="testdeploymentretries") as tf:
-        tf.write(script)
-        tf.seek(0)
-        out = tf.read()
-        logger.info(f"Script: {out}")
-        script_path = tf.name
-
-        cmd = f"mender-artifact write module-image -T script -n {artifact_name} -t {device_type} -o {output_path} -f {script_path}"
-        logger.info(f"Executing command: {cmd}")
-        subprocess.check_call(cmd, shell=True)
-
-        return output_path
+    return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
 @pytest.mark.usefixtures("enterprise_no_client")

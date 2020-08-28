@@ -77,6 +77,11 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
+    MTLS_FILES = [
+        COMPOSE_FILES_PATH + "/extra/mtls/mtls-ambassador-test.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+    ]
     SMTP_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-test.yml",
         COMPOSE_FILES_PATH
@@ -439,6 +444,40 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
                 addrs.append(ip + ":8822")
 
         return addrs
+
+
+class DockerComposeMTLSSetup(DockerComposeNamespace):
+    def __init__(self, name):
+        extra_files = self.MTLS_FILES + self.ENTERPRISE_FILES
+        super().__init__(name, extra_files)
+
+    def setup(self):
+        host_ip = socket.gethostbyname(socket.gethostname())
+        self._docker_compose_cmd(
+            "up -d --scale mtls-ambassador=0 --scale mender-client=0",
+            env={"HOST_IP": host_ip},
+        )
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
+
+    def start_api_gateway(self):
+        self._docker_compose_cmd("scale mender-api-gateway=1")
+
+    def stop_api_gateway(self):
+        self._docker_compose_cmd("scale mender-api-gateway=0")
+
+    def start_mtls_ambassador(self):
+        self._docker_compose_cmd(
+            "up -d --scale mtls-ambassador=1 --scale mender-client=0"
+        )
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+
+    def new_mtls_client(self, name, tenant):
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        logger.info("creating client connected to tenant: " + tenant)
+        time.sleep(45)
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

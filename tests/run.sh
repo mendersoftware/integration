@@ -187,7 +187,14 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
 
-python3 -m pytest \
+# Create a file for sharing port-number between processes
+echo 8881 > .port-number
+trap cleanup EXIT
+cleanup() {
+  rm -rf .port-number
+}
+
+nice -n 19 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \

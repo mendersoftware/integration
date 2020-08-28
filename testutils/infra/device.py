@@ -18,7 +18,7 @@ import traceback
 import os
 import socket
 import subprocess
-import threading
+import filelock
 
 from fabric import Connection
 from paramiko import SSHException
@@ -136,20 +136,25 @@ class MenderDevice:
         return self._service_name
 
 
+class SafePortNumberGenerator(object):
+
+    port_lock = filelock.FileLock(".port-number.lock")
+
+    @staticmethod
+    def port_number():
+        with SafePortNumberGenerator.port_lock:
+            with open(".port-number", "r+") as f:
+                port_nr = int(f.read())
+                # Increment the port number for the next process
+                f.seek(0)
+                f.write(str(port_nr + 1))
+                f.truncate()
+                return port_nr
+
+
 class RebootDetector:
-    # This global one is used to increment each port used.
-    port = 8181
-    # lock to protect global data
-    lock = threading.Lock()
-
     def __init__(self, device, host_ip):
-        try:
-            RebootDetector.lock.acquire()
-            self.port = RebootDetector.port
-            RebootDetector.port += 1
-        finally:
-            RebootDetector.lock.release()
-
+        self.port = SafePortNumberGenerator.port_number()
         self.host_ip = host_ip
         self.device = device
         self.server = None

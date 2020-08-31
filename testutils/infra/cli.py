@@ -13,16 +13,24 @@
 #    limitations under the License.
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
+from testutils.infra.container_manager.kubernetes_manager import (
+    KubernetesNamespace,
+    isK8S,
+)
 
 
 class BaseCli:
     def __init__(self, microservice, containers_namespace, container_manager):
-        if container_manager is None:
+        if isK8S():
+            self.container_manager = KubernetesNamespace()
+            base_filter = microservice
+        elif container_manager is None:
             self.container_manager = DockerNamespace(containers_namespace)
+            base_filter = microservice + "_1"
         else:
             self.container_manager = container_manager
+            base_filter = microservice + "_1"
 
-        base_filter = microservice + "_1"
         self.cid = self.container_manager.getid([base_filter])
 
 

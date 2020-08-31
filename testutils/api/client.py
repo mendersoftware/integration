@@ -11,11 +11,12 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import os
 import os.path
 
 import requests
 
-GATEWAY_HOSTNAME = "mender-api-gateway"
+GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "mender-api-gateway"
 
 
 class ApiClient:

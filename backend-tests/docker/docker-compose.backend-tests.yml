@@ -8,11 +8,15 @@ services:
             - ${INTEGRATION_PATH}/backend-tests/tests:/tests
             - ${INTEGRATION_PATH}/testutils:/testutils
             - /var/run/docker.sock:/var/run/docker.sock
+            - ~/.aws:/root/.aws
+            - ~/.kube:/root/.kube
         command: ${PYTEST_ARGS}
         environment:
             PYTHONPATH: "/testutils"
             PYTHONDONTWRITEBYTECODE: 1
             TENANTADM_STRIPE_API_KEY: ${STRIPE_API_KEY}
+            GATEWAY_HOSTNAME: ${GATEWAY_HOSTNAME}
+            K8S: ${K8S}
 
 networks:
     mender:

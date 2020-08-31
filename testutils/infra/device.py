@@ -162,7 +162,7 @@ class RebootDetector:
 
     def __init__(self, device, host_ip):
         # Also lock on thread level
-        with lock:
+        with self.lock:
             self.port = SafePortNumberGenerator.port_number()
             self.host_ip = host_ip
             self.device = device

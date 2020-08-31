@@ -19,6 +19,7 @@ import os
 import socket
 import subprocess
 import filelock
+import threading
 
 from fabric import Connection
 from paramiko import SSHException
@@ -153,11 +154,19 @@ class SafePortNumberGenerator(object):
 
 
 class RebootDetector:
+
+    # The number generator needs both OS and thread level locking, due to xdist
+    # running tests in different processes, as well as Python threading running
+    # within a process.
+    lock = threading.Lock()
+
     def __init__(self, device, host_ip):
-        self.port = SafePortNumberGenerator.port_number()
-        self.host_ip = host_ip
-        self.device = device
-        self.server = None
+        # Also lock on thread level
+        with lock:
+            self.port = SafePortNumberGenerator.port_number()
+            self.host_ip = host_ip
+            self.device = device
+            self.server = None
 
     def __enter__(self):
         local_name = "test.mender-reboot-detector.txt.%s" % self.device.host_string

@@ -12,20 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import time
 import logging
-import traceback
 import os
 import socket
 import subprocess
-import filelock
+import time
+import traceback
 import threading
 
+import filelock
 from fabric import Connection
-from paramiko import SSHException
-from paramiko.ssh_exception import NoValidConnectionsError
-from paramiko.client import MissingHostKeyPolicy
 from invoke.exceptions import UnexpectedExit
+from paramiko import SSHException
+from paramiko.client import MissingHostKeyPolicy
+from paramiko.ssh_exception import NoValidConnectionsError
 
 logger = logging.getLogger()
 
@@ -174,7 +174,7 @@ class RebootDetector:
             fd.write("%s:%d" % (self.host_ip, self.port))
         try:
             self.device.put(
-                local_name, remote_path="/data/mender/test.mender-reboot-detector.txt",
+                local_name, remote_path="/data/mender/test.mender-reboot-detector.txt"
             )
         finally:
             os.unlink(local_name)
@@ -407,7 +407,7 @@ def _run(conn, cmd, **kw):
             continue
         except Exception as e:
             logger.exception(
-                "Generic exception happened while connecting to host %s", conn.host,
+                "Generic exception happened while connecting to host %s", conn.host
             )
             raise e
     else:

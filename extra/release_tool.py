@@ -389,7 +389,11 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = ["docker-compose.yml", "docker-compose.enterprise.yml"]
+    _DOCKER_ONLY_YML = [
+        "docker-compose.yml",
+        "docker-compose.enterprise.yml",
+        "docker-compose.auditlogs.yml",
+    ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
 
     def _is_known_yml_file(entry):

@@ -24,3 +24,7 @@ venv
 
 # Emacs directory local variables
 .dir-locals.el
+
+# Test tools and overrides
+backend-tests/downloaded-tools/
+docker-compose.override.yml

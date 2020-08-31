@@ -191,10 +191,10 @@ fi
 echo 8881 > .port-number
 trap cleanup EXIT
 cleanup() {
-  rm -rf .port-number
+  rm -rf .port-number .port-number.lock docker_lock
 }
 
-nice -n 19 python3 -m pytest \
+python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \

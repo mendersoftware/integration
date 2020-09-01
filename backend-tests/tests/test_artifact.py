@@ -14,15 +14,11 @@
 
 import os
 import pytest
-import random
 import re
 import requests
-import string
 import subprocess
 import tempfile
 import uuid
-
-from contextlib import contextmanager
 
 from testutils.api.client import ApiClient
 from testutils.api import (
@@ -383,7 +379,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -430,7 +426,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -476,7 +472,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan=plan,
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm1"], "size": 256,},
+                {"artifact_name": "test", "device_types": ["arm1"], "size": 256},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],

@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import os
-import requests
 import tempfile
 import time
 import uuid
@@ -92,7 +91,7 @@ class TestCreateArtifactBase:
         assert artifact["description"] == "description"
         assert artifact["name"] == "artifact"
         assert artifact["info"] == {"format": "mender", "version": 3}
-        assert artifact["signed"] == False
+        assert artifact["signed"] is False
         assert len(artifact["updates"]) == 1
         assert artifact["size"] > 0
         assert artifact["id"] is not None

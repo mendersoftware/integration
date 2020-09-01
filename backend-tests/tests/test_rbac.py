@@ -13,7 +13,6 @@
 #    limitations under the License.
 import json
 import logging
-import pymongo
 import pytest
 import uuid
 
@@ -93,7 +92,6 @@ def setup_tenant_devices(tenant, device_groups):
     invtry_MGMT = ApiClient(inventory.URL_MGMT)
     user = tenant.users[0]
     grouped_devices = {}
-    group_cumulative = []
     group = None
 
     login_tenant_users(tenant)

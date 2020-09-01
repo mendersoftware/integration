@@ -13,16 +13,13 @@
 #    limitations under the License.
 import pytest
 import multiprocessing as mp
-import logging
 import os
-import requests
 import random
 import time
-import testutils.util.crypto
+import uuid
 
 from datetime import datetime, timedelta
 
-import testutils.api.client
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
@@ -32,14 +29,8 @@ import testutils.api.deployments_v2 as deployments_v2
 
 from testutils.api.client import ApiClient
 from testutils.common import (
-    User,
-    Device,
-    Authset,
-    Tenant,
     create_org,
     create_user,
-    create_authset,
-    change_authset_status,
     clean_mongo,
     mongo_cleanup,
     mongo,
@@ -107,9 +98,16 @@ def setup_deployments_enterprise_test(
     Creates two tenants, with one user each, where each user has three deployments,
     and a hundred devices each.
     """
-    tenant1 = create_tenant_test_setup("bugs@bunny.org", "acme", plan=plan)
+
+    uuidv4 = str(uuid.uuid4())
+    tenant1 = create_tenant_test_setup(
+        "some.user+" + uuidv4 + "@example.com", "test.mender.io-" + uuidv4, plan=plan
+    )
     # Add a second tenant to make sure that the functionality does not interfere with other tenants
-    tenant2 = create_tenant_test_setup("road@runner.org", "indiedev", plan=plan)
+    uuidv4 = str(uuid.uuid4())
+    tenant2 = create_tenant_test_setup(
+        "some.user+" + uuidv4 + "@example.com", "test.mender.io-" + uuidv4, plan=plan
+    )
     # Create 'existing_deployments' predefined deployments to act as noise for the server to handle
     # for both users
     return tenant1, tenant2
@@ -559,7 +557,6 @@ def setup_devices_and_management_st(nr_devices=100):
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
-    api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
     r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -586,13 +583,18 @@ def setup_devices_and_management_mt(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
-    tenant = create_org("acme", "bugs@bunny.org", "correcthorse", plan="enterprise")
+    uuidv4 = str(uuid.uuid4())
+    tenant = create_org(
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "correcthorse",
+        plan="enterprise",
+    )
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
-    api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
     r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -627,7 +629,7 @@ def try_update(
     :param default_artifact_name: default artifact name of the
                                   artifact used in the request
 
-    NOTE: You can override the device type and artifact name 
+    NOTE: You can override the device type and artifact name
           by creating a device_type/artifact_name member of the
           Device object.
     """
@@ -691,7 +693,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
     def try_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
     ):
-        ### Static helper function ###
+        # Static helper function
         # Setup Deployment APIs
         api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
 
@@ -723,7 +725,6 @@ class TestPhasedRolloutDeploymentsEnterprise:
                     deployment["phases"][i]["start_ts"], "%Y-%m-%dT%H:%M:%SZ"
                 )
                 now = datetime.utcnow()
-                wait_time = start_ts - now
 
                 # While phase in progress
                 # NOTE: add a half a second buffer time, as a just-in-time
@@ -742,7 +743,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
                     "missing `start_ts` for phase %d" % i
                 )
 
-            ### Test for all devices in the deployment ###
+            # Test for all devices in the deployment
             if devices_updated > 0:
                 # Allready updated
                 for device in devices[:devices_updated]:
@@ -982,12 +983,11 @@ class TestPhasedRolloutConcurrencyEnterprise:
     def try_concurrent_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
     ):
-        ### Static helper function ###
+        # Static helper function
         # Setup Deployment APIs
         api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
         status_codes = []
 
-        devices_updated = 0
         num_phases = len(deployment["phases"])
         batch_sizes = [
             int((deployment["phases"][i]["batch_size"] / 100.0) * len(devices))
@@ -1015,7 +1015,6 @@ class TestPhasedRolloutConcurrencyEnterprise:
                     deployment["phases"][i]["start_ts"], "%Y-%m-%dT%H:%M:%SZ"
                 )
                 now = datetime.utcnow()
-                wait_time = start_ts - now
 
                 # While phase in progress:
                 # Spam update requests from random batches of devices
@@ -1419,7 +1418,10 @@ def create_tenant(name, username, plan):
 
 @pytest.fixture(scope="function")
 def setup_tenant(clean_mongo):
-    tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
+    uuidv4 = str(uuid.uuid4())
+    tenant = create_tenant(
+        "test.mender.io-" + uuidv4, "some.user+" + uuidv4 + "@example.com", "enterprise"
+    )
     # give workflows time to finish provisioning
     time.sleep(10)
     return tenant
@@ -1431,7 +1433,7 @@ def clean_mongo_client(mongo):
     common.MongoClient connected to the DB.
 
     Useful for tests with multiple testcases:
-    - protects the whole test func as usual 
+    - protects the whole test func as usual
     - but also allows calling MongoClient.cleanup() between cases
     """
     mongo_cleanup(mongo)
@@ -1463,7 +1465,6 @@ def create_dynamic_deployment(
     f = create_filter(name, predicates, utoken)
 
     api_dep_v2 = ApiClient(deployments_v2.URL_MGMT)
-    api_dep_v1 = ApiClient(deployments.URL_MGMT)
 
     depid = None
     with get_mender_artifact(name) as filename:
@@ -1548,7 +1549,7 @@ def assert_get_next(code, dtoken, artifact_name=None):
     resp = api_dev_deploy.with_auth(dtoken).call(
         "GET",
         deployments.URL_NEXT,
-        qs_params={"artifact_name": "dontcare", "device_type": "arm1",},
+        qs_params={"artifact_name": "dontcare", "device_type": "arm1"},
     )
 
     assert resp.status_code == code
@@ -1747,8 +1748,6 @@ class TestDynamicDeploymentsEnterprise:
             "foo", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
 
-        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
-
         devs = [
             make_device_with_inventory(
                 [{"name": "foo", "value": "foo"}],
@@ -1804,8 +1803,6 @@ class TestDynamicDeploymentsEnterprise:
             max_devices=10,
         )
 
-        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
-
         devs = [
             make_device_with_inventory(
                 [{"name": "foo", "value": "foo"}],
@@ -1858,7 +1855,7 @@ class TestDynamicDeploymentsEnterprise:
         verify_stats(stats, {"success": 10})
 
     def test_deployment_ordering(self, setup_tenant):
-        """ Check that devices only get dynamic deployments fresher than the 
+        """ Check that devices only get dynamic deployments fresher than the
             latest one it finished.
 
             In other words, after updating its attributes the device won't accidentally
@@ -1867,10 +1864,10 @@ class TestDynamicDeploymentsEnterprise:
 
         user = setup_tenant.users[0]
 
-        depfoo1 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo1", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
-        depfoo2 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo2", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
         depbar = create_dynamic_deployment(
@@ -1893,10 +1890,10 @@ class TestDynamicDeploymentsEnterprise:
         assert_get_next(204, dev.token)
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
-        depfoo3 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo3", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
-        depfoo4 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
         assert_get_next(200, dev.token, "foo3")

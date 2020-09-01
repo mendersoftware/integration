@@ -19,7 +19,7 @@ import json
 import uuid
 
 from testutils.api.client import ApiClient
-from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
+from testutils.infra.cli import CliUseradm, CliDeviceauth
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
@@ -28,13 +28,9 @@ import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 import testutils.util.crypto as crypto
 
-from cryptography.hazmat.primitives.asymmetric import dsa
-
 from testutils.common import (
-    User,
     Device,
     Authset,
-    Tenant,
     mongo,
     clean_mongo,
     create_user,
@@ -42,7 +38,6 @@ from testutils.common import (
     create_random_authset,
     create_authset,
     get_device_by_id_data,
-    make_accepted_device,
     change_authset_status,
 )
 
@@ -96,12 +91,7 @@ def devices(clean_migrated_mongo, user):
 
 @pytest.yield_fixture(scope="function")
 def tenants_users(clean_migrated_mongo_mt):
-    cli = CliTenantadm()
-    api = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
-
-    names = ["tenant1", "tenant2"]
     tenants = []
-
     for n in range(2):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
@@ -148,7 +138,7 @@ class TestPreauthBase:
 
         # preauth device
         devs = [
-            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()},
             {
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
@@ -165,7 +155,7 @@ class TestPreauthBase:
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
             },
-            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed()},
         ]
 
         for d in devs:
@@ -346,9 +336,14 @@ def make_devs_with_authsets(user, tenant_token=""):
 
     devices = []
 
-    keygen_rsa = lambda: crypto.get_keypair_rsa()
-    keygen_ec_256 = lambda: crypto.get_keypair_ec(crypto.EC_CURVE_256)
-    keygen_ed = lambda: crypto.get_keypair_ed()
+    def keygen_rsa():
+        return crypto.get_keypair_rsa()
+
+    def keygen_ec_256():
+        return crypto.get_keypair_ec(crypto.EC_CURVE_256)
+
+    def keygen_ed():
+        return crypto.get_keypair_ed()
 
     # some vanilla 'pending' devices, single authset
     for _ in range(3):
@@ -1319,8 +1314,7 @@ class TestAuthsetMgmtBase:
             "GET", inventory.URL_DEVICE, path_params={"id": dev.id}
         )
         assert r.status_code == 200
-
-        api_dev = r.json()
+        assert r.json() is not None
 
 
 class TestAuthsetMgmt(TestAuthsetMgmtBase):
@@ -1606,7 +1600,7 @@ class TestAuthReqBase:
             tenant_token = tenant.tenant_token
 
         devs = [
-            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa(),},
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()},
             {
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_256),
@@ -1623,7 +1617,7 @@ class TestAuthReqBase:
                 "id_data": rand_id_data(),
                 "keypair": crypto.get_keypair_ec(crypto.EC_CURVE_521),
             },
-            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed(),},
+            {"id_data": rand_id_data(), "keypair": crypto.get_keypair_ed()},
         ]
 
         r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))

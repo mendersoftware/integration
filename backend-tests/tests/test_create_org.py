@@ -15,9 +15,7 @@
 import pytest
 import time
 import logging
-import asyncore
 
-from threading import Thread
 from urllib import parse
 
 from testutils.common import mongo, clean_mongo, randstr

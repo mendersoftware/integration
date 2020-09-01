@@ -17,13 +17,9 @@ import subprocess
 import time
 import uuid
 
-import pymongo
-
 from testutils.infra import cli
 from testutils import api
 from testutils.common import (
-    User,
-    Device,
     mongo,
     mongo_cleanup,
 )
@@ -82,8 +78,6 @@ class TestCreateOrganizationCLIEnterprise:
         leads to conflicting login credentials.
         """
         tenantadm_cli = cli.CliTenantadm()
-        err = None
-
         self.logger.debug("Starting `test_duplicate_username`")
 
         self.logger.debug("First tenant creation call")
@@ -115,7 +109,7 @@ class TestCreateOrganizationCLIEnterprise:
                 name=name, username=username, password="321password"
             )
             pytest.fail("Multiple users with the same username is not allowed")
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             pass
 
         self.logger.info("`test_duplicate_username` finished successfully.")

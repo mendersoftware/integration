@@ -11,18 +11,12 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import logging
-import time
 import os
 import pytest
-import subprocess
-import time
 import stripe
-
-import pymongo
+import time
 
 from testutils.common import (
-    User,
     mongo,
     mongo_cleanup,
     clean_mongo,
@@ -45,7 +39,7 @@ if stripe.api_key is None:
 
 class TestCreateOrganizationV2EnterpriseNew:
     """ Test the 'new tenant' workflow.
-    
+
     - registration on v2 endpoint -> tenant secret
     - UI collects card, does extra SCA confirmation as necessary (with secret)
     - account is completely unusable for now
@@ -146,7 +140,7 @@ class TestCreateOrganizationV2EnterpriseNew:
         """ Regulatory test card numbers.
 
         These regulatory cards that will trigger the 3D Secure SCA checks.
-        The UI check here is mandatory, and can't be cheated around - 
+        The UI check here is mandatory, and can't be cheated around -
         so just verify that without it, tenant can't be activated at all.
 
         Actually, it's just a couple cards from the test set. Others allow
@@ -244,7 +238,7 @@ class TestCreateOrganizationV2EnterpriseExisting:
         # verify the old source is detached and new one attached
         cust = stripeutils.customer_for_tenant(email)
 
-        assert cust["default_source"] == None
+        assert cust["default_source"] is None
         assert len(cust["sources"]) == 0
 
         stripeutils.customer_has_pm(cust)

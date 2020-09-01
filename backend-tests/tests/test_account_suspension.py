@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import random
 import time
 import uuid
 
@@ -21,17 +20,12 @@ import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
-from testutils.infra.cli import CliTenantadm, CliUseradm
-import testutils.util.crypto
 from testutils.common import (
-    User,
     Device,
-    Tenant,
     mongo,
     clean_mongo,
     create_org,
     create_random_authset,
-    get_device_by_id_data,
     change_authset_status,
 )
 

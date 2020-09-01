@@ -15,6 +15,7 @@ import json
 import logging
 import pymongo
 import pytest
+import uuid
 
 import testutils.api.deployments as deployments
 import testutils.api.deviceauth as deviceauth
@@ -171,7 +172,7 @@ class TestRBACDeviceGroupEnterprise:
         [
             {
                 "name": "Test RBAC deploy to device group",
-                "user": {"name": "test1@username.org", "pwd": "password"},
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
                 "permissions": [
                     UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
                 ],
@@ -181,7 +182,7 @@ class TestRBACDeviceGroupEnterprise:
             },
             {
                 "name": "Test RBAC deployment forbidden",
-                "user": {"name": "test2@username.org", "pwd": "password"},
+                "user": {"name": "test2-UUID@example.com", "pwd": "password"},
                 "permissions": [
                     UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
                 ],
@@ -192,7 +193,7 @@ class TestRBACDeviceGroupEnterprise:
             # { TODO: This test-case should pass, but deployments only
             #         expect device IDs to come from the same group
             #   "name": "Test RBAC deployment multiple device groups",
-            #   "user": {"name": "test3@username.org", "pwd": "password"},
+            #   "user": {"name": "test3-UUID@example.com", "pwd": "password"},
             #   "permissions": [
             #       UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test"),
             #       UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "staging"),
@@ -203,7 +204,7 @@ class TestRBACDeviceGroupEnterprise:
             # },
             {
                 "name": "Test RBAC deploy to devices outside group",
-                "user": {"name": "test4@username.org", "pwd": "password"},
+                "user": {"name": "test4-UUID@example.com", "pwd": "password"},
                 "permissions": [
                     UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test"),
                 ],
@@ -219,13 +220,16 @@ class TestRBACDeviceGroupEnterprise:
         are not allowed to deploy to devices outside the restricted
         groups.
         """
-        dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
-
-        i = 0
         self.logger.info("RUN: %s", test_case["name"])
-        tenant = create_org(
-            "org%d" % i, "admin%d@username.org" % i, "password", plan="enterprise"
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
         )
+        tenant = create_org(tenant, username, password, "enterprise")
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
         test_user = create_user(tid=tenant.id, **test_case["user"])
         tenant.users.append(test_user)
         login_tenant_users(tenant)
@@ -239,6 +243,8 @@ class TestRBACDeviceGroupEnterprise:
 
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
+
+        dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
         rsp = dplmnt_MGMT.with_auth(test_user.token).call(
             "POST",
             deployments.URL_DEPLOYMENTS_ARTIFACTS,

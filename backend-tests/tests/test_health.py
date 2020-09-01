@@ -15,6 +15,8 @@
 import pytest
 import requests
 
+from urllib import parse
+
 from testutils.api import client
 
 
@@ -30,7 +32,13 @@ class TestHealthCheck:
         ],
     )
     def test_health_check(self, url):
-        rsp = requests.get(url)
+        parsed = parse.urlparse(url)
+        api_client = client.ApiClient(
+            base_url="",
+            host=parsed.hostname + ":" + str(parsed.port),
+            schema=parsed.scheme + "://",
+        )
+        rsp = api_client.call("GET", parsed.path)
         assert rsp.status_code == 204, rsp.text
 
 
@@ -47,5 +55,11 @@ class TestHealthCheckEnterprise:
         ],
     )
     def test_health_check(self, url):
-        rsp = requests.get(url)
+        parsed = parse.urlparse(url)
+        api_client = client.ApiClient(
+            base_url="",
+            host=parsed.hostname + ":" + str(parsed.port),
+            schema=parsed.scheme + "://",
+        )
+        rsp = api_client.call("GET", parsed.path)
         assert rsp.status_code == 204, rsp.text

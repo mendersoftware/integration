@@ -16,6 +16,7 @@ import os
 import requests
 import tempfile
 import time
+import uuid
 
 from json import dumps
 
@@ -100,9 +101,10 @@ class TestCreateArtifactBase:
 
 class TestCreateArtifactEnterprise(TestCreateArtifactBase):
     def test_create_artifact(self, mongo, clean_mongo):
+        uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
-            "test.mender.io",
-            "some.user@example.com",
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
         create_org(tenant, username, password)
@@ -111,6 +113,7 @@ class TestCreateArtifactEnterprise(TestCreateArtifactBase):
 
 class TestCreateArtifactOpenSource(TestCreateArtifactBase):
     def test_create_artifact(self, mongo, clean_mongo):
-        username, password = "some.user@example.com", "secretsecret"
+        uuidv4 = str(uuid.uuid4())
+        username, password = ("some.user+" + uuidv4 + "@example.com", "secretsecret")
         create_user(username, password)
         self.run_create_artifact_test(username, password)

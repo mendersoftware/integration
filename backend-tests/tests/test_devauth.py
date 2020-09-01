@@ -16,7 +16,7 @@ import random
 import time
 import base64
 import json
-
+import uuid
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
@@ -100,10 +100,14 @@ def tenants_users(clean_migrated_mongo_mt):
     names = ["tenant1", "tenant2"]
     tenants = []
 
-    for n in names:
-        username = "user@" + n + ".com"
-        password = "correcthorse"
-        tenants.append(create_org(n, username, password))
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenants.append(create_org(tenant, username, password))
 
     yield tenants
 
@@ -1395,9 +1399,13 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_default_tenant_token(self, clean_mongo):
         """Connect with a device without a tenant-token, and make sure it shows up in the default tenant account"""
 
-        default_tenant = create_org(
-            name="default-tenant", username="root@admin.com", password="foobarbaz"
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
         )
+        default_tenant = create_org(tenant, username, password)
         default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
@@ -1431,7 +1439,13 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_valid_tenant_not_duplicated_for_default_tenant(self, clean_mongo):
         """Verify that a valid tenant-token login does not show up in the default tenant's account"""
 
-        default_tenant = create_org("default-tenant", "root@admin.com", "foobarbaz")
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        default_tenant = create_org(tenant, username, password)
         default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
@@ -1483,7 +1497,13 @@ class TestDefaultTenantTokenEnterprise(object):
     def test_invalid_tenant_token_added_to_default_account(self, clean_mongo):
         """Verify that an invalid tenant token does show up in the default tenant account"""
 
-        default_tenant = create_org("default-tenant", "root@admin.com", "foobarbaz")
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        default_tenant = create_org(tenant, username, password)
         default_tenant_user = default_tenant.users[0]
 
         # Restart the deviceauth service with the new token belonging to `default-tenant`
@@ -1500,7 +1520,13 @@ class TestDefaultTenantTokenEnterprise(object):
         default_utoken = r.text
 
         # Create a second user, which has it's own tenant token
-        tenant1 = create_org("tenant1", "foo@bar.com", "foobarbaz")
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant1 = create_org(tenant, username, password)
         tenant1_user = tenant1.users[0]
         r = self.uc.call(
             "POST", useradm.URL_LOGIN, auth=(tenant1_user.name, tenant1_user.pwd)
@@ -1534,16 +1560,31 @@ class TestDefaultTenantTokenEnterprise(object):
 
 @pytest.fixture(scope="function")
 def tenants_with_plans(clean_mongo):
-    tos = create_org("tenant-os", "user@tenant-os.com", "correcthorse", plan="os")
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+    tos = create_org(tenant, username, password, plan="os")
     tos.plan = "os"
-    tpro = create_org(
-        "tenant-pro", "user@tenant-pro.com", "correcthorse", plan="professional"
+    #
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
     )
+    tpro = create_org(tenant, username, password, plan="professional")
     tpro.plan = "professional"
-
-    tent = create_org(
-        "tenant-ent", "user@tenant-ent.com", "correcthorse", plan="enterprise"
+    #
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
     )
+    tent = create_org(tenant, username, password, plan="enterprise")
     tent.plan = "enterprise"
 
     return [tos, tpro, tent]

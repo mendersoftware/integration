@@ -390,6 +390,16 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 
 ################################################################################
 
+git commit --allow-empty -m 'Changelog:All: Bump pytest-html in /tests/requirements
+
+Bumps [pytest-html](https://github.com/pytest-dev/pytest-html) from 2.0.1 to 2.1.1.
+- [Release notes](https://github.com/pytest-dev/pytest-html/releases)
+- [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
+- [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
 
 git commit --allow-empty -m 'Changelog: All bugs fixed N75
 
@@ -433,6 +443,10 @@ _Released xx.xx.xxxx_
   * Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.
     - [Release notes](https://github.com/klauspost/pgzip/releases)
     - [Commits](klauspost/pgzip@v1.2.3...v1.2.4)
+  * Bumps [pytest-html](https://github.com/pytest-dev/pytest-html) from 2.0.1 to 2.1.1.
+    - [Release notes](https://github.com/pytest-dev/pytest-html/releases)
+    - [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
+    - [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
   * Bumps golang from 1.14 to 1.15.0.
 * All bugs fixed N75
 * AllSomethingElse N77

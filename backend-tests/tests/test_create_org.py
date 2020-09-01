@@ -16,7 +16,9 @@ import pytest
 import time
 import logging
 import asyncore
+
 from threading import Thread
+from urllib import parse
 
 from testutils.common import mongo, clean_mongo, randstr
 from testutils.api.client import ApiClient
@@ -80,7 +82,8 @@ class TestCreateOrganizationEnterprise:
             )
 
         # get the tenant id (and verify that only one tenant exists)
-        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        qs = parse.urlencode({"q": tenant})
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS + "?" + qs)
         assert r.status_code == 200
         api_tenants = r.json()
         assert len(api_tenants) == 1
@@ -144,7 +147,8 @@ class TestCreateOrganizationEnterprise:
             )
 
         # get the tenant id (and verify that only one tenant exists)
-        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        qs = parse.urlencode({"q": tenant})
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS + "?" + qs)
         assert r.status_code == 200
         api_tenants = r.json()
         assert len(api_tenants) == 1

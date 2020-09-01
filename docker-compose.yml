@@ -65,6 +65,7 @@ services:
         depends_on:
             - mender-mongo
             - mender-workflows-server
+            - mender-inventory
 
     #
     # mender-inventory

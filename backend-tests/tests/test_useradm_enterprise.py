@@ -16,6 +16,7 @@ import random
 import time
 import base64
 import io
+import uuid
 from urllib import parse
 
 from PIL import Image
@@ -57,12 +58,20 @@ def tenants_users(clean_migrated_mongo):
     cli = CliTenantadm()
     api = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
-    for n in ["tenant1", "tenant2"]:
-        username = "user%d@%s.com"  # user[12]@tenant[12].com
-        password = "correcthorse"
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
         # Create tenant with two users
-        tenant = create_org(n, username % (1, n), "123password", plan="enterprise")
-        tenant.users.append(create_user(username % (2, n), password, tenant.id))
+        tenant = create_org(tenant, username, password, "enterprise")
+        tenant.users.append(
+            create_user(
+                "some.other.user+" + uuidv4 + "@example.com", password, tenant.id
+            )
+        )
         tenants.append(tenant)
 
     yield tenants

@@ -68,6 +68,9 @@ class CliUseradm(BaseCli):
         return uid
 
     def migrate(self, tenant_id=None):
+        if isK8S():
+            return
+
         cmd = [self.path, "migrate"]
 
         if tenant_id is not None:
@@ -106,6 +109,9 @@ class CliTenantadm(BaseCli):
         return tenant
 
     def migrate(self):
+        if isK8S():
+            return
+
         cmd = ["usr/bin/tenantadm", "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
@@ -118,6 +124,9 @@ class CliDeviceauth(BaseCli):
         )
 
     def migrate(self, tenant_id=None):
+        if isK8S():
+            return
+
         cmd = ["usr/bin/deviceauth", "migrate"]
 
         if tenant_id is not None:

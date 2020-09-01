@@ -13,14 +13,20 @@
 #    limitations under the License.
 import os
 import os.path
+import subprocess
 
 import requests
+import time
+
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "mender-api-gateway"
 
 
 class ApiClient:
     def __init__(self, base_url="", host=GATEWAY_HOSTNAME, schema="https://"):
+        self.host = host
+        self.schema = schema
         self.base_url = schema + host + base_url
         self.headers = {}
 
@@ -45,17 +51,30 @@ class ApiClient:
     ):
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
-        return requests.request(
-            method,
-            url,
-            json=body,
-            data=data,
-            params=qs_params,
-            headers=self.__make_headers(headers),
-            auth=auth,
-            verify=False,
-            files=files,
-        )
+        try:
+            p = None
+            if isK8S() and url.startswith("http://mender-"):
+                host = self.host.split(":", 1)[0]
+                port = self.host.split(":", 1)[1] if ":" in self.host else "80"
+                cmd = ["kubectl", "port-forward", "service/" + host, "8080:%s" % port]
+                p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
+                url = "http://localhost:8080/" + url.split("/", 3)[-1]
+                # wait a few seconds to let the port-forwarding fully initialize
+                time.sleep(3)
+            return requests.request(
+                method,
+                url,
+                json=body,
+                data=data,
+                params=qs_params,
+                headers=self.__make_headers(headers),
+                auth=auth,
+                verify=False,
+                files=files,
+            )
+        finally:
+            if p is not None:
+                p.terminate()
 
     def post(self, url, *pargs, **kwargs):
         return self.call("POST", url, *pargs, **kwargs)

@@ -20,12 +20,14 @@ import uuid
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliTenantadm
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
 import testutils.api.inventory as inventory
 import testutils.util.crypto as crypto
+
 from cryptography.hazmat.primitives.asymmetric import dsa
 
 from testutils.common import (
@@ -1390,6 +1392,9 @@ def compare_aset(authset, api_authset):
     assert authset.status == api_authset["status"]
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not relevant in a staging or production environment"
+)
 class TestDefaultTenantTokenEnterprise(object):
 
     uc = ApiClient(useradm.URL_MGMT)

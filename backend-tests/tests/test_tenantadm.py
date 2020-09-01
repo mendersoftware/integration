@@ -15,6 +15,7 @@ import logging
 import pytest
 import subprocess
 import time
+import uuid
 
 import pymongo
 
@@ -51,15 +52,21 @@ class TestCreateOrganizationCLIEnterprise:
         tenantadm_cli = cli.CliTenantadm()
         self.logger.info("Starting `test_success`")
 
+        uuidv4 = str(uuid.uuid4())
+        name, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
         tenant_id = tenantadm_cli.create_org(
-            name="fooCorp", username="user@example.com", password="password"
+            name=name, username=username, password=password
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
         # Retry login every second for 3 min
         for i in range(60 * 3):
             rsp = self.api_mgmt_useradm.call(
-                "POST", api.useradm.URL_LOGIN, auth=("user@example.com", "password")
+                "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 break
@@ -80,15 +87,21 @@ class TestCreateOrganizationCLIEnterprise:
         self.logger.debug("Starting `test_duplicate_username`")
 
         self.logger.debug("First tenant creation call")
+        uuidv4 = str(uuid.uuid4())
+        name, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
         tenant_id = tenantadm_cli.create_org(
-            name="fooCorp", username="user@example.com", password="321password"
+            name=name, username=username, password=password
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
         # Retry login every second for 3 min
         for i in range(60 * 3):
             rsp = self.api_mgmt_useradm.call(
-                "POST", api.useradm.URL_LOGIN, auth=("user@example.com", "321password")
+                "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 self.logger.debug("Successfully logged into account")
@@ -99,7 +112,7 @@ class TestCreateOrganizationCLIEnterprise:
         try:
             self.logger.debug("Second tenant creation call")
             tenant_id = tenantadm_cli.create_org(
-                name="barCorp", username="user@example.com", password="321password"
+                name=name, username=username, password="321password"
             )
             pytest.fail("Multiple users with the same username is not allowed")
         except subprocess.CalledProcessError as e:
@@ -115,15 +128,21 @@ class TestCreateOrganizationCLIEnterprise:
         self.logger.debug("Starting `test_duplicate_username`")
         tenantadm_cli = cli.CliTenantadm()
 
+        uuidv4 = str(uuid.uuid4())
+        name, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
         tenant_id = tenantadm_cli.create_org(
-            name="fooCorp", username="foo@corp.org", password="321password"
+            name=name, username=username, password=password
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
         # Retry login every second for 3 min
         for i in range(60 * 3):
             rsp = self.api_mgmt_useradm.call(
-                "POST", api.useradm.URL_LOGIN, auth=("foo@corp.org", "321password")
+                "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 self.logger.debug("Successfully logged into account")
@@ -132,15 +151,20 @@ class TestCreateOrganizationCLIEnterprise:
 
         assert rsp.status_code == 200
 
+        name, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.other.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
         tenant_id = tenantadm_cli.create_org(
-            name="fooCorp", username="foo@acme.com", password="password123"
+            name=name, username=username, password=password
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
         # Retry login every second for 3 min
         for i in range(60 * 3):
             rsp = self.api_mgmt_useradm.call(
-                "POST", api.useradm.URL_LOGIN, auth=("foo@acme.com", "password123")
+                "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 break

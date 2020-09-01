@@ -14,6 +14,7 @@
 import pytest
 import random
 import time
+import uuid
 
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
@@ -39,10 +40,14 @@ from testutils.common import (
 def tenants(clean_mongo):
     tenants = []
 
-    for n in ["tenant1", "tenant2"]:
-        username = "user@" + n + ".com"
-        password = "correcthorse"
-        tenants.append(create_org(n, username, password))
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenants.append(create_org(tenant, username, password))
 
     yield tenants
 

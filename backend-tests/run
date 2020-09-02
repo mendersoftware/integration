@@ -10,10 +10,11 @@ DOWNLOAD_REQUIREMENTS="true"
 COMPOSE_CMD_BASE="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
         "
-COMPOSE_CMD_OPEN="${COMPOSE_CMD_K8S} \
+COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml
+        -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
         "
 COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} \
         -f $INTEGRATION_PATH/docker-compose.enterprise.yml \

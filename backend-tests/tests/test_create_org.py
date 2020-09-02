@@ -15,10 +15,11 @@
 import pytest
 import time
 import logging
+import uuid
 
 from urllib import parse
 
-from testutils.common import mongo, clean_mongo, randstr
+from testutils.common import mongo, clean_mongo
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
@@ -51,7 +52,8 @@ class TestCreateOrganizationEnterprise:
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -115,7 +117,8 @@ class TestCreateOrganizationEnterprise:
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -166,7 +169,8 @@ class TestCreateOrganizationEnterprise:
     def test_duplicate_organization_name(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -199,7 +203,8 @@ class TestCreateOrganizationEnterprise:
     def test_duplicate_email(self, clean_migrated_mongo):
         tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -213,7 +218,8 @@ class TestCreateOrganizationEnterprise:
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
 
         payload = {
             "request_id": "123457",

@@ -15,12 +15,12 @@ import os
 import pytest
 import stripe
 import time
+import uuid
 
 from testutils.common import (
     mongo,
     mongo_cleanup,
     clean_mongo,
-    randstr,
 )
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm_v1
@@ -75,7 +75,8 @@ class TestCreateOrganizationV2EnterpriseNew:
         Some of these are omitted - they are in fact being rejected with:
         'Please use a Visa, MasterCard, or American Express card'
         """
-        tenant = "test.mender.io-{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
         payload = {
             "request_id": "123456",
@@ -149,7 +150,8 @@ class TestCreateOrganizationV2EnterpriseNew:
         See https://stripe.com/docs/testing#three-ds-cards.
 
         """
-        tenant = "test.mender.io-{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
 
         payload = {
@@ -205,7 +207,8 @@ class TestCreateOrganizationV2EnterpriseNew:
 
 class TestCreateOrganizationV2EnterpriseExisting:
     def test_ok(self, clean_mongo):
-        name = "test.mender.io-" + randstr()
+        uuidv4 = str(uuid.uuid4())
+        name = "test.mender.io-" + uuidv4
         email = "user@{}.com".format(name)
         res = create_org_v1(name, email, "asdfqwer1234", "tok_visa")
 

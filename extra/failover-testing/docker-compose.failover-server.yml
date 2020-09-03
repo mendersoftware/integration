@@ -118,7 +118,7 @@ services:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
 
     mender-mongo-2:
-        image: mongo:3.6
+        image: mongo:4.4
         extends:
             file: common.yml
             service: mender-base

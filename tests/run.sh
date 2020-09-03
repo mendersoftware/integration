@@ -16,6 +16,8 @@ usage() {
     echo "    --                               Seperates 'run.sh' arguments from pytest arguments"
     echo "    <pytest-args>                    Passes these arguments along to pytest"
     echo "    tests/<testfile.py>              Name the test-file to run"
+    echo "    -k TestNameToRun                 Name of the test class, method, or module to run"
+
     echo
     echo "Recognized Environment Variables:"
     echo

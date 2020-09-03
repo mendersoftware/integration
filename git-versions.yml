@@ -8,28 +8,28 @@ services:
     # backend open source services
     #
     mender-deployments:
-        image: mendersoftware/deployments:master
+        image: mendersoftware/deployments:2.1.x
 
     mender-gui:
-        image: mendersoftware/gui:master
+        image: mendersoftware/gui:2.5.x
 
     mender-api-gateway:
-        image: mendersoftware/api-gateway:master
+        image: mendersoftware/api-gateway:2.3.x
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:master
+        image: mendersoftware/deviceauth:2.4.x
 
     mender-inventory:
-        image: mendersoftware/inventory:master
+        image: mendersoftware/inventory:2.1.x
 
     mender-useradm:
-        image: mendersoftware/useradm:master
+        image: mendersoftware/useradm:1.12.x
 
     mender-workflows-server:
-        image: mendersoftware/workflows:master
+        image: mendersoftware/workflows:1.2.x
 
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:master
+        image: mendersoftware/workflows-worker:1.2.x
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:master
+        image: mendersoftware/create-artifact-worker:1.0.x

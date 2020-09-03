@@ -150,13 +150,6 @@ git:
     - mender-create-artifact-worker
     release_component: true
 
-  auditlogs:
-    docker_image:
-    - auditlogs
-    docker_container:
-    - mender-auditlogs
-    release_component: true
-
 docker_image:
   deployments:
     git:
@@ -312,13 +305,6 @@ docker_image:
     - mender-create-artifact-worker
     release_component: true
 
-  auditlogs:
-    git:
-    - auditlogs
-    docker_container:
-    - mender-auditlogs
-    release_component: true
-
 docker_container:
   mender-deployments:
     git:
@@ -430,11 +416,4 @@ docker_container:
     - create-artifact-worker
     docker_image:
     - create-artifact-worker
-    release_component: true
-
-  mender-auditlogs:
-    git:
-    - auditlogs
-    docker_image:
-    - auditlogs
     release_component: true

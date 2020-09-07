@@ -1,0 +1,6 @@
+# This file lists software components, and their versions, that are part of a
+# Mender release, have Docker containers, but are not part a default Mender
+# installation (have no docker-compose file).
+services:
+    mtls-ambassador:
+        image: registry.mender.io/mendersoftware/mtls-ambassador:mender-master

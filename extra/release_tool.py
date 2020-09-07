@@ -223,6 +223,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "integration": "INTEGRATION_REV",
     "mender-qa": "MENDER_QA_REV",
     "auditlogs": "AUDITLOGS_REV",
+    "mtls-ambassador": "MTLS_AMBASSADOR",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -235,6 +236,7 @@ BACKEND_SERVICES_ENT = {
     "useradm-enterprise",
     "workflows-enterprise",
     "auditlogs",
+    "mtls-ambassador",
 }
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = (
@@ -396,6 +398,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.yml",
         "docker-compose.enterprise.yml",
         "docker-compose.auditlogs.yml",
+        "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
 
@@ -404,6 +407,7 @@ def filter_docker_compose_files_list(list, version):
             entry.startswith("git-versions")
             and entry.endswith(".yml")
             or entry == "other-components.yml"
+            or entry == "other-components-docker.yml"
             or (entry.startswith("docker-compose") and entry.endswith(".yml"))
         )
 
@@ -2174,7 +2178,7 @@ def do_build(args):
 
     if os.path.exists(RELEASE_TOOL_STATE):
         print(
-            "Fetching cached parameters from %s. Delete to reset." % RELEASE_TOOL_STATE
+            "Fetching cached parameters from %s (delete to reset)." % RELEASE_TOOL_STATE
         )
         with open(RELEASE_TOOL_STATE) as fd:
             state = yaml.safe_load(fd)
@@ -2242,10 +2246,13 @@ def do_build(args):
 
 
 def determine_version_to_include_in_release(state, repo):
+    """Returns True if the user decided on the component, False if the user
+    skips the decision for later"""
+
     version = state_value(state, [repo.git(), "version"])
 
     if version is not None:
-        return
+        return True
 
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())
@@ -2312,8 +2319,15 @@ def determine_version_to_include_in_release(state, repo):
             % (repo.git(), " ".join(git_cmd), " ".join(changelog_cmd))
         )
         reply = ask(
-            "Based on this, is there a reason for a new release of %s? " % repo.git()
+            "Based on this, is there a reason for a new release of %s? (Yes/No/Skip) "
+            % repo.git()
         )
+
+    if reply.lower().startswith("s"):
+        print("Ok. Postponing decision on %s for later" % repo.git())
+        print()
+        print_line()
+        return False
 
     if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask(
@@ -2336,6 +2350,7 @@ def determine_version_to_include_in_release(state, repo):
 
     print()
     print_line()
+    return True
 
 
 def do_release(release_state_file):
@@ -2389,8 +2404,11 @@ def do_release(release_state_file):
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
-        determine_version_to_include_in_release(state, repo)
+    repos = sorted(Component.get_components_of_type("git"), key=repo_sort_key)
+    while len(repos) > 0:
+        repo = repos.pop(0)
+        if not determine_version_to_include_in_release(state, repo):
+            repos.append(repo)
 
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)
@@ -3163,6 +3181,8 @@ def main():
         print("--version-of, --set-version-of and --release are mutually exclusive!")
         sys.exit(1)
 
+    # Check conflicting options.
+    operations = 0
     for operation in [args.release, args.hosted_release]:
         if operation:
             operations = operations + 1

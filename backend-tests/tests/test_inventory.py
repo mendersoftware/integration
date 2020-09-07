@@ -14,6 +14,7 @@
 import logging
 import pytest
 import time
+import uuid
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
@@ -23,18 +24,11 @@ import testutils.api.inventory as inventory
 import testutils.api.inventory_v2 as inventory_v2
 
 from testutils.common import (
-    User,
-    Device,
-    Authset,
-    Tenant,
     mongo,
     clean_mongo,
     mongo_cleanup,
     create_user,
     create_org,
-    create_authset,
-    get_device_by_id_data,
-    change_authset_status,
     make_accepted_device,
     make_accepted_devices,
 )
@@ -69,14 +63,15 @@ def user(clean_migrated_mongo):
 
 @pytest.fixture(scope="function")
 def tenants_users(clean_migrated_mongo_mt):
-    names = ["tenant1", "tenant2"]
     tenants = []
-
-    for n in names:
-        username = "user@%s.com" % n
-        password = "correcthorse"
-        tenant = create_org(n, username, password)
-        tenants.append(tenant)
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenants.append(create_org(tenant, username, password))
 
     yield tenants
 
@@ -87,7 +82,6 @@ class TestGetDevicesBase:
         devauthd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         invm = ApiClient(inventory.URL_MGMT)
-        invd = ApiClient(inventory.URL_DEV)
 
         # log in user
         r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
@@ -95,7 +89,7 @@ class TestGetDevicesBase:
         utoken = r.text
 
         # prepare accepted devices
-        devs = make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
+        make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
         # wait for devices to be provisioned
         time.sleep(3)
@@ -241,7 +235,6 @@ class TestDevicePatchAttributes:
         useradmm = ApiClient(useradm.URL_MGMT)
         devauthd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
-        invm = ApiClient(inventory.URL_MGMT)
         invd = ApiClient(inventory.URL_DEV)
 
         # log in user
@@ -320,13 +313,30 @@ class TestDeviceFilteringEnterprise:
     @pytest.fixture(autouse=True)
     def setup_tenants(self, clean_mongo):
         # Initialize tenants and devices
-        self.tenant_ent = create_org(
-            "AcmeEnterprise", "acme@ent.org", "password", "enterprise"
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
         )
-        self.tenant_pro = create_org(
-            "AcmeProrofessionsl", "acme@pro.org", "password", "professional"
+        self.tenant_ent = create_org(tenant, username, password, "enterprise")
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
         )
-        self.tenant_os = create_org("AcmeOpenSource", "acme@open.src", "password", "os")
+        self.tenant_pro = create_org(tenant, username, password, "professional")
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        self.tenant_os = create_org(tenant, username, password, "os")
+        #
         add_devices_to_tenant(
             self.tenant_ent,
             [
@@ -1257,12 +1267,13 @@ class TestDeviceFilteringEnterprise:
         self.logger.info("Running test case: %s" % test_case["name"])
 
         # Setup tenant and (initial) device set.
-        tenant = create_org(
-            "BobTheEnterprise",
-            username="bob@ent.org",
-            password="password",
-            plan="enterprise",
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
         )
+        tenant = create_org(tenant, username, password, "enterprise")
         rsp = usradmm.call(
             "POST", useradm.URL_LOGIN, auth=(tenant.users[0].name, tenant.users[0].pwd),
         )

@@ -10,9 +10,27 @@ include:
 stages:
   - test
 
+test:check-commits:
+  except:
+    refs:
+      - /^(master|[0-9]+\.[0-9]+\.x)$/
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
+test:check-python3-formatting:
+  except:
+    refs:
+      - /^(master|[0-9]+\.[0-9]+\.x)$/
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
 test:extra-tools:changelog-generator:
   image: "python:3"
   stage: test
+
+  except:
+    variables:
+      - $RUN_TESTS_STAGING == "true"
 
   before_script:
     # Rename the branch we're on, so that it's not in the way for the
@@ -30,6 +48,10 @@ test:extra-tools:release-tool:
   image: "python:3"
   stage: test
 
+  except:
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
   before_script:
     - pip install pytest pyyaml
     # Add github remote for tests using --integration-versions-including
@@ -41,3 +63,51 @@ test:extra-tools:release-tool:
   script:
     # Run release-tool unit tests.
     - python3 -m pytest extra/test_release_tool.py
+
+test:staging:backend-tests:
+  image: debian:buster
+  stage: test
+  timeout: 4h
+  only:
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
+  services:
+    - docker:dind
+
+  variables:
+    K8S: "staging"
+    AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
+    AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
+    GATEWAY_HOSTNAME: "staging.hosted.mender.io"
+    DOCKER_HOST: tcp://docker:2375
+
+  before_script:
+    - apt update
+    - apt install -yyq curl gnupg
+    # Install docker
+    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    - apt-key fingerprint 0EBFCD88
+    - echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable" >> /etc/apt/sources.list
+    - apt update
+    - apt install -yyq docker-ce docker-ce-cli containerd.io
+    # Install docker-compose
+    - curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+    - chmod 775 /usr/bin/docker-compose
+    # Install python dependencies
+    - apt install -yyq python3-yaml
+
+  script:
+    - cd backend-tests
+    - ./run -s enterprise
+
+  artifacts:
+    expire_in: 2w
+    when: always
+    paths:
+      - backend-tests/acceptance.*
+      - backend-tests/results_backend_integration_*.xml
+      - backend-tests/report_backend_integration_*.html
+    reports:
+      junit: backend-tests/results_backend_integration_*.xml

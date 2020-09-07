@@ -13,15 +13,12 @@
 #    limitations under the License.
 
 import os
-import random
+import pytest
 import re
 import requests
-import string
 import subprocess
 import tempfile
-import pytest
-
-from contextlib import contextmanager
+import uuid
 
 from testutils.api.client import ApiClient
 from testutils.api import (
@@ -50,9 +47,10 @@ class TestUploadArtifactEnterprise:
         return r.text
 
     def get_tenant_username_and_password(self, plan):
+        uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
-            "test.mender.io",
-            "some.user@example.com",
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
         tenant = create_org(tenant, username, password, plan)
@@ -206,7 +204,6 @@ class TestUploadArtifactEnterprise:
         for artifact_kw in artifacts:
             artifact_kw.setdefault("artifact_name", "test")
             artifact_kw.setdefault("device_types", ["arm1"])
-            print(artifact_kw)
             with get_mender_artifact(**artifact_kw) as artifact:
                 r = api_client.with_auth(auth_token).call(
                     "POST",
@@ -382,7 +379,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -429,7 +426,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -475,7 +472,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan=plan,
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm1"], "size": 256,},
+                {"artifact_name": "test", "device_types": ["arm1"], "size": 256},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
@@ -522,9 +519,23 @@ class TestUploadArtifactEnterprise:
 
     def test_artifacts_exclusive_to_user(self, mongo, clean_mongo):
         tenants = []
-        tenant = create_org("foo", "foo@foo.com", "correcthorse", "enterprise")
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password)
         tenants.append(tenant)
-        tenant = create_org("bar", "bar@bar.com", "correcthorse", "enterprise")
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password)
         tenants.append(tenant)
 
         api_client = ApiClient(deployments.URL_MGMT)
@@ -565,6 +576,10 @@ class TestUploadArtifactEnterprise:
             api_client.with_auth(auth_token)
             r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
             assert r.status_code == 200
-            artifacts = r.json()
+            artifacts = [
+                artifact
+                for artifact in r.json()
+                if not artifact["name"].startswith("mender-demo-artifact")
+            ]
             assert len(artifacts) == 1
             assert artifacts[0]["name"] == user.name

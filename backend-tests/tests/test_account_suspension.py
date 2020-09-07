@@ -12,25 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import random
 import time
+import uuid
 
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
-from testutils.infra.cli import CliTenantadm, CliUseradm
-import testutils.util.crypto
 from testutils.common import (
-    User,
     Device,
-    Tenant,
     mongo,
     clean_mongo,
     create_org,
     create_random_authset,
-    get_device_by_id_data,
     change_authset_status,
 )
 
@@ -39,10 +34,14 @@ from testutils.common import (
 def tenants(clean_mongo):
     tenants = []
 
-    for n in ["tenant1", "tenant2"]:
-        username = "user@" + n + ".com"
-        password = "correcthorse"
-        tenants.append(create_org(n, username, password))
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenants.append(create_org(tenant, username, password))
 
     yield tenants
 

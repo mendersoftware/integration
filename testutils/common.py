@@ -274,15 +274,6 @@ def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devic
     return devices
 
 
-def randstr():
-    """ Random suffix generation.
-        Useful when we need e.g. unique object ids so that
-        parallel test runs don't step on each other's data.
-    """
-    charset = string.ascii_letters + string.digits
-    return "".join(random.choice(charset) for i in range(5))
-
-
 @contextmanager
 def get_mender_artifact(
     artifact_name="test",

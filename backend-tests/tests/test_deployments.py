@@ -13,16 +13,13 @@
 #    limitations under the License.
 import pytest
 import multiprocessing as mp
-import logging
 import os
-import requests
 import random
 import time
-import testutils.util.crypto
+import uuid
 
 from datetime import datetime, timedelta
 
-import testutils.api.client
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
@@ -32,14 +29,8 @@ import testutils.api.deployments_v2 as deployments_v2
 
 from testutils.api.client import ApiClient
 from testutils.common import (
-    User,
-    Device,
-    Authset,
-    Tenant,
     create_org,
     create_user,
-    create_authset,
-    change_authset_status,
     clean_mongo,
     mongo_cleanup,
     mongo,
@@ -47,6 +38,10 @@ from testutils.common import (
     make_accepted_device,
     make_accepted_devices,
 )
+from testutils.infra.container_manager.kubernetes_manager import isK8S
+
+
+WAITING_MULTIPLIER = 8 if isK8S() else 1
 
 
 def upload_image(filename, auth_token, description="abc"):
@@ -107,9 +102,16 @@ def setup_deployments_enterprise_test(
     Creates two tenants, with one user each, where each user has three deployments,
     and a hundred devices each.
     """
-    tenant1 = create_tenant_test_setup("bugs@bunny.org", "acme", plan=plan)
+
+    uuidv4 = str(uuid.uuid4())
+    tenant1 = create_tenant_test_setup(
+        "some.user+" + uuidv4 + "@example.com", "test.mender.io-" + uuidv4, plan=plan
+    )
     # Add a second tenant to make sure that the functionality does not interfere with other tenants
-    tenant2 = create_tenant_test_setup("road@runner.org", "indiedev", plan=plan)
+    uuidv4 = str(uuid.uuid4())
+    tenant2 = create_tenant_test_setup(
+        "some.user+" + uuidv4 + "@example.com", "test.mender.io-" + uuidv4, plan=plan
+    )
     # Create 'existing_deployments' predefined deployments to act as noise for the server to handle
     # for both users
     return tenant1, tenant2
@@ -559,7 +561,6 @@ def setup_devices_and_management_st(nr_devices=100):
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
-    api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
     r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -586,13 +587,18 @@ def setup_devices_and_management_mt(nr_devices=100):
     """
     Sets up user and tenant and creates authorized devices.
     """
-    tenant = create_org("acme", "bugs@bunny.org", "correcthorse", plan="enterprise")
+    uuidv4 = str(uuid.uuid4())
+    tenant = create_org(
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "correcthorse",
+        plan="enterprise",
+    )
     user = tenant.users[0]
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
-    api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     # log in user
     r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
@@ -627,7 +633,7 @@ def try_update(
     :param default_artifact_name: default artifact name of the
                                   artifact used in the request
 
-    NOTE: You can override the device type and artifact name 
+    NOTE: You can override the device type and artifact name
           by creating a device_type/artifact_name member of the
           Device object.
     """
@@ -691,7 +697,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
     def try_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
     ):
-        ### Static helper function ###
+        # Static helper function
         # Setup Deployment APIs
         api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
 
@@ -723,26 +729,27 @@ class TestPhasedRolloutDeploymentsEnterprise:
                     deployment["phases"][i]["start_ts"], "%Y-%m-%dT%H:%M:%SZ"
                 )
                 now = datetime.utcnow()
-                wait_time = start_ts - now
 
                 # While phase in progress
                 # NOTE: add a half a second buffer time, as a just-in-time
                 #       request will break the remainder of the test
-                while now < (start_ts - timedelta(milliseconds=500)):
+                while now < (
+                    start_ts - timedelta(milliseconds=500 * WAITING_MULTIPLIER)
+                ):
                     # Spam update requests from random non-updated devices
                     dev = random.choice(devices)
                     status_code = try_update(dev)
                     assert status_code == 204
                     now = datetime.utcnow()
                 # Sleep the last 500ms to let the next phase start
-                time.sleep(0.5)
+                time.sleep(0.5 * WAITING_MULTIPLIER)
             else:
                 raise ValueError(
                     "Invalid phased deployment request, "
                     "missing `start_ts` for phase %d" % i
                 )
 
-            ### Test for all devices in the deployment ###
+            # Test for all devices in the deployment
             if devices_updated > 0:
                 # Allready updated
                 for device in devices[:devices_updated]:
@@ -819,9 +826,9 @@ class TestPhasedRolloutDeploymentsEnterprise:
             "devices": [dev.id for dev in devs],
             "phases": [
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 }
             ],
         }
@@ -839,14 +846,15 @@ class TestPhasedRolloutDeploymentsEnterprise:
             "phases": [
                 {
                     "batch_size": 10,
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 },
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=30)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=2 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "batch_size": 90,
                 },
             ],
@@ -866,21 +874,23 @@ class TestPhasedRolloutDeploymentsEnterprise:
             "phases": [
                 {"batch_size": 13},
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "batch_size": 17,
                 },
                 {
                     "batch_size": 29,
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=30)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=2 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 },
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=45)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=3 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
             ],
         }
@@ -901,21 +911,23 @@ class TestPhasedRolloutDeploymentsEnterprise:
             "phases": [
                 {"batch_size": 10},
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "batch_size": 20,
                 },
                 {
                     "batch_size": 5,
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=30)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=2 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 },
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=45)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=3 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
             ],
         }
@@ -947,14 +959,15 @@ class TestPhasedRolloutDeploymentsEnterprise:
                 {"batch_size": 13},
                 {
                     "batch_size": 29,
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 },
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=30)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    )
+                    "start_ts": (
+                        datetime.utcnow()
+                        + timedelta(seconds=2 * 15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 },
             ],
         }
@@ -982,12 +995,11 @@ class TestPhasedRolloutConcurrencyEnterprise:
     def try_concurrent_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
     ):
-        ### Static helper function ###
+        # Static helper function
         # Setup Deployment APIs
         api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
         status_codes = []
 
-        devices_updated = 0
         num_phases = len(deployment["phases"])
         batch_sizes = [
             int((deployment["phases"][i]["batch_size"] / 100.0) * len(devices))
@@ -1015,14 +1027,15 @@ class TestPhasedRolloutConcurrencyEnterprise:
                     deployment["phases"][i]["start_ts"], "%Y-%m-%dT%H:%M:%SZ"
                 )
                 now = datetime.utcnow()
-                wait_time = start_ts - now
 
                 # While phase in progress:
                 # Spam update requests from random batches of devices
                 # concurrently by creating a pool of minimum 4 processes
                 # that send requests in parallel.
                 with mp.Pool(max(4, mp.cpu_count())) as pool:
-                    while now <= (start_ts - timedelta(milliseconds=500)):
+                    while now <= (
+                        start_ts - timedelta(milliseconds=500 * WAITING_MULTIPLIER)
+                    ):
                         # NOTE: ^ add a half a second buffer time to
                         #       account for the delay in sending and
                         #       processing the request.
@@ -1048,7 +1061,7 @@ class TestPhasedRolloutConcurrencyEnterprise:
                         )
                         now = datetime.utcnow()
                 # Sleep the last 500ms to let the next phase start
-                time.sleep(0.5)
+                time.sleep(0.5 * WAITING_MULTIPLIER)
             else:
                 raise ValueError(
                     "Invalid phased deployment request, "
@@ -1098,9 +1111,9 @@ class TestPhasedRolloutConcurrencyEnterprise:
             "phases": [
                 {"batch_size": 10},
                 {
-                    "start_ts": (datetime.utcnow() + timedelta(seconds=15)).strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),
+                    "start_ts": (
+                        datetime.utcnow() + timedelta(seconds=15 * WAITING_MULTIPLIER)
+                    ).strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "batch_size": 90,
                 },
             ],
@@ -1419,7 +1432,10 @@ def create_tenant(name, username, plan):
 
 @pytest.fixture(scope="function")
 def setup_tenant(clean_mongo):
-    tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
+    uuidv4 = str(uuid.uuid4())
+    tenant = create_tenant(
+        "test.mender.io-" + uuidv4, "some.user+" + uuidv4 + "@example.com", "enterprise"
+    )
     # give workflows time to finish provisioning
     time.sleep(10)
     return tenant
@@ -1431,7 +1447,7 @@ def clean_mongo_client(mongo):
     common.MongoClient connected to the DB.
 
     Useful for tests with multiple testcases:
-    - protects the whole test func as usual 
+    - protects the whole test func as usual
     - but also allows calling MongoClient.cleanup() between cases
     """
     mongo_cleanup(mongo)
@@ -1463,7 +1479,6 @@ def create_dynamic_deployment(
     f = create_filter(name, predicates, utoken)
 
     api_dep_v2 = ApiClient(deployments_v2.URL_MGMT)
-    api_dep_v1 = ApiClient(deployments.URL_MGMT)
 
     depid = None
     with get_mender_artifact(name) as filename:
@@ -1548,7 +1563,7 @@ def assert_get_next(code, dtoken, artifact_name=None):
     resp = api_dev_deploy.with_auth(dtoken).call(
         "GET",
         deployments.URL_NEXT,
-        qs_params={"artifact_name": "dontcare", "device_type": "arm1",},
+        qs_params={"artifact_name": "dontcare", "device_type": "arm1"},
     )
 
     assert resp.status_code == code
@@ -1586,12 +1601,9 @@ def verify_stats(stats, expected):
 
 
 class TestDynamicDeploymentsEnterprise:
-    def test_assignment_based_on_filters(self, clean_mongo_client):
-        """ Test basic dynamic deployments characteristic:
-            - deployments match on inventory attributes via various filter predicates
-        """
-
-        test_cases = [
+    @pytest.mark.parametrize(
+        "tc",
+        [
             # single predicate, $eq
             {
                 "name": "single predicate, $eq",
@@ -1710,32 +1722,37 @@ class TestDynamicDeploymentsEnterprise:
                     [{"name": "foo", "value": "bar1"}],
                 ],
             },
+        ],
+    )
+    def test_assignment_based_on_filters(self, clean_mongo_client, tc):
+        """ Test basic dynamic deployments characteristic:
+            - deployments match on inventory attributes via various filter predicates
+        """
+        uuidv4 = str(uuid.uuid4())
+        tenant = create_tenant(
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "enterprise",
+        )
+        user = tenant.users[0]
+
+        matching_devs = [
+            make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+            for attrs in tc["matches"]
+        ]
+        nonmatching_devs = [
+            make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+            for attrs in tc["nonmatches"]
         ]
 
-        for tc in test_cases:
-            print("test case: {}\n".format(tc["name"]))
-            tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
-            user = tenant.users[0]
+        dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
+        assert dep["initial_device_count"] == len(matching_devs)
 
-            matching_devs = [
-                make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
-                for attrs in tc["matches"]
-            ]
-            nonmatching_devs = [
-                make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
-                for attrs in tc["nonmatches"]
-            ]
+        for d in matching_devs:
+            assert_get_next(200, d.token, "foo")
 
-            dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
-            assert dep["initial_device_count"] == len(matching_devs)
-
-            for d in matching_devs:
-                assert_get_next(200, d.token, "foo")
-
-            for d in nonmatching_devs:
-                assert_get_next(204, d.token)
-
-            clean_mongo_client.cleanup()
+        for d in nonmatching_devs:
+            assert_get_next(204, d.token)
 
     def test_unbounded_deployment_lifecycle(self, setup_tenant):
         """ Check how a dynamic deployment (no bounds) progresses through states
@@ -1746,8 +1763,6 @@ class TestDynamicDeploymentsEnterprise:
         dep = create_dynamic_deployment(
             "foo", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
-
-        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
 
         devs = [
             make_device_with_inventory(
@@ -1804,8 +1819,6 @@ class TestDynamicDeploymentsEnterprise:
             max_devices=10,
         )
 
-        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
-
         devs = [
             make_device_with_inventory(
                 [{"name": "foo", "value": "foo"}],
@@ -1858,7 +1871,7 @@ class TestDynamicDeploymentsEnterprise:
         verify_stats(stats, {"success": 10})
 
     def test_deployment_ordering(self, setup_tenant):
-        """ Check that devices only get dynamic deployments fresher than the 
+        """ Check that devices only get dynamic deployments fresher than the
             latest one it finished.
 
             In other words, after updating its attributes the device won't accidentally
@@ -1867,10 +1880,10 @@ class TestDynamicDeploymentsEnterprise:
 
         user = setup_tenant.users[0]
 
-        depfoo1 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo1", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
-        depfoo2 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo2", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
         depbar = create_dynamic_deployment(
@@ -1893,123 +1906,108 @@ class TestDynamicDeploymentsEnterprise:
         assert_get_next(204, dev.token)
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
-        depfoo3 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo3", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
-        depfoo4 = create_dynamic_deployment(
+        create_dynamic_deployment(
             "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
         assert_get_next(200, dev.token, "foo3")
 
-    def test_phased_rollout(self, clean_mongo_client):
-        """ Check phased rollouts with and without max_devices.
-        """
-
-        # for adjusting start_ts in consecutive cases
-        # each case adds some delay and makes the utcnow() at phase defintion stale
-        start_ts_add_secs = 0
-
-        # note: start_ts are actual datetimes; formatted to str just-in-time
-        # after ts_add_secs adjustments
-        cases = [
+    @pytest.mark.parametrize(
+        "tc",
+        [
             # without max_devices
             {
                 "name": "without max_devices",
-                "phases": [
-                    {"batch_size": 20},
-                    {"start_ts": datetime.utcnow() + timedelta(seconds=15)},
-                ],
+                "phases": [{"batch_size": 20}, {"start_ts": None,},],
                 "max_devices": None,
             },
             # with max_devices
             {
                 "name": "with max_devices",
-                "phases": [
-                    {"batch_size": 20},
-                    {"start_ts": datetime.utcnow() + timedelta(seconds=15)},
-                ],
+                "phases": [{"batch_size": 20}, {"start_ts": None,},],
                 "max_devices": 10,
             },
-        ]
+        ],
+    )
+    def test_phased_rollout(self, clean_mongo_client, tc):
+        """ Check phased rollouts with and without max_devices.
+        """
+        uuidv4 = str(uuid.uuid4())
+        tenant = create_tenant(
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "enterprise",
+        )
+        user = tenant.users[0]
 
-        for tc in cases:
-            print("test case: {}\n".format(tc["name"]))
-            before = datetime.utcnow()
+        # adjust phase start ts for previous test case duration
+        # format for api consumption
+        for phase in tc["phases"]:
+            if "start_ts" in phase:
+                phase["start_ts"] = datetime.utcnow() + timedelta(
+                    seconds=15 * WAITING_MULTIPLIER
+                )
+                phase["start_ts"] = phase["start_ts"].strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            tenant = create_tenant("foo", "foo@tenant.com", "enterprise")
-            user = tenant.users[0]
+        # a phased dynamic deployment must have an initial matching devices count
+        # fails without devices
+        create_dynamic_deployment(
+            "foo",
+            [predicate("foo", "inventory", "$eq", "foo")],
+            user.utoken,
+            phases=tc["phases"],
+            max_devices=tc["max_devices"],
+            status_code=400,
+        )
 
-            # adjust phase start ts for previous test case duration
-            # format for api consumption
-            for phase in tc["phases"]:
-                if "start_ts" in phase:
-                    phase["start_ts"] += timedelta(seconds=start_ts_add_secs)
-                    phase["start_ts"] = phase["start_ts"].strftime("%Y-%m-%dT%H:%M:%SZ")
-
-            # a phased dynamic deployment must have an initial matching devices count
-            # fails without devices
-            create_dynamic_deployment(
-                "foo",
-                [predicate("foo", "inventory", "$eq", "foo")],
-                user.utoken,
-                phases=tc["phases"],
-                max_devices=tc["max_devices"],
-                status_code=400,
+        # a deployment with initial devs succeeds
+        devs = [
+            make_device_with_inventory(
+                [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
             )
+            for i in range(10)
+        ]
+        dep = create_dynamic_deployment(
+            "bar",
+            [predicate("bar", "inventory", "$eq", "bar")],
+            user.utoken,
+            phases=tc["phases"],
+            max_devices=tc["max_devices"],
+        )
+        assert dep["initial_device_count"] == 10
+        assert len(dep["phases"]) == len(tc["phases"])
 
-            # a deployment with initial devs succeeds
-            devs = [
+        # first phase is immediately on
+        for d in devs[:2]:
+            assert_get_next(200, d.token, "bar")
+            set_status(dep["id"], "success", d.token)
+
+        for d in devs[2:]:
+            assert_get_next(204, d.token)
+
+        # rough wait for phase 2
+        time.sleep(15 * WAITING_MULTIPLIER + 1)
+
+        for d in devs[2:]:
+            assert_get_next(200, d.token, "bar")
+            set_status(dep["id"], "success", d.token)
+
+        dep = get_deployment(dep["id"], user.utoken)
+
+        if tc["max_devices"] is None:
+            # no max_devices = deployment remains in progress
+            assert dep["status"] == "inprogress"
+            extra_devs = [
                 make_device_with_inventory(
                     [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
                 )
                 for i in range(10)
             ]
-            dep = create_dynamic_deployment(
-                "bar",
-                [predicate("bar", "inventory", "$eq", "bar")],
-                user.utoken,
-                phases=tc["phases"],
-                max_devices=tc["max_devices"],
-            )
-            assert dep["initial_device_count"] == 10
-            assert len(dep["phases"]) == len(tc["phases"])
 
-            # first phase is immediately on
-            for d in devs[:2]:
-                assert_get_next(200, d.token, "bar")
-                set_status(dep["id"], "success", d.token)
-
-            for d in devs[2:]:
-                assert_get_next(204, d.token)
-
-            # rough wait for phase 2
-            time.sleep(16)
-
-            for d in devs[2:]:
-                assert_get_next(200, d.token, "bar")
-                set_status(dep["id"], "success", d.token)
-
-            dep = get_deployment(dep["id"], user.utoken)
-
-            if tc["max_devices"] is None:
-                # no max_devices = deployment remains in progress
-                assert dep["status"] == "inprogress"
-                extra_devs = [
-                    make_device_with_inventory(
-                        [{"name": "bar", "value": "bar"}],
-                        user.utoken,
-                        tenant.tenant_token,
-                    )
-                    for i in range(10)
-                ]
-
-                for extra in extra_devs:
-                    assert_get_next(200, extra.token, "bar")
-            else:
-                # max_devices reached, so deployment is finished
-                assert dep["status"] == "finished"
-
-            clean_mongo_client.cleanup()
-
-            after = datetime.utcnow()
-            start_ts_add_secs = (after - before).seconds
+            for extra in extra_devs:
+                assert_get_next(200, extra.token, "bar")
+        else:
+            # max_devices reached, so deployment is finished
+            assert dep["status"] == "finished"

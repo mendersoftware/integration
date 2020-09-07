@@ -7,13 +7,17 @@ export INTEGRATION_PATH
 
 DOWNLOAD_REQUIREMENTS="true"
 
+COMPOSE_CMD_BASE="docker-compose -p backend-tests \
+        -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
+        "
 COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
-        -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml
+        -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
         "
-COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} -f $INTEGRATION_PATH/docker-compose.enterprise.yml \
+COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} \
+        -f $INTEGRATION_PATH/docker-compose.enterprise.yml \
         -f $INTEGRATION_PATH/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
         -f $INTEGRATION_PATH/extra/smtp-testing/workflows-worker-smtp-test.yml \
         -f $INTEGRATION_PATH/extra/stripe-testing/stripe-test.docker-compose.yml
@@ -221,6 +225,10 @@ for suite in "${TEST_SUITES[@]}"; do
             PYTEST_REPORT="$PYTEST_REPORT_ENTERPRISE"
             ;;
     esac
+
+    if [ -n "$K8S" ]; then
+        COMPOSE_CMD="${COMPOSE_CMD_BASE}"
+    fi
 
     prepare_pytest_args
     run_tests

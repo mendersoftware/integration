@@ -2242,10 +2242,13 @@ def do_build(args):
 
 
 def determine_version_to_include_in_release(state, repo):
+    """Returns True if the user decided on the component, False if the user
+    skips the decision for later"""
+
     version = state_value(state, [repo.git(), "version"])
 
     if version is not None:
-        return
+        return True
 
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())
@@ -2312,8 +2315,15 @@ def determine_version_to_include_in_release(state, repo):
             % (repo.git(), " ".join(git_cmd), " ".join(changelog_cmd))
         )
         reply = ask(
-            "Based on this, is there a reason for a new release of %s? " % repo.git()
+            "Based on this, is there a reason for a new release of %s? (Yes/No/Skip) "
+            % repo.git()
         )
+
+    if reply.lower().startswith("s"):
+        print("Ok. Postponing decision on %s for later" % repo.git())
+        print()
+        print_line()
+        return False
 
     if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask(
@@ -2336,6 +2346,7 @@ def determine_version_to_include_in_release(state, repo):
 
     print()
     print_line()
+    return True
 
 
 def do_release(release_state_file):
@@ -2389,8 +2400,11 @@ def do_release(release_state_file):
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
-        determine_version_to_include_in_release(state, repo)
+    repos = sorted(Component.get_components_of_type("git"), key=repo_sort_key)
+    while len(repos) > 0:
+        repo = repos.pop(0)
+        if not determine_version_to_include_in_release(state, repo):
+            repos.append(repo)
 
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)

@@ -2174,7 +2174,7 @@ def do_build(args):
 
     if os.path.exists(RELEASE_TOOL_STATE):
         print(
-            "Fetching cached parameters from %s. Delete to reset." % RELEASE_TOOL_STATE
+            "Fetching cached parameters from %s (delete to reset)." % RELEASE_TOOL_STATE
         )
         with open(RELEASE_TOOL_STATE) as fd:
             state = yaml.safe_load(fd)

@@ -222,7 +222,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "meta-mender": "META_MENDER_REV",
     "integration": "INTEGRATION_REV",
     "mender-qa": "MENDER_QA_REV",
-    "mtls-ambassador": "MTLS_AMBASSADOR",
+    "mtls-ambassador": "MTLS_AMBASSADOR_REV",
 }
 
 # categorize backend services wrt open/enterprise versions

@@ -24,3 +24,6 @@ services:
 
     mender-useradm:
         image: registry.mender.io/mendersoftware/useradm-enterprise:1.12.x
+
+    mtls-ambassador:
+        image: registry.mender.io/mendersoftware/mtls-ambassador:master

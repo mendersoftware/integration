@@ -3163,6 +3163,8 @@ def main():
         print("--version-of, --set-version-of and --release are mutually exclusive!")
         sys.exit(1)
 
+    # Check conflicting options.
+    operations = 0
     for operation in [args.release, args.hosted_release]:
         if operation:
             operations = operations + 1

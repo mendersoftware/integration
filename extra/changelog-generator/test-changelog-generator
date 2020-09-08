@@ -252,6 +252,16 @@ Changelog: commit'
 
 ################################################################################
 
+git commit --allow-empty -m 'Bump github.com/stretchr/testify from 1.5.1 to 1.6.0
+
+Bumps [github.com/stretchr/testify](https://github.com/stretchr/testify) from 1.5.1 to 1.6.0.
+- [Release notes](https://github.com/stretchr/testify/releases)
+- [Commits](stretchr/testify@v1.5.1...v1.6.0)
+
+Signed-off-by: dependabot-preview[bot] <support@dependabot.com>'
+
+################################################################################
+
 git commit --allow-empty -m 'Changelog with suspicious number outside of it. N63
 
 2345
@@ -370,6 +380,27 @@ Should be included N74'
 
 ################################################################################
 
+git commit --allow-empty -m 'Changelog:All: Bump github.com/klauspost/pgzip from 1.2.3 to 1.2.4
+
+Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.
+- [Release notes](https://github.com/klauspost/pgzip/releases)
+- [Commits](klauspost/pgzip@v1.2.3...v1.2.4)
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
+
+git commit --allow-empty -m 'Changelog:All: Bump pytest-html in /tests/requirements
+
+Bumps [pytest-html](https://github.com/pytest-dev/pytest-html) from 2.0.1 to 2.1.1.
+- [Release notes](https://github.com/pytest-dev/pytest-html/releases)
+- [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
+- [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
+
 git commit --allow-empty -m 'Changelog: All bugs fixed N75
 
 Should not be included N76'
@@ -381,6 +412,15 @@ git commit --allow-empty -m 'Changelog: AllSomethingElse N77
 Should not be included N78'
 
 ################################################################################
+
+git commit --allow-empty -m 'Changelog:All: Bump golang from 1.14 to 1.15.0
+
+Bumps golang from 1.14 to 1.15.0.
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
+
 
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
@@ -399,6 +439,15 @@ _Released xx.xx.xxxx_
 
 #### test-changelog-generator.$$ (HEAD)
 
+* Aggregated Dependabot Changelogs:
+  * Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.
+    - [Release notes](https://github.com/klauspost/pgzip/releases)
+    - [Commits](klauspost/pgzip@v1.2.3...v1.2.4)
+  * Bumps [pytest-html](https://github.com/pytest-dev/pytest-html) from 2.0.1 to 2.1.1.
+    - [Release notes](https://github.com/pytest-dev/pytest-html/releases)
+    - [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
+    - [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
+  * Bumps golang from 1.14 to 1.15.0.
 * All bugs fixed N75
 * AllSomethingElse N77
 * As well as this. N34

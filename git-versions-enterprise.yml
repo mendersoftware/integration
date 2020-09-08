@@ -28,3 +28,5 @@ services:
     mender-auditlogs:
         image: registry.mender.io/mendersoftware/auditlogs:master
 
+    mtls-ambassador:
+        image: registry.mender.io/mendersoftware/mtls-ambassador:master

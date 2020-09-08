@@ -157,6 +157,13 @@ git:
     - mender-auditlogs
     release_component: true
 
+  mtls-ambassador:
+    docker_image:
+    - mtls-ambassador
+    docker_container:
+    - mtls-ambassador
+    release_component: true
+
 docker_image:
   deployments:
     git:
@@ -319,6 +326,13 @@ docker_image:
     - mender-auditlogs
     release_component: true
 
+  mtls-ambassador:
+    git:
+    - mtls-ambassador
+    docker_container:
+    - mtls-ambassador
+    release_component: true
+
 docker_container:
   mender-deployments:
     git:
@@ -427,4 +441,11 @@ docker_container:
     - auditlogs
     docker_image:
     - auditlogs
+    release_component: true
+
+  mtls-ambassador:
+    git:
+    - mtls-ambassador
+    docker_image:
+    - mtls-ambassador
     release_component: true

@@ -18,7 +18,6 @@ import socket
 import subprocess
 import filelock
 import logging
-import tempfile
 import copy
 
 from .docker_manager import DockerNamespace
@@ -78,10 +77,18 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
+    MTLS_FILES = [
+        COMPOSE_FILES_PATH + "/extra/mtls/mtls-ambassador-test.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+    ]
     SMTP_FILES = [
-        COMPOSE_FILES_PATH + "/extra/smtp-testing/conductor-workers-smtp-test.yml",
+        COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-test.yml",
         COMPOSE_FILES_PATH
         + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
+    ]
+    COMPAT_FILES = [
+        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
 
     NUM_SERVICES_OPENSOURCE = 11
@@ -119,7 +126,7 @@ class DockerComposeNamespace(DockerNamespace):
 
                 except subprocess.CalledProcessError as e:
                     logger.info(
-                        "failed to run docker-compose: error follows:\n%s" % (e.output)
+                        'failed to run "%s": error follows:\n%s' % (cmd, e.output)
                     )
                     self._stop_docker_compose()
 
@@ -280,9 +287,7 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
             DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES)
 
     def setup(self):
-        self._docker_compose_cmd("up -d")
-        if self.num_clients > 1:
-            self._docker_compose_cmd("scale mender-client=%d" % self.num_clients)
+        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
 
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
@@ -381,6 +386,98 @@ class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
         host_ip = socket.gethostbyname(socket.gethostname())
         self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
         self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
+
+
+class DockerComposeCompatibilitySetup(DockerComposeNamespace):
+    def __init__(self, name, enterprise=False):
+        self._enterprise = enterprise
+        extra_files = self.COMPAT_FILES
+        if self._enterprise:
+            extra_files += self.ENTERPRISE_FILES
+        super().__init__(name, extra_files)
+
+    def client_services(self):
+        services = self._docker_compose_cmd("ps --service").split()
+        clients = []
+        for service in services:
+            if service.startswith("mender-client"):
+                clients.append(service)
+        return clients
+
+    def setup(self):
+        compose_args = "up -d " + " ".join(
+            ["--scale %s=0" % service for service in self.client_services()]
+        )
+        self._docker_compose_cmd(compose_args)
+
+    def populate_clients(self, name=None, tenant_token="", replicas=1):
+        client_services = self.client_services()
+        compose_cmd = "run -d"
+        if tenant_token != "":
+            compose_cmd += " -e TENANT_TOKEN={tkn}".format(tkn=tenant_token)
+        if name is not None:
+            compose_cmd += " --name '{name}'".format(name=name)
+
+        compose_cmd += " {service}"
+
+        for i in range(replicas):
+            for service in client_services:
+                self._docker_compose_cmd(compose_cmd.format(service=service))
+
+    def get_mender_clients(self):
+        cmd = [
+            "docker",
+            "ps",
+            "--filter=label=com.docker.compose.project=" + self.name,
+            '--format={{.Label "com.docker.compose.service"}}',
+        ]
+
+        services = subprocess.check_output(cmd).decode().split()
+        clients = []
+        for service in services:
+            if service.startswith("mender-client"):
+                clients.append(service)
+
+        addrs = []
+        for client in clients:
+            for ip in self.get_ip_of_service(client):
+                addrs.append(ip + ":8822")
+
+        return addrs
+
+
+class DockerComposeMTLSSetup(DockerComposeNamespace):
+    def __init__(self, name):
+        extra_files = self.MTLS_FILES + self.ENTERPRISE_FILES
+        super().__init__(name, extra_files)
+
+    def setup(self):
+        host_ip = socket.gethostbyname(socket.gethostname())
+        self._docker_compose_cmd(
+            "up -d --scale mtls-ambassador=0 --scale mender-client=0",
+            env={"HOST_IP": host_ip},
+        )
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
+
+    def start_api_gateway(self):
+        self._docker_compose_cmd("scale mender-api-gateway=1")
+
+    def stop_api_gateway(self):
+        self._docker_compose_cmd("scale mender-api-gateway=0")
+
+    def start_mtls_ambassador(self):
+        self._docker_compose_cmd(
+            "up -d --scale mtls-ambassador=1 --scale mender-client=0"
+        )
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+
+    def new_mtls_client(self, name, tenant):
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        logger.info("creating client connected to tenant: " + tenant)
+        time.sleep(45)
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

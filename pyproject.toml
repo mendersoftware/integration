@@ -9,6 +9,7 @@ include = '''
     | tests
     | extra
   )/.*\.py$
+  | extra/changelog-generator/changelog-generator
 )
 '''
 exclude = '''

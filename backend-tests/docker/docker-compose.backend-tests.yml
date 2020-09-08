@@ -8,10 +8,16 @@ services:
             - ${INTEGRATION_PATH}/backend-tests/tests:/tests
             - ${INTEGRATION_PATH}/testutils:/testutils
             - /var/run/docker.sock:/var/run/docker.sock
-        depends_on:
-            - mender-api-gateway
         command: ${PYTEST_ARGS}
         environment:
             PYTHONPATH: "/testutils"
             PYTHONDONTWRITEBYTECODE: 1
             TENANTADM_STRIPE_API_KEY: ${STRIPE_API_KEY}
+            GATEWAY_HOSTNAME: ${GATEWAY_HOSTNAME}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+            AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+            K8S: ${K8S}
+
+networks:
+    mender:

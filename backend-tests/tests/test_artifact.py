@@ -13,30 +13,26 @@
 #    limitations under the License.
 
 import os
-import random
+import pytest
 import re
 import requests
-import string
 import subprocess
 import tempfile
-import pytest
-
-from contextlib import contextmanager
+import uuid
 
 from testutils.api.client import ApiClient
 from testutils.api import (
     deployments,
     useradm,
-    deviceauth as deviceauth_v1,
+    deviceauth,
 )
 from testutils.common import (
     create_org,
     mongo,
     clean_mongo,
     get_mender_artifact,
+    make_accepted_device,
 )
-
-from .test_deployments import make_accepted_device
 
 
 class TestUploadArtifactEnterprise:
@@ -51,9 +47,10 @@ class TestUploadArtifactEnterprise:
         return r.text
 
     def get_tenant_username_and_password(self, plan):
+        uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
-            "test.mender.io",
-            "some.user@example.com",
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
         tenant = create_org(tenant, username, password, plan)
@@ -207,7 +204,6 @@ class TestUploadArtifactEnterprise:
         for artifact_kw in artifacts:
             artifact_kw.setdefault("artifact_name", "test")
             artifact_kw.setdefault("device_types", ["arm1"])
-            print(artifact_kw)
             with get_mender_artifact(**artifact_kw) as artifact:
                 r = api_client.with_auth(auth_token).call(
                     "POST",
@@ -228,8 +224,9 @@ class TestUploadArtifactEnterprise:
             assert r.status_code == 201
 
         # create a new accepted device
-        devauthd = ApiClient(deviceauth_v1.URL_DEVICES)
-        dev = make_accepted_device(auth_token, devauthd, tenant.tenant_token)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        dev = make_accepted_device(devauthd, devauthm, auth_token, tenant.tenant_token)
         assert dev is not None
 
         # create a deployment
@@ -382,7 +379,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -429,7 +426,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan="enterprise",
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024,},
+                {"artifact_name": "test", "device_types": ["arm2"], "size": 1024},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm2"],
@@ -475,7 +472,7 @@ class TestUploadArtifactEnterprise:
         dev = self.setup_upload_artifact_selection(
             plan=plan,
             artifacts=(
-                {"artifact_name": "test", "device_types": ["arm1"], "size": 256,},
+                {"artifact_name": "test", "device_types": ["arm1"], "size": 256},
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
@@ -519,3 +516,70 @@ class TestUploadArtifactEnterprise:
             assert size == 256
         finally:
             os.unlink(f.name)
+
+    def test_artifacts_exclusive_to_user(self, mongo, clean_mongo):
+        tenants = []
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password)
+        tenants.append(tenant)
+        #
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password)
+        tenants.append(tenant)
+
+        api_client = ApiClient(deployments.URL_MGMT)
+        api_client.headers = {}  # avoid default Content-Type: application/json
+
+        for tenant in tenants:
+            user = tenant.users[0]
+            auth_token = self.get_auth_token(user.name, user.pwd)
+
+            # create and upload the mender artifact
+            with get_mender_artifact(
+                artifact_name=user.name,
+                device_types=["arm1"],
+                depends=("key1:value1", "key2:value2"),
+                provides=("key3:value3", "key4:value4", "key5:value5"),
+            ) as artifact:
+                r = api_client.with_auth(auth_token).call(
+                    "POST",
+                    deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                    files=(
+                        ("description", (None, "description")),
+                        ("size", (None, str(os.path.getsize(artifact)))),
+                        (
+                            "artifact",
+                            (
+                                artifact,
+                                open(artifact, "rb"),
+                                "application/octet-stream",
+                            ),
+                        ),
+                    ),
+                )
+                assert r.status_code == 201
+
+        for tenant in tenants:
+            user = tenant.users[0]
+            auth_token = self.get_auth_token(user.name, user.pwd)
+            api_client.with_auth(auth_token)
+            r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+            assert r.status_code == 200
+            artifacts = [
+                artifact
+                for artifact in r.json()
+                if not artifact["name"].startswith("mender-demo-artifact")
+            ]
+            assert len(artifacts) == 1
+            assert artifacts[0]["name"] == user.name

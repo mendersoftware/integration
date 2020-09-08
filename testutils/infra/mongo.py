@@ -12,7 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+
 from pymongo import MongoClient as PyMongoClient
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
 class MongoClient:
@@ -20,6 +23,8 @@ class MongoClient:
         self.client = PyMongoClient(addr)
 
     def cleanup(self):
+        if isK8S():
+            return
         dbs = self.client.list_database_names()
         dbs = [d for d in dbs if d not in ["local", "admin", "config", "workflows"]]
         for d in dbs:

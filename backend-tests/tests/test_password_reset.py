@@ -16,11 +16,13 @@ import asyncore
 import pytest
 import re
 import time
+import uuid
 
 from threading import Thread
 
 from testutils.api import useradm
 from testutils.api.client import ApiClient
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.smtpd_mock import SMTPServerMock
 
 from testutils.common import (
@@ -44,10 +46,19 @@ class TestPasswordResetEnterprise:
 
     uc = ApiClient(useradm.URL_MGMT)
 
+    @pytest.mark.skipif(
+        isK8S(), reason="not testable in a staging or production environment"
+    )
     def test_password_reset(self, clean_mongo, smtp_mock):
-        email = "user@mender.io"
+        uuidv4 = str(uuid.uuid4())
+        tenant, email, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        create_org(tenant, email, password)
         new_password = "new.password$$"
-        create_org("tenant", email, "correcthorse")
+
         r = self.uc.post(useradm.URL_PASSWORD_RESET_START, body={"email": email})
         assert r.status_code == 202
         # wait for the password reset email

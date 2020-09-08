@@ -12,25 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import random
 import time
+import uuid
 
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deployments as deployments
-from testutils.infra.cli import CliTenantadm, CliUseradm
-import testutils.util.crypto
 from testutils.common import (
-    User,
     Device,
-    Tenant,
     mongo,
     clean_mongo,
     create_org,
     create_random_authset,
-    get_device_by_id_data,
     change_authset_status,
 )
 
@@ -39,10 +34,14 @@ from testutils.common import (
 def tenants(clean_mongo):
     tenants = []
 
-    for n in ["tenant1", "tenant2"]:
-        username = "user@" + n + ".com"
-        password = "correcthorse"
-        tenants.append(create_org(n, username, password))
+    for n in range(2):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenants.append(create_org(tenant, username, password))
 
     yield tenants
 
@@ -69,7 +68,7 @@ def tenants_users_devices(tenants, mongo):
 
 class TestAccountSuspensionEnterprise:
     def test_user_cannot_log_in(self, tenants):
-        tc = ApiClient(tenantadm.URL_INTERNAL)
+        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
         uc = ApiClient(useradm.URL_MGMT)
 
@@ -106,7 +105,7 @@ class TestAccountSuspensionEnterprise:
             assert r.status_code == 200
 
     def test_authenticated_user_is_rejected(self, tenants):
-        tc = ApiClient(tenantadm.URL_INTERNAL)
+        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
         uc = ApiClient(useradm.URL_MGMT)
         dc = ApiClient(deviceauth.URL_MGMT)
 
@@ -141,7 +140,7 @@ class TestAccountSuspensionEnterprise:
         dacd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
-        tc = ApiClient(tenantadm.URL_INTERNAL)
+        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
 
         # accept a dev
         device = tenants_users_devices[0].devices[0]
@@ -182,7 +181,7 @@ class TestAccountSuspensionEnterprise:
         dacd = ApiClient(deviceauth.URL_DEVICES)
         devauthm = ApiClient(deviceauth.URL_MGMT)
         uc = ApiClient(useradm.URL_MGMT)
-        tc = ApiClient(tenantadm.URL_INTERNAL)
+        tc = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://")
         dc = ApiClient(deployments.URL_DEVICES)
 
         # accept a dev

@@ -15,10 +15,11 @@
 import pytest
 import time
 import logging
-import asyncore
-from threading import Thread
+import uuid
 
-from testutils.common import mongo, clean_mongo, randstr
+from urllib import parse
+
+from testutils.common import mongo, clean_mongo
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
@@ -40,14 +41,19 @@ class TestCreateOrganizationEnterprise:
         stripeutils.delete_cust(cust["id"])
 
     def test_success(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT)
+        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
         uc = ApiClient(useradm.URL_MGMT)
-        tenantadmi = ApiClient(tenantadm.URL_INTERNAL)
-        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
+        tenantadmi = ApiClient(
+            tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://"
+        )
+        devauthi = ApiClient(
+            deviceauth_v1.URL_INTERNAL, host=deviceauth_v1.HOST, schema="http://"
+        )
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -76,7 +82,8 @@ class TestCreateOrganizationEnterprise:
             )
 
         # get the tenant id (and verify that only one tenant exists)
-        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        qs = parse.urlencode({"q": tenant})
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS + "?" + qs)
         assert r.status_code == 200
         api_tenants = r.json()
         assert len(api_tenants) == 1
@@ -99,14 +106,19 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_success_with_plan(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT)
+        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
         uc = ApiClient(useradm.URL_MGMT)
-        tenantadmi = ApiClient(tenantadm.URL_INTERNAL)
-        devauthi = ApiClient(deviceauth_v1.URL_INTERNAL)
+        tenantadmi = ApiClient(
+            tenantadm.URL_INTERNAL, host=tenantadm.HOST, schema="http://"
+        )
+        devauthi = ApiClient(
+            deviceauth_v1.URL_INTERNAL, host=deviceauth_v1.HOST, schema="http://"
+        )
 
         logging.info("Starting TestCreateOrganizationEnterprise")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -136,7 +148,8 @@ class TestCreateOrganizationEnterprise:
             )
 
         # get the tenant id (and verify that only one tenant exists)
-        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS)
+        qs = parse.urlencode({"q": tenant})
+        r = tenantadmi.call("GET", tenantadm.URL_INTERNAL_TENANTS + "?" + qs)
         assert r.status_code == 200
         api_tenants = r.json()
         assert len(api_tenants) == 1
@@ -154,9 +167,10 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_duplicate_organization_name(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT)
+        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -187,9 +201,10 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email2)
 
     def test_duplicate_email(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT)
+        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
         email = "some.user@{}.com".format(tenant)
 
         payload = {
@@ -203,7 +218,8 @@ class TestCreateOrganizationEnterprise:
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
-        tenant = "tenant{}".format(randstr())
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
 
         payload = {
             "request_id": "123457",
@@ -219,7 +235,7 @@ class TestCreateOrganizationEnterprise:
         self._cleanup_stripe(email)
 
     def test_plan_invalid(self, clean_migrated_mongo):
-        tc = ApiClient(tenantadm.URL_MGMT)
+        tc = ApiClient(tenantadm.URL_MGMT, host=tenantadm.HOST, schema="http://")
         payload = {
             "request_id": "123456",
             "organization": "tenant-foo",

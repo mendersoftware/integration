@@ -136,32 +136,30 @@ class MenderDevice:
 
 
 class RebootDetector:
-    # This global one is used to increment each port used.
-    port = 8181
-
     def __init__(self, device, host_ip):
-        self.port = RebootDetector.port
-        RebootDetector.port += 1
         self.host_ip = host_ip
         self.device = device
         self.server = None
 
     def __enter__(self):
+        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server.bind((self.host_ip, 0))
+        addr, port = self.server.getsockname()
+        self.port = port
+
         local_name = "test.mender-reboot-detector.txt.%s" % self.device.host_string
         with open(local_name, "w") as fd:
             fd.write("%s:%d" % (self.host_ip, self.port))
         try:
             self.device.put(
-                local_name, remote_path="/data/mender/test.mender-reboot-detector.txt",
+                local_name, remote_path="/data/mender/test.mender-reboot-detector.txt"
             )
         finally:
             os.unlink(local_name)
 
         self.device.run("systemctl restart mender-reboot-detector")
 
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((self.host_ip, self.port))
         self.server.listen(1)
 
         return self
@@ -385,7 +383,7 @@ def _run(conn, cmd, **kw):
             continue
         except Exception as e:
             logger.exception(
-                "Generic exception happened while connecting to host %s", conn.host,
+                "Generic exception happened while connecting to host %s", conn.host
             )
             raise e
     else:

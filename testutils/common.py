@@ -25,7 +25,7 @@ import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
-from testutils.api.client import ApiClient
+from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 
@@ -127,12 +127,26 @@ def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
     return User(uid, name, pwd)
 
 
-def create_org(name, username, password, plan="os"):
-    cli = CliTenantadm()
+def create_org(
+    name,
+    username,
+    password,
+    plan="os",
+    containers_namespace="backend-tests",
+    container_manager=None,
+):
+    cli = CliTenantadm(
+        containers_namespace=containers_namespace, container_manager=container_manager
+    )
     user_id = None
     tenant_id = cli.create_org(name, username, password, plan=plan)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
-    api = ApiClient(useradm.URL_MGMT)
+
+    host = GATEWAY_HOSTNAME
+    if container_manager is not None:
+        host = container_manager.get_mender_gateway()
+    api = ApiClient(useradm.URL_MGMT, host=host)
+
     # Try log in every second for 3 minutes.
     # - There usually is a slight delay (in order of ms) for propagating
     #   the created user to the db.
@@ -247,13 +261,17 @@ def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
     return dev
 
 
-def randstr():
-    """ Random suffix generation.
-        Useful when we need e.g. unique object ids so that
-        parallel test runs don't step on each other's data.
-    """
-    charset = string.ascii_letters + string.digits
-    return "".join(random.choice(charset) for i in range(5))
+def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devices=1):
+    """ Create accepted devices.
+        returns list of Device objects."""
+    devices = []
+
+    # some 'accepted' devices, single authset
+    for _ in range(num_devices):
+        dev = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
+        devices.append(dev)
+
+    return devices
 
 
 @contextmanager

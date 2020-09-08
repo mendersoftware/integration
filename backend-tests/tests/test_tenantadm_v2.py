@@ -11,23 +11,16 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import logging
-import time
 import os
 import pytest
-import subprocess
-import time
 import stripe
-
-import pymongo
+import time
+import uuid
 
 from testutils.common import (
-    User,
     mongo,
     mongo_cleanup,
     clean_mongo,
-    create_org,
-    randstr,
 )
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm_v1
@@ -35,8 +28,8 @@ import testutils.api.tenantadm_v2 as tenantadm_v2
 import testutils.integration.stripe as stripeutils
 from testutils.api.client import ApiClient
 
-api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT)
-api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT)
+api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT, host=tenantadm_v1.HOST, schema="http://")
+api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT, host=tenantadm_v2.HOST, schema="http://")
 
 api_uadm = ApiClient(useradm.URL_MGMT)
 stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
@@ -46,7 +39,7 @@ if stripe.api_key is None:
 
 class TestCreateOrganizationV2EnterpriseNew:
     """ Test the 'new tenant' workflow.
-    
+
     - registration on v2 endpoint -> tenant secret
     - UI collects card, does extra SCA confirmation as necessary (with secret)
     - account is completely unusable for now
@@ -57,7 +50,21 @@ class TestCreateOrganizationV2EnterpriseNew:
     Most of the UI work is emulated, see comments.
     """
 
-    def test_ok_non_sca_cards(self, clean_mongo):
+    @pytest.mark.parametrize(
+        "card",
+        [
+            "pm_card_visa",
+            "pm_card_visa_debit",
+            "pm_card_mastercard",
+            "pm_card_mastercard_debit",
+            "pm_card_mastercard_prepaid",
+            "pm_card_amex",
+            "pm_card_br",
+            "pm_card_ca",
+            "pm_card_mx",
+        ],
+    )
+    def test_ok_non_sca_cards(self, clean_mongo, card):
         """ Basic test card numbers.
 
         These cards won't trigger extra auth flows, but still have to work with the SCA-ready workflow.
@@ -68,77 +75,73 @@ class TestCreateOrganizationV2EnterpriseNew:
         Some of these are omitted - they are in fact being rejected with:
         'Please use a Visa, MasterCard, or American Express card'
         """
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
+        uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
+        payload = {
+            "request_id": "123456",
+            "organization": tenant,
+            "email": uname,
+            "password": upass,
+            "g-recaptcha-response": "foobar",
+        }
 
-        for card in [
-            "pm_card_visa",
-            "pm_card_visa_debit",
-            "pm_card_mastercard",
-            "pm_card_mastercard_debit",
-            "pm_card_mastercard_prepaid",
-            "pm_card_amex",
-            "pm_card_br",
-            "pm_card_ca",
-            "pm_card_mx",
-        ]:
+        res = api_tadm_v2.call(
+            "POST",
+            tenantadm_v2.URL_CREATE_ORG_TENANT,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=payload,
+        )
+        assert res.status_code == 200
 
-            tenant = "tenant{}".format(randstr())
-            uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
-            payload = {
-                "request_id": "123456",
-                "organization": tenant,
-                "email": uname,
-                "password": upass,
-                "g-recaptcha-response": "foobar",
-            }
+        secret = res.json()["secret"]
+        assert len(secret) > 0
+        tid = res.json()["id"]
 
-            res = api_tadm_v2.call(
-                "POST",
-                tenantadm_v2.URL_CREATE_ORG_TENANT,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                data=payload,
-            )
-            assert res.status_code == 200
+        # user can't log in until the org is activated
+        r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
+        assert r.status_code == 401
 
-            secret = res.json()["secret"]
-            assert len(secret) > 0
-            tid = res.json()["id"]
+        # we're emulating CC collection (and setup intent confirmation)
+        # setup intent cofirm is the last step normally done by the stripe ui components
+        seti = stripeutils.find_setup_intent(secret)
 
-            # user can't log in until the org is activated
-            r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
-            assert r.status_code == 401
+        stripeutils.confirm(card, seti["id"])
 
-            # we're emulating CC collection (and setup intent confirmation)
-            # setup intent cofirm is the last step normally done by the stripe ui components
-            seti = stripeutils.find_setup_intent(secret)
+        # tenant can be activated now
+        res = api_tadm_v2.call(
+            "PUT",
+            tenantadm_v2.URL_TENANT_STATUS,
+            path_params={"id": tid},
+            body={"status": "active"},
+        )
+        assert res.status_code == 202
 
-            stripeutils.confirm(card, seti["id"])
+        # wait for create org workflow, try login
+        try_login(api_uadm, uname, upass)
 
-            # tenant can be activated now
-            res = api_tadm_v2.call(
-                "PUT",
-                tenantadm_v2.URL_TENANT_STATUS,
-                path_params={"id": tid},
-                body={"status": "active"},
-            )
-            assert res.status_code == 202
+        # verify that tenant's customer has an attached
+        # payment method/default payment method
+        cust = stripeutils.customer_for_tenant(uname)
+        stripeutils.customer_has_pm(cust)
 
-            # wait for create org workflow, try login
-            try_login(api_uadm, uname, upass)
+        # cleanup
+        # setup intents can't be cleaned up apparently, cancel doesn't work
+        stripeutils.delete_cust(cust["id"])
 
-            # verify that tenant's customer has an attached
-            # payment method/default payment method
-            cust = stripeutils.customer_for_tenant(uname)
-            stripeutils.customer_has_pm(cust)
-
-            # cleanup
-            # setup intents can't be cleaned up apparently, cancel doesn't work
-            stripeutils.delete_cust(cust["id"])
-
-    def test_ok_sca_cards(self, clean_mongo):
+    @pytest.mark.parametrize(
+        "card",
+        [
+            "pm_card_authenticationRequiredOnSetup",
+            "pm_card_authenticationRequired",
+            "pm_card_threeDSecure2Required",
+        ],
+    )
+    def test_ok_sca_cards(self, clean_mongo, card):
         """ Regulatory test card numbers.
 
         These regulatory cards that will trigger the 3D Secure SCA checks.
-        The UI check here is mandatory, and can't be cheated around - 
+        The UI check here is mandatory, and can't be cheated around -
         so just verify that without it, tenant can't be activated at all.
 
         Actually, it's just a couple cards from the test set. Others allow
@@ -147,69 +150,65 @@ class TestCreateOrganizationV2EnterpriseNew:
         See https://stripe.com/docs/testing#three-ds-cards.
 
         """
+        uuidv4 = str(uuid.uuid4())
+        tenant = "test.mender.io-" + uuidv4
+        uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
 
-        for card in [
-            "pm_card_authenticationRequiredOnSetup",
-            "pm_card_authenticationRequired",
-            "pm_card_threeDSecure2Required",
-        ]:
-            tenant = "tenant{}".format(randstr())
-            uname, upass = "user@{}.com".format(tenant), "asdfqwer1234"
+        payload = {
+            "request_id": "123456",
+            "organization": tenant,
+            "email": uname,
+            "password": upass,
+            "g-recaptcha-response": "foobar",
+        }
 
-            payload = {
-                "request_id": "123456",
-                "organization": tenant,
-                "email": uname,
-                "password": upass,
-                "g-recaptcha-response": "foobar",
-            }
+        res = api_tadm_v2.call(
+            "POST",
+            tenantadm_v2.URL_CREATE_ORG_TENANT,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data=payload,
+        )
+        assert res.status_code == 200
 
-            res = api_tadm_v2.call(
-                "POST",
-                tenantadm_v2.URL_CREATE_ORG_TENANT,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
-                data=payload,
-            )
-            assert res.status_code == 200
+        secret = res.json()["secret"]
+        assert len(secret) > 0
+        tid = res.json()["id"]
 
-            secret = res.json()["secret"]
-            assert len(secret) > 0
-            tid = res.json()["id"]
+        # user can't log in until the org is activated
+        r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
+        assert r.status_code == 401
 
-            # user can't log in until the org is activated
-            r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
-            assert r.status_code == 401
+        # we're emulating CC collection (and setup intent confirmation)
+        # setup intent cofirm is the last step normally done by the stripe ui components
+        seti = stripeutils.find_setup_intent(secret)
 
-            # we're emulating CC collection (and setup intent confirmation)
-            # setup intent cofirm is the last step normally done by the stripe ui components
-            seti = stripeutils.find_setup_intent(secret)
+        # this will pass, because it's a test mode - but still the card will be unconfirmed/unusable
+        stripeutils.confirm(card, seti["id"])
 
-            # this will pass, because it's a test mode - but still the card will be unconfirmed/unusable
-            stripeutils.confirm(card, seti["id"])
+        # tenant *cannot* be activated
+        # because the auth was not completed
+        res = api_tadm_v2.call(
+            "PUT",
+            tenantadm_v2.URL_TENANT_STATUS,
+            path_params={"id": tid},
+            body={"status": "active"},
+        )
 
-            # tenant *cannot* be activated
-            # because the auth was not completed
-            res = api_tadm_v2.call(
-                "PUT",
-                tenantadm_v2.URL_TENANT_STATUS,
-                path_params={"id": tid},
-                body={"status": "active"},
-            )
+        # looks weird be we *do* expect this
+        # we don't propagate this stripe error to users, nobody has
+        # any business calling this EP on an unverfied card
+        # internal error: Credit card not verified yet
+        assert res.status_code == 500
 
-            # looks weird be we *do* expect this
-            # we don't propagate this stripe error to users, nobody has
-            # any business calling this EP on an unverfied card
-            # internal error: Credit card not verified yet
-            assert res.status_code == 500
-
-            # verify that the user can't log in (ever, actually)
-            r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
-            assert r.status_code == 401
+        # verify that the user can't log in (ever, actually)
+        r = api_uadm.call("POST", useradm.URL_LOGIN, auth=(uname, upass))
+        assert r.status_code == 401
 
 
 class TestCreateOrganizationV2EnterpriseExisting:
     def test_ok(self, clean_mongo):
-        name = "existing-tenant" + randstr()
+        uuidv4 = str(uuid.uuid4())
+        name = "test.mender.io-" + uuidv4
         email = "user@{}.com".format(name)
         res = create_org_v1(name, email, "asdfqwer1234", "tok_visa")
 
@@ -242,7 +241,7 @@ class TestCreateOrganizationV2EnterpriseExisting:
         # verify the old source is detached and new one attached
         cust = stripeutils.customer_for_tenant(email)
 
-        assert cust["default_source"] == None
+        assert cust["default_source"] is None
         assert len(cust["sources"]) == 0
 
         stripeutils.customer_has_pm(cust)

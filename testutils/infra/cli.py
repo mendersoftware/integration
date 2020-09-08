@@ -13,16 +13,24 @@
 #    limitations under the License.
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
+from testutils.infra.container_manager.kubernetes_manager import (
+    KubernetesNamespace,
+    isK8S,
+)
 
 
 class BaseCli:
     def __init__(self, microservice, containers_namespace, container_manager):
-        if container_manager is None:
+        if isK8S():
+            self.container_manager = KubernetesNamespace()
+            base_filter = microservice
+        elif container_manager is None:
             self.container_manager = DockerNamespace(containers_namespace)
+            base_filter = microservice + "_1"
         else:
             self.container_manager = container_manager
+            base_filter = microservice + "_1"
 
-        base_filter = microservice + "_1"
         self.cid = self.container_manager.getid([base_filter])
 
 
@@ -60,6 +68,9 @@ class CliUseradm(BaseCli):
         return uid
 
     def migrate(self, tenant_id=None):
+        if isK8S():
+            return
+
         cmd = [self.path, "migrate"]
 
         if tenant_id is not None:
@@ -98,6 +109,9 @@ class CliTenantadm(BaseCli):
         return tenant
 
     def migrate(self):
+        if isK8S():
+            return
+
         cmd = ["usr/bin/tenantadm", "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
@@ -110,6 +124,9 @@ class CliDeviceauth(BaseCli):
         )
 
     def migrate(self, tenant_id=None):
+        if isK8S():
+            return
+
         cmd = ["usr/bin/deviceauth", "migrate"]
 
         if tenant_id is not None:

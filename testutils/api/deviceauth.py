@@ -13,12 +13,13 @@
 #    limitations under the License.
 import json
 
-import testutils.api.client
 import testutils.util.crypto
 
-URL_DEVICES = testutils.api.client.GATEWAY_URL + "/api/devices/v1/authentication"
-URL_INTERNAL = "http://mender-device-auth:8080/api/internal/v1/devauth"
-URL_MGMT = testutils.api.client.GATEWAY_URL + "/api/management/v2/devauth"
+HOST = "mender-device-auth:8080"
+
+URL_DEVICES = "/api/devices/v1/authentication"
+URL_INTERNAL = "/api/internal/v1/devauth"
+URL_MGMT = "/api/management/v2/devauth"
 
 URL_AUTH_REQS = "/auth_requests"
 

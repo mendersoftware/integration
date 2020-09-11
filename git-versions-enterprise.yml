@@ -8,22 +8,22 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:2.1.x
+        image: registry.mender.io/mendersoftware/deployments-enterprise:2.1.0
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:2.1.x
+        image: registry.mender.io/mendersoftware/inventory-enterprise:2.1.0
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:1.2.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise:1.2.0
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:1.2.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:1.2.0
 
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:2.1.x
+        image: registry.mender.io/mendersoftware/tenantadm:2.1.0
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:1.12.x
+        image: registry.mender.io/mendersoftware/useradm-enterprise:1.12.0
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.x
+        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.0

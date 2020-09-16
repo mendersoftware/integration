@@ -223,7 +223,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "integration": "INTEGRATION_REV",
     "mender-qa": "MENDER_QA_REV",
     "auditlogs": "AUDITLOGS_REV",
-    "mtls-ambassador": "MTLS_AMBASSADOR",
+    "mtls-ambassador": "MTLS_AMBASSADOR_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -2323,11 +2323,11 @@ def determine_version_to_include_in_release(state, repo):
             % repo.git()
         )
 
-    if reply.lower().startswith("s"):
-        print("Ok. Postponing decision on %s for later" % repo.git())
-        print()
-        print_line()
-        return False
+        if reply.lower().startswith("s"):
+            print("Ok. Postponing decision on %s for later" % repo.git())
+            print()
+            print_line()
+            return False
 
     if not prev_of_repo or reply.lower().startswith("y"):
         reply = ask(

@@ -16,38 +16,35 @@ services:
 
     mender-api-gateway:
         ports:
-            - "443:443"
+            - 80:80
+            - 443:443
+            - 8080:8080
+        command: 
+            - --api.dashboard=true
+            - --api.insecure=true
+            - --accesslog=true
+            - --log.level=DEBUG
+            - --providers.file.filename=/config/tls.toml
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --entrypoints.http.address=:80
+            - --entrypoints.https.address=:443
+            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
+            - --entrypoints.http.http.redirections.entryPoint.to=https
+            - --entrypoints.http.http.redirections.entryPoint.scheme=https
         networks:
             mender:
                 aliases:
                     - docker.mender.io
-        volumes:
-            - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
-            - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
-        environment:
-            ALLOWED_HOSTS: localhost docker.mender.io
-            HSTS_MAX_AGE: 0
-
-    storage-proxy:
-        ports:
-            - "9000:9000"
-        networks:
-            mender:
-                aliases:
                     - s3.docker.mender.io
-        environment:
-
-            # use nginx syntax for rate limiting, see
-            # https://nginx.org/en/docs/http/ngx_http_core_module.html#limit_rate
-            # Examples:
-            #   1m - 1MB/s
-            #   512k - 512kB/s
-            DOWNLOAD_SPEED: 3m
-            MAX_CONNECTIONS: 30
         volumes:
-            - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
-            - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
-            - ./storage-proxy/nginx.conf.demo:/usr/local/openresty/nginx/conf/nginx.conf
+            - ./tls.toml:/config/tls.toml
+            - ./certs/api-gateway/cert.crt:/certs/cert.crt
+            - ./certs/api-gateway/private.key:/certs/private.key
+            - ./certs/storage-proxy/cert.crt:/certs/s3.docker.mender.io.crt
+            - ./certs/storage-proxy/private.key:/certs/s3.docker.mender.io.key
 
     mender-deployments:
         command: server --automigrate
@@ -57,7 +54,10 @@ services:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
-            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000
+            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io
+        depends_on:
+            - mender-mongo
+            - minio
 
     minio:
         networks:
@@ -67,11 +67,18 @@ services:
         environment:
             MINIO_ACCESS_KEY: minio
             MINIO_SECRET_KEY: minio123
+        # use rate limiting, for more options see: https://docs.traefik.io/v2.2/middlewares/ratelimit/
+        # labels:
+        #     - traefik.http.middlewares.demo-ratelimit.ratelimit.average=30
+        #     - traefik.http.routers.minio.middlewares=demo-ratelimit
 
     mender-gui:
         environment:
             # enable demo mode for UI ["true"/"false"]
             DEMO: "true"
+        labels:
+            - traefik.http.middlewares.sec-headers.headers.stsSeconds=0
+            - traefik.http.middlewares.sec-headers.headers.isDevelopment=true
 
     mender-workflows-server:
         command: server --automigrate

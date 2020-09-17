@@ -4,12 +4,15 @@ services:
     mender-api-gateway:
         ports:
             - "80:80"
-        environment:
-            SSL: "false"
-
-    storage-proxy:
-        volumes:
-            - ./storage-proxy/no-ssl.nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+        command:
+            - --accesslog=true
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --entrypoints.http.address=:80
+            - --entrypoints.https.address=:443
+            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
 
     mender-deployments:
         environment:

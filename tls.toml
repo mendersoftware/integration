@@ -1,0 +1,10 @@
+[tls.stores]
+[tls.stores.default]
+  [tls.stores.default.defaultCertificate]
+    certFile = "/certs/cert.crt"
+    keyFile  = "/certs/private.key"
+
+[[tls.certificates]]
+  # the following is required if minio is used but won't break if minio or the crt files aren't present
+  certFile = "/certs/s3.docker.mender.io.crt"
+  keyFile = "/certs/s3.docker.mender.io.key"

@@ -128,13 +128,11 @@ services:
     #
     mender-create-artifact-worker:
         image: mendersoftware/create-artifact-worker:mender-master
-        environment:
-            WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
             file: common.yml
             service: mender-base
         environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mongo-workflows:27017
+            - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
             - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
             - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:

@@ -10,3 +10,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        command: server --automigrate
+
+    mender-api-gateway:
+        environment:
+            HAVE_AUDITLOGS: 1

@@ -118,6 +118,7 @@ class TestUploadArtifactEnterprise:
             "key3": "value3",
             "key4": "value4",
             "key5": "value5",
+            "rootfs-image.version": "test",
         }
 
     def test_upload_artifact_depends_conflicting(self, mongo, clean_mongo):

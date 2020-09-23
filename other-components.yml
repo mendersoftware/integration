@@ -5,7 +5,7 @@
 # 'services' tag.
 services:
     mender-artifact:
-        image: mendersoftware/mender-artifact:master
+        image: mendersoftware/mender-artifact:feature-partial_updates
 
     mender-cli:
         image: mendersoftware/mender-cli:master

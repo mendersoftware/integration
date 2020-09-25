@@ -76,16 +76,7 @@ class TestAuditLogsEnterprise:
         user = tenant_users.users[0]
 
         d = make_deployment(user.token)
-
-        expected = {
-            "action": "create",
-            "actor": {"id": user.id, "type": "user", "email": user.name,},
-            "object": {
-                "id": d["id"],
-                "type": "deployment",
-                "deployment": {"name": d["name"], "artifact_name": d["artifact_name"],},
-            },
-        }
+        expected = evt_deployment_create(user, d)
 
         time.sleep(0.5)
         alogs = ApiClient(auditlogs.URL_MGMT)
@@ -105,19 +96,7 @@ class TestAuditLogsEnterprise:
             user = tenant_users.users[uidx]
 
             d = make_deployment(user.token)
-
-            evt = {
-                "action": "create",
-                "actor": {"id": user.id, "type": "user", "email": user.name,},
-                "object": {
-                    "id": d["id"],
-                    "type": "deployment",
-                    "deployment": {
-                        "name": d["name"],
-                        "artifact_name": d["artifact_name"],
-                    },
-                },
-            }
+            evt = evt_deployment_create(user, d)
 
             time.sleep(0.5)
 
@@ -350,6 +329,21 @@ def make_deployment(token):
     assert len(found) == 1
 
     return found[0]
+
+
+def evt_deployment_create(user, deployment):
+    return {
+        "action": "create",
+        "actor": {"id": user.id, "type": "user", "email": user.name},
+        "object": {
+            "id": deployment["id"],
+            "type": "deployment",
+            "deployment": {
+                "name": deployment["name"],
+                "artifact_name": deployment["artifact_name"],
+            },
+        },
+    }
 
 
 def check_log(log, expected):

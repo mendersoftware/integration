@@ -15,6 +15,7 @@
 import pytest
 import uuid
 import os
+import json
 import time
 from datetime import datetime
 import urllib.parse
@@ -86,17 +87,77 @@ class TestAuditLogsEnterprise:
 
         check_log(res[0], expected)
 
+    def test_user_create(self, tenant_users):
+        user = tenant_users.users[0]
+
+        alogs = ApiClient(auditlogs.URL_MGMT)
+
+        uid = make_user(user.token, "foo@acme.com", "secretsecret")
+        expected = evt_user_create(user, uid, "foo@acme.com")
+
+        time.sleep(0.5)
+        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+        assert res.status_code == 200
+        res = res.json()
+        assert len(res) == 1
+
+        check_log(res[0], expected)
+
+    def test_user_delete(self, tenant_users):
+        user = tenant_users.users[0]
+        user_del = tenant_users.users[1]
+
+        alogs = ApiClient(auditlogs.URL_MGMT)
+
+        delete_user(user, user_del.id)
+        expected = evt_user_delete(user, user_del)
+
+        time.sleep(0.5)
+        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+        assert res.status_code == 200
+        res = res.json()
+        assert len(res) == 1
+
+        check_log(res[0], expected)
+
+    def test_user_change_role(self, tenant_users):
+        user = tenant_users.users[0]
+        user_change = tenant_users.users[1]
+
+        alogs = ApiClient(auditlogs.URL_MGMT)
+
+        roles = ["RBAC_ROLE_CI"]
+        change_role(user.token, user_change.id, roles)
+        expected = evt_change_role(user, user_change, roles)
+
+        time.sleep(0.5)
+        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+        assert res.status_code == 200
+        res = res.json()
+        assert len(res) == 1
+
+        check_log(res[0], expected)
+
     def test_get_params(self, tenant_users):
         """ Mix up some audiltog events, check GET with various params """
 
-        # N events (for now - deployments) from both users
+        # N various events from both users
         events = []
         for i in range(10):
             uidx = i % 2
             user = tenant_users.users[uidx]
 
-            d = make_deployment(user.token)
-            evt = evt_deployment_create(user, d)
+            evt = None
+            oid = None
+            if i % 3 == 0:
+                uuidv4 = str(uuid.uuid4())
+                uid = make_user(user.token, uuidv4 + "@acme.com", "secretsecret")
+                evt = evt_user_create(user, uid, uuidv4 + "@acme.com")
+                oid = uid
+            else:
+                d = make_deployment(user.token)
+                evt = evt_deployment_create(user, d)
+                oid = d["id"]
 
             time.sleep(0.5)
 
@@ -106,7 +167,7 @@ class TestAuditLogsEnterprise:
                 "GET", auditlogs.URL_LOGS
             )
             resp = resp.json()
-            found = [e for e in resp if e["object"]["id"] == d["id"]]
+            found = [e for e in resp if e["object"]["id"] == oid]
             assert len(found) == 1
 
             evt["time"] = found[0]["time"]
@@ -346,8 +407,75 @@ def evt_deployment_create(user, deployment):
     }
 
 
+def make_user(token, email, pwd):
+    res = (
+        ApiClient(useradm.URL_MGMT)
+        .with_auth(token)
+        .call("POST", useradm.URL_USERS, {"email": email, "password": pwd},)
+    )
+    assert res.status_code == 201
+    return res.headers["Location"].split("/")[1]
+
+
+def evt_user_create(actor_user, newid, email):
+    return {
+        "action": "create",
+        "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
+        "object": {"id": newid, "type": "user", "user": {"email": email},},
+    }
+
+
+def delete_user(actor_user, uid):
+    res = (
+        ApiClient(useradm.URL_MGMT)
+        .with_auth(actor_user.token)
+        .call("DELETE", useradm.URL_USERS_ID, path_params={"id": uid})
+    )
+    assert res.status_code == 204
+
+
+def evt_user_delete(actor_user, del_user):
+    return {
+        "action": "delete",
+        "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
+        "object": {
+            "id": del_user.id,
+            "type": "user",
+            "user": {"email": del_user.name},
+        },
+    }
+
+
+def change_role(token, uid, roles):
+    res = (
+        ApiClient(useradm.URL_MGMT)
+        .with_auth(token)
+        .call(
+            "PUT", useradm.URL_USERS_ID, path_params={"id": uid}, body={"roles": roles}
+        )
+    )
+    assert res.status_code == 204
+
+
+def evt_change_role(user, user_change, roles):
+    update = {"roles": roles}
+    return {
+        "action": "update",
+        "actor": {"id": user.id, "type": "user", "email": user.name},
+        "object": {
+            "id": user_change.id,
+            "type": "user",
+            "user": {"email": user_change.name},
+        },
+        "change": "Updated user {}:\n{}".format(user_change.id, go_dict_str(update)),
+    }
+
+
 def check_log(log, expected):
     assert log["action"] == expected["action"]
+    if "change" in expected:
+        assert log["change"] == expected["change"]
+
     for k in expected["actor"]:
         assert log["actor"][k] == expected["actor"][k]
 
@@ -355,3 +483,10 @@ def check_log(log, expected):
         assert log["object"][k] == expected["object"][k]
 
     assert log["time"] is not None
+
+
+def go_dict_str(d):
+    """Account for dict encoding diffs between go/py"""
+    djson = json.dumps(d)
+
+    return djson.replace(" ", "")

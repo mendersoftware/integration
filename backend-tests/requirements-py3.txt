@@ -7,3 +7,4 @@ pyzbar==0.1.8
 pyotp==2.4.0
 pillow==7.2.0
 stripe==2.51.0
+redo==2.0.4

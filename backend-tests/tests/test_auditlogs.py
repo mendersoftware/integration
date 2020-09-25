@@ -20,6 +20,8 @@ import time
 from datetime import datetime
 import urllib.parse
 
+import redo
+
 from testutils.infra.cli import CliUseradm, CliTenantadm, CliDeployments
 from testutils.common import (
     create_org,
@@ -79,11 +81,16 @@ class TestAuditLogsEnterprise:
         d = make_deployment(user.token)
         expected = evt_deployment_create(user, d)
 
-        time.sleep(0.5)
-        alogs = ApiClient(auditlogs.URL_MGMT)
-        resp = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
-        res = resp.json()
-        assert len(res) == 1
+        res = None
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            alogs = ApiClient(auditlogs.URL_MGMT)
+            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            assert res.status_code == 200
+            res = res.json()
+            if len(res) == 1:
+                break
+        else:
+            assert False, "max GET /logs retries hit"
 
         check_log(res[0], expected)
 
@@ -95,11 +102,15 @@ class TestAuditLogsEnterprise:
         uid = make_user(user.token, "foo@acme.com", "secretsecret")
         expected = evt_user_create(user, uid, "foo@acme.com")
 
-        time.sleep(0.5)
-        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
-        assert res.status_code == 200
-        res = res.json()
-        assert len(res) == 1
+        res = None
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            assert res.status_code == 200
+            res = res.json()
+            if len(res) == 1:
+                break
+        else:
+            assert False, "max GET /logs retries hit"
 
         check_log(res[0], expected)
 
@@ -112,11 +123,15 @@ class TestAuditLogsEnterprise:
         delete_user(user, user_del.id)
         expected = evt_user_delete(user, user_del)
 
-        time.sleep(0.5)
-        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
-        assert res.status_code == 200
-        res = res.json()
-        assert len(res) == 1
+        res = None
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            assert res.status_code == 200
+            res = res.json()
+            if len(res) == 1:
+                break
+        else:
+            assert False, "max GET /logs retries hit"
 
         check_log(res[0], expected)
 
@@ -130,11 +145,15 @@ class TestAuditLogsEnterprise:
         change_role(user.token, user_change.id, roles)
         expected = evt_change_role(user, user_change, roles)
 
-        time.sleep(0.5)
-        res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
-        assert res.status_code == 200
-        res = res.json()
-        assert len(res) == 1
+        res = None
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            assert res.status_code == 200
+            res = res.json()
+            if len(res) == 1:
+                break
+        else:
+            assert False, "max GET /logs retries hit"
 
         check_log(res[0], expected)
 
@@ -162,13 +181,18 @@ class TestAuditLogsEnterprise:
             time.sleep(0.5)
 
             # get exact time for filter testing
-            alogs = ApiClient(auditlogs.URL_MGMT)
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
-                "GET", auditlogs.URL_LOGS
-            )
-            resp = resp.json()
-            found = [e for e in resp if e["object"]["id"] == oid]
-            assert len(found) == 1
+            found = None
+            for _ in redo.retrier(attempts=3, sleeptime=1):
+                alogs = ApiClient(auditlogs.URL_MGMT)
+                resp = alogs.with_auth(tenant_users.users[0].token).call(
+                    "GET", auditlogs.URL_LOGS
+                )
+                resp = resp.json()
+                found = [e for e in resp if e["object"]["id"] == oid]
+                if len(found) == 1:
+                    break
+            else:
+                assert False, "max GET /logs retries hit"
 
             evt["time"] = found[0]["time"]
 

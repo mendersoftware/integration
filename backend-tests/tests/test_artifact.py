@@ -68,6 +68,7 @@ class TestUploadArtifactEnterprise:
         # create and upload the mender artifact
         with get_mender_artifact(
             artifact_name="test",
+            update_module="dummy",
             device_types=["arm1"],
             depends=("key1:value1", "key2:value2"),
             provides=("key3:value3", "key4:value4", "key5:value5"),
@@ -118,7 +119,7 @@ class TestUploadArtifactEnterprise:
             "key3": "value3",
             "key4": "value4",
             "key5": "value5",
-            "rootfs-image.version": "test",
+            "rootfs-image.dummy.version": "test",
         }
 
     def test_upload_artifact_depends_conflicting(self, mongo, clean_mongo):
@@ -251,8 +252,8 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
             ),
         )
@@ -271,14 +272,14 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:another-checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:another-checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
             ),
         )
@@ -289,7 +290,7 @@ class TestUploadArtifactEnterprise:
             body={
                 "device_type": "arm1",
                 "artifact_name": "old-artifact",
-                "rootfs_image_checksum": "wrong-checksum",
+                "rootfs-image.checksum": "wrong-checksum",
             },
         )
         assert r.status_code == 204
@@ -301,8 +302,8 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
             ),
         )
@@ -313,7 +314,7 @@ class TestUploadArtifactEnterprise:
             body={
                 "device_type": "arm1",
                 "artifact_name": "old-artifact",
-                "rootfs_image_checksum": "checksum",
+                "rootfs-image.checksum": "checksum",
             },
         )
         assert r.status_code == 200
@@ -325,8 +326,8 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:another-checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:another-checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
             ),
         )
@@ -337,7 +338,7 @@ class TestUploadArtifactEnterprise:
             body={
                 "device_type": "arm1",
                 "artifact_name": "test",
-                "rootfs_image_checksum": "checksum",
+                "rootfs-image.checksum": "checksum",
             },
         )
         assert r.status_code == 204
@@ -351,14 +352,14 @@ class TestUploadArtifactEnterprise:
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
                 {
                     "artifact_name": "test",
                     "device_types": ["arm1"],
-                    "depends": ("rootfs_image_checksum:another-checksum",),
-                    "provides": ("rootfs_image_checksum:provided",),
+                    "depends": ("rootfs-image.checksum:another-checksum",),
+                    "provides": ("rootfs-image.checksum:provided",),
                 },
             ),
         )
@@ -369,7 +370,7 @@ class TestUploadArtifactEnterprise:
             body={
                 "device_type": "arm1",
                 "artifact_name": "old-artifact",
-                "rootfs_image_checksum": "another-checksum",
+                "rootfs-image.checksum": "another-checksum",
             },
         )
         assert r.status_code == 200
@@ -443,7 +444,7 @@ class TestUploadArtifactEnterprise:
             body={
                 "device_type": "arm2",
                 "artifact_name": "old-artifact",
-                "rootfs_image_checksum": "another-checksum",
+                "rootfs-image.checksum": "another-checksum",
             },
         )
         assert r.status_code == 200

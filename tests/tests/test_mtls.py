@@ -126,13 +126,15 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
         )
         device.run(
-            'sed -i.backup -e "/\\[Service\\]/ a Environment=SOFTHSM2_CONF=/softhsm/softhsm2.conf" /lib/systemd/system/mender-client.service'
+            'sed -i.backup -e "/\\[Service\\]/ a Environment=SOFTHSM2_CONF=/softhsm/softhsm2.conf" /lib/systemd/system/%s.service'
+            % device.get_client_service_name()
         )
         return key_uri
 
     def hsm_cleanup(self, device):
         device.run(
-            "mv /lib/systemd/system/mender-client.service.backup /lib/systemd/system/mender-client.service"
+            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service"
+            % (device.get_client_service_name(), device.get_client_service_name())
         )
         device.run("rm -Rf /softhsm")
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf")
@@ -177,7 +179,8 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 remote_path="/var/lib/mender",
             )
 
-        env.device.run("systemctl stop mender-client")
+        client_service_name = env.device.get_client_service_name()
+        env.device.run("systemctl stop %s" % client_service_name)
         tmpdir = tempfile.mkdtemp()
 
         ssl_engine_id = "pkcs11"
@@ -226,7 +229,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
         logger.info("starting the client.")
         # start the Mender client
-        env.device.run("systemctl start mender-client")
+        env.device.run("systemctl start %s" % client_service_name)
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])

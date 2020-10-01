@@ -57,6 +57,15 @@ def setup_ent_mtls(request):
     auth.multitenancy = True
     auth.current_tenant = env.tenant
 
+    env.stop_api_gateway()
+
+    # start a new mender client
+    env.new_mtls_client("mender-client", env.tenant.tenant_token)
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
+    env.start_api_gateway()
+
     return env
 
 
@@ -128,71 +137,58 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         device.run("rm -Rf /softhsm")
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf")
 
-    def common_test_mtls_enterprise(
-        self, setup_ent_mtls, algorithm=None, use_hsm=False
-    ):
-        tenant = setup_ent_mtls.tenant
-
+    def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
         # stop the api gateway
-        setup_ent_mtls.stop_api_gateway()
-
-        # start a new mender client
-        setup_ent_mtls.new_mtls_client("mender-client", tenant.tenant_token)
-
-        # stop the Mender client
-        setup_ent_mtls.device = device = MenderDevice(
-            setup_ent_mtls.get_mender_clients()[0]
-        )
-        device.ssh_is_opened()
+        env.stop_api_gateway()
 
         # upload the certificates
         basedir = os.path.join(os.path.dirname(__file__), "..", "..",)
         certs = os.path.join(basedir, "extra", "mtls", "certs",)
 
-        device.put(
+        env.device.put(
             "tenant.ca.crt",
             local_path=os.path.join(certs, "tenant-ca"),
             remote_path="/etc/ssl/certs",
         )
-        device.run("update-ca-certificates")
+        env.device.run("update-ca-certificates")
 
-        device.put(
+        env.device.put(
             "server.crt",
             local_path=os.path.join(certs, "server"),
             remote_path="/etc/mender",
         )
-        device.put(
+        env.device.put(
             "cert.crt",
             local_path=os.path.join(basedir, "certs", "storage-proxy"),
             remote_path="/etc/mender",
         )
-        device.run(
+        env.device.run(
             "cat /etc/mender/server.crt /etc/mender/cert.crt > /tmp/server.crt && mv /tmp/server.crt /etc/mender/server.crt && rm /etc/mender/cert.crt"
         )
         if algorithm is not None:
-            device.put(
+            env.device.put(
                 f"client.1.{algorithm}.crt",
                 local_path=os.path.join(certs, "client"),
                 remote_path="/var/lib/mender",
             )
-            device.put(
+            env.device.put(
                 f"client.1.{algorithm}.key",
                 local_path=os.path.join(certs, "client"),
                 remote_path="/var/lib/mender",
             )
 
-        device.run("systemctl stop mender-client")
+        env.device.run("systemctl stop mender-client")
         tmpdir = tempfile.mkdtemp()
 
         ssl_engine_id = "pkcs11"
         pin = "0001"
         if algorithm is not None and use_hsm is True:
-            self.hsm_setup(pin, ssl_engine_id, device)
-            key_uri = self.hsm_get_key_uri(pin, ssl_engine_id, device)
+            self.hsm_setup(pin, ssl_engine_id, env.device)
+            key_uri = self.hsm_get_key_uri(pin, ssl_engine_id, env.device)
 
         try:
             # retrieve the original configuration file
-            output = device.run("cat /etc/mender/mender.conf")
+            output = env.device.run("cat /etc/mender/mender.conf")
             config = json.loads(output)
             # replace mender.conf with an mTLS enabled one
             config["ServerURL"] = "https://mtls-ambassador:8080"
@@ -216,7 +212,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             mender_conf = os.path.join(tmpdir, "mender.conf")
             with open(mender_conf, "w") as fd:
                 json.dump(config, fd)
-            device.put(
+            env.device.put(
                 os.path.basename(mender_conf),
                 local_path=os.path.dirname(mender_conf),
                 remote_path="/etc/mender",
@@ -224,20 +220,18 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         finally:
             shutil.rmtree(tmpdir)
 
-        device.run("systemctl daemon-reload")
+        env.device.run("systemctl daemon-reload")
         # start the api gateway
-        setup_ent_mtls.start_api_gateway()
+        env.start_api_gateway()
 
         logger.info("starting the client.")
         # start the Mender client
-        device.run("systemctl start mender-client")
-        return device
+        env.device.run("systemctl start mender-client")
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
     def test_mtls_enterprise(self, setup_ent_mtls, algorithm):
-        # set up the mTLS test environment and return the device
-        device = self.common_test_mtls_enterprise(setup_ent_mtls, algorithm)
+        self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=False)
 
         # prepare a test artifact
         with tempfile.NamedTemporaryFile() as tf:
@@ -260,7 +254,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         deploy.check_expected_status("finished", deployment_id)
 
         # verify the update was actually installed on the device
-        out = device.run(
+        out = setup_ent_mtls.device.run(
             "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender -show-artifact"
         ).strip()
         assert out == "mtls-artifact"
@@ -268,12 +262,20 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
-        try:
-            # set up the mTLS test environment and return the device
-            device = self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, True)
 
-            output = device.run(
-                "journalctl -u %s | cat" % device.get_client_service_name()
+        # Check if the client has has SoftHSM (from yocto dunfell forward)
+        output = setup_ent_mtls.device.run(
+            "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True
+        )
+        if output.rstrip() != "true":
+            pytest.skip("Needs SoftHSM to run this test")
+
+        try:
+            self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
+
+            output = setup_ent_mtls.device.run(
+                "journalctl -u %s | cat"
+                % setup_ent_mtls.device.get_client_service_name()
             )
             assert "ded private key: '" in output
 
@@ -298,17 +300,17 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             deploy.check_expected_status("finished", deployment_id)
 
             # verify the update was actually installed on the device
-            out = device.run(
+            out = setup_ent_mtls.device.run(
                 "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender -show-artifact"
             ).strip()
             assert out == "mtls-artifact"
         finally:
-            self.hsm_cleanup(device)
+            self.hsm_cleanup(setup_ent_mtls.device)
 
     @MenderTesting.fast
     def test_mtls_enterprise_without_client_cert(self, setup_ent_mtls):
         # set up the mTLS test environment, without providing client certs
-        self.common_test_mtls_enterprise(setup_ent_mtls, algorithm=None)
+        self.common_test_mtls_enterprise(setup_ent_mtls, algorithm=None, use_hsm=False)
 
         # wait 30 seconds
         time.sleep(30)

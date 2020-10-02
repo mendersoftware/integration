@@ -38,32 +38,43 @@ exit 0
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestInventory(MenderTesting):
     @MenderTesting.fast
+    @pytest.mark.xfail(reason="MEN-4001 and MEN-4003.", strict=True)
     def test_inventory(self):
         """
         Test that device reports inventory after having bootstrapped and performed
         an application update using a dummy script artifact.
         """
 
-        # create a simple artifact (script) which doesn't do anything
-        artifact_name = "simple-artifact"
-        with tempfile.NamedTemporaryFile() as tf:
-            artifact = make_script_artifact(
-                artifact_name,
-                conftest.machine_name,
-                tf.name,
-                extra_args="--software-name swname --software-version v1",
+        def deploy_simple_artifact(artifact_name, extra_args):
+            # create a simple artifact (script) which doesn't do anything
+            with tempfile.NamedTemporaryFile() as tf:
+                artifact = make_script_artifact(
+                    artifact_name,
+                    conftest.machine_name,
+                    tf.name,
+                    extra_args=extra_args,
+                )
+                deploy.upload_image(artifact)
+
+            # deploy the artifact above
+            device_ids = [device["id"] for device in devauth.get_devices()]
+            deployment_id = deploy.trigger_deployment(
+                artifact_name, artifact_name=artifact_name, devices=device_ids,
             )
-            deploy.upload_image(artifact)
 
-        # deploy the artifact above
-        device_ids = [device["id"] for device in devauth.get_devices()]
-        deployment_id = deploy.trigger_deployment(
-            artifact_name, artifact_name=artifact_name, devices=device_ids,
+            # now just wait for the update to succeed
+            deploy.check_expected_statistics(deployment_id, "success", 1)
+            deploy.check_expected_status("finished", deployment_id)
+
+        deploy_simple_artifact(
+            "simple-artifact-1",
+            "--software-name swname --software-version v1"
+            + " --provides rootfs-image.swname.custom_field:value"
+            + " --provides rootfs-image.custom_field:value",
         )
-
-        # now just wait for the update to succeed
-        deploy.check_expected_statistics(deployment_id, "success", 1)
-        deploy.check_expected_status("finished", deployment_id)
+        deploy_simple_artifact(
+            "simple-artifact-2", "--software-name swname --software-version v2"
+        )
 
         # verify the inventory
         latest_exception = None
@@ -119,9 +130,26 @@ class TestInventory(MenderTesting):
                             )
                             in attrs
                         )
+                        # Should be in inventory because it comes with artifact.
                         assert (
                             json.loads(
-                                '{"name": "rootfs-image.swname.version", "value": "v1"}'
+                                '{"name": "rootfs-image.swname.version", "value": "v2"}'
+                            )
+                            in attrs
+                        )
+                        # Should not be in inventory because the default is to
+                        # clear inventory attributes in the same namespace.
+                        assert (
+                            json.loads(
+                                '{"name": "rootfs-image.swname.custom_field", "value": "value"}'
+                            )
+                            not in attrs
+                        )
+                        # Should be in inventory because the default is to keep
+                        # inventory attributes in different namespaces.
+                        assert (
+                            json.loads(
+                                '{"name": "rootfs-image.custom_field", "value": "value"}'
                             )
                             in attrs
                         )

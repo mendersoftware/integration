@@ -17,4 +17,4 @@ URL_MGMT = "/api/management/v2/tenantadm"
 
 URL_CREATE_ORG_TENANT = "/tenants"
 URL_TENANT_STATUS = "/tenants/{id}/status"
-URL_TENANT_SECRET = "/secret"
+URL_TENANT_SECRET = "/billing/secret"

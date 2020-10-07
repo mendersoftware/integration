@@ -18,6 +18,7 @@ import pytest
 import shutil
 import tempfile
 import time
+import re
 
 from testutils.common import create_org
 from testutils.infra.container_manager import factory
@@ -113,12 +114,14 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             shutil.rmtree(tmpdir)
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
-        key_uri = device.run(
+        pt11tool_output = device.run(
             "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin="
             + pin
-            + " --list-all-privkeys | grep URL | sed -e 's/.*URL: //'"
+            + " --list-all-privkeys"
         ).rstrip("\n")
+        key_uri = re.search(r"URL:\s(.*)", pt11tool_output).group(1)
         key_uri = key_uri + ";pin-value=" + pin
+
         device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
         device.run(
             'echo -ne "[openssl_init]\nengines=engine_section\n\n[engine_section]\npkcs11 = pkcs11_section\n\n[pkcs11_section]\nengine_id = '
@@ -133,11 +136,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     def hsm_cleanup(self, device):
         device.run(
-            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service"
+            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service || true"
             % (device.get_client_service_name(), device.get_client_service_name())
         )
         device.run("rm -Rf /softhsm")
-        device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf")
+        device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
         # stop the api gateway

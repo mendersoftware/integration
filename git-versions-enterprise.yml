@@ -26,7 +26,7 @@ services:
         image: registry.mender.io/mendersoftware/useradm-enterprise:staging
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:master
+        image: registry.mender.io/mendersoftware/auditlogs:staging
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:master
+        image: registry.mender.io/mendersoftware/mtls-ambassador:none

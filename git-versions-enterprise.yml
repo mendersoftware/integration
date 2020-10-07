@@ -29,4 +29,4 @@ services:
         image: registry.mender.io/mendersoftware/auditlogs:staging
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:none
+        image: registry.mender.io/mendersoftware/mtls-ambassador:master

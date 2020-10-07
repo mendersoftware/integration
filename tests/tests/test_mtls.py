@@ -136,11 +136,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     def hsm_cleanup(self, device):
         device.run(
-            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service"
+            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service || true"
             % (device.get_client_service_name(), device.get_client_service_name())
         )
         device.run("rm -Rf /softhsm")
-        device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf")
+        device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
         # stop the api gateway

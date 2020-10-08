@@ -552,7 +552,7 @@ class TestDeploymentsEndpointEnterprise(object):
                 assert exp[k] == rsp[k]
 
 
-def setup_devices_and_management_st(nr_devices=100):
+def setup_devices_and_management_st(nr_devices=100, deploy_to_group=None):
     """
     Sets up user creates authorized devices.
     """
@@ -571,6 +571,14 @@ def setup_devices_and_management_st(nr_devices=100):
     devs = make_accepted_devices(devauthd, devauthm, utoken, "", nr_devices)
     # wait for devices to be provisioned
     time.sleep(3)
+    if deploy_to_group:
+        for device in devs[:-1]:
+            r = invm.with_auth(utoken).call(
+                "PUT",
+                inventory.URL_DEVICE_GROUP.format(id=device.id),
+                body={"group": deploy_to_group},
+            )
+            assert r.status_code == 204
 
     # Check that the number of devices were created
     r = invm.with_auth(utoken).call(
@@ -583,7 +591,7 @@ def setup_devices_and_management_st(nr_devices=100):
     return user, utoken, devs
 
 
-def setup_devices_and_management_mt(nr_devices=100):
+def setup_devices_and_management_mt(nr_devices=100, deploy_to_group=None):
     """
     Sets up user and tenant and creates authorized devices.
     """
@@ -611,6 +619,14 @@ def setup_devices_and_management_mt(nr_devices=100):
     )
     # wait for devices to be provisioned
     time.sleep(3)
+    if deploy_to_group:
+        for device in devs[:-1]:
+            r = invm.with_auth(utoken).call(
+                "PUT",
+                inventory.URL_DEVICE_GROUP.format(id=device.id),
+                body={"group": deploy_to_group},
+            )
+            assert r.status_code == 204
 
     # Check that the number of devices were created
     r = invm.with_auth(utoken).call(
@@ -1196,7 +1212,9 @@ class StatusVerifier:
 
 
 class TestDeploymentsStatusUpdateBase:
-    def do_test_deployment_status_update(self, clean_mongo, user_token, devs):
+    def do_test_deployment_status_update(
+        self, clean_mongo, user_token, devs, deploy_to_group=None
+    ):
         """
         deployment with four devices
         requires five devices (last one won't be part of the deployment
@@ -1213,9 +1231,25 @@ class TestDeploymentsStatusUpdateBase:
             "artifact_name": "deployments-phase-testing",
             "devices": [dev.id for dev in devs[:-1]],
         }
+        if deploy_to_group:
+            deployment_req = {
+                "name": "phased-deployment",
+                "artifact_name": "deployments-phase-testing",
+                "devices": [],
+                "group": deploy_to_group,
+                "retries": 0,
+            }
+
         resp = deploymentsm.with_auth(user_token).call(
             "POST", deployments.URL_DEPLOYMENTS, deployment_req
         )
+        if deploy_to_group:
+            resp = deploymentsm.with_auth(user_token).call(
+                "POST",
+                deployments.URL_DEPLOYMENTS + "/group/" + deploy_to_group,
+                deployment_req,
+            )
+
         assert resp.status_code == 201
 
         # Store the location from the GET /deployments/{id} request
@@ -1416,6 +1450,26 @@ class TestDeploymentsStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
         self.do_test_deployment_status_update(clean_mongo, user_token, devs)
+
+
+class TestDeploymentsToGroupStatusUpdate(TestDeploymentsStatusUpdateBase):
+    def test_deployment_status_update(self, clean_mongo):
+        _user, user_token, devs = setup_devices_and_management_st(
+            5, deploy_to_group="g0"
+        )
+        self.do_test_deployment_status_update(
+            clean_mongo, user_token, devs, deploy_to_group="g0"
+        )
+
+
+class TestDeploymentsToGroupStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
+    def test_deployment_status_update(self, clean_mongo):
+        _user, _tenant, user_token, devs = setup_devices_and_management_mt(
+            5, deploy_to_group="g0"
+        )
+        self.do_test_deployment_status_update(
+            clean_mongo, user_token, devs, deploy_to_group="g0"
+        )
 
 
 def create_tenant(name, username, plan):

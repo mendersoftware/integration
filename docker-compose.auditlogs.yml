@@ -15,3 +15,11 @@ services:
     mender-api-gateway:
         environment:
             HAVE_AUDITLOGS: 1
+
+    mender-useradm:
+        environment:
+            USERADM_ENABLE_AUDIT: 1
+
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_ENABLE_AUDIT: 1

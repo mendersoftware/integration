@@ -38,7 +38,6 @@ exit 0
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestInventory(MenderTesting):
     @MenderTesting.fast
-    @pytest.mark.xfail(reason="MEN-4001 and MEN-4003.", strict=True)
     def test_inventory(self):
         """
         Test that device reports inventory after having bootstrapped and performed

@@ -438,7 +438,7 @@ REBOOT_TEST_SET = [
     (
         "simulate_powerloss_artifact_install_enter",
         {
-            "RebootScripts": ["ArtifactInstall_Enter_01",],
+            "RebootScripts": ["ArtifactInstall_Enter_01"],
             "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",

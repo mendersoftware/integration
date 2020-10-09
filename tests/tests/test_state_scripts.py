@@ -394,6 +394,43 @@ TEST_SETS = [
             ],
         },
     ),
+    (
+        "No_roll_forward_on_ArtifactInstall_Leave_error",
+        {
+            "FailureScript": ["ArtifactInstall_Leave_03"],
+            "ExpectedStatus": "failure",
+            "SwapPartitionExpectation": False,  # We should not switch partition
+            "ScriptOrder": [
+                "Idle_Enter_08_testing",
+                "Idle_Enter_09",
+                "Idle_Leave_09",
+                "Idle_Leave_10",
+                "Sync_Enter_02",
+                "Sync_Enter_03",
+                "Sync_Leave_04",
+                "Sync_Leave_15",
+                "Download_Enter_12",
+                "Download_Enter_13",
+                "Download_Leave_14",
+                "Download_Leave_25",
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Enter_02",
+                "ArtifactInstall_Leave_01",
+                "ArtifactInstall_Leave_03",
+                "ArtifactInstall_Error_01",
+                "ArtifactInstall_Error_02",
+                "ArtifactInstall_Error_99",
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollback_Enter_01",
+                "ArtifactRollback_Leave_00",
+                "ArtifactRollback_Leave_01",
+                "ArtifactFailure_Enter_22",
+                "ArtifactFailure_Enter_33",
+                "ArtifactFailure_Leave_44",
+                "ArtifactFailure_Leave_55",
+            ],
+        },
+    ),
 ]
 
 

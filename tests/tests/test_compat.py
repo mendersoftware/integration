@@ -131,7 +131,7 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
             pytest.fail("timeout waiting for devices to submit inventory")
 
         rsp = api_inventory.call(
-            "GET", inventory.URL_DEVICES, qs_params={"per_page": num_devices * 2},
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": num_devices * 2}
         )
         assert rsp.status_code == 200
         dev_invs = rsp.json()
@@ -177,7 +177,7 @@ def assert_successful_deployment(api_deployments, deployment_id, timeout=TIMEOUT
         dpl = rsp.json()
         if dpl["status"] == "finished":
             rsp = api_deployments.call(
-                "GET", deployments.URL_DEPLOYMENTS_STATISTICS.format(id=deployment_id),
+                "GET", deployments.URL_DEPLOYMENTS_STATISTICS.format(id=deployment_id)
             )
             assert rsp.status_code == 200
             assert rsp.json()["failure"] == 0
@@ -189,40 +189,68 @@ def assert_successful_deployment(api_deployments, deployment_id, timeout=TIMEOUT
             time.sleep(1)
 
 
-def _watch_clients(host_addr, clients, timeout=TIMEOUT):
+class RebootDetectorThread(threading.Thread):
+    def __init__(self, host_ip, client, timeout, barrier, **kwargs):
+        super().__init__(**kwargs)
+        self._host_ip = host_ip
+        self._client = client
+        self._timeout = timeout
+        self._exception_q = queue.Queue(maxsize=1)
+        self.detector = self._client.get_reboot_detector(self._host_ip)
+        self.barrier = barrier
+
+    def run(self):
+        try:
+            # Setup the individual reboot-detectors
+            with self.detector as rd:
+                # Possibly move this to after the reboot-detector accepts connections (?)
+                self.barrier.wait()
+                rd.verify_reboot_performed(max_wait=self._timeout.total_seconds())
+        except Exception as e:
+            self._exception_q.put_nowait(e)
+
+    def join(self, timeout=None):
+        super().join(timeout)
+        if not self._exception_q.empty():
+            exc = self._exception_q.get_nowait()
+            if isinstance(exc, Exception):
+                raise exc
+
+
+class ParallelRebootDetector:
     """
-    Watches for clients to reboot in separate threads
+       A parallel implementation of the RebootDetector class
+
+    :param clients: running Mender clients
+    :param host_ip: The IP of the host
+    :param timeout: The timeout for the reboot detector
+    :param deadline: The deadline for the timeout, waiting for the reboot detector(s) to finish the join
     """
 
-    class _RebootThread(threading.Thread):
-        def __init__(self, host_ip, client, timeout, **kwargs):
-            super().__init__(**kwargs)
-            self._host_ip = host_ip
-            self._client = client
-            self._timeout = timeout
-            self._exception_q = queue.Queue(maxsize=1)
+    def __init__(self, clients, host_ip, timeout, deadline):
+        self.reboot_detectors = []
+        self.deadline = deadline
+        self.enter_barrier = threading.Barrier(
+            len(clients) + 1  # +1 for the main-thread to block
+        )
+        for client in clients:
+            self.reboot_detectors.append(
+                RebootDetectorThread(host_ip, client, timeout, self.enter_barrier)
+            )
 
-        def run(self):
-            try:
-                detector = self._client.get_reboot_detector(self._host_ip)
-                with detector as rd:
-                    rd.verify_reboot_performed(max_wait=self._timeout.total_seconds())
-            except Exception as e:
-                self._exception_q.put_nowait(e)
+    def __enter__(self):
+        for d in self.reboot_detectors:
+            d.start()
 
-        def join(self, timeout=None):
-            super().join(timeout)
-            if not self._exception_q.empty():
-                exc = self._exception_q.get_nowait()
-                if isinstance(exc, Exception):
-                    raise exc
+        # Wait for all reboot-detectors to finish their setup, before starting
+        # the code within the 'with' statement
+        self.enter_barrier.wait()
 
-    threads = []
-    for client in clients:
-        thread = _RebootThread(host_addr, client, timeout)
-        thread.start()
-        threads.append(thread)
-    return threads
+        # Now all devices are ready to check for reboots during an update process
+
+    def __exit__(self, *args, **kwargs):
+        for d in self.reboot_detectors:
+            d.join((self.deadline - datetime.now()).total_seconds() + 1)
 
 
 class TestClientCompatibilityBase:
@@ -289,6 +317,7 @@ class TestClientCompatibilityBase:
             payload_type="rootfs-image",
         )
         artifact_file = artifact.make()
+
         rsp = api_deployments.call(
             "POST",
             deployments.URL_DEPLOYMENTS_ARTIFACTS,
@@ -297,30 +326,28 @@ class TestClientCompatibilityBase:
                     "artifact.mender",
                     artifact_file,
                     "application/octet-stream",
-                ),
+                )
             },
         )
         assert rsp.status_code == 201
 
-        # Start watching clients in parallel threads.
-        threads = _watch_clients(env.get_virtual_network_host_ip(), env.devices)
+        with ParallelRebootDetector(
+            env.devices, env.get_virtual_network_host_ip(), TIMEOUT, deadline
+        ):
 
-        rsp = api_deployments.call(
-            "POST",
-            deployments.URL_DEPLOYMENTS,
-            body={
-                "artifact_name": "rootfs-noop-update",
-                "devices": [device["id"] for device in devices],
-                "name": "noop_deployment",
-            },
-        )
-        assert rsp.status_code == 201
+            rsp = api_deployments.call(
+                "POST",
+                deployments.URL_DEPLOYMENTS,
+                body={
+                    "artifact_name": "rootfs-noop-update",
+                    "devices": [device["id"] for device in devices],
+                    "name": "noop_deployment",
+                },
+            )
+            assert rsp.status_code == 201
 
-        deployment_id = rsp.headers.get("Location").split("/")[-1]
-        assert_successful_deployment(api_deployments, deployment_id)
-
-        for thread in threads:
-            thread.join((deadline - datetime.now()).total_seconds() + 1)
+            deployment_id = rsp.headers.get("Location").split("/")[-1]
+            assert_successful_deployment(api_deployments, deployment_id)
 
 
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):

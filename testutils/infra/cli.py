@@ -154,3 +154,32 @@ class CliDeviceauth(BaseCli):
         # Restart the container, so that it is picked up by the device-auth service on startup
         self.container_manager.cmd(self.cid, "stop")
         self.container_manager.cmd(self.cid, "start")
+
+
+class CliDeployments(BaseCli):
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        BaseCli.__init__(
+            self, "mender-deployments", containers_namespace, container_manager
+        )
+
+        # is it an open version, or enterprise?
+        for path in ["/usr/bin/deployments", "/usr/bin/deployments-enterprise"]:
+            try:
+                self.container_manager.execute(self.cid, [path, "--version"])
+                self.path = path
+            except:
+                continue
+
+        if self.path is None:
+            raise RuntimeError("no runnable binary found for 'deployments'")
+
+    def migrate(self, tenant_id=None):
+        if isK8S():
+            return
+
+        cmd = [self.path, "migrate"]
+
+        if tenant_id is not None:
+            cmd.extend(["--tenant", tenant_id])
+
+        self.container_manager.execute(self.cid, cmd)

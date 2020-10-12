@@ -11,10 +11,6 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+URL_MGMT = "/api/management/v1/auditlogs"
 
-HOST = "mender-tenantadm:8080"
-URL_MGMT = "/api/management/v2/tenantadm"
-
-URL_CREATE_ORG_TENANT = "/tenants"
-URL_TENANT_STATUS = "/tenants/{id}/status"
-URL_TENANT_SECRET = "/billing/secret"
+URL_LOGS = "/logs"

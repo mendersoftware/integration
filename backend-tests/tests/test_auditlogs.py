@@ -17,8 +17,10 @@ import uuid
 import os
 import json
 import time
-from datetime import datetime
 import urllib.parse
+
+
+from datetime import datetime
 
 import redo
 
@@ -482,7 +484,6 @@ def change_role(token, uid, roles):
 
 
 def evt_change_role(user, user_change, roles):
-    update = {"roles": roles}
     return {
         "action": "update",
         "actor": {"id": user.id, "type": "user", "email": user.name},
@@ -491,14 +492,16 @@ def evt_change_role(user, user_change, roles):
             "type": "user",
             "user": {"email": user_change.name},
         },
-        "change": "Updated user {}:\n{}".format(user_change.id, go_dict_str(update)),
+        "change": "Update user {} ({}).\nDiff:\n".format(
+            user_change.id, user_change.name
+        ),
     }
 
 
 def check_log(log, expected):
     assert log["action"] == expected["action"]
     if "change" in expected:
-        assert log["change"] == expected["change"]
+        assert log["change"].startswith(expected["change"])
 
     for k in expected["actor"]:
         assert log["actor"][k] == expected["actor"][k]

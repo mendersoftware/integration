@@ -283,7 +283,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 "journalctl -u %s | cat"
                 % setup_ent_mtls.device.get_client_service_name()
             )
-            assert "ded private key: '" in output
+            assert "loaded private key: '" in output
 
             # prepare a test artifact
             with tempfile.NamedTemporaryFile() as tf:

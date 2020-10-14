@@ -8,13 +8,13 @@ services:
     # backend open source services
     #
     mender-gui:
-        image: mendersoftware/gui:staging
+        image: mendersoftware/gui:saas-v2020.10.14
 
     mender-api-gateway:
-        image: mendersoftware/api-gateway:staging
+        image: mendersoftware/api-gateway:saas-v2020.10.14
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:staging
+        image: mendersoftware/deviceauth:saas-v2020.10.14
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:staging
+        image: mendersoftware/create-artifact-worker:saas-v2020.10.14

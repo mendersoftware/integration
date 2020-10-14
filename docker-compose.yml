@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:staging
+        image: registry.mender.io/mendersoftware/deployments-enterprise:saas-v2020.10.14
         extends:
             file: common.yml
             service: mender-base
@@ -18,7 +18,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:staging
+        image: mendersoftware/gui:saas-v2020.10.14
         extends:
             file: common.yml
             service: mender-base
@@ -35,7 +35,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:staging
+        image: mendersoftware/api-gateway:saas-v2020.10.14
         extends:
             file: common.yml
             service: mender-base
@@ -54,7 +54,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:staging
+        image: mendersoftware/deviceauth:saas-v2020.10.14
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -70,7 +70,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:staging
+        image: registry.mender.io/mendersoftware/inventory-enterprise:saas-v2020.10.14
         extends:
             file: common.yml
             service: mender-base
@@ -83,7 +83,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:staging
+        image: registry.mender.io/mendersoftware/useradm-enterprise:saas-v2020.10.14
         extends:
             file: common.yml
             service: mender-base
@@ -96,7 +96,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:staging
+        image: registry.mender.io/mendersoftware/workflows-enterprise:saas-v2020.10.14
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -111,7 +111,7 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:staging
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:saas-v2020.10.14
         command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
@@ -127,7 +127,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:staging
+        image: mendersoftware/create-artifact-worker:saas-v2020.10.14
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:

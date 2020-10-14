@@ -3,4 +3,4 @@
 # installation (have no docker-compose file).
 services:
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:mender-master
+        image: registry.mender.io/mendersoftware/mtls-ambassador:saas-v2020.10.14

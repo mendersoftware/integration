@@ -3,7 +3,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:staging
+        image: registry.mender.io/mendersoftware/tenantadm:saas-v2020.10.14
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:

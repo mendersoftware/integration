@@ -18,11 +18,6 @@ git:
     - mender-deployments
     release_component: true
 
-  deviceadm:
-    docker_image: []
-    docker_container: []
-    release_component: false
-
   deviceauth:
     docker_image:
     - deviceauth

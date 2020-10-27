@@ -25,6 +25,9 @@ services:
     mender-useradm:
         image: mendersoftware/useradm:master
 
+    mender-deviceconnect:
+        image: mendersoftware/deviceconnect:master
+
     mender-workflows-server:
         image: mendersoftware/workflows:master
 

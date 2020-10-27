@@ -224,11 +224,12 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
     "auditlogs": "AUDITLOGS_REV",
     "mtls-ambassador": "MTLS_AMBASSADOR_REV",
+    "deviceconnect": "DEVICECONNECT_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
-BACKEND_SERVICES_OPEN = {"deviceauth", "create-artifact-worker"}
+BACKEND_SERVICES_OPEN = {"deviceauth", "deviceconnect", "create-artifact-worker"}
 BACKEND_SERVICES_ENT = {
     "tenantadm",
     "deployments-enterprise",
@@ -398,6 +399,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.yml",
         "docker-compose.enterprise.yml",
         "docker-compose.auditlogs.yml",
+        "docker-compose.connect.yml",
         "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]

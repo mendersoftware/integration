@@ -1591,7 +1591,7 @@ def make_device_with_inventory(attributes, utoken, tenant_token):
     verify that the status of the device in inventory is "accepted"
     """
     accepted = False
-    timeout = 90
+    timeout = 10
     for i in range(timeout):
         r = invm.with_auth(utoken).call("GET", inventory.URL_DEVICE.format(id=d.id))
         if r.status_code == 200:
@@ -2045,6 +2045,16 @@ class TestDynamicDeploymentsEnterprise:
             )
             for i in range(10)
         ]
+
+        # adjust phase start ts for previous test case duration
+        # format for api consumption
+        for phase in tc["phases"]:
+            if "start_ts" in phase:
+                phase["start_ts"] = datetime.utcnow() + timedelta(
+                    seconds=15 * WAITING_MULTIPLIER
+                )
+                phase["start_ts"] = phase["start_ts"].strftime("%Y-%m-%dT%H:%M:%SZ")
+
         dep = create_dynamic_deployment(
             "bar",
             [predicate("bar", "inventory", "$eq", "bar")],

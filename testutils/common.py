@@ -241,6 +241,7 @@ def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
 def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
     dev = make_pending_device(dauthd1, dauthm, utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
+    time.sleep(1)
     change_authset_status(dauthm, dev.id, aset_id, "accepted", utoken)
 
     aset = dev.authsets[0]

@@ -150,7 +150,7 @@ services:
             - traefik.http.routers.deviceauthMgmt.tls=true
             - traefik.http.routers.deviceauthMgmt.service=deviceauthMgmt
             - traefik.http.services.deviceauthMgmt.loadbalancer.server.port=8080
-            # the X-Original-URI and X-Original-Method headers are added by træfik automatically, however as X-Forwarded-Uri and X-Forwarded-Method
+            # the X-Original-URI and X-Original-Method headers are added by traefik automatically, however as X-Forwarded-Uri and X-Forwarded-Method
             # https://github.com/containous/traefik/blob/125470f1106373ff42cf03ae28467055a8186de5/pkg/middlewares/forwardedheaders/forwarded_header.go#L12-L38
         networks:
             - mender

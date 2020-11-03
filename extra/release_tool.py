@@ -398,6 +398,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.yml",
         "docker-compose.enterprise.yml",
         "docker-compose.auditlogs.yml",
+        "docker-compose.connect.yml",
         "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
@@ -2608,6 +2609,8 @@ def do_integration_versions_including(args):
     ]
     if args.all:
         git_query += ["refs/heads/**"]
+    if args.feature_branches:
+        git_query += ["refs/remotes/%s/feature-*" % remote]
     output = execute_git(None, git_dir, git_query, capture=True)
     candidates = []
     for line in output.strip().split("\n"):
@@ -3071,6 +3074,12 @@ def main():
         metavar="SERVICE",
         help="Find version(s) of integration repository that contain the given version of SERVICE, "
         + " where version is given with --version. Returned as a newline separated list",
+    )
+    parser.add_argument(
+        "--feature-branches",
+        action="store_true",
+        default=False,
+        help="When used with -f, include upstream feature branches",
     )
     parser.add_argument(
         "-v",

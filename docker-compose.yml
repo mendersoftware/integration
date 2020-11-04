@@ -215,7 +215,7 @@ services:
             - traefik.http.services.useradm.loadbalancer.server.port=8080
 
             - traefik.http.routers.useradmLogin.entrypoints=https
-            - traefik.http.routers.useradmLogin.rule=Path(`/api/management/{(v[0-9]+)}/useradm/auth/login`)||PathPrefix(`/api/management/{(v[0-9]+)}/useradm/(oauth2|auth/password-reset)`)
+            - traefik.http.routers.useradmLogin.rule=Path(`/api/management/{(v[0-9]+)}/useradm/auth/login`)||PathPrefix(`/api/management/{(v[0-9]+)}/useradm/{(oauth2|auth\/password-reset)}`)
             # traefik should automatically forward the x-forwarded-host header
             - traefik.http.routers.useradmLogin.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.useradmLogin.tls=true

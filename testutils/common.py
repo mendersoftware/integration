@@ -19,6 +19,8 @@ import string
 import tempfile
 import os
 import subprocess
+import redo
+import requests
 from contextlib import contextmanager
 
 import testutils.api.deviceauth as deviceauth
@@ -315,3 +317,42 @@ def get_mender_artifact(
     finally:
         os.unlink(filename)
         os.path.exists(artifact) and os.unlink(artifact)
+
+
+def wait_for_traefik(gateway_host, routers=[]):
+    """ Wait until provided routers are installed.
+    Prevents race conditions where services are already up but traefik hasn't yet registered their routers. This causes subtle timing issues.
+    By default checks the basic routers (incl. deployments - startup so time consuming, in practice it guarantees success).
+    TODO: k8s support?
+    """
+    if routers == []:
+        rnames = [
+            "deployments@docker",
+            "deploymentsMgmt@docker",
+            "minio@docker",
+            "deviceauth@docker",
+            "deviceauthMgmt@docker",
+            "newInventory@docker",
+            "oldInventory@docker",
+            "useradm@docker",
+            "useradmLogin@docker",
+            "deviceauth@docker",
+            "deviceauthMgmt@docker",
+            "oldDeviceInventory@docker",
+        ]
+    else:
+        rnames = routers[:]
+
+    for _ in redo.retrier(attempts=5, sleeptime=10):
+        try:
+            r = requests.get("http://{}:8080/api/http/routers".format(gateway_host))
+            assert r.status_code == 200
+
+            cur_routers = [x["name"] for x in r.json()]
+
+            if set(cur_routers).issuperset(set(rnames)):
+                break
+        except requests.exceptions.ConnectionError as ex:
+            print("connection error while waiting for routers - but that's ok")
+    else:
+        assert False, "timeout hit waiting for traefik routers {}".format(rnames)

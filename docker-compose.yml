@@ -73,7 +73,7 @@ services:
             # errorhandling 
             - traefik.http.middlewares.json-error-responder1.errors.service=error-responder
             - traefik.http.middlewares.json-error-responder1.errors.query=/{status}.json
-            - traefik.http.middlewares.json-error-responder1.errors.status=400-404
+            - traefik.http.middlewares.json-error-responder1.errors.status=401-404
             - traefik.http.middlewares.json-error-responder2.errors.service=error-responder
             - traefik.http.middlewares.json-error-responder2.errors.query=/{status}.json
             - traefik.http.middlewares.json-error-responder2.errors.status=500-504

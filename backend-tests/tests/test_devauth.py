@@ -17,6 +17,8 @@ import time
 import base64
 import json
 import uuid
+import redo
+import requests
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
@@ -1411,6 +1413,8 @@ class TestDefaultTenantTokenEnterprise(object):
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
+        wait_for_traefik(routers=["deviceauth@docker"])
+
         # Retrieve user token for management API
         r = self.uc.call(
             "POST",
@@ -1450,6 +1454,8 @@ class TestDefaultTenantTokenEnterprise(object):
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        wait_for_traefik(routers=["deviceauth@docker"])
 
         # Get default user token for management api
         r = self.uc.call(
@@ -1508,6 +1514,8 @@ class TestDefaultTenantTokenEnterprise(object):
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        wait_for_traefik(routers=["deviceauth@docker"])
 
         # Get default user auth token for management api
         r = self.uc.call(
@@ -1693,3 +1701,16 @@ class TestAuthReqEnterprise(TestAuthReqBase):
         for tenant in tenants_with_plans:
             user = tenant.users[0]
             self.do_test_submit_accept(user, tenant)
+
+def wait_for_traefik(routers=[]):
+    """ Useful for service restart scenarios - wait until provided routers are (re-)installed."""
+    for _ in redo.retrier(attempts=5, sleeptime=1):
+        r = requests.get("http://mender-api-gateway:8080/api/http/routers")
+        assert r.status_code == 200
+
+        cur_routers = [x["name"] for x in r.json()]
+
+        if set(cur_routers).issuperset(set(routers)):
+            break
+    else:
+        assert False, "timeout hit waiting for traefik routers {}".format(routers)

@@ -17,6 +17,7 @@ import time
 import base64
 import json
 import uuid
+import requests
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
@@ -39,6 +40,7 @@ from testutils.common import (
     create_authset,
     get_device_by_id_data,
     change_authset_status,
+    wait_for_traefik
 )
 
 
@@ -1411,6 +1413,8 @@ class TestDefaultTenantTokenEnterprise(object):
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
+        wait_for_traefik("mender-api-gateway")
+
         # Retrieve user token for management API
         r = self.uc.call(
             "POST",
@@ -1450,6 +1454,8 @@ class TestDefaultTenantTokenEnterprise(object):
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        wait_for_traefik("mender-api-gateway")
 
         # Get default user token for management api
         r = self.uc.call(
@@ -1508,6 +1514,8 @@ class TestDefaultTenantTokenEnterprise(object):
         # Restart the deviceauth service with the new token belonging to `default-tenant`
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
+
+        wait_for_traefik("mender-api-gateway")
 
         # Get default user auth token for management api
         r = self.uc.call(

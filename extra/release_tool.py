@@ -1678,7 +1678,10 @@ def trigger_gitlab_build(params, extra_buildparams):
         )
 
         if reply.status_code < 200 or reply.status_code >= 300:
-            print("Request returned: %d: %s" % (reply.status_code, reply.reason))
+            print(
+                "Request returned: %d: %s\n%s"
+                % (reply.status_code, reply.reason, reply.content.decode("latin-1"))
+            )
         else:
             print("Build started.")
             print("Link: %s" % reply.json().get("web_url"))

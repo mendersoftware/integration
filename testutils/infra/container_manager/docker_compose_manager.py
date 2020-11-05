@@ -91,8 +91,8 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 11
-    NUM_SERVICES_ENTERPRISE = 13
+    NUM_SERVICES_OPENSOURCE = 10
+    NUM_SERVICES_ENTERPRISE = 12
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)

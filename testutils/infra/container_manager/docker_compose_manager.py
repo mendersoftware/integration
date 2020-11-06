@@ -109,7 +109,12 @@ class DockerComposeNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "docker-compose -p %s %s %s" % (self.name, files_args, arg_list)
+        cmd = "MENDER_TESTPREFIX=%s docker-compose -p %s %s %s" % (
+            self.name,
+            self.name,
+            files_args,
+            arg_list,
+        )
 
         logger.info("running with: %s" % cmd)
 

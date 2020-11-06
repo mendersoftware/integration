@@ -19,6 +19,7 @@ services:
             - "traefik.http.routers.minio.rule=Host(`s3.docker.mender.io`)||PathPrefix(`/mender-artifact-storage`)"
             - "traefik.http.routers.minio.tls=true"
             - "traefik.http.services.minio.loadbalancer.server.port=9000"
+            - mender.testprefix=${MENDER_TESTPREFIX}
         command: server /export
 
     #

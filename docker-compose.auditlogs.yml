@@ -22,6 +22,7 @@ services:
             - traefik.http.routers.auditlogs.tls=true
             - traefik.http.routers.auditlogs.service=auditlogs
             - traefik.http.services.auditlogs.loadbalancer.server.port=8080
+            - mender.testprefix=${MENDER_TESTPREFIX}
 
     mender-api-gateway:
         environment:

@@ -19,12 +19,13 @@ services:
             - 80:80
             - 443:443
             - 8080:8080
-        command: 
+        command:
             - --api.dashboard=true
             - --api.insecure=true
             - --accesslog=true
             - --log.level=DEBUG
             - --providers.file.filename=/config/tls.toml
+            - --providers.docker.constraints=Label(`mender.testprefix`,`${MENDER_TESTPREFIX}`)
             - --providers.docker=true
             - --providers.docker.exposedbydefault=false
             - --entrypoints.http.address=:80

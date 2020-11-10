@@ -25,6 +25,11 @@ services:
     #
     # mender-deployments depends on minio if minio is in use
     #
+    mender-api-gateway:
+        depends_on:
+            minio:
+                condition: service_healthy
+
     mender-deployments:
         depends_on:
             minio:

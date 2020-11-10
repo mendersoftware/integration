@@ -58,7 +58,6 @@ services:
             DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io
         depends_on:
             - mender-mongo
-            - minio
 
     minio:
         networks:

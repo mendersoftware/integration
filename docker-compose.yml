@@ -24,6 +24,14 @@ services:
             - traefik.http.routers.deploymentsMgmt.tls=true
             - traefik.http.routers.deploymentsMgmt.service=deploymentsMgmt
             - traefik.http.services.deploymentsMgmt.loadbalancer.server.port=8080
+            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
+            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.port=8080
+            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.interval=5s
+            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.timeout=3s
+            - traefik.http.services.deployments.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
+            - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
+            - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
+            - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=3s
             - mender.testprefix=${MENDER_TESTPREFIX}
         networks:
             - mender
@@ -123,7 +131,6 @@ services:
         # these servers and exits with 'upstream server not found'
         depends_on:
             - mender-device-auth
-            - mender-deployments
             - mender-gui
             - mender-useradm
             - mender-inventory

@@ -224,11 +224,12 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-qa": "MENDER_QA_REV",
     "auditlogs": "AUDITLOGS_REV",
     "mtls-ambassador": "MTLS_AMBASSADOR_REV",
+    "deviceconnect": "DEVICECONNECT_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
-BACKEND_SERVICES_OPEN = {"deviceauth", "create-artifact-worker"}
+BACKEND_SERVICES_OPEN = {"deviceauth", "deviceconnect", "create-artifact-worker"}
 BACKEND_SERVICES_ENT = {
     "tenantadm",
     "deployments-enterprise",

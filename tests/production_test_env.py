@@ -49,7 +49,7 @@ def fill_production_template():
         shell=True,
     )
     subprocess.check_output(
-        "sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost:9000|' ../production-testing-env.yml",
+        "sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost|' ../production-testing-env.yml",
         shell=True,
     )
     subprocess.check_output(

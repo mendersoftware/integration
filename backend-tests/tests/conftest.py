@@ -15,8 +15,11 @@ import urllib3
 import pytest
 
 from requests.packages import urllib3
+from testutils.common import wait_for_traefik
 
 urllib3.disable_warnings()
 
 # See https://docs.pytest.org/en/latest/writing_plugins.html#assertion-rewriting
 pytest.register_assert_rewrite("testutils")
+
+wait_for_traefik("mender-api-gateway")

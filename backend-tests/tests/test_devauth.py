@@ -1546,7 +1546,6 @@ class TestDefaultTenantTokenEnterprise(object):
             create_random_authset(
                 self.devauthd, self.devauthm, tenant1_utoken, "mumbojumbotoken"
             )
-        assert "assert 0 == 1" in str(e.value)
 
         # Double check that it is not added to tenant1
         r = self.devauthm.with_auth(tenant1_utoken).call(

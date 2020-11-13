@@ -200,7 +200,7 @@ def get_device_by_id_data(dauthm, id_data, utoken):
         if len(api_devs) == 0:
             break
 
-    assert len(found) == 1
+    assert len(found) == 1, "device not found by id data"
 
     return found[0]
 

@@ -232,12 +232,12 @@ class TestBasicIntegration(MenderTesting):
         mender_device.run("mender -send-inventory")
         logger.info("mender client has forced an inventory update")
 
-        # Give the client some time to send the inventory.
-        time.sleep(5)
+        for i in range(10):
+            # Check that the updated inventory value is now present.
+            invJSON = inv.get_devices()
+            for element in invJSON[0]["attributes"]:
+                if element["name"] == "host" and element["value"] == "foobar":
+                    return
+            time.sleep(10)
 
-        # Check that the updated inventory value is now present.
-        invJSON = inv.get_devices()
-        for element in invJSON[0]["attributes"]:
-            if element["name"] == "host" and element["value"] == "foobar":
-                return
         pytest.fail("The inventory was not updated")

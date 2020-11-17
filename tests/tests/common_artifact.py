@@ -18,9 +18,7 @@ import tempfile
 from ..MenderAPI import logger
 
 
-def get_script_artifact(
-    script, artifact_name, device_type, output_path, extra_args=None
-):
+def get_script_artifact(script, artifact_name, device_type, output_path):
     with tempfile.NamedTemporaryFile(suffix="testdeployment") as tf:
         tf.write(script)
         tf.seek(0)
@@ -29,9 +27,6 @@ def get_script_artifact(
         script_path = tf.name
 
         cmd = f"mender-artifact write module-image -T script -n {artifact_name} -t {device_type} -o {output_path} -f {script_path}"
-        if extra_args is not None:
-            cmd += f" {extra_args}"
-
         logger.info(f"Executing command: {cmd}")
         subprocess.check_call(cmd, shell=True)
 

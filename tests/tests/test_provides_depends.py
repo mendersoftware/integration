@@ -53,7 +53,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
         def prepare_provides_artifact(artifact_file, artifact_id):
             cmd = (
                 # Package tests folder in the artifact, just a random folder.
-                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --provides rootfs-image.directory.foo:bar"
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --provides foo:bar"
                 % (artifact_file, artifact_id)
             )
             logger.info("Executing: " + cmd)
@@ -74,7 +74,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
         def prepare_depends_artifact(artifact_file, artifact_id):
             cmd = (
                 # Package tests folder in the artifact, just a random folder.
-                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --depends rootfs-image.directory.foo:bar"
+                "directory-artifact-gen -o %s -n %s -t docker-client -d /tmp/test_file_update_module tests -- --depends foo:bar"
                 % (artifact_file, artifact_id)
             )
             logger.info("Executing: " + cmd)

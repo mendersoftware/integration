@@ -14,10 +14,10 @@ services:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise:feature-deviceconnect
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:feature-deviceconnect
 
     mender-tenantadm:
         image: registry.mender.io/mendersoftware/tenantadm:master

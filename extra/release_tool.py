@@ -225,6 +225,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "auditlogs": "AUDITLOGS_REV",
     "mtls-ambassador": "MTLS_AMBASSADOR_REV",
     "deviceconnect": "DEVICECONNECT_REV",
+    "mender-shell": "MENDER_SHELL_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -1679,7 +1680,10 @@ def trigger_gitlab_build(params, extra_buildparams):
         )
 
         if reply.status_code < 200 or reply.status_code >= 300:
-            print("Request returned: %d: %s" % (reply.status_code, reply.reason))
+            print(
+                "Request returned: %d: %s\n%s"
+                % (reply.status_code, reply.reason, reply.content.decode("latin-1"))
+            )
         else:
             print("Build started.")
             print("Link: %s" % reply.json().get("web_url"))
@@ -2610,6 +2614,8 @@ def do_integration_versions_including(args):
     ]
     if args.all:
         git_query += ["refs/heads/**"]
+    if args.feature_branches:
+        git_query += ["refs/remotes/%s/feature-*" % remote]
     output = execute_git(None, git_dir, git_query, capture=True)
     candidates = []
     for line in output.strip().split("\n"):
@@ -3073,6 +3079,12 @@ def main():
         metavar="SERVICE",
         help="Find version(s) of integration repository that contain the given version of SERVICE, "
         + " where version is given with --version. Returned as a newline separated list",
+    )
+    parser.add_argument(
+        "--feature-branches",
+        action="store_true",
+        default=False,
+        help="When used with -f, include upstream feature branches",
     )
     parser.add_argument(
         "-v",

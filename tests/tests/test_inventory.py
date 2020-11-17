@@ -13,39 +13,82 @@
 #    limitations under the License.
 
 import json
+import tempfile
 import time
 
 import pytest
 
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
-from ..MenderAPI import devauth, inv, logger
+from ..MenderAPI import deploy, devauth, inv, logger
+from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
+
+
+def make_script_artifact(artifact_name, device_type, output_path, extra_args):
+    script = b"""\
+#!/bin/bash
+exit 0
+"""
+    return get_script_artifact(
+        script, artifact_name, device_type, output_path, extra_args
+    )
 
 
 @pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
 class TestInventory(MenderTesting):
     @MenderTesting.fast
     def test_inventory(self):
-        """Test that device reports inventory after having bootstrapped."""
+        """
+        Test that device reports inventory after having bootstrapped and performed
+        an application update using a dummy script artifact.
+        """
 
-        attempts = 10
+        def deploy_simple_artifact(artifact_name, extra_args):
+            # create a simple artifact (script) which doesn't do anything
+            with tempfile.NamedTemporaryFile() as tf:
+                artifact = make_script_artifact(
+                    artifact_name,
+                    conftest.machine_name,
+                    tf.name,
+                    extra_args=extra_args,
+                )
+                deploy.upload_image(artifact)
 
-        while True:
-            attempts = attempts - 1
+            # deploy the artifact above
+            device_ids = [device["id"] for device in devauth.get_devices()]
+            deployment_id = deploy.trigger_deployment(
+                artifact_name, artifact_name=artifact_name, devices=device_ids,
+            )
+
+            # now just wait for the update to succeed
+            deploy.check_expected_statistics(deployment_id, "success", 1)
+            deploy.check_expected_status("finished", deployment_id)
+
+        deploy_simple_artifact(
+            "simple-artifact-1",
+            "--software-name swname --software-version v1"
+            + " --provides rootfs-image.swname.custom_field:value"
+            + " --provides rootfs-image.custom_field:value",
+        )
+        deploy_simple_artifact(
+            "simple-artifact-2", "--software-name swname --software-version v2"
+        )
+
+        # verify the inventory
+        latest_exception = None
+        for _ in range(10):
             try:
                 inv_json = inv.get_devices()
-                auth_json = devauth.get_devices()
-
-                auth_ids = [device["id"] for device in auth_json]
-
                 assert len(inv_json) > 0
+
+                auth_json = devauth.get_devices()
+                auth_ids = [device["id"] for device in auth_json]
 
                 for device in inv_json:
                     try:
                         # Check that authentication and inventory agree.
                         assert device["id"] in auth_ids
-
                         attrs = device["attributes"]
 
                         # Extract name and value only, to make tests more resilient
@@ -83,6 +126,29 @@ class TestInventory(MenderTesting):
                             json.loads(
                                 '{"name": "device_type", "value": "%s"}'
                                 % conftest.machine_name
+                            )
+                            in attrs
+                        )
+                        # Should be in inventory because it comes with artifact.
+                        assert (
+                            json.loads(
+                                '{"name": "rootfs-image.swname.version", "value": "v2"}'
+                            )
+                            in attrs
+                        )
+                        # Should not be in inventory because the default is to
+                        # clear inventory attributes in the same namespace.
+                        assert (
+                            json.loads(
+                                '{"name": "rootfs-image.swname.custom_field", "value": "value"}'
+                            )
+                            not in attrs
+                        )
+                        # Should be in inventory because the default is to keep
+                        # inventory attributes in different namespaces.
+                        assert (
+                            json.loads(
+                                '{"name": "rootfs-image.custom_field", "value": "value"}'
                             )
                             in attrs
                         )
@@ -127,17 +193,12 @@ class TestInventory(MenderTesting):
                                 assert any([subkey in keys for subkey in key])
                             else:
                                 assert key in keys
-
                     except:
                         logger.info("Exception caught, 'device' json: %s" % device)
                         raise
-                break
-
-            except:
-                # This may pass only after the client has had some time to
-                # report.
-                if attempts > 0:
-                    time.sleep(5)
-                    continue
-                else:
-                    raise
+            except Exception as e:
+                latest_exception = e
+                time.sleep(5)
+            else:
+                return
+        raise latest_exception

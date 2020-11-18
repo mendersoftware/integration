@@ -14,7 +14,7 @@ services:
         image: mendersoftware/gui:master
 
     mender-api-gateway:
-        image: mendersoftware/api-gateway:master
+        image: mendersoftware/api-gateway:feature-deviceconnect
 
     mender-device-auth:
         image: mendersoftware/deviceauth:feature-deviceconnect

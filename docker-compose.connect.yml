@@ -4,7 +4,7 @@ services:
   # mender-deviceconnect
   #
   mender-deviceconnect:
-    image: mendersoftware/deviceconnect:mender-master
+    image: mendersoftware/deviceconnect:saas-v2020.11.19
     command: server --automigrate
     extends:
       file: common.yml

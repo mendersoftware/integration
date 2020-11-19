@@ -5,7 +5,7 @@ services:
     # auditlogs
     #
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:staging
+        image: registry.mender.io/mendersoftware/auditlogs:saas-v2020.11.19
         networks:
             - mender
         depends_on:

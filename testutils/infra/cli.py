@@ -155,6 +155,17 @@ class CliDeviceauth(BaseCli):
         self.container_manager.cmd(self.cid, "stop")
         self.container_manager.cmd(self.cid, "start")
 
+    def propagate_inventory_statuses(self, tenant_id=None):
+        if isK8S():
+            return
+
+        cmd = ["usr/bin/deviceauth", "propagate-inventory-statuses"]
+
+        if tenant_id is not None:
+            cmd.extend(["--tenant_id", tenant_id])
+
+        self.container_manager.execute(self.cid, cmd)
+
 
 class CliDeployments(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):

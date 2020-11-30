@@ -1693,3 +1693,49 @@ class TestAuthReqEnterprise(TestAuthReqBase):
         for tenant in tenants_with_plans:
             user = tenant.users[0]
             self.do_test_submit_accept(user, tenant)
+
+
+class TestDevAuthCliBase:
+    def do_test_propagate_statuses(self, user, tenant=None):
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        uadm = ApiClient(useradm.URL_MGMT)
+
+        tenant_token = ""
+        if tenant is not None:
+            tenant_token = tenant.tenant_token
+
+        dev = {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()}
+
+        r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        body, sighdr = deviceauth.auth_req(
+            dev["id_data"], dev["keypair"][1], dev["keypair"][0], tenant_token,
+        )
+
+        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+
+        assert r.status_code == 401
+
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        assert r.status_code == 200
+
+        api_devs = r.json()
+        assert len(api_devs) == 1
+
+        deviceauth_cli = CliDeviceauth()
+        deviceauth_cli.propagate_inventory_statuses()
+
+
+class TestDevAuthCli(TestDevAuthCliBase):
+    def test_propagate_statuses(self, user):
+        self.do_test_propagate_statuses(user)
+
+
+class TestDevAuthCliEnterprise(TestDevAuthCliBase):
+    def do_test_propagate_statuses(self, tenants_with_plans):
+        for tenant in tenants_with_plans:
+            user = tenant.users[0]
+            self.do_test_propagate_statuses(user, tenant)

@@ -2848,6 +2848,7 @@ def do_hosted_release(version=None):
     state["version"] = version
 
     # Client components will not change
+    non_backend_versions = {}
     for non_backend_comp in Component.get_components_of_type(
         "git", only_independent_component=True
     ):

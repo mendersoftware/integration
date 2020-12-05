@@ -22,3 +22,6 @@ services:
     networks:
       - mender
 
+    mender-workflows-worker:
+        environment:
+            HAVE_DEVICECONNECT: 1

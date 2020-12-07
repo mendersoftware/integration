@@ -6,5 +6,5 @@ pytest-html==3.0.0
 pyzbar==0.1.8
 pyotp==2.4.1
 pillow==8.0.1
-stripe==2.55.0
+stripe==2.55.1
 redo==2.0.4

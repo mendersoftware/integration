@@ -132,7 +132,12 @@ class Component:
         raise KeyError("Component '%s' not found" % name)
 
     @staticmethod
-    def get_components_of_type(type, only_release=None, only_non_release=False):
+    def get_components_of_type(
+        type,
+        only_release=None,
+        only_non_release=False,
+        only_independent_component=False,
+    ):
         Component._initialize_component_maps()
         if only_release is None:
             if only_non_release:
@@ -143,6 +148,9 @@ class Component:
             raise Exception("only_release and only_non_release can't both be true")
         components = []
         for comp in Component.COMPONENT_MAPS[type]:
+            if only_independent_component:
+                if not Component(comp, type).is_independent_component():
+                    continue
             if Component.COMPONENT_MAPS[type][comp]["release_component"]:
                 if only_non_release:
                     continue
@@ -2841,11 +2849,14 @@ def do_hosted_release(version=None):
 
     # Client components will not change
     non_backend_versions = {}
-    for non_backend_repo in ["mender", "mender-artifact", "mender-cli"]:
-        comp = Component.get_component_of_type("git", non_backend_repo)
-        yml_component = comp.yml_components()[0]
+    for non_backend_comp in Component.get_components_of_type(
+        "git", only_independent_component=True
+    ):
+        if non_backend_comp.git() == "integration":
+            continue
+        yml_component = non_backend_comp.yml_components()[0]
 
-        non_backend_versions[non_backend_repo] = version_of(
+        non_backend_versions[non_backend_comp.git()] = version_of(
             integration_dir(), yml_component
         )
 

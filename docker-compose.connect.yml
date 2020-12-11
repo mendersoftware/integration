@@ -26,6 +26,7 @@ services:
     mender-workflows-worker:
         environment:
             DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
+            HAVE_DEVICECONNECT: 1
 
     mender-api-gateway:
         environment:

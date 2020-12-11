@@ -3,6 +3,6 @@ services:
 
     mender-client:
         # Needs to be built in mender client's test directory.
-        image: mendersoftware/mender-client-docker:feature-client_auth_api
+        image: mendersoftware/mender-client-docker:master
         networks:
             - mender

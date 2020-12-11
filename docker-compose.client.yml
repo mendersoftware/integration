@@ -5,7 +5,7 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:feature-client_auth_api
+        image: mendersoftware/mender-client-qemu:master
         networks:
             - mender
         stdin_open: true

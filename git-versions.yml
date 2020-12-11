@@ -14,10 +14,10 @@ services:
         image: mendersoftware/gui:master
 
     mender-api-gateway:
-        image: mendersoftware/api-gateway:feature-deviceconnect
+        image: mendersoftware/api-gateway:master
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:feature-deviceconnect
+        image: mendersoftware/deviceauth:master
 
     mender-inventory:
         image: mendersoftware/inventory:master
@@ -29,10 +29,10 @@ services:
         image: mendersoftware/deviceconnect:master
 
     mender-workflows-server:
-        image: mendersoftware/workflows:feature-deviceconnect
+        image: mendersoftware/workflows:master
 
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:feature-deviceconnect
+        image: mendersoftware/workflows-worker:master
 
     mender-create-artifact-worker:
         image: mendersoftware/create-artifact-worker:master

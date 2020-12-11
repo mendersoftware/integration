@@ -18,7 +18,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:feature-deviceconnect
+        image: mendersoftware/gui:mender-master
         extends:
             file: common.yml
             service: mender-base
@@ -35,7 +35,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: mendersoftware/api-gateway:feature-deviceconnect
+        image: mendersoftware/api-gateway:master
         extends:
             file: common.yml
             service: mender-base
@@ -54,7 +54,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:feature-deviceconnect
+        image: mendersoftware/deviceauth:mender-master
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -96,7 +96,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server:
-        image: mendersoftware/workflows:feature-deviceconnect
+        image: mendersoftware/workflows:mender-master
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -111,7 +111,7 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:feature-deviceconnect
+        image: mendersoftware/workflows-worker:mender-master
         command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017

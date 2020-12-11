@@ -112,7 +112,6 @@ class Authentication:
                 time.sleep(1)
             assert r.status_code == 200
 
-        logger.info("Using Authorization headers: " + str(r.text))
         return self.auth_header
 
     def create_user(self, username, password, tenant_id=""):
@@ -137,6 +136,7 @@ class Authentication:
 
         if r.status_code == 200:
             self.auth_header = {"Authorization": "Bearer " + str(r.text)}
+        logger.info("Using Authorization headers: " + str(r.text))
         return r
 
     def _create_org(self, name, username, password, plan="os"):

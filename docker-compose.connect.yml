@@ -14,6 +14,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - mender-nats
         environment:
             DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
             DEVICECONNECT_NATS_URL: "nats://mender-nats"

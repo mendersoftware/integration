@@ -1,0 +1,38 @@
+version: '2.1'
+services:
+
+    #
+    # storage-proxy
+    #
+    storage-proxy:
+        ports:
+            - "9000:9000"
+        networks:
+            mender:
+                aliases:
+                    - s3.docker.mender.io
+        volumes:
+            - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
+            - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
+            - ./storage-proxy/nginx.conf.demo:/usr/local/openresty/nginx/conf/nginx.conf
+        labels:
+            - traefik.enable=false
+            - mender.testprefix=${MENDER_TESTPREFIX}
+
+    #                  
+    # mender-api-gateway
+    #
+    mender-api-gateway:
+        # steal the 's3' alias from the gateway by simply overwriting aliases
+        # now storage-proxy owns this domain
+        networks:
+            mender:
+                aliases:
+                    - docker.mender.io
+
+    #
+    # mender-deployments
+    # 
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000

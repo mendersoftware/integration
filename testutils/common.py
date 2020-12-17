@@ -332,13 +332,13 @@ def wait_for_traefik(gateway_host, routers=[]):
             "minio@docker",
             "deviceauth@docker",
             "deviceauthMgmt@docker",
-            "newInventory@docker",
-            "oldInventory@docker",
+            "inventoryMgmt@docker",
+            "inventoryMgmtV1@docker",
             "useradm@docker",
             "useradmLogin@docker",
             "deviceauth@docker",
             "deviceauthMgmt@docker",
-            "oldDeviceInventory@docker",
+            "inventoryV1@docker",
         ]
     else:
         rnames = routers[:]

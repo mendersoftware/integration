@@ -178,30 +178,30 @@ services:
             service: mender-base
         labels:
             - traefik.enable=true
-            - traefik.http.routers.newInventory.entrypoints=https
-            - traefik.http.routers.newInventory.rule=PathPrefix(`/api/management/v2/inventory`)
-            - traefik.http.routers.newInventory.service=newInventory
-            - traefik.http.routers.newInventory.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.newInventory.tls=true
-            - traefik.http.services.newInventory.loadbalancer.server.port=8080
+            - traefik.http.routers.inventoryMgmt.entrypoints=https
+            - traefik.http.routers.inventoryMgmt.rule=PathPrefix(`/api/management/v2/inventory`)
+            - traefik.http.routers.inventoryMgmt.service=inventoryMgmt
+            - traefik.http.routers.inventoryMgmt.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryMgmt.tls=true
+            - traefik.http.services.inventoryMgmt.loadbalancer.server.port=8080
 
-            - traefik.http.middlewares.oldInventory-replacepathregex.replacepathregex.regex=^/api/management/v1/inventory/(.*)
-            - traefik.http.middlewares.oldInventory-replacepathregex.replacepathregex.replacement=/api/0.1.0/$$1
-            - traefik.http.routers.oldInventory.entrypoints=https
-            - traefik.http.routers.oldInventory.middlewares=userauth,oldInventory-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.oldInventory.rule=PathPrefix(`/api/management/v1/inventory`)
-            - traefik.http.routers.oldInventory.service=oldInventory
-            - traefik.http.routers.oldInventory.tls=true
-            - traefik.http.services.oldInventory.loadbalancer.server.port=8080
+            - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.regex=^/api/management/v1/inventory/(.*)
+            - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/$$1
+            - traefik.http.routers.inventoryMgmtV1.entrypoints=https
+            - traefik.http.routers.inventoryMgmtV1.middlewares=userauth,inventoryMgmtV1-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryMgmtV1.rule=PathPrefix(`/api/management/v1/inventory`)
+            - traefik.http.routers.inventoryMgmtV1.service=inventoryMgmtV1
+            - traefik.http.routers.inventoryMgmtV1.tls=true
+            - traefik.http.services.inventoryMgmtV1.loadbalancer.server.port=8080
 
-            - traefik.http.middlewares.oldDeviceInventory-replacepathregex.replacepathregex.regex=^/api/devices/v1/inventory/(.*)
-            - traefik.http.middlewares.oldDeviceInventory-replacepathregex.replacepathregex.replacement=/api/0.1.0/attributes
-            - traefik.http.routers.oldDeviceInventory.entrypoints=https
-            - traefik.http.routers.oldDeviceInventory.middlewares=devauth,oldDeviceInventory-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.oldDeviceInventory.rule=PathPrefix(`/api/devices/v1/inventory`)
-            - traefik.http.routers.oldDeviceInventory.service=oldDeviceInventory
-            - traefik.http.routers.oldDeviceInventory.tls=true
-            - traefik.http.services.oldDeviceInventory.loadbalancer.server.port=8080
+            - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.regex=^/api/devices/v1/inventory/(.*)
+            - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/attributes
+            - traefik.http.routers.inventoryV1.entrypoints=https
+            - traefik.http.routers.inventoryV1.middlewares=devauth,inventoryV1-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryV1.rule=PathPrefix(`/api/devices/v1/inventory`)
+            - traefik.http.routers.inventoryV1.service=inventoryV1
+            - traefik.http.routers.inventoryV1.tls=true
+            - traefik.http.services.inventoryV1.loadbalancer.server.port=8080
             - mender.testprefix=${MENDER_TESTPREFIX}
         networks:
             - mender

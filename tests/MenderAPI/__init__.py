@@ -32,14 +32,16 @@ def get_container_manager():
     return container_manager
 
 
+from .artifacts import Artifacts
 from .authentication import Authentication
 from .deployments import Deployments
-from .artifacts import Artifacts
-from .inventory import Inventory
 from .devauth import DeviceAuthV2
+from .deviceconnect import DeviceConnect
+from .inventory import Inventory
 
 auth = Authentication()
 devauth = DeviceAuthV2(auth)
+devconnect = DeviceConnect(auth, devauth)
 deploy = Deployments(auth, devauth)
 image = Artifacts()
 inv = Inventory(auth)
@@ -49,6 +51,7 @@ inv = Inventory(auth)
 def reset_mender_api(manager=None):
     auth.reset()
     devauth.reset()
+    devconnect.reset()
     deploy.reset()
     image.reset()
     inv.reset()

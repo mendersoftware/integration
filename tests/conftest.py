@@ -139,10 +139,7 @@ def pytest_exception_interact(node, call, report):
             for service in [device.get_client_service_name(), "mender-shell"]:
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)
-                    output = device.run(
-                        "journalctl -u %s || true" % service,
-                        wait=60,
-                    )
+                    output = device.run("journalctl -u %s || true" % service, wait=60,)
                     logger.info(output)
                 except:
                     logger.info("Not able to print %s systemd log" % service)

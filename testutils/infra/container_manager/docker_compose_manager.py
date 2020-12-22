@@ -37,6 +37,7 @@ class DockerComposeNamespace(DockerNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
     ]
     QEMU_CLIENT_FILES = [
@@ -91,8 +92,8 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 11
-    NUM_SERVICES_ENTERPRISE = 13
+    NUM_SERVICES_OPENSOURCE = 12
+    NUM_SERVICES_ENTERPRISE = 14
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
@@ -276,6 +277,11 @@ class DockerComposeNamespace(DockerNamespace):
             )
 
         return gateway[0]
+
+    def restart_service(self, service):
+        """Restarts a service."""
+        self._docker_compose_cmd("scale %s=0" % service)
+        self._docker_compose_cmd("scale %s=1" % service)
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):

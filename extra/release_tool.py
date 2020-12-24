@@ -233,7 +233,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "auditlogs": "AUDITLOGS_REV",
     "mtls-ambassador": "MTLS_AMBASSADOR_REV",
     "deviceconnect": "DEVICECONNECT_REV",
-    "mender-shell": "MENDER_SHELL_REV",
+    "mender-connect": "MENDER_CONNECT_REV",
 }
 
 # categorize backend services wrt open/enterprise versions

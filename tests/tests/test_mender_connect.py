@@ -27,7 +27,7 @@ if WRONG_BEHAVIOR:
     logger.addHandler(logging.StreamHandler())
 
 
-class TestMenderShell:
+class TestMenderConnect:
     def test_regular_protocol_commands(
         self, class_persistent_standard_setup_one_client_bootstrapped
     ):
@@ -36,9 +36,9 @@ class TestMenderShell:
         if WRONG_BEHAVIOR:
             # MEN-4273.
             device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-shell.conf"""
+                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
             )
-            device.run("systemctl restart mender-shell")
+            device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Start shell.
@@ -74,9 +74,9 @@ class TestMenderShell:
             body = shell.stopShell()
             assert body is None
 
-            # Repeat stopping should be no-op.
+            # Repeat stopping and verify the error
             body = shell.stopShell()
-            assert body is None
+            assert b"session not found" in body, body
 
             # Make sure we can not send anything to the shell.
             shell.sendInput("ls /\n".encode())
@@ -84,7 +84,7 @@ class TestMenderShell:
             output = output.decode()
             assert "usr" not in output
             assert "etc" not in output
-            assert False, "TODO: Check for error here."
+            assert "session not found" in output, output
 
             # Start it again.
             shell.startShell()
@@ -107,24 +107,24 @@ class TestMenderShell:
         if WRONG_BEHAVIOR:
             # MEN-4273.
             device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-shell.conf"""
+                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
             )
-            device.run("systemctl restart mender-shell")
+            device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-        # Test that mender-shell recovers if it initially has no DBus
+        # Test that mender-connect recovers if it initially has no DBus
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
         device.run("systemctl --job-mode=ignore-dependencies stop mender-client")
-        device.run("systemctl --job-mode=ignore-dependencies restart mender-shell")
+        device.run("systemctl --job-mode=ignore-dependencies restart mender-connect")
 
         time.sleep(10)
 
-        # At this point, mender-shell will already have queried DBus.
+        # At this point, mender-connect will already have queried DBus.
         device.run("systemctl --job-mode=ignore-dependencies start mender-client")
 
         with devconnect.get_websocket() as ws:
@@ -139,15 +139,15 @@ class TestMenderShell:
         if WRONG_BEHAVIOR:
             # MEN-4273.
             device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-shell.conf"""
+                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
             )
-            device.run("systemctl restart mender-shell")
+            device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-        # Test that mender-shell recovers if it loses the connection to deviceconnect.
+        # Test that mender-connect recovers if it loses the connection to deviceconnect.
         class_persistent_standard_setup_one_client_bootstrapped.restart_service(
             "mender-deviceconnect"
         )

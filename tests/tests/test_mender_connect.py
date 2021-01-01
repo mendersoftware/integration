@@ -17,14 +17,12 @@ import pytest
 import time
 
 from testutils.api import proto_shell
-from testutils.api.proto_shell import WRONG_BEHAVIOR
 from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
 from ..MenderAPI import devconnect
 
-if WRONG_BEHAVIOR:
-    logger = logging.getLogger("websockets")
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(logging.StreamHandler())
+logger = logging.getLogger("websockets")
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler())
 
 
 class TestMenderConnect:
@@ -33,12 +31,10 @@ class TestMenderConnect:
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
 
-        if WRONG_BEHAVIOR:
-            # MEN-4273.
-            device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-            )
-            device.run("systemctl restart mender-connect")
+        device.run(
+            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
+        )
+        device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Start shell.
@@ -61,7 +57,9 @@ class TestMenderConnect:
 
             # Make sure we do not get any new output, it should be the same shell as before.
             output = shell.recvOutput()
-            assert output == b"", "Unexpected output received when relauncing already launched shell."
+            assert (
+                output == b""
+            ), "Unexpected output received when relauncing already launched shell."
 
             # Test if a simple command works.
             shell.sendInput("ls /\n".encode())
@@ -89,27 +87,23 @@ class TestMenderConnect:
             # Start it again.
             shell.startShell()
 
-            if not WRONG_BEHAVIOR:
-                # Drain any initial output from the prompt. It should end in either "# "
-                # (root) or "$ " (user).
-                # MEN-4240 or MEN-4141, possibly a combination.
-                output = shell.recvOutput()
-                assert output[-2:].decode() in [
-                    "# ",
-                    "$ ",
-                ], "Could not detect shell prompt."
+            # Drain any initial output from the prompt. It should end in either "# "
+            # (root) or "$ " (user).
+            output = shell.recvOutput()
+            assert output[-2:].decode() in [
+                "# ",
+                "$ ",
+            ], "Could not detect shell prompt."
 
     def test_dbus_reconnect(
         self, class_persistent_standard_setup_one_client_bootstrapped
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
 
-        if WRONG_BEHAVIOR:
-            # MEN-4273.
-            device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-            )
-            device.run("systemctl restart mender-connect")
+        device.run(
+            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
+        )
+        device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
@@ -136,12 +130,10 @@ class TestMenderConnect:
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
 
-        if WRONG_BEHAVIOR:
-            # MEN-4273.
-            device.run(
-                """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-            )
-            device.run("systemctl restart mender-connect")
+        device.run(
+            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
+        )
+        device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
@@ -157,8 +149,3 @@ class TestMenderConnect:
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
-
-    def test_wrong_behavior_fixed(self):
-        assert (
-            False
-        ), "This is the failure you SHOULD reach if everything else is passing. Once all occurrences of WRONG_BEHAVIOR have been removed, this test can be removed as well."

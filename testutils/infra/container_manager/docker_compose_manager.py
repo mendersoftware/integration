@@ -145,7 +145,10 @@ class DockerComposeNamespace(DockerNamespace):
                 "docker-compose -p %s %s ps -q" % (self.name, files_args), shell=True
             )
             running_countainers_count = len(out.split())
-            if running_countainers_count == expected_containers:
+            if running_countainers_count in (
+                expected_containers,
+                expected_containers + 1,
+            ):
                 time.sleep(60)
                 return
             else:

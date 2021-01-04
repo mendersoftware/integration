@@ -10,5 +10,5 @@ services:
     mender-cli:
         image: mendersoftware/mender-cli:1.5.0
 
-    mender-shell:
-        image: mendersoftware/mender-shell:master
+    mender-connect:
+        image: mendersoftware/mender-connect:master

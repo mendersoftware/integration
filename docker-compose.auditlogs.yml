@@ -23,3 +23,7 @@ services:
     mender-deployments:
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1
+
+    mender-workflows-worker:
+        environment:
+            HAVE_AUDITLOGS: 1

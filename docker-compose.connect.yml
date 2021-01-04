@@ -1,24 +1,38 @@
 version: '2.1'
 services:
-  #
-  # mender-deviceconnect
-  #
-  mender-deviceconnect:
-    image: mendersoftware/deviceconnect:staging
-    command: server --automigrate
-    extends:
-      file: common.yml
-      service: mender-base
-    networks:
-      - mender
-    depends_on:
-      - mender-mongo
-    environment:
-      DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
-      DEVICECONNECT_NATS_URL: "nats://mender-nats"
 
-  mender-nats:
-    image: nats:2.1-alpine3.11
-    networks:
-      - mender
+    #
+    # mender-deviceconnect
+    #
+    mender-deviceconnect:
+        image: mendersoftware/deviceconnect:mender-master
+        command: server --automigrate
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+            - mender-nats
+        environment:
+            DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
+            DEVICECONNECT_NATS_URL: "nats://mender-nats"
 
+    mender-nats:
+        image: nats:2.1-alpine3.11
+        networks:
+            - mender
+
+    mender-workflows-worker:
+        environment:
+            DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
+            HAVE_DEVICECONNECT: 1
+
+    mender-api-gateway:
+        environment:
+            HAVE_DEVICECONNECT: 1
+
+    mender-gui:
+        environment:
+            HAVE_DEVICECONNECT: 1

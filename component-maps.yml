@@ -171,7 +171,7 @@ git:
     - mender-deviceconnect
     release_component: true
 
-  mender-shell:
+  mender-connect:
     docker_image: []
     docker_container: []
     release_component: true

@@ -56,16 +56,6 @@ parse_args() {
             # Undocumented flag, we use this for internal testing.
             EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_FILES"
             ENTERPRISE=1
-        elif [[ "$1" = "down" ]] || [[ "$1" = "rm" ]] || [[ "$1" = "stop" ]]; then
-            # If the argument is either "down" or "rm", enable the client so that it
-            # gets cleaned up, no matter if `--client` is passed or not.
-            CLIENT=1
-            # Not a flag, so we should break out of the loop.
-            break
-        elif [[ "$1" = "up" ]]; then
-            RUN_UP=1
-            # Not a flag, so we should break out of the loop.
-            break
         else
             break
         fi
@@ -75,6 +65,15 @@ parse_args() {
     local EXTRA_FILES_NEXT=0
     for i in "$@"; do
         case $i in
+            down|rm|stop)
+                # If the argument is either "down" or "rm", enable the client so
+                # that it gets cleaned up, no matter if `--client` is passed or
+                # not.
+                CLIENT=1
+                ;;
+            up)
+                RUN_UP=1
+                ;;
             -f=*|--file=*)
                 EXTRA_FILES="$EXTRA_FILES $i"
                 ;;

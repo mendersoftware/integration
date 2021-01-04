@@ -20,21 +20,12 @@ from testutils.api import proto_shell
 from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
 from ..MenderAPI import devconnect
 
-logger = logging.getLogger("websockets")
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler())
-
 
 class TestMenderConnect:
     def test_regular_protocol_commands(
         self, class_persistent_standard_setup_one_client_bootstrapped
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
-
-        device.run(
-            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-        )
-        device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Start shell.
@@ -100,11 +91,6 @@ class TestMenderConnect:
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
 
-        device.run(
-            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-        )
-        device.run("systemctl restart mender-connect")
-
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
@@ -129,11 +115,6 @@ class TestMenderConnect:
         self, class_persistent_standard_setup_one_client_bootstrapped
     ):
         device = class_persistent_standard_setup_one_client_bootstrapped.device
-
-        device.run(
-            """sed -i -e '2i"SkipVerify": true,' /etc/mender/mender-connect.conf"""
-        )
-        device.run("systemctl restart mender-connect")
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.

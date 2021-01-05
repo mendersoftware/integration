@@ -26,11 +26,11 @@ class ProtoShell:
         self.protomsg = protomsg.ProtoMsg(PROTO_TYPE_SHELL)
         self.ws = ws
 
-    def startShell(self, user="ui-user"):
+    def startShell(self):
         self.protomsg.clear()
 
         self.protomsg.setTyp(MSG_TYPE_SPAWN_SHELL)
-        msg = self.protomsg.encode(user.encode())
+        msg = self.protomsg.encode(b"")
         self.ws.send(msg)
 
         msg = self.ws.recv()
@@ -62,10 +62,10 @@ class ProtoShell:
             return body
         raise RuntimeError("Should never get here")
 
-    def stopShell(self, user="ui-user"):
+    def stopShell(self):
         self.protomsg.clear()
         self.protomsg.setTyp(MSG_TYPE_STOP_SHELL)
-        msg = self.protomsg.encode(user.encode())
+        msg = self.protomsg.encode(b"")
         self.ws.send(msg)
 
         msg = self.ws.recv()

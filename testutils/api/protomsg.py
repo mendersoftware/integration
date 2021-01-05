@@ -14,6 +14,9 @@
 
 import sys
 
+PROP_STATUS_NORMAL = 1
+PROP_STATUS_ERROR = 2
+
 try:
     import msgpack
 except ModuleNotFoundError:

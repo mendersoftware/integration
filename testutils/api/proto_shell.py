@@ -73,5 +73,5 @@ class ProtoShell:
         assert (
             self.protomsg.typ == MSG_TYPE_STOP_SHELL
         ), "Did not receive confirmation that shell was started."
-        self.protomsg.clearAll()
+        self.sid = None
         return body

@@ -16,7 +16,7 @@ import logging
 import pytest
 import time
 
-from testutils.api import proto_shell
+from testutils.api import proto_shell, protomsg
 from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
 from ..MenderAPI import devconnect
 
@@ -31,11 +31,13 @@ class TestMenderConnect:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert body == b"Shell started"
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
             output = shell.recvOutput()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
                 "$ ",
@@ -44,6 +46,7 @@ class TestMenderConnect:
             # Starting the shell again should be a no-op. It should return that
             # it is already started, as long as the shell limit is 1. MEN-4240.
             body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_ERROR
             assert body == b"failed to start shell: shell is already running"
 
             # Make sure we do not get any new output, it should be the same shell as before.
@@ -55,21 +58,25 @@ class TestMenderConnect:
             # Test if a simple command works.
             shell.sendInput("ls /\n".encode())
             output = shell.recvOutput()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             output = output.decode()
             assert "usr" in output
             assert "etc" in output
 
             # Try to stop shell.
             body = shell.stopShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert body is None
 
             # Repeat stopping and verify the error
             body = shell.stopShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_ERROR
             assert b"session not found" in body, body
 
             # Make sure we can not send anything to the shell.
             shell.sendInput("ls /\n".encode())
             output = shell.recvOutput()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_ERROR
             output = output.decode()
             assert "usr" not in output
             assert "etc" not in output
@@ -77,10 +84,12 @@ class TestMenderConnect:
 
             # Start it again.
             shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
             output = shell.recvOutput()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
                 "$ ",

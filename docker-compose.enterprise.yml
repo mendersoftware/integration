@@ -22,6 +22,21 @@ services:
         extends:
             file: common.yml
             service: mender-base
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.tenantadm.entrypoints=https
+            - traefik.http.routers.tenantadm.middlewares=userauth
+            - traefik.http.routers.tenantadm.rule=PathPrefix(`/api/management/{(v[0-9]+)}/tenantadm`)
+            - traefik.http.routers.tenantadm.tls=true
+            - traefik.http.routers.tenantadm.service=tenantadm
+            - traefik.http.services.tenantadm.loadbalancer.server.port=8080
+
+            - traefik.http.routers.tenantadmMgmt.entrypoints=https
+            - traefik.http.routers.tenantadmMgmt.rule=PathPrefix(`/api/management/{(v[0-9]+)}/tenantadm/tenants`) && Method(`OPTIONS`,`POST`,`PUT`,`DELETE`)
+            - traefik.http.routers.tenantadmMgmt.tls=true
+            - traefik.http.routers.tenantadmMgmt.service=tenantadmMgmt
+            - traefik.http.services.tenantadmMgmt.loadbalancer.server.port=8080
+            - mender.testprefix=${MENDER_TESTPREFIX}
         networks:
             - mender
         depends_on:

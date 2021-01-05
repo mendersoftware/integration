@@ -72,7 +72,7 @@ git:
     - api-gateway
     docker_container:
     - mender-api-gateway
-    release_component: true
+    release_component: false
 
   mender-artifact:
     docker_image: []
@@ -246,7 +246,7 @@ docker_image:
     - mender-api-gateway-docker
     docker_container:
     - mender-api-gateway
-    release_component: true
+    release_component: false
 
   mender-conductor:
     git:
@@ -400,7 +400,7 @@ docker_container:
     - mender-api-gateway-docker
     docker_image:
     - api-gateway
-    release_component: true
+    release_component: false
 
   mender-conductor:
     git:

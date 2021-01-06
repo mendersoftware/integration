@@ -20,7 +20,7 @@ import subprocess
 import pytest
 
 from .. import conftest
-from ..common_setup import standard_setup_one_client_bootstrapped
+from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import deploy, logger
@@ -536,10 +536,14 @@ class TestStateScripts(MenderTesting):
 
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
-        self, standard_setup_one_client_bootstrapped, description, test_set, valid_image
+        self,
+        class_persistent_standard_setup_one_client_bootstrapped,
+        description,
+        test_set,
+        valid_image,
     ):
 
-        mender_device = standard_setup_one_client_bootstrapped.device
+        mender_device = class_persistent_standard_setup_one_client_bootstrapped.device
         work_dir = "test_state_scripts.%s" % mender_device.host_string
 
         script_content = (
@@ -593,7 +597,9 @@ class TestStateScripts(MenderTesting):
             MenderDeviceGroup([mender_device.host_string])
         )[mender_device.host_string]
 
-        host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+        host_ip = (
+            class_persistent_standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+        )
         with mender_device.get_reboot_detector(host_ip) as reboot_detector:
 
             common_update_procedure(
@@ -673,12 +679,16 @@ class TestStateScripts(MenderTesting):
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(
-        self, standard_setup_one_client_bootstrapped, valid_image, description, test_set
+        self,
+        class_persistent_standard_setup_one_client_bootstrapped,
+        valid_image,
+        description,
+        test_set,
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        mender_device = standard_setup_one_client_bootstrapped.device
+        mender_device = class_persistent_standard_setup_one_client_bootstrapped.device
         work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
         client_service_name = mender_device.get_client_service_name()

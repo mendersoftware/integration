@@ -39,8 +39,7 @@ def standard_setup_one_client(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def standard_setup_one_client_bootstrapped(request):
+def standard_setup_one_client_bootstrapped_impl(request):
     env = container_factory.getStandardSetup(num_clients=1)
     request.addfinalizer(env.teardown)
 
@@ -53,6 +52,16 @@ def standard_setup_one_client_bootstrapped(request):
     devauth.accept_devices(1)
 
     return env
+
+
+@pytest.fixture(scope="function")
+def standard_setup_one_client_bootstrapped(request):
+    return standard_setup_one_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_standard_setup_one_client_bootstrapped(request):
+    return standard_setup_one_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")

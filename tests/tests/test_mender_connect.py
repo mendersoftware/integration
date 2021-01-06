@@ -139,3 +139,39 @@ class TestMenderConnect:
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
+
+    def test_bogus_shell_message(
+        self, class_persistent_standard_setup_one_client_bootstrapped
+    ):
+
+        with devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
+
+            prot.clear()
+            prot.setTyp("bogusmessage")
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            msg = ws.recv()
+            body = prot.decode(msg)
+            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
+            assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
+            assert prot.typ == "bogusmessage"
+
+    def test_bogus_proto_message(
+        self, class_persistent_standard_setup_one_client_bootstrapped
+    ):
+
+        with devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            msg = ws.recv()
+            body = prot.decode(msg)
+            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
+            assert prot.protoType == 12345
+            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL

@@ -139,7 +139,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:mender-master
+        image: mendersoftware/deviceauth:feature-traefik
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -212,7 +212,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:mender-master
+        image: mendersoftware/useradm:feature-traefik
         extends:
             file: common.yml
             service: mender-base

@@ -26,15 +26,16 @@ class ProtoShell:
         self.protomsg = protomsg.ProtoMsg(PROTO_TYPE_SHELL)
         self.ws = ws
 
-    def startShell(self, user="ui-user"):
+    def startShell(self):
         self.protomsg.clear()
 
         self.protomsg.setTyp(MSG_TYPE_SPAWN_SHELL)
-        msg = self.protomsg.encode(user.encode())
+        msg = self.protomsg.encode(b"")
         self.ws.send(msg)
 
         msg = self.ws.recv()
         body = self.protomsg.decode(msg)
+        assert self.protomsg.protoType == PROTO_TYPE_SHELL
         assert self.protomsg.typ == MSG_TYPE_SPAWN_SHELL, (
             'Did not receive confirmation that shell was started (received command "%s").'
             % self.protomsg.typ
@@ -55,6 +56,7 @@ class ProtoShell:
             while True:
                 msg = self.ws.recv(timeout)
                 body += self.protomsg.decode(msg)
+                assert self.protomsg.protoType == PROTO_TYPE_SHELL
                 assert (
                     self.protomsg.typ == MSG_TYPE_SHELL_COMMAND
                 ), "Did not receive shell output."
@@ -62,16 +64,17 @@ class ProtoShell:
             return body
         raise RuntimeError("Should never get here")
 
-    def stopShell(self, user="ui-user"):
+    def stopShell(self):
         self.protomsg.clear()
         self.protomsg.setTyp(MSG_TYPE_STOP_SHELL)
-        msg = self.protomsg.encode(user.encode())
+        msg = self.protomsg.encode(b"")
         self.ws.send(msg)
 
         msg = self.ws.recv()
         body = self.protomsg.decode(msg)
+        assert self.protomsg.protoType == PROTO_TYPE_SHELL
         assert (
             self.protomsg.typ == MSG_TYPE_STOP_SHELL
         ), "Did not receive confirmation that shell was started."
-        self.protomsg.clearAll()
+        self.sid = None
         return body

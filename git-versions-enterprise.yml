@@ -11,7 +11,7 @@ services:
         image: registry.mender.io/mendersoftware/deployments-enterprise:master
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:master
+        image: registry.mender.io/mendersoftware/inventory-enterprise:feature-traefik
 
     mender-workflows-server:
         image: registry.mender.io/mendersoftware/workflows-enterprise:master
@@ -23,7 +23,7 @@ services:
         image: registry.mender.io/mendersoftware/tenantadm:master
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:feature-traefik
 
     mender-auditlogs:
         image: registry.mender.io/mendersoftware/auditlogs:master

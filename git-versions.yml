@@ -17,13 +17,13 @@ services:
         image: mendersoftware/api-gateway:master
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:master
+        image: mendersoftware/deviceauth:feature-traefik
 
     mender-inventory:
         image: mendersoftware/inventory:master
 
     mender-useradm:
-        image: mendersoftware/useradm:master
+        image: mendersoftware/useradm:feature-traefik
 
     mender-deviceconnect:
         image: mendersoftware/deviceconnect:master

@@ -27,3 +27,7 @@ services:
     mender-workflows-worker:
         environment:
             HAVE_AUDITLOGS: 1
+
+    mender-deviceconnect:
+        environment:
+            HAVE_AUDITLOGS: 1

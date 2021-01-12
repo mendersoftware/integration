@@ -5,4 +5,4 @@ services:
     # mender-legacy-client 
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:2.0.x
+        image: mendersoftware/mender-client-qemu:2.0.0

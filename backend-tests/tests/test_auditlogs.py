@@ -297,9 +297,16 @@ class TestAuditLogsEnterprise:
         # compute unix timestamps for event datetimes (ms to s resolution)
         # to correctly select expected results
         for e in events:
-            e["test_unix_time"] = datetime.strptime(
-                e["time"], "%Y-%m-%dT%H:%M:%S.%fZ"
-            ).timestamp()
+            # If time is exactly at 0ms, the format does not include
+            # decimal point.
+            if "." in e["time"]:
+                e["test_unix_time"] = datetime.strptime(
+                    e["time"], "%Y-%m-%dT%H:%M:%S.%fZ"
+                ).timestamp()
+            else:
+                e["test_unix_time"] = datetime.strptime(
+                    e["time"], "%Y-%m-%dT%H:%M:%SZ"
+                ).timestamp()
 
         for case in cases:
             time = events[case["idx"]]["time"]
@@ -492,9 +499,7 @@ def evt_change_role(user, user_change, roles):
             "type": "user",
             "user": {"email": user_change.name},
         },
-        "change": "Update user {} ({}).\nDiff:\n".format(
-            user_change.id, user_change.name
-        ),
+        "change": "Updated user {}:\n".format(user_change.name),
     }
 
 

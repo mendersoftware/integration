@@ -5,7 +5,7 @@ services:
     # mender-deviceconnect
     #
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:mender-master
+        image: mendersoftware/deviceconnect:mender-2.6.x
         command: server --automigrate
         extends:
             file: common.yml

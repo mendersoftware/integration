@@ -12,13 +12,13 @@ services:
     #    image: mendersoftware/deployments:master
 
     mender-gui:
-        image: mendersoftware/gui:staging
+        image: mendersoftware/gui:saas-v2021.01.14
 
     mender-api-gateway:
-        image: mendersoftware/api-gateway:staging
+        image: mendersoftware/api-gateway:saas-v2021.01.14
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:staging
+        image: mendersoftware/deviceauth:saas-v2021.01.14
 
     #mender-inventory:
         #image: mendersoftware/inventory:master
@@ -27,7 +27,7 @@ services:
         #image: mendersoftware/useradm:master
 
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:staging
+        image: mendersoftware/deviceconnect:saas-v2021.01.14
 
     #mender-workflows-server:
         #image: mendersoftware/workflows:master
@@ -36,4 +36,4 @@ services:
         #image: mendersoftware/workflows-worker:master
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:staging
+        image: mendersoftware/create-artifact-worker:saas-v2021.01.14

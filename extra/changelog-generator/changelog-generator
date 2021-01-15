@@ -346,10 +346,10 @@ for repo in repos:
             if len(jiras) > 0:
                 tracker += "(" + ", ".join(sorted(jiras)) + ")"
         for entry in ENTRIES[sha_entry]:
-            # Safety check. See if there are still numbers at least four digits long in
-            # the output, and if so, warn about it. This may be ticket references that
-            # we missed.
-            match = re.search("[0-9]{4,}", entry)
+            # Safety check. See if there are still numbers at least four digits
+            # long not preceded by '#' in the output and if so, warn about it.
+            # This may be ticket references that we missed.
+            match = re.search("(?<!#)[0-9]{4,}", entry)
             if match:
                 POSSIBLE_PROBLEMS.append(
                     "*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."

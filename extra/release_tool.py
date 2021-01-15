@@ -1133,22 +1133,32 @@ def find_prev_version(tag_list, version):
     return None
 
 
-def next_patch_version(prev_version, next_beta=None):
-    """Returns the next patch version is a series, based on the given version.
-    If next_beta is not None, then the version will be a new beta, instead of a
-    new patch release."""
+def find_patch_version(state, repo, prev_version, next_unreleased=False, last_released=False):
+    """Returns a patch version in a series, either the next unreleased one, or the
+    last (most recent) released one."""
 
-    (major, minor, patch, beta) = version_components(prev_version)
-    if next_beta:
-        new_version = "%d.%d.%db%d" % (major, minor, patch, next_beta)
-    elif beta is not None:
-        new_version = "%d.%d.%d" % (major, minor, patch)
-    else:
-        new_version = "%d.%d.%d" % (major, minor, patch + 1)
-    assert (
-        prev_version != new_version
-    ), "Previous and new version should not be the same!"
-    return new_version
+    if (next_unreleased and last_released) or not (next_unreleased or last_released):
+        raise Exception("Exactly one of the next_unreleased or last_released flags must be set!")
+
+    last_version = prev_version
+    while True:
+        (major, minor, patch, beta) = version_components(last_version)
+        if beta is not None:
+            new_version = "%d.%d.%d" % (major, minor, patch)
+        else:
+            new_version = "%d.%d.%d" % (major, minor, patch + 1)
+
+        try:
+            execute_git(state, repo.git(), ["rev-parse", new_version], capture=True, capture_stderr=True)
+        except subprocess.CalledProcessError:
+            # Doesn't exist.
+            if last_released:
+                return last_version
+            else:
+                return new_version
+
+        # If it exists, loop around and try again.
+        last_version = new_version
 
 
 def generate_new_tags(state, tag_avail, final):
@@ -2262,6 +2272,7 @@ def determine_version_to_include_in_release(state, repo):
     (prev_major, prev_minor, _, _) = version_components(prev_of_integration)
 
     prev_of_repo = None
+    prev_of_repo_independent = None
     new_repo_version = None
     follow_branch = None
     if overall_major == prev_major and overall_minor == prev_minor:
@@ -2271,7 +2282,12 @@ def determine_version_to_include_in_release(state, repo):
             repo.yml_components()[0],
             in_integration_version=prev_of_integration,
         )
-        new_repo_version = next_patch_version(prev_of_repo, next_beta=overall_beta)
+        if overall_beta is not None:
+            (major, minor, patch, _) = version_components(prev_of_repo)
+            new_repo_version = "%d.%d.%db%d" % (major, minor, patch, overall_beta)
+        else:
+            new_repo_version = find_patch_version(state, repo, prev_of_repo, next_unreleased=True)
+            prev_of_repo_independent = find_patch_version(state, repo, prev_of_repo, last_released=True)
         follow_branch = find_default_following_branch(state, repo, new_repo_version)
     else:
         # No series exists. Base on master.
@@ -2286,6 +2302,7 @@ def determine_version_to_include_in_release(state, repo):
             # No previous version at all. Start at 1.0.0.
             prev_of_repo = None
             new_repo_version = "1.0.0"
+        prev_of_repo_independent = prev_of_repo
         if overall_beta:
             new_repo_version += "b%d" % overall_beta
         follow_branch = "%s/master" % find_upstream_remote(state, repo.git())
@@ -2317,6 +2334,13 @@ def determine_version_to_include_in_release(state, repo):
             "Above is the output of:\n\ncd %s\ngit %s\n%s\n"
             % (repo.git(), " ".join(git_cmd), " ".join(changelog_cmd))
         )
+
+        if prev_of_repo_independent and prev_of_repo_independent != prev_of_repo:
+            print("""WARNING: %s is not the latest patch release, the latest patch release
+is %s, which does not occur in any integration version. You might want to
+double check this.
+""" % (prev_of_repo, prev_of_repo_independent))
+
         reply = ask(
             "Based on this, is there a reason for a new release of %s? (Yes/No/Skip) "
             % repo.git()

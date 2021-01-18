@@ -14,3 +14,7 @@ services:
             # don't supply a tenant token. If empty, clients without a tenant
             # token will be rejected.
             DEVICEAUTH_DEFAULT_TENANT_TOKEN: ''
+
+    mender-deviceconnect:
+        environment:
+            DEVICECONNECT_ENABLE_AUDIT: "1"

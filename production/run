@@ -20,7 +20,7 @@ fi
 ENTERPRISE_DOCKER_COMPOSE=
 ENTERPRISE_PROD=
 if [ -f ./config/enterprise.yml ]; then
-    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml"
+    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml -f ../docker-compose.auditlogs.yml"
     ENTERPRISE_PROD="-f ./config/enterprise.yml"
 fi
 
@@ -28,6 +28,7 @@ exec docker-compose \
      -p menderproduction \
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \
+     -f ../docker-compose.connect.yml \
      $ENTERPRISE_DOCKER_COMPOSE \
      -f ./config/prod.yml \
      $ENTERPRISE_PROD \

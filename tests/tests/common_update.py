@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -170,6 +170,7 @@ def update_image_failed(
     expected_log_message="Reboot to the new update failed",
     install_image="broken_update.ext4",
     make_artifact=None,
+    expected_number_of_reboots=2,
 ):
     """
         Perform a upgrade using a broken image (random data)
@@ -192,7 +193,7 @@ def update_image_failed(
         # about where we would end up. However, with update modules we prefer to
         # be conservative, and reboot one more time after the rollback to make
         # *sure* we are in the correct partition.
-        reboot.verify_reboot_performed(number_of_reboots=2)
+        reboot.verify_reboot_performed(number_of_reboots=expected_number_of_reboots)
 
     with device.get_reboot_detector(host_ip) as reboot:
         assert device.get_active_partition() == previous_active_part

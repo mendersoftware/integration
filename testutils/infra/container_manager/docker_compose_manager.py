@@ -53,6 +53,8 @@ class DockerComposeNamespace(DockerNamespace):
     LEGACY_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
     ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
@@ -92,8 +94,8 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 13
-    NUM_SERVICES_ENTERPRISE = 15
+    NUM_SERVICES_OPENSOURCE = 12
+    NUM_SERVICES_ENTERPRISE = 14
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
@@ -110,7 +112,12 @@ class DockerComposeNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "docker-compose -p %s %s %s" % (self.name, files_args, arg_list)
+        cmd = "MENDER_TESTPREFIX=%s docker-compose -p %s %s %s" % (
+            self.name,
+            self.name,
+            files_args,
+            arg_list,
+        )
 
         logger.info("running with: %s" % cmd)
 

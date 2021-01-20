@@ -18,6 +18,8 @@ services:
             AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
             AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
             K8S: ${K8S}
+        depends_on:
+            - mender-api-gateway
 
 networks:
     mender:

@@ -39,7 +39,6 @@ services:
             mender:
                 aliases:
                     - docker.mender.io
-                    - s3.docker.mender.io
         volumes:
             - ./tls.toml:/config/tls.toml
             - ./certs/api-gateway/cert.crt:/certs/cert.crt
@@ -60,10 +59,6 @@ services:
             - mender-mongo
 
     minio:
-        networks:
-            mender:
-                aliases:
-                    - minio.s3.docker.mender.io
         environment:
             MINIO_ACCESS_KEY: minio
             MINIO_SECRET_KEY: minio123

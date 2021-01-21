@@ -10,7 +10,7 @@ services:
         networks:
             mender:
                 aliases:
-                    - minio.s3.docker.mender.io
+                    - s3.docker.mender.io
         environment:
             MINIO_HTTP_TRACE: /dev/stdout
         labels:

@@ -3,6 +3,16 @@ services:
   #
   # Setup including older clients
   #
+  mender-client-2-5:
+    image: mendersoftware/mender-client-qemu:2.5
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+
   mender-client-2-4:
     image: mendersoftware/mender-client-qemu:2.4
     networks:

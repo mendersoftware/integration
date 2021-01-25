@@ -423,6 +423,16 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 
 ################################################################################
 
+git commit --allow-empty -m 'Changelog:All: Bump mender-test-images from 457ea99 to 713c563
+
+Bumps [tests/acceptance/image-tests](https://github.com/mendersoftware/mender-image-tests) from `457ea99` to `713c563`.
+- [Release notes](https://github.com/mendersoftware/mender-image-tests/releases)
+- [Commits](https://github.com/mendersoftware/mender-image-
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
+
 
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"

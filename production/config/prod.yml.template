@@ -67,10 +67,25 @@ services:
                     # if devices and deployments will access storage
                     # using https://s3.acme.org:9000, then
                     # set this to https://s3.acme.org:9000
-                    - https://set-my-alias-here.com
+                    - set-my-alias-here.com
+        command:
+            - --accesslog=true
+            - --providers.file.filename=/config/tls.toml
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --entrypoints.http.address=:80
+            - --entrypoints.https.address=:443
+            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
+            - --entrypoints.http.http.redirections.entryPoint.to=https
+            - --entrypoints.http.http.redirections.entryPoint.scheme=https
         volumes:
-            - ./production/keys-generated/certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt:ro
-            - ./production/keys-generated/certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key:ro
+            - ./tls.toml:/config/tls.toml
+            - ./production/keys-generated/certs/api-gateway/cert.crt:/certs/cert.crt:ro
+            - ./production/keys-generated/certs/api-gateway/private.key:/certs/private.key:ro
+            - ./production/keys-generated/certs/storage-proxy/cert.crt:/certs/s3.docker.mender.io.crt
+            - ./production/keys-generated/certs/storage-proxy/private.key:/certs/s3.docker.mender.io.key
         logging:
             options:
                 max-file: "10"
@@ -81,9 +96,9 @@ services:
     mender-deployments:
         command: server --automigrate
         volumes:
-            - ./production/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/storage-proxy.crt:ro
+            - ./production/keys-generated/certs/storage-proxy/cert.crt:/etc/ssl/certs/s3.docker.mender.io.crt:ro
         environment:
-            STORAGE_BACKEND_CERT: /etc/ssl/certs/storage-proxy.crt
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
             # access key, the same value as MINIO_ACCESS_KEY
             DEPLOYMENTS_AWS_AUTH_KEY:
             # secret, the same valie as MINIO_SECRET_KEY

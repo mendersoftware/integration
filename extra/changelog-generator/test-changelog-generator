@@ -289,20 +289,21 @@ Changelog: commit'
 # A bit tricky to make this commit, because normal git-commit cleans up \r.
 # But it *is* in our Git history (1f900885d2aebda3e23ca5129d37f5e75eb83ee4)
 TREE=$(git cat-file commit HEAD | grep '^tree ' | sed -e 's/^tree //')
-git reset --hard $(git commit-tree -p $(git rev-parse HEAD) $TREE <<EOF)
+git reset --hard $(git commit-tree -p $(git rev-parse HEAD) $TREE <<EOF
 Changelog with Windows line endings N66
 
 Changelog: title
 
 stuff stuff
 EOF
+)
 
 ################################################################################
 
 # We just generate an invalid GPG signature (it is from a random commit in core
 # and won't be valid, but that doesn't matter).
 TREE=$(git cat-file commit HEAD | grep '^tree ' | sed -e 's/^tree //')
-git reset --hard $(git hash-object -w -t commit --stdin <<EOF)
+git reset --hard $(git hash-object -w -t commit --stdin <<EOF
 tree $TREE
 parent $(git rev-parse HEAD)
 author whatever <whatever@whatever.com> 1461929235 -0400
@@ -329,6 +330,7 @@ Changelog with GPG entry N67
 
 Changelog: Commit
 EOF
+)
 
 ################################################################################
 
@@ -416,6 +418,16 @@ Should not be included N78'
 git commit --allow-empty -m 'Changelog:All: Bump golang from 1.14 to 1.15.0
 
 Bumps golang from 1.14 to 1.15.0.
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
+
+git commit --allow-empty -m 'Changelog:All: Bump mender-test-images from 457ea99 to 713c563
+
+Bumps [tests/acceptance/image-tests](https://github.com/mendersoftware/mender-image-tests) from `457ea99` to `713c563`.
+- [Release notes](https://github.com/mendersoftware/mender-image-tests/releases)
+- [Commits](https://github.com/mendersoftware/mender-image-
 
 Signed-off-by: dependabot[bot] <support@github.com>'
 

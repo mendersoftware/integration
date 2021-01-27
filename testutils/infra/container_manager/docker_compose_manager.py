@@ -19,6 +19,7 @@ import subprocess
 import filelock
 import logging
 import copy
+import redo
 
 from .docker_manager import DockerNamespace
 
@@ -274,16 +275,23 @@ class DockerComposeNamespace(DockerNamespace):
         return output.decode().strip() + ":8822"
 
     def get_mender_gateway(self):
-        """Returns IP address of mender-api-gateway service"""
-        gateway = self.get_ip_of_service("mender-api-gateway")
+        """Returns IP address of mender-api-gateway service
+           Has internal retry - upon setup 'up', the gateway
+           will not be available for a while.
+        """
+        for _ in redo.retrier(attempts=10, sleeptime=1):
+            gateway = self.get_ip_of_service("mender-api-gateway")
 
-        if len(gateway) != 1:
-            raise SystemExit(
-                "expected one instance of api-gateway running, but found: %d instance(s)"
-                % len(gateway)
+            if len(gateway) != 1:
+                continue
+            else:
+                return gateway[0]
+        else:
+            assert (
+                False
+            ), "expected one instance of api-gateway running, but found: {} instance(s)".format(
+                len(gateway)
             )
-
-        return gateway[0]
 
     def restart_service(self, service):
         """Restarts a service."""

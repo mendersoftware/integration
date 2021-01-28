@@ -24,3 +24,8 @@ services:
     mender-api-gateway:
         environment:
             HAVE_DEVICECONFIG: 1
+
+    mender-workflows-worker:
+        environment:
+            HAVE_DEVICECONFIG: 1
+            DEVICECONFIG_ADDR: "mender-deviceconfig:8080"

@@ -22,6 +22,7 @@ import pytest
 from ..common_setup import running_custom_production_setup
 from ..MenderAPI import authentication, deployments, DeviceAuthV2, logger
 from .mendertesting import MenderTesting
+from testutils.common import wait_for_traefik
 
 
 class TestDemoArtifact(MenderTesting):
@@ -57,6 +58,12 @@ class TestDemoArtifact(MenderTesting):
             test_env[
                 "DOCKER_COMPOSE_PROJECT_NAME"
             ] = running_custom_production_setup.name
+
+            # the infra layer sets MENDER_TESTPREFIX for the compose command on first run
+            # but here we're running the setup manually (the test does multiple ups/downs)
+            # the prefix is lost here, so re-set it to the correct value
+            test_env["MENDER_TESTPREFIX"] = running_custom_production_setup.name
+
             args = [
                 "./demo",
                 "--client",
@@ -75,7 +82,8 @@ class TestDemoArtifact(MenderTesting):
             )
             logger.info("Started the demo script")
             password = ""
-            time.sleep(60)
+
+            wait_for_traefik(running_custom_production_setup.get_mender_gateway())
             for line in proc.stdout:
                 line = line.decode()
                 logger.info(line)
@@ -104,6 +112,7 @@ class TestDemoArtifact(MenderTesting):
         logger.info("Running test_demo_artifact_upload")
         logger.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script.run_demo_script_up)
+
         run_demo_script.teardown()
         self.auth.reset_auth_token()
 

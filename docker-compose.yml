@@ -32,7 +32,7 @@ services:
             - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
             - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
             - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=3s
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -92,7 +92,7 @@ services:
             - traefik.http.middlewares.json-error-responder4.errors.service=error-responder
             - traefik.http.middlewares.json-error-responder4.errors.query=/{status}.json
             - traefik.http.middlewares.json-error-responder4.errors.status=429
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         environment:
@@ -161,7 +161,7 @@ services:
             - traefik.http.services.deviceauthMgmt.loadbalancer.server.port=8080
             # the X-Original-URI and X-Original-Method headers are added by traefik automatically, however as X-Forwarded-Uri and X-Forwarded-Method
             # https://github.com/containous/traefik/blob/125470f1106373ff42cf03ae28467055a8186de5/pkg/middlewares/forwardedheaders/forwarded_header.go#L12-L38
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -202,7 +202,7 @@ services:
             - traefik.http.routers.inventoryV1.service=inventoryV1
             - traefik.http.routers.inventoryV1.tls=true
             - traefik.http.services.inventoryV1.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -232,7 +232,7 @@ services:
             - traefik.http.routers.useradmLogin.tls=true
             - traefik.http.routers.useradmLogin.service=useradmLogin
             - traefik.http.services.useradmLogin.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:

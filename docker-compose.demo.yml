@@ -25,7 +25,7 @@ services:
             - --accesslog=true
             - --log.level=DEBUG
             - --providers.file.filename=/config/tls.toml
-            - --providers.docker.constraints=Label(`mender.testprefix`,`${MENDER_TESTPREFIX}`)
+            - --providers.docker.constraints=Label(`mender.testprefix`,`${MENDER_TESTPREFIX:-""}`)
             - --providers.docker=true
             - --providers.docker.exposedbydefault=false
             - --entrypoints.http.address=:80

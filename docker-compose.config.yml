@@ -19,7 +19,7 @@ services:
             - traefik.http.routers.deviceconfig.tls=true
             - traefik.http.routers.deviceconfig.service=deviceconfig
             - traefik.http.services.deviceconfig.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
 
     mender-api-gateway:
         environment:

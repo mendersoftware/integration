@@ -36,7 +36,7 @@ services:
             - traefik.http.routers.tenantadmMgmt.tls=true
             - traefik.http.routers.tenantadmMgmt.service=tenantadmMgmt
             - traefik.http.services.tenantadmMgmt.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:

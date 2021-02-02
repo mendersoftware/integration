@@ -12,34 +12,21 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import asyncore
 import pytest
 import re
 import time
 import uuid
 
-from threading import Thread
-
 from testutils.api import useradm
 from testutils.api.client import ApiClient
 from testutils.infra.container_manager.kubernetes_manager import isK8S
-from testutils.infra.smtpd_mock import SMTPServerMock
+from testutils.infra.smtpd_mock import smtp_mock
 
 from testutils.common import (
     clean_mongo,
     create_org,
     mongo,
 )
-
-
-@pytest.yield_fixture(scope="function")
-def smtp_mock():
-    smtp_mock = SMTPMock()
-    thread = Thread(target=smtp_mock.start)
-    thread.daemon = True
-    thread.start()
-    yield smtp_mock
-    smtp_mock.stop()
 
 
 class TestPasswordResetEnterprise:
@@ -120,23 +107,3 @@ class TestPasswordResetEnterprise:
             body={"secret_hash": ["dummy"], "password": "newe password"},
         )
         assert r.status_code == 400
-
-
-class SMTPMock:
-    def start(self):
-        self.server = SMTPServerMock(("0.0.0.0", 4444), None, enable_SMTPUTF8=True)
-        asyncore.loop()
-
-    def stop(self):
-        self.server.close()
-
-    def filtered_messages(self, email):
-        return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
-
-    def assert_called(self, email):
-        msgs = self.filtered_messages(email)
-        assert len(msgs) == 1
-        m = msgs[0]
-        assert m.mailfrom.rsplit("@", 1)[-1] == "mender.io"
-        assert m.rcpttos[0] == email
-        assert len(m.data) > 0

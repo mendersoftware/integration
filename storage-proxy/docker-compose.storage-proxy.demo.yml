@@ -17,7 +17,7 @@ services:
             - ./storage-proxy/nginx.conf.demo:/usr/local/openresty/nginx/conf/nginx.conf
         labels:
             - traefik.enable=false
-            - mender.testprefix=${MENDER_TESTPREFIX}
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
 
     #                  
     # mender-api-gateway

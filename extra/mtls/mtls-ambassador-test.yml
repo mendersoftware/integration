@@ -14,4 +14,4 @@ services:
       MTLS_DEBUG_LOG: "true"
       MTLS_INSECURE_SKIP_VERIFY: "true"
     labels:
-        - mender.testprefix=${MENDER_TESTPREFIX}
+        - mender.testprefix=${MENDER_TESTPREFIX:-""}

@@ -180,6 +180,7 @@ run_non_up_commands() {
         # exit 1 will never happen.
         exec docker-compose \
                 -f docker-compose.yml \
+                -f docker-compose.config.yml \
                 -f docker-compose.connect.yml \
                 -f docker-compose.storage.minio.yml \
                 -f docker-compose.demo.yml \
@@ -194,6 +195,7 @@ run_non_up_commands() {
 exitfunc() {
     retval=$(docker-compose \
             -f docker-compose.yml \
+            -f docker-compose.config.yml \
             -f docker-compose.connect.yml \
             -f docker-compose.storage.minio.yml \
             -f docker-compose.demo.yml \
@@ -210,6 +212,7 @@ start_server() {
             -f docker-compose.yml \
             -f docker-compose.storage.minio.yml \
             -f docker-compose.demo.yml \
+            -f docker-compose.config.yml \
             -f docker-compose.connect.yml \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
             $EXTRA_FILES \
@@ -298,6 +301,7 @@ maybe_launch_enterprise_client() {
             EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
             TENANT_TOKEN=$TENANT_TOKEN docker-compose \
                     -f docker-compose.yml \
+                    -f docker-compose.config.yml \
                     -f docker-compose.connect.yml \
                     -f docker-compose.storage.minio.yml \
                     -f docker-compose.demo.yml \
@@ -414,6 +418,7 @@ wait_for_user() {
 follow_logs() {
     docker-compose \
             -f docker-compose.yml \
+            -f docker-compose.config.yml \
             -f docker-compose.connect.yml \
             -f docker-compose.storage.minio.yml \
             -f docker-compose.demo.yml \

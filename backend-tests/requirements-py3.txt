@@ -4,7 +4,7 @@ cryptography==3.3.1
 pytest==6.2.2
 pytest-html==3.1.1
 pyzbar==0.1.8
-pyotp==2.5.1
+pyotp==2.6.0
 pillow==8.1.0
 stripe==2.55.1
 redo==2.0.4

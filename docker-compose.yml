@@ -11,27 +11,39 @@ services:
             service: mender-base
         labels:
             - traefik.enable=true
+            # Devices API
             - traefik.http.routers.deployments.entrypoints=https
             - traefik.http.routers.deployments.rule=PathPrefix(`/api/devices/{(v[0-9]+)}/deployments`)
             - traefik.http.routers.deployments.middlewares=devauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deployments.tls=true
             - traefik.http.routers.deployments.service=deployments
             - traefik.http.services.deployments.loadbalancer.server.port=8080
-            
+            - traefik.http.services.deployments.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
+            - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
+            - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
+            - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=5s
+            # Devices API download endpoint
+            - traefik.http.routers.deploymentsDL.entrypoints=https
+            - traefik.http.routers.deploymentsDL.rule=PathPrefix(`/api/devices/{(v[0-9]+)}/deployments/download`)
+            - traefik.http.routers.deploymentsDL.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.deploymentsDL.tls=true
+            - traefik.http.routers.deploymentsDL.service=deploymentsDL
+            - traefik.http.services.deploymentsDL.loadbalancer.server.port=8080
+            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.path=/api/internal/v1/deployments/alive
+            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.port=8080
+            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.interval=10s
+            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.timeout=3s
+            # Management API
             - traefik.http.routers.deploymentsMgmt.entrypoints=https
             - traefik.http.routers.deploymentsMgmt.rule=PathPrefix(`/api/management/{(v[0-9]+)}/deployments`)
             - traefik.http.routers.deploymentsMgmt.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deploymentsMgmt.tls=true
             - traefik.http.routers.deploymentsMgmt.service=deploymentsMgmt
             - traefik.http.services.deploymentsMgmt.loadbalancer.server.port=8080
-            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
+            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.path=/api/internal/v1/deployments/alive
             - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.port=8080
             - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.interval=5s
             - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.timeout=3s
-            - traefik.http.services.deployments.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
-            - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
-            - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
-            - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=3s
             - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender

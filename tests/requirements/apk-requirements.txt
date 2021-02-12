@@ -17,3 +17,6 @@ e2fsprogs-extra
 openssl
 jq
 libc6-compat
+musl-dev
+rust
+cargo

@@ -38,3 +38,7 @@ services:
         environment:
             HAVE_DEVICECONFIG: 1
             DEVICECONFIG_ADDR: "mender-deviceconfig:8080"
+
+    mender-gui:
+        environment:
+            HAVE_DEVICECONFIG: 1

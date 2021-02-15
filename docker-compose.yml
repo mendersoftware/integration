@@ -14,7 +14,7 @@ services:
             # Devices API
             - traefik.http.routers.deployments.entrypoints=https
             - traefik.http.routers.deployments.rule=PathPrefix(`/api/devices/{(v[0-9]+)}/deployments`)
-            - traefik.http.routers.deployments.middlewares=devauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.deployments.middlewares=devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deployments.tls=true
             - traefik.http.routers.deployments.service=deployments
             - traefik.http.services.deployments.loadbalancer.server.port=8080
@@ -22,7 +22,7 @@ services:
             - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
             - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
             - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=5s
-            # Devices API download endpoint
+            # Devices API download endpoint - we won't use compression here
             - traefik.http.routers.deploymentsDL.entrypoints=https
             - traefik.http.routers.deploymentsDL.rule=PathPrefix(`/api/devices/{(v[0-9]+)}/deployments/download`)
             - traefik.http.routers.deploymentsDL.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
@@ -36,7 +36,7 @@ services:
             # Management API
             - traefik.http.routers.deploymentsMgmt.entrypoints=https
             - traefik.http.routers.deploymentsMgmt.rule=PathPrefix(`/api/management/{(v[0-9]+)}/deployments`)
-            - traefik.http.routers.deploymentsMgmt.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.deploymentsMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deploymentsMgmt.tls=true
             - traefik.http.routers.deploymentsMgmt.service=deploymentsMgmt
             - traefik.http.services.deploymentsMgmt.loadbalancer.server.port=8080
@@ -61,7 +61,7 @@ services:
         labels:
             - traefik.enable=true
             - traefik.http.routers.gui.entrypoints=https
-            - traefik.http.routers.gui.middlewares=ensure-ui-path,signup-redirect,ui-stripprefix,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.gui.middlewares=ensure-ui-path,signup-redirect,ui-stripprefix,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.gui.rule=PathPrefix(`/`)
             - traefik.http.routers.gui.service=gui
             - traefik.http.routers.gui.tls=true
@@ -87,6 +87,7 @@ services:
             - traefik.http.middlewares.sec-headers.headers.stsIncludeSubdomains=true
             - traefik.http.middlewares.sec-headers.headers.browserXssFilter=true
             - traefik.http.middlewares.sec-headers.headers.customRequestHeaders.X-Forwarded-Proto=https
+            - traefik.http.middlewares.compression.compress=true
             - traefik.http.middlewares.devauth.forwardAuth.address=http://mender-device-auth:8080/api/internal/v1/devauth/tokens/verify
             - traefik.http.middlewares.devauth.forwardAuth.authResponseHeaders=X-MEN-RequestID
             - traefik.http.middlewares.userauth.forwardAuth.address=http://mender-useradm:8080/api/internal/v1/useradm/auth/verify
@@ -167,7 +168,7 @@ services:
             
             - traefik.http.routers.deviceauthMgmt.entrypoints=https
             - traefik.http.routers.deviceauthMgmt.rule=PathPrefix(`/api/management/{(v[0-9]+)}/devauth`)
-            - traefik.http.routers.deviceauthMgmt.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.deviceauthMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deviceauthMgmt.tls=true
             - traefik.http.routers.deviceauthMgmt.service=deviceauthMgmt
             - traefik.http.services.deviceauthMgmt.loadbalancer.server.port=8080
@@ -193,14 +194,14 @@ services:
             - traefik.http.routers.inventoryMgmt.entrypoints=https
             - traefik.http.routers.inventoryMgmt.rule=PathPrefix(`/api/management/v2/inventory`)
             - traefik.http.routers.inventoryMgmt.service=inventoryMgmt
-            - traefik.http.routers.inventoryMgmt.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.inventoryMgmt.tls=true
             - traefik.http.services.inventoryMgmt.loadbalancer.server.port=8080
 
             - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.regex=^/api/management/v1/inventory/(.*)
             - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/$$1
             - traefik.http.routers.inventoryMgmtV1.entrypoints=https
-            - traefik.http.routers.inventoryMgmtV1.middlewares=userauth,inventoryMgmtV1-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryMgmtV1.middlewares=userauth,inventoryMgmtV1-replacepathregex,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.inventoryMgmtV1.rule=PathPrefix(`/api/management/v1/inventory`)
             - traefik.http.routers.inventoryMgmtV1.service=inventoryMgmtV1
             - traefik.http.routers.inventoryMgmtV1.tls=true
@@ -209,7 +210,7 @@ services:
             - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.regex=^/api/devices/v1/inventory/(.*)
             - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/attributes
             - traefik.http.routers.inventoryV1.entrypoints=https
-            - traefik.http.routers.inventoryV1.middlewares=devauth,inventoryV1-replacepathregex,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.inventoryV1.middlewares=devauth,inventoryV1-replacepathregex,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.inventoryV1.rule=PathPrefix(`/api/devices/v1/inventory`)
             - traefik.http.routers.inventoryV1.service=inventoryV1
             - traefik.http.routers.inventoryV1.tls=true
@@ -231,7 +232,7 @@ services:
         labels:
             - traefik.enable=true
             - traefik.http.routers.useradm.entrypoints=https
-            - traefik.http.routers.useradm.middlewares=userauth,sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.useradm.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.useradm.rule=PathPrefix(`/api/management/{(v[0-9]+)}/useradm`)
             - traefik.http.routers.useradm.tls=true
             - traefik.http.routers.useradm.service=useradm
@@ -240,7 +241,7 @@ services:
             - traefik.http.routers.useradmLogin.entrypoints=https
             - traefik.http.routers.useradmLogin.rule=Path(`/api/management/{(v[0-9]+)}/useradm/auth/login`)||PathPrefix(`/api/management/{(v[0-9]+)}/useradm/{(oauth2|auth\/password-reset)}`)
             # traefik should automatically forward the x-forwarded-host header
-            - traefik.http.routers.useradmLogin.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.useradmLogin.middlewares=sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.useradmLogin.tls=true
             - traefik.http.routers.useradmLogin.service=useradmLogin
             - traefik.http.services.useradmLogin.loadbalancer.server.port=8080

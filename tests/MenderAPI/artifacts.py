@@ -73,6 +73,59 @@ class Artifacts:
 
         return artifact_filename
 
+    def make_module_artifact(
+        self,
+        module_type,
+        device_type,
+        artifact_name,
+        artifact_filename,
+        files=[],
+        meta_data=None,
+        signed=False,
+        scripts=[],
+        global_flags="",
+        version=None,
+        depends={},
+        provides={},
+    ):
+        signed_arg = ""
+
+        if artifact_name.startswith("artifact_name="):
+            artifact_name = artifact_name.split("=")[1]
+
+        if signed:
+            private_key = "../extra/signed-artifact-client-testing/private.key"
+            assert os.path.exists(private_key), "private key for testing doesn't exist"
+            signed_arg = "-k %s" % (private_key)
+
+        cmd = "%s %s  write module-image -T %s -t %s -n %s -o %s %s %s %s" % (
+            self.artifacts_tool_path,
+            global_flags,
+            module_type,
+            device_type,
+            artifact_name,
+            artifact_filename,
+            ("-m %s" % meta_data) if meta_data else "",
+            signed_arg,
+            ("-v %d" % version) if version else "",
+        )
+        for file in files:
+            cmd += " -f %s" % file
+
+        for script in scripts:
+            cmd += " -s %s" % script
+
+        for key, value in depends.items():
+            cmd += " -d %s:%s" % (key, value)
+
+        for key, value in provides.items():
+            cmd += " -p %s:%s" % (key, value)
+
+        logger.info("Running: " + cmd)
+        subprocess.check_call(cmd, shell=True)
+
+        return artifact_filename
+
     def get_mender_conf(self, image):
         """
         Get the /etc/mender/mender.conf from the artifact rootfs as a

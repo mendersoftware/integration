@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ import shutil
 import time
 import os
 import subprocess
+import pathlib
 
 import pytest
 
@@ -23,9 +24,24 @@ from .. import conftest
 from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
 from ..helpers import Helpers
-from ..MenderAPI import deploy, logger
+from ..MenderAPI import deploy, logger, image
 from .mendertesting import MenderTesting
 from testutils.infra.device import MenderDeviceGroup
+
+
+@pytest.fixture(scope="class")
+def class_persistent_setup_client_state_scripts_update_module(
+    class_persistent_standard_setup_one_client_bootstrapped,
+):
+    device = class_persistent_standard_setup_one_client_bootstrapped.device
+    device.put(
+        "module-state-scripts-test",
+        local_path=pathlib.Path(__file__).parent.parent.absolute(),
+        remote_path="/usr/share/mender/modules/v3",
+    )
+
+    return class_persistent_standard_setup_one_client_bootstrapped
+
 
 TEST_SETS = [
     (
@@ -348,52 +364,53 @@ TEST_SETS = [
             ],
         },
     ),
-    (
-        "Corrupted_script_version_in_etc",
-        {
-            "FailureScript": [],
-            "ExpectedStatus": "failure",
-            "CorruptEtcScriptVersionInUpdate": True,
-            "ScriptOrder": [
-                "Idle_Enter_08_testing",
-                "Idle_Enter_09",
-                "Idle_Leave_09",
-                "Idle_Leave_10",
-                "Sync_Enter_02",
-                "Sync_Enter_03",
-                "Sync_Leave_04",
-                "Sync_Leave_15",
-                "Download_Enter_12",
-                "Download_Enter_13",
-                "Download_Leave_14",
-                "Download_Leave_25",
-                "ArtifactInstall_Enter_01",
-                "ArtifactInstall_Enter_02",
-                "ArtifactInstall_Leave_01",
-                "ArtifactInstall_Leave_03",
-                "ArtifactReboot_Enter_01",
-                "ArtifactReboot_Enter_11",
-                "ArtifactReboot_Leave_01",
-                "ArtifactReboot_Leave_89",
-                "ArtifactReboot_Leave_99",
-                "ArtifactCommit_Enter_01",
-                "ArtifactCommit_Enter_05",
-                "ArtifactCommit_Error_91",
-                "ArtifactRollback_Enter_00",
-                "ArtifactRollback_Enter_01",
-                "ArtifactRollback_Leave_00",
-                "ArtifactRollback_Leave_01",
-                "ArtifactRollbackReboot_Enter_00",
-                "ArtifactRollbackReboot_Enter_99",
-                "ArtifactRollbackReboot_Leave_01",
-                "ArtifactRollbackReboot_Leave_99",
-                "ArtifactFailure_Enter_22",
-                "ArtifactFailure_Enter_33",
-                "ArtifactFailure_Leave_44",
-                "ArtifactFailure_Leave_55",
-            ],
-        },
-    ),
+    # TODO: Move this test case out of the rest, requires full rootfs update
+    # (
+    #     "Corrupted_script_version_in_etc",
+    #     {
+    #         "FailureScript": [],
+    #         "ExpectedStatus": "failure",
+    #         "CorruptEtcScriptVersionInUpdate": True,
+    #         "ScriptOrder": [
+    #             "Idle_Enter_08_testing",
+    #             "Idle_Enter_09",
+    #             "Idle_Leave_09",
+    #             "Idle_Leave_10",
+    #             "Sync_Enter_02",
+    #             "Sync_Enter_03",
+    #             "Sync_Leave_04",
+    #             "Sync_Leave_15",
+    #             "Download_Enter_12",
+    #             "Download_Enter_13",
+    #             "Download_Leave_14",
+    #             "Download_Leave_25",
+    #             "ArtifactInstall_Enter_01",
+    #             "ArtifactInstall_Enter_02",
+    #             "ArtifactInstall_Leave_01",
+    #             "ArtifactInstall_Leave_03",
+    #             "ArtifactReboot_Enter_01",
+    #             "ArtifactReboot_Enter_11",
+    #             "ArtifactReboot_Leave_01",
+    #             "ArtifactReboot_Leave_89",
+    #             "ArtifactReboot_Leave_99",
+    #             "ArtifactCommit_Enter_01",
+    #             "ArtifactCommit_Enter_05",
+    #             "ArtifactCommit_Error_91",
+    #             "ArtifactRollback_Enter_00",
+    #             "ArtifactRollback_Enter_01",
+    #             "ArtifactRollback_Leave_00",
+    #             "ArtifactRollback_Leave_01",
+    #             "ArtifactRollbackReboot_Enter_00",
+    #             "ArtifactRollbackReboot_Enter_99",
+    #             "ArtifactRollbackReboot_Leave_01",
+    #             "ArtifactRollbackReboot_Leave_99",
+    #             "ArtifactFailure_Enter_22",
+    #             "ArtifactFailure_Enter_33",
+    #             "ArtifactFailure_Leave_44",
+    #             "ArtifactFailure_Leave_55",
+    #         ],
+    #     },
+    # ),
 ]
 
 
@@ -680,15 +697,14 @@ class TestStateScripts(MenderTesting):
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(
         self,
-        class_persistent_standard_setup_one_client_bootstrapped,
-        valid_image,
+        class_persistent_setup_client_state_scripts_update_module,
         description,
         test_set,
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        mender_device = class_persistent_standard_setup_one_client_bootstrapped.device
+        mender_device = class_persistent_setup_client_state_scripts_update_module.device
         work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
         client_service_name = mender_device.get_client_service_name()
@@ -696,31 +712,12 @@ class TestStateScripts(MenderTesting):
             script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
 
-            old_active = mender_device.get_active_partition()
-
             # Make rootfs-scripts and put them in rootfs image.
             rootfs_script_dir = os.path.join(work_dir, "rootfs-scripts")
             shutil.rmtree(work_dir, ignore_errors=True)
             os.mkdir(work_dir)
             os.mkdir(rootfs_script_dir)
 
-            new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-            shutil.copy(valid_image, new_rootfs)
-            ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
-            ps.stdin.write(b"cd /etc/mender\n" b"mkdir scripts\n" b"cd scripts\n")
-
-            with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
-                if test_set.get("CorruptEtcScriptVersionInUpdate"):
-                    fd.write("1000")
-                else:
-                    fd.write("2")
-            ps.stdin.write(b"rm version\n")
-            ps.stdin.write(
-                bytes(
-                    "write %s version\n" % os.path.join(rootfs_script_dir, "version"),
-                    "utf-8",
-                )
-            )
             for script in self.scripts:
                 if script.startswith("Artifact"):
                     # This is a script for the artifact, skip this one.
@@ -731,24 +728,12 @@ class TestStateScripts(MenderTesting):
                     else:
                         fd.write(script_content)
                     os.fchmod(fd.fileno(), 0o0755)
-                ps.stdin.write(
-                    bytes(
-                        "write %s %s\n"
-                        % (os.path.join(rootfs_script_dir, script), script),
-                        "utf-8",
-                    )
-                )
-
-            ps.stdin.close()
-            ps.wait()
 
             # Write this again in case it was corrupted above.
             with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
                 fd.write("2")
 
-            # Then copy them to QEMU host.
-            # Zip them all up to avoid having to copy each and every file, which is
-            # quite slow.
+            # Then zip and copy them to QEMU host.
             subprocess.check_call(
                 ["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir
             )
@@ -782,15 +767,25 @@ class TestStateScripts(MenderTesting):
                     if test_set.get("CorruptDataScriptVersionIn") == script:
                         fd.write("printf '1000' > /data/mender/scripts/version\n")
 
+            # Callback for our custom artifact maker
+            def make_artifact(filename, artifact_name):
+                return image.make_module_artifact(
+                    "module-state-scripts-test",
+                    conftest.machine_name,
+                    artifact_name,
+                    filename,
+                    scripts=[artifact_script_dir],
+                )
+
             # Now create the artifact, and make the deployment.
             device_id = Helpers.ip_to_device_id_map(
                 MenderDeviceGroup([mender_device.host_string])
             )[mender_device.host_string]
             deployment_id = common_update_procedure(
-                install_image=new_rootfs,
                 verify_status=False,
                 devices=[device_id],
                 scripts=[artifact_script_dir],
+                make_artifact=make_artifact,
             )[0]
             if test_set["ExpectedStatus"] is None:
                 # In this case we don't expect the deployment to even be
@@ -842,21 +837,6 @@ class TestStateScripts(MenderTesting):
 
             output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split("\n"))
-
-            new_active = mender_device.get_active_partition()
-            should_switch_partition = test_set["ExpectedStatus"] == "success"
-
-            if test_set.get("SwapPartitionExpectation"):
-                should_switch_partition = not should_switch_partition
-
-            if should_switch_partition:
-                assert (
-                    old_active != new_active
-                ), "Device did not switch partition as expected!"
-            else:
-                assert (
-                    old_active == new_active
-                ), "Device switched partition which was not expected!"
 
         except:
             output = mender_device.run(

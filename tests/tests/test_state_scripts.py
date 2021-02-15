@@ -418,10 +418,11 @@ REBOOT_TEST_SET = [
     (
         "simulate_powerloss_artifact_install_enter",
         {
-            "RebootScripts": ["ArtifactInstall_Enter_01",],
+            "RebootScripts": ["ArtifactInstall_Enter_02",],
             "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Enter_02",
                 "ArtifactInstall_Leave_01",
                 "ArtifactReboot_Enter_01",
                 "ArtifactReboot_Leave_01",
@@ -429,7 +430,8 @@ REBOOT_TEST_SET = [
                 "ArtifactFailure_Leave_89",
             ],
             "ExpectedScriptFlow": [
-                "ArtifactInstall_Enter_01",  # kill!
+                "ArtifactInstall_Enter_01",  # run one script to init log
+                "ArtifactInstall_Enter_02",  # kill!
                 "ArtifactFailure_Enter_01",  # run failure scripts
                 "ArtifactFailure_Leave_89",
             ],
@@ -439,7 +441,6 @@ REBOOT_TEST_SET = [
         "simulate_powerloss_in_commit_enter",
         {
             "RebootScripts": ["ArtifactCommit_Enter_89"],
-            "DoubleReboot": [True],
             "ExpectedFinalPartition": ["OriginalPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
@@ -469,7 +470,6 @@ REBOOT_TEST_SET = [
         "simulate_powerloss_in_artifact_commit_leave",
         {
             "RebootOnceScripts": ["ArtifactCommit_Leave_01"],
-            "DoubleReboot": [True],
             "ExpectedFinalPartition": ["OtherPartition"],
             "ScriptOrder": [
                 "ArtifactInstall_Enter_01",
@@ -554,13 +554,12 @@ class TestStateScripts(MenderTesting):
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
         self,
-        class_persistent_standard_setup_one_client_bootstrapped,
+        class_persistent_setup_client_state_scripts_update_module,
         description,
         test_set,
-        valid_image,
     ):
 
-        mender_device = class_persistent_standard_setup_one_client_bootstrapped.device
+        mender_device = class_persistent_setup_client_state_scripts_update_module.device
         work_dir = "test_state_scripts.%s" % mender_device.host_string
 
         script_content = (
@@ -589,14 +588,6 @@ class TestStateScripts(MenderTesting):
         os.mkdir(work_dir)
         os.mkdir(artifact_script_dir)
 
-        new_rootfs = os.path.join(work_dir, "rootfs.ext4")
-        shutil.copy(valid_image, new_rootfs)
-
-        ps = subprocess.Popen(["debugfs", "-w", new_rootfs], stdin=subprocess.PIPE)
-        ps.stdin.write(b"cd /etc/mender\n" b"mkdir scripts\n" b"cd scripts\n")
-        ps.stdin.close()
-        ps.wait()
-
         for script in test_set.get("ScriptOrder"):
             if not script.startswith("Artifact"):
                 # Not an artifact script, skip this one.
@@ -615,30 +606,29 @@ class TestStateScripts(MenderTesting):
         )[mender_device.host_string]
 
         host_ip = (
-            class_persistent_standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+            class_persistent_setup_client_state_scripts_update_module.get_virtual_network_host_ip()
         )
+
+        def make_artifact(filename, artifact_name):
+            return image.make_module_artifact(
+                "module-state-scripts-test",
+                conftest.machine_name,
+                artifact_name,
+                filename,
+                scripts=[artifact_script_dir],
+            )
+
         with mender_device.get_reboot_detector(host_ip) as reboot_detector:
 
             common_update_procedure(
-                install_image=new_rootfs,
                 verify_status=True,
                 devices=[device_id],
                 scripts=[artifact_script_dir],
-            )[0]
+                make_artifact=make_artifact,
+            )
 
             try:
-
-                orig_part = mender_device.get_active_partition()
-
-                # handle case where the client has not finished the update
-                # path on the committed partition, but new partition is installed,
-                # thus we will not get a valid entrypoint into the uncommitted parition(reboot_leave)
-                # and the client will thus reboot straight after starting, and u-boot will
-                # fall back to the committed partition
-                if test_set.get("DoubleReboot", False):
-                    reboot_detector.verify_reboot_performed(number_of_reboots=2)
-                else:
-                    reboot_detector.verify_reboot_performed()
+                reboot_detector.verify_reboot_performed()
 
                 # wait until the last script has been run
                 logger.debug("Wait until the last script has been run")
@@ -664,12 +654,6 @@ class TestStateScripts(MenderTesting):
                             ", ".join(script_logs.rstrip().split("\n")),
                         )
                     )
-
-                # make sure the client ended up on the right partition
-                if "OtherPartition" in test_set.get("ExpectedFinalPartition", []):
-                    assert orig_part != mender_device.get_active_partition()
-                else:
-                    assert orig_part == mender_device.get_active_partition()
 
                 assert script_logs.split() == test_set.get("ExpectedScriptFlow")
 

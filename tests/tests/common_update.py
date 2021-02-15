@@ -41,22 +41,22 @@ def common_update_procedure(
 
     with artifact_lock:
         if regenerate_image_id:
-            artifact_id = "mender-%s" % str(random.randint(0, 99999999))
-            logger.debug("randomized image id: " + artifact_id)
+            artifact_name = "mender-%s" % str(random.randint(0, 99999999))
+            logger.debug("randomized image id: " + artifact_name)
         else:
-            artifact_id = Helpers.yocto_id_from_ext4(install_image)
+            artifact_name = Helpers.yocto_id_from_ext4(install_image)
 
         # create artifact
         with tempfile.NamedTemporaryFile() as artifact_file:
             if make_artifact:
-                created_artifact = make_artifact(artifact_file.name, artifact_id)
+                created_artifact = make_artifact(artifact_file.name, artifact_name)
             else:
                 compression_arg = "--compression " + compression_type
                 created_artifact = image.make_rootfs_artifact(
                     install_image,
                     device_type,
-                    artifact_id,
-                    artifact_file,
+                    artifact_name,
+                    artifact_file.name,
                     signed=signed,
                     scripts=scripts,
                     global_flags=compression_arg,
@@ -77,7 +77,9 @@ def common_update_procedure(
                     )
                 pre_deployment_callback()
                 deployment_id = deploy.trigger_deployment(
-                    name="New valid update", artifact_name=artifact_id, devices=devices
+                    name="New valid update",
+                    artifact_name=artifact_name,
+                    devices=devices,
                 )
             else:
                 logger.warn("failed to create artifact")
@@ -88,7 +90,7 @@ def common_update_procedure(
     if verify_status:
         deploy.check_expected_status("inprogress", deployment_id)
 
-    return deployment_id, artifact_id
+    return deployment_id, artifact_name
 
 
 def update_image(
@@ -154,8 +156,8 @@ def update_image(
     deploy.check_expected_status("finished", deployment_id)
 
     # make sure backend recognizes signed and unsigned images
-    artifact_id = deploy.get_deployment(deployment_id)["artifacts"][0]
-    artifact_info = deploy.get_artifact_details(artifact_id)
+    artifact_name = deploy.get_deployment(deployment_id)["artifacts"][0]
+    artifact_info = deploy.get_artifact_details(artifact_name)
     assert (
         artifact_info["signed"] is signed
     ), "image was not correct recognized as signed/unsigned"

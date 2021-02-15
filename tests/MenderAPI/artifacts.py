@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class Artifacts:
         image,
         device_type,
         artifact_name,
-        artifact_file_created,
+        artifact_filename,
         signed=False,
         scripts=[],
         global_flags="",
@@ -55,7 +55,7 @@ class Artifacts:
             image,
             device_type,
             artifact_name,
-            artifact_file_created.name,
+            artifact_filename,
             signed_arg,
             ("-v %d" % version) if version else "",
         )
@@ -71,7 +71,7 @@ class Artifacts:
         logger.info("Running: " + cmd)
         subprocess.check_call(cmd, shell=True)
 
-        return artifact_file_created.name
+        return artifact_filename
 
     def get_mender_conf(self, image):
         """

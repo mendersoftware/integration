@@ -39,6 +39,7 @@ class DockerComposeNamespace(DockerNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.config.yml",
         COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
     ]
@@ -96,8 +97,8 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 12
-    NUM_SERVICES_ENTERPRISE = 14
+    NUM_SERVICES_OPENSOURCE = 13
+    NUM_SERVICES_ENTERPRISE = 15
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)

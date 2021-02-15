@@ -163,11 +163,11 @@ env_setup() {
     export MENDER_VERSION=$(awk -F':' '/mendersoftware\/mender-client/ {print $3}' docker-compose.client.yml)
     export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
-    MENDER_SERVER_URI="https://localhost"
+    MENDER_SERVER_URI="https://docker.mender.io"
     # use http when providing no-ssl config
     if [[ "${ARGS[*]}" == *"-f docker-compose.no-ssl.yml"* ]]
     then
-        MENDER_SERVER_URI="http://localhost"
+        MENDER_SERVER_URI="http://docker.mender.io"
     fi
 
     USER='mender-demo@example.com'

@@ -79,7 +79,7 @@ class TestConfiguration(MenderTesting):
         reported = None
         for i in range(180):
             r = requests_retry().get(
-                configuration_url, verify=False, headers=auth.get_auth_token(),
+                configuration_url, verify=False, headers=auth.get_auth_token()
             )
             assert r.status_code == 200
             reported = r.json().get("reported")
@@ -167,7 +167,7 @@ class TestConfigurationEnterprise(MenderTesting):
         reported = None
         for i in range(180):
             r = requests_retry().get(
-                configuration_url, verify=False, headers=auth.get_auth_token(),
+                configuration_url, verify=False, headers=auth.get_auth_token()
             )
             assert r.status_code == 200
             reported = r.json().get("reported")

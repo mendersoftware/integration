@@ -89,6 +89,8 @@ class TestConfiguration(MenderTesting):
 
         assert configuration == reported
 
+        verify_update_was_forced(standard_setup_one_client.device)
+
 
 @pytest.mark.usefixtures("enterprise_no_client")
 class TestConfigurationEnterprise(MenderTesting):
@@ -174,3 +176,15 @@ class TestConfigurationEnterprise(MenderTesting):
             time.sleep(1)
 
         assert configuration == reported
+
+        verify_update_was_forced(mender_device)
+
+
+def verify_update_was_forced(mender_device):
+    """ Check that the update was triggered by update-check """
+
+    out = mender_device.run(
+        "journalctl -u %s -l" % mender_device.get_client_service_name()
+    )
+    assert "Forced wake-up from sleep" in out
+    assert "Forcing state machine to: update-check" in out

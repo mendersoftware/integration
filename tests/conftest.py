@@ -114,7 +114,7 @@ def pytest_exception_interact(node, call, report):
             for val in node.funcargs.values()
             if isinstance(val, BaseContainerManagerNamespace)
         ]
-        if len(env_candidates) == 1:
+        if len(env_candidates) > 0:
             env = env_candidates[0]
             dev_candidates = [
                 getattr(env, attr)

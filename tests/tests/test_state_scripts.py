@@ -364,53 +364,53 @@ TEST_SETS = [
             ],
         },
     ),
-    # TODO: Move this test case out of the rest, requires full rootfs update
-    # (
-    #     "Corrupted_script_version_in_etc",
-    #     {
-    #         "FailureScript": [],
-    #         "ExpectedStatus": "failure",
-    #         "CorruptEtcScriptVersionInUpdate": True,
-    #         "ScriptOrder": [
-    #             "Idle_Enter_08_testing",
-    #             "Idle_Enter_09",
-    #             "Idle_Leave_09",
-    #             "Idle_Leave_10",
-    #             "Sync_Enter_02",
-    #             "Sync_Enter_03",
-    #             "Sync_Leave_04",
-    #             "Sync_Leave_15",
-    #             "Download_Enter_12",
-    #             "Download_Enter_13",
-    #             "Download_Leave_14",
-    #             "Download_Leave_25",
-    #             "ArtifactInstall_Enter_01",
-    #             "ArtifactInstall_Enter_02",
-    #             "ArtifactInstall_Leave_01",
-    #             "ArtifactInstall_Leave_03",
-    #             "ArtifactReboot_Enter_01",
-    #             "ArtifactReboot_Enter_11",
-    #             "ArtifactReboot_Leave_01",
-    #             "ArtifactReboot_Leave_89",
-    #             "ArtifactReboot_Leave_99",
-    #             "ArtifactCommit_Enter_01",
-    #             "ArtifactCommit_Enter_05",
-    #             "ArtifactCommit_Error_91",
-    #             "ArtifactRollback_Enter_00",
-    #             "ArtifactRollback_Enter_01",
-    #             "ArtifactRollback_Leave_00",
-    #             "ArtifactRollback_Leave_01",
-    #             "ArtifactRollbackReboot_Enter_00",
-    #             "ArtifactRollbackReboot_Enter_99",
-    #             "ArtifactRollbackReboot_Leave_01",
-    #             "ArtifactRollbackReboot_Leave_99",
-    #             "ArtifactFailure_Enter_22",
-    #             "ArtifactFailure_Enter_33",
-    #             "ArtifactFailure_Leave_44",
-    #             "ArtifactFailure_Leave_55",
-    #         ],
-    #     },
-    # ),
+    (
+        "Corrupted_script_version_in_etc",
+        {
+            "FailureScript": [],
+            "ExpectedStatus": "failure",
+            "CorruptEtcScriptVersionIn": "ArtifactReboot_Leave_99",
+            "RestoreEtcScriptVersionIn": "ArtifactRollbackReboot_Leave_99",
+            "ScriptOrder": [
+                "Idle_Enter_08_testing",
+                "Idle_Enter_09",
+                "Idle_Leave_09",
+                "Idle_Leave_10",
+                "Sync_Enter_02",
+                "Sync_Enter_03",
+                "Sync_Leave_04",
+                "Sync_Leave_15",
+                "Download_Enter_12",
+                "Download_Enter_13",
+                "Download_Leave_14",
+                "Download_Leave_25",
+                "ArtifactInstall_Enter_01",
+                "ArtifactInstall_Enter_02",
+                "ArtifactInstall_Leave_01",
+                "ArtifactInstall_Leave_03",
+                "ArtifactReboot_Enter_01",
+                "ArtifactReboot_Enter_11",
+                "ArtifactReboot_Leave_01",
+                "ArtifactReboot_Leave_89",
+                "ArtifactReboot_Leave_99",
+                "ArtifactCommit_Enter_01",
+                "ArtifactCommit_Enter_05",
+                "ArtifactCommit_Error_91",
+                "ArtifactRollback_Enter_00",
+                "ArtifactRollback_Enter_01",
+                "ArtifactRollback_Leave_00",
+                "ArtifactRollback_Leave_01",
+                "ArtifactRollbackReboot_Enter_00",
+                "ArtifactRollbackReboot_Enter_99",
+                "ArtifactRollbackReboot_Leave_01",
+                "ArtifactRollbackReboot_Leave_99",
+                "ArtifactFailure_Enter_22",
+                "ArtifactFailure_Enter_33",
+                "ArtifactFailure_Leave_44",
+                "ArtifactFailure_Leave_55",
+            ],
+        },
+    ),
 ]
 
 
@@ -750,6 +750,10 @@ class TestStateScripts(MenderTesting):
                         fd.write(script_content)
                     if test_set.get("CorruptDataScriptVersionIn") == script:
                         fd.write("printf '1000' > /data/mender/scripts/version\n")
+                    if test_set.get("CorruptEtcScriptVersionIn") == script:
+                        fd.write("printf '1000' > /etc/mender/scripts/version\n")
+                    if test_set.get("RestoreEtcScriptVersionIn") == script:
+                        fd.write("printf '2' > /etc/mender/scripts/version\n")
 
             # Callback for our custom artifact maker
             def make_artifact(filename, artifact_name):

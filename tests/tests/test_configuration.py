@@ -16,10 +16,13 @@
 import json
 import pytest
 import time
+import redo
 
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
 from testutils.common import Tenant, User
+from testutils.api.client import ApiClient
+import testutils.api.deviceconnect as deviceconnect
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from ..MenderAPI import (
@@ -53,13 +56,16 @@ class TestConfiguration(MenderTesting):
         )
         assert 1 == len(devices)
 
+        auth = authentication.Authentication()
+
+        wait_for_connect(auth, devices[0])
+
         # set the device's configuration
         configuration = {"key": "value"}
         configuration_url = (
             "https://%s/api/management/v1/deviceconfig/configurations/device/%s"
             % (get_container_manager().get_mender_gateway(), devices[0])
         )
-        auth = authentication.Authentication()
         r = requests_retry().put(
             configuration_url,
             verify=False,
@@ -142,6 +148,8 @@ class TestConfigurationEnterprise(MenderTesting):
         )
         assert 1 == len(devices)
 
+        wait_for_connect(auth, devices[0])
+
         # set the device's configuration
         configuration = {"key": "value"}
         configuration_url = (
@@ -188,3 +196,23 @@ def verify_update_was_forced(mender_device):
     )
     assert "Forced wake-up from sleep" in out
     assert "Forcing state machine to: update-check" in out
+
+
+def wait_for_connect(auth, devid):
+    devconn = ApiClient(
+        host=get_container_manager().get_mender_gateway(),
+        base_url=deviceconnect.URL_MGMT,
+    )
+
+    for _ in redo.retrier(attempts=60, sleeptime=1):
+        logger.info("waiting for device in deviceconnect")
+        res = devconn.call(
+            "GET",
+            deviceconnect.URL_MGMT_DEVICE,
+            headers=auth.get_auth_token(),
+            path_params={"id": devid},
+        )
+        if res.status_code == 200 and res.json()["status"] == "connected":
+            break
+    else:
+        assert False, "timed out waiting for /connect"

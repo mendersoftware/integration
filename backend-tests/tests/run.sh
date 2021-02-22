@@ -10,4 +10,4 @@ else
     kubectl get pods -o wide
 fi
 
-python3 -m pytest -s /tests/test_*.py "$@"
+python3 -m pytest -v -s /tests/test_*.py "$@"

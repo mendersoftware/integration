@@ -108,13 +108,18 @@ class TestMenderConnect:
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
-        device.run("systemctl --job-mode=ignore-dependencies stop mender-client")
+        client_service_name = device.get_client_service_name()
+        device.run(
+            f"systemctl --job-mode=ignore-dependencies stop {client_service_name}"
+        )
         device.run("systemctl --job-mode=ignore-dependencies restart mender-connect")
 
         time.sleep(10)
 
         # At this point, mender-connect will already have queried DBus.
-        device.run("systemctl --job-mode=ignore-dependencies start mender-client")
+        device.run(
+            f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
+        )
 
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.

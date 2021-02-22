@@ -58,7 +58,9 @@ def tenant_users(clean_migrated_mongo):
         "secretsecret",
     )
     tenant = create_org(tenant, username, password, "enterprise")
-    user = create_user("foo@user.com", "correcthorsebatterystaple", tid=tenant.id)
+    user = create_user(
+        "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
+    )
 
     tenant.users.append(user)
 
@@ -101,8 +103,9 @@ class TestAuditLogsEnterprise:
 
         alogs = ApiClient(auditlogs.URL_MGMT)
 
-        uid = make_user(user.token, "foo@acme.com", "secretsecret")
-        expected = evt_user_create(user, uid, "foo@acme.com")
+        uuidv4 = str(uuid.uuid4())
+        uid = make_user(user.token, "foo+" + uuidv4 + "@acme.com", "secretsecret")
+        expected = evt_user_create(user, uid, "foo+" + uuidv4 + "@acme.com")
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):

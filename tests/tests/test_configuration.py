@@ -60,42 +60,16 @@ class TestConfiguration(MenderTesting):
 
         wait_for_connect(auth, devices[0])
 
-        # set the device's configuration
-        configuration = {"key": "value"}
-        configuration_url = (
-            "https://%s/api/management/v1/deviceconfig/configurations/device/%s"
-            % (get_container_manager().get_mender_gateway(), devices[0])
-        )
-        r = requests_retry().put(
-            configuration_url,
-            verify=False,
-            headers=auth.get_auth_token(),
-            json=configuration,
-        )
+        # set and verify the device's configuration
+        # retry to skip possible race conditions between update poll and update trigger
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            set_and_verify_config({"key": "value"}, devices[0], auth.get_auth_token())
 
-        # deploy the configurations
-        r = requests_retry().post(
-            configuration_url + "/deploy",
-            verify=False,
-            headers=auth.get_auth_token(),
-            json={"retries": 0},
-        )
+            forced = was_update_forced(standard_setup_one_client.device)
+            if forced:
+                return
 
-        # loop and verify the reported configuration
-        reported = None
-        for i in range(180):
-            r = requests_retry().get(
-                configuration_url, verify=False, headers=auth.get_auth_token()
-            )
-            assert r.status_code == 200
-            reported = r.json().get("reported")
-            if reported == configuration:
-                break
-            time.sleep(1)
-
-        assert configuration == reported
-
-        verify_update_was_forced(standard_setup_one_client.device)
+        assert False, "the update check was never triggered"
 
 
 @pytest.mark.usefixtures("enterprise_no_client")
@@ -150,52 +124,39 @@ class TestConfigurationEnterprise(MenderTesting):
 
         wait_for_connect(auth, devices[0])
 
-        # set the device's configuration
-        configuration = {"key": "value"}
-        configuration_url = (
-            "https://%s/api/management/v1/deviceconfig/configurations/device/%s"
-            % (get_container_manager().get_mender_gateway(), devices[0])
-        )
-        r = requests_retry().put(
-            configuration_url,
-            verify=False,
-            headers=auth.get_auth_token(),
-            json=configuration,
-        )
+        # set and verify the device's configuration
+        # retry to skip possible race conditions between update poll and update trigger
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            set_and_verify_config({"key": "value"}, devices[0], auth.get_auth_token())
 
-        # deploy the configurations
-        r = requests_retry().post(
-            configuration_url + "/deploy",
-            verify=False,
-            headers=auth.get_auth_token(),
-            json={"retries": 0},
-        )
+            forced = was_update_forced(mender_device)
+            if forced:
+                return
 
-        # loop and verify the reported configuration
-        reported = None
-        for i in range(180):
-            r = requests_retry().get(
-                configuration_url, verify=False, headers=auth.get_auth_token()
-            )
-            assert r.status_code == 200
-            reported = r.json().get("reported")
-            if reported == configuration:
-                break
-            time.sleep(1)
-
-        assert configuration == reported
-
-        verify_update_was_forced(mender_device)
+        assert False, "the update check was never triggered"
 
 
-def verify_update_was_forced(mender_device):
-    """ Check that the update was triggered by update-check """
+def was_update_forced(mender_device):
+    """Check that the update was triggered by update-check
+    It's possible that due to a race, the update was applied by normal check, blocking the update check trigger.
+    Make sure which case it is.
+    """
 
     out = mender_device.run(
         "journalctl -u %s -l" % mender_device.get_client_service_name()
     )
-    assert "Forced wake-up from sleep" in out
-    assert "Forcing state machine to: update-check" in out
+    if (
+        "Forced wake-up from sleep" in out
+        and "Forcing state machine to: update-check" in out
+    ):
+        return True
+    elif "Cannot check update or update inventory while in update-fetch state" in out:
+        # race condition - check-update came while we were already updating
+        return False
+    else:
+        raise RuntimeError(
+            "fatal: no expected evidence of an update was found in device logs"
+        )
 
 
 def wait_for_connect(auth, devid):
@@ -216,3 +177,35 @@ def wait_for_connect(auth, devid):
             break
     else:
         assert False, "timed out waiting for /connect"
+
+
+def set_and_verify_config(config, devid, authtoken):
+    """ Deploy a configuration and assert it was reported back """
+
+    configuration_url = (
+        "https://%s/api/management/v1/deviceconfig/configurations/device/%s"
+        % (get_container_manager().get_mender_gateway(), devid)
+    )
+    r = requests_retry().put(
+        configuration_url, verify=False, headers=authtoken, json=config,
+    )
+
+    # deploy the configurations
+    r = requests_retry().post(
+        configuration_url + "/deploy",
+        verify=False,
+        headers=authtoken,
+        json={"retries": 0},
+    )
+
+    # loop and verify the reported configuration
+    reported = None
+    for i in range(180):
+        r = requests_retry().get(configuration_url, verify=False, headers=authtoken)
+        assert r.status_code == 200
+        reported = r.json().get("reported")
+        if reported == config:
+            break
+        time.sleep(1)
+
+    assert config == reported

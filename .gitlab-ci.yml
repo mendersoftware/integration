@@ -68,6 +68,33 @@ test:extra-tools:release-tool:
     # Run release-tool unit tests.
     - python3 -m pytest extra/test_release_tool.py
 
+test:docs:
+  image: tiangolo/docker-with-compose
+  services:
+    - docker:19.03.5-dind
+  except:
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
+  before_script:
+    - apk add bash git openssl pwgen python3 jq
+    - git config --global user.name "user"
+    - git config --global user.email "user@example.com"
+    - git clone --depth=1 https://github.com/mendersoftware/mender-docs.git mender-docs
+
+  script:
+    - cd mender-docs
+    - env TEST_OPEN_SOURCE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        docker login -u ntadm_menderci -p "$REGISTRY_MENDER_IO_PASSWORD" registry.mender.io;
+      fi
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md;
+      fi
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/01.Upgrading-from-OS-to-Enterprise/docs.md;
+      fi
+
 test:staging:backend-tests:
   image: debian:buster
   stage: test

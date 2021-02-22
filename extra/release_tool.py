@@ -1299,9 +1299,6 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
 
         # Modify docker tags in docker-compose file.
         for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key):
-            if repo.git() == "integration":
-                continue
-
             if repo.is_independent_component():
                 set_docker_compose_version_to(
                     tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
@@ -2900,8 +2897,6 @@ def do_hosted_release(version=None):
     for non_backend_comp in Component.get_components_of_type(
         "git", only_independent_component=True
     ):
-        if non_backend_comp.git() == "integration":
-            continue
         yml_component = non_backend_comp.yml_components()[0]
 
         non_backend_versions[non_backend_comp.git()] = version_of(

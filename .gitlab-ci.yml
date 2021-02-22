@@ -6,9 +6,13 @@ include:
     file: '.gitlab-ci-check-python3-format.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-github-status-updates.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-docker-build.yml'
 
 stages:
   - test
+  - build
+  - publish
 
 test:check-commits:
   except:
@@ -111,3 +115,13 @@ test:staging:backend-tests:
       - backend-tests/report_backend_integration_*.html
     reports:
       junit: backend-tests/results_backend_integration_*.xml
+
+build:docker:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons

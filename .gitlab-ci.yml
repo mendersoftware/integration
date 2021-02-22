@@ -125,3 +125,8 @@ publish:image:
   variables:
     DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
     DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:mender:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons

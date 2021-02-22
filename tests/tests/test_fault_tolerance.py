@@ -43,30 +43,65 @@ class TestFaultTolerance(MenderTesting):
     ):
         try:
             for h in hosts:
-                gateway_ip = device.run(
-                    r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
-                    % (h),
-                    hide=True,
-                ).strip()
-
-                if accessible:
-                    logger.info("Allowing network communication to %s" % h)
-                    device.run(
-                        "iptables -D INPUT -s %s -j DROP" % (gateway_ip), hide=True
-                    )
-                    device.run(
-                        "iptables -D OUTPUT -s %s -j DROP" % (gateway_ip), hide=True
-                    )
+                if h == "s3.docker.mender.io":
+                    TestFaultTolerance.block_by_domain(device, accessible, h)
                 else:
-                    logger.info("Disallowing network communication to %s" % h)
-                    device.run(
-                        "iptables -I INPUT 1 -s %s -j DROP" % gateway_ip, hide=True
-                    )
-                    device.run(
-                        "iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True
-                    )
+                    TestFaultTolerance.block_by_ip(device, accessible, h)
         except Exception as e:
             logger.info("Exception while messing with network connectivity: %s", str(e))
+
+    @staticmethod
+    def block_by_ip(device, accessible, host):
+        """ Get IP of host and block by that.
+        """
+        gateway_ip = device.run(
+            r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+            % (host),
+            hide=True,
+        ).strip()
+
+        if accessible:
+            logger.info("Allowing network communication to %s" % host)
+            device.run("iptables -D INPUT -s %s -j DROP" % (gateway_ip), hide=True)
+            device.run("iptables -D OUTPUT -s %s -j DROP" % (gateway_ip), hide=True)
+        else:
+            logger.info("Disallowing network communication to %s" % host)
+            device.run("iptables -I INPUT 1 -s %s -j DROP" % gateway_ip, hide=True)
+            device.run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True)
+
+    def block_by_domain(device, accessible, host):
+        """ Some services shouldn't be blocked by ip, because they share it with other services.
+            (example: s3 is the same IP as gateway as a whole).
+            Block these by host/domain name instead (using iptables string matching).
+        """
+
+        # extra modules for iptables string matching
+        device.run("modprobe xt_string")
+        device.run("modprobe ts-bm")
+
+        if accessible:
+            logger.info("Allowing network communication to %s" % host)
+            device.run(
+                "iptables -D INPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                % host
+            )
+
+            device.run(
+                "iptables -D OUTPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                % host
+            )
+        else:
+            logger.info("Disallowing network communication to %s" % host)
+            res = device.run(
+                "iptables -I INPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                % host,
+                hide=True,
+            )
+            device.run(
+                "iptables -I OUTPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                % host,
+                hide=True,
+            )
 
     @staticmethod
     def wait_for_download_retry_attempts(device, search_string):
@@ -163,6 +198,10 @@ class TestFaultTolerance(MenderTesting):
             being copied over to the inactive parition.
 
             The test should result in a successful download retry.
+            
+            NOTE: storage and gateway share an ip, so disabling connectivity
+            is tricky - we must alternate between blocking by the whole ip and blocking
+            just by domain
         """
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -178,28 +217,38 @@ class TestFaultTolerance(MenderTesting):
         inactive_part = mender_device.get_passive_partition()
 
         host_ip = standard_setup_one_client_bootstrapped.get_virtual_network_host_ip()
+
+        blocked_service = None
+
         with mender_device.get_reboot_detector(host_ip) as reboot:
             if test_set["blockAfterStart"]:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(valid_image)
                 mender_device.run("fuser -mv %s" % (inactive_part))
 
-            # use iptables to block traffic to storage
+                # storage must be blocked by ip to kill an ongoing connection
+                # so block the whole gateway
+                blocked_service = "docker.mender.io"
+            else:
+                # storage can/must be blocked just by domain since
+                # gateway must still be accessible for deployment reporting
+                blocked_service = "s3.docker.mender.io"
+
             TestFaultTolerance.manipulate_network_connectivity(
-                mender_device, False, hosts=["s3.docker.mender.io"]
-            )  # disable connectivity
+                mender_device, False, hosts=[blocked_service]
+            )
 
             if not test_set["blockAfterStart"]:
-                # Block before we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(valid_image)
 
             # re-enable connectivity after 2 retries
             TestFaultTolerance.wait_for_download_retry_attempts(
                 mender_device, test_set["logMessageToLookFor"]
             )
+
             TestFaultTolerance.manipulate_network_connectivity(
-                mender_device, True, hosts=["s3.docker.mender.io"]
-            )  # re-enable connectivity
+                mender_device, True, hosts=[blocked_service]
+            )
 
             reboot.verify_reboot_performed()
             deploy.check_expected_status("finished", deployment_id)

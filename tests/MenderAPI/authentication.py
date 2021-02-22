@@ -83,7 +83,7 @@ class Authentication:
         )
 
         if create_new_user:
-            if r.status_code is not 200:
+            if r.status_code != 200:
                 if self.multitenancy and self.org_create:
                     tenant_id = self._create_org(
                         self.org_name, self.username, self.password, self.plan

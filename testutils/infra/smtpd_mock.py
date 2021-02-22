@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,6 +13,11 @@
 #    limitations under the License.
 
 import smtpd
+import asyncore
+import pytest
+import time
+
+from threading import Thread
 
 
 class Message:
@@ -30,3 +35,35 @@ class SMTPServerMock(smtpd.SMTPServer):
 
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         self.messages.append(Message(peer, mailfrom, rcpttos, data))
+
+
+class SMTPMock:
+    def start(self):
+        self.server = SMTPServerMock(("0.0.0.0", 4444), None, enable_SMTPUTF8=True)
+        asyncore.loop()
+
+    def stop(self):
+        self.server.close()
+
+    def filtered_messages(self, email):
+        return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
+
+    def assert_called(self, email):
+        msgs = self.filtered_messages(email)
+        assert len(msgs) == 1
+        m = msgs[0]
+        assert m.mailfrom.rsplit("@", 1)[-1] == "mender.io"
+        assert m.rcpttos[0] == email
+        assert len(m.data) > 0
+
+
+@pytest.fixture(scope="function")
+def smtp_mock():
+    smtp_mock = SMTPMock()
+    thread = Thread(target=smtp_mock.start)
+    thread.daemon = True
+    thread.start()
+    yield smtp_mock
+    smtp_mock.stop()
+    # need to wait for the port to be released
+    time.sleep(30)

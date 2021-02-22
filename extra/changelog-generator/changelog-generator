@@ -21,6 +21,7 @@ SHA_TO_TRACKER = {}
 
 JIRA_REGEX = r"(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)"
 TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
+ORGANIZATION = "mendersoftware"
 
 
 def aggregate_dependabot_changelogs(entry_list):
@@ -28,9 +29,10 @@ def aggregate_dependabot_changelogs(entry_list):
     aggregated_dependabot_changelogs = ""
     for entry in entry_list:
         if re.search("[Bb]umps? .* from .* to .*", entry):
-            aggregated_dependabot_changelogs += "\n* " + "\n  ".join(
-                [s for n, s in enumerate(entry.split("\n")) if s != "" and n != 0]
-            )
+            if ORGANIZATION not in entry:
+                aggregated_dependabot_changelogs += "\n* " + "\n  ".join(
+                    [s for n, s in enumerate(entry.split("\n")) if s != "" and n != 0]
+                )
         else:
             new_entry_list.append(entry)
     if aggregated_dependabot_changelogs != "":
@@ -346,10 +348,10 @@ for repo in repos:
             if len(jiras) > 0:
                 tracker += "(" + ", ".join(sorted(jiras)) + ")"
         for entry in ENTRIES[sha_entry]:
-            # Safety check. See if there are still numbers at least four digits long in
-            # the output, and if so, warn about it. This may be ticket references that
-            # we missed.
-            match = re.search("[0-9]{4,}", entry)
+            # Safety check. See if there are still numbers at least four digits
+            # long not preceded by '#' in the output and if so, warn about it.
+            # This may be ticket references that we missed.
+            match = re.search("(?<!#)[0-9]{4,}", entry)
             if match:
                 POSSIBLE_PROBLEMS.append(
                     "*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."

@@ -1,0 +1,10 @@
+version: '2.1'
+services:
+    #
+    # storage-proxy
+    #
+    storage-proxy:
+        image: openresty/openresty:1.13.6.2-0-alpine
+        restart: on-failure
+        networks:
+            - mender

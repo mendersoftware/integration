@@ -32,6 +32,7 @@ $ export K8S="staging"
 $ export AWS_ACCESS_KEY_ID="<aws-access-key>"
 $ export AWS_SECRET_ACCESS_KEY="<aws-access-key>"
 $ export AWS_DEFAULT_REGION="us-east-1"
+$ export AWS_EKS_CLUSTER_NAME="hosted-mender-staging"
 $ export GATEWAY_HOSTNAME="staging.hosted.mender.io"
 ```
 
@@ -40,6 +41,7 @@ The values of the variables follow:
 * **K8S** contains the name of the namespace where the Mender product is running in the Kubernetes cluster;
 * **AWS_ACCESS_KEY_ID** and **AWS_SECRET_ACCESS_KEY** are the AWS access key and secret, used to authenticate to the EKS cluster;
 * **AWS_DEFAULT_REGION** contains the region where the EKS cluster is running;
+* **AWS_EKS_CLUSTER_NAME** contains the name of the EKS cluster;
 * **GATEWAY_HOSTNAME** determines the Mender API gateway's public host name, accessible via HTTPS, to call public API end-points.
 
 You can now start the test using the `run` script.

@@ -28,6 +28,7 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
 from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 
@@ -323,8 +324,9 @@ def wait_for_traefik(gateway_host, routers=[]):
     """ Wait until provided routers are installed.
     Prevents race conditions where services are already up but traefik hasn't yet registered their routers. This causes subtle timing issues.
     By default checks the basic routers (incl. deployments - startup so time consuming, in practice it guarantees success).
-    TODO: k8s support?
     """
+    if isK8S():
+        return
     if routers == []:
         rnames = [
             "deployments@docker",

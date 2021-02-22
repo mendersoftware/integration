@@ -13,3 +13,5 @@ services:
       MTLS_MENDER_BACKEND: "https://mender-api-gateway"
       MTLS_DEBUG_LOG: "true"
       MTLS_INSECURE_SKIP_VERIFY: "true"
+    labels:
+        - mender.testprefix=${MENDER_TESTPREFIX:-""}

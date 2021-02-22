@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -29,14 +29,14 @@ from testutils.common import (
 )
 
 
-class TestPasswordResetEnterprise:
+class TestVerifyEmailEnterprise:
 
     uc = ApiClient(useradm.URL_MGMT)
 
     @pytest.mark.skipif(
         isK8S(), reason="not testable in a staging or production environment"
     )
-    def test_password_reset(self, clean_mongo, smtp_mock):
+    def test_verify_email(self, clean_mongo, smtp_mock):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
             "test.mender.io-" + uuidv4,
@@ -44,11 +44,22 @@ class TestPasswordResetEnterprise:
             "secretsecret",
         )
         create_org(tenant, email, password)
-        new_password = "new.password$$"
 
-        r = self.uc.post(useradm.URL_PASSWORD_RESET_START, body={"email": email})
+        # login and try to enable two factor authentication
+        # it shouldn't be possible since the user email address
+        # has not been verified
+        r = self.uc.call("POST", useradm.URL_LOGIN, auth=(email, password))
+        assert r.status_code == 200
+        utoken = r.text
+        r = self.uc.with_auth(utoken).call(
+            "POST", useradm.URL_SETTINGS, body={"2fa": "enabled"}
+        )
+        assert r.status_code == 403
+
+        # verify user email address
+        r = self.uc.post(useradm.URL_VERIFY_EMAIL_START, body={"email": email})
         assert r.status_code == 202
-        # wait for the password reset email
+        # wait for the verification email
         message = None
         for i in range(15):
             messages = smtp_mock.filtered_messages(email)
@@ -61,49 +72,49 @@ class TestPasswordResetEnterprise:
         assert message.data != ""
         # extract the secret hash from the link
         match = re.search(
-            r"https://hosted.mender.io/ui/#/password/([a-z0-9\-]+)",
+            r"https://hosted.mender.io/ui/#/activate/([a-z0-9\-]+)",
             message.data.decode("utf-8"),
         )
         secret_hash = match.group(1)
         assert secret_hash != ""
-        # reset the password
+        # complete the email address
         r = self.uc.post(
-            useradm.URL_PASSWORD_RESET_COMPLETE,
-            body={"secret_hash": secret_hash, "password": new_password},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash},
         )
-        assert r.status_code == 202
-        # try to login using the new password
-        r = self.uc.call("POST", useradm.URL_LOGIN, auth=(email, new_password))
-        assert r.status_code == 200
-        assert bool(r.text)
+        assert r.status_code == 204
 
-    def test_password_reset_non_existent_email(self, clean_mongo):
+        # try to enable two factor authentication after email address verification
+        # now it should be possible
+        r = self.uc.with_auth(utoken).call(
+            "POST", useradm.URL_SETTINGS, body={"2fa": "enabled"}
+        )
+        assert r.status_code == 201
+
+    def test_verify_email_non_existent_email(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_PASSWORD_RESET_START,
+            useradm.URL_VERIFY_EMAIL_START,
             body={"email": "this.email.does.not.exist@mender.io"},
         )
         assert r.status_code == 202
 
-    def test_password_reset_empty_email(self, clean_mongo):
-        r = self.uc.post(useradm.URL_PASSWORD_RESET_START, body={"email": ""})
+    def test_verify_email_empty_email(self, clean_mongo):
+        r = self.uc.post(useradm.URL_VERIFY_EMAIL_START, body={"email": ""})
         assert r.status_code == 400
 
-    def test_password_reset_invalid_body(self, clean_mongo):
+    def test_verify_email_invalid_body(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_PASSWORD_RESET_START, body={"email": ["email@mender.io"]}
+            useradm.URL_VERIFY_EMAIL_START, body={"email": ["email@mender.io"]}
         )
         assert r.status_code == 400
 
-    def test_password_reset_complete_invalid_secret(self, clean_mongo):
+    def test_verify_email_complete_invalid_secret(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_PASSWORD_RESET_COMPLETE,
-            body={"secret_hash": "dummy", "password": "newe password"},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": "dummy"},
         )
         assert r.status_code == 400
 
-    def test_password_reset_complete_invalid_body(self, clean_mongo):
+    def test_verify_email_complete_invalid_body(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_PASSWORD_RESET_COMPLETE,
-            body={"secret_hash": ["dummy"], "password": "newe password"},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": ["dummy"]},
         )
         assert r.status_code == 400

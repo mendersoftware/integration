@@ -19,6 +19,8 @@ import subprocess
 import filelock
 import logging
 import copy
+import redo
+from testutils.common import wait_for_traefik
 
 from .docker_manager import DockerNamespace
 
@@ -37,6 +39,7 @@ class DockerComposeNamespace(DockerNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.config.yml",
         COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
     ]
@@ -53,6 +56,8 @@ class DockerComposeNamespace(DockerNamespace):
     LEGACY_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
     ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
@@ -110,7 +115,12 @@ class DockerComposeNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "docker-compose -p %s %s %s" % (self.name, files_args, arg_list)
+        cmd = "MENDER_TESTPREFIX=%s docker-compose -p %s %s %s" % (
+            self.name,
+            self.name,
+            files_args,
+            arg_list,
+        )
 
         logger.info("running with: %s" % cmd)
 
@@ -146,7 +156,7 @@ class DockerComposeNamespace(DockerNamespace):
             )
             running_countainers_count = len(out.split())
             if running_countainers_count == expected_containers:
-                time.sleep(60)
+                wait_for_traefik(self.get_mender_gateway())
                 return
             else:
                 time.sleep(1)
@@ -267,16 +277,23 @@ class DockerComposeNamespace(DockerNamespace):
         return output.decode().strip() + ":8822"
 
     def get_mender_gateway(self):
-        """Returns IP address of mender-api-gateway service"""
-        gateway = self.get_ip_of_service("mender-api-gateway")
+        """Returns IP address of mender-api-gateway service
+           Has internal retry - upon setup 'up', the gateway
+           will not be available for a while.
+        """
+        for _ in redo.retrier(attempts=10, sleeptime=1):
+            gateway = self.get_ip_of_service("mender-api-gateway")
 
-        if len(gateway) != 1:
-            raise SystemExit(
-                "expected one instance of api-gateway running, but found: %d instance(s)"
-                % len(gateway)
+            if len(gateway) != 1:
+                continue
+            else:
+                return gateway[0]
+        else:
+            assert (
+                False
+            ), "expected one instance of api-gateway running, but found: {} instance(s)".format(
+                len(gateway)
             )
-
-        return gateway[0]
 
     def restart_service(self, service):
         """Restarts a service."""

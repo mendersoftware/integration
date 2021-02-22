@@ -72,7 +72,7 @@ git:
     - api-gateway
     docker_container:
     - mender-api-gateway
-    release_component: true
+    release_component: false
 
   mender-artifact:
     docker_image: []
@@ -177,6 +177,13 @@ git:
     release_component: true
     independent_component: true
 
+  deviceconfig:
+    docker_image:
+    - deviceconfig
+    docker_container:
+    - mender-deviceconfig
+    release_component: true
+
 docker_image:
   deployments:
     git:
@@ -246,7 +253,7 @@ docker_image:
     - mender-api-gateway-docker
     docker_container:
     - mender-api-gateway
-    release_component: true
+    release_component: false
 
   mender-conductor:
     git:
@@ -353,6 +360,13 @@ docker_image:
     - mender-deviceconnect
     release_component: true
 
+  deviceconfig:
+    git:
+    - deviceconfig
+    docker_container:
+    - mender-deviceconfig
+    release_component: true
+
 docker_container:
   mender-deployments:
     git:
@@ -396,7 +410,7 @@ docker_container:
     - mender-api-gateway-docker
     docker_image:
     - api-gateway
-    release_component: true
+    release_component: false
 
   mender-conductor:
     git:
@@ -475,4 +489,11 @@ docker_container:
     - deviceconnect
     docker_image:
     - deviceconnect
+    release_component: true
+
+  mender-deviceconfig:
+    git:
+    - deviceconfig
+    docker_image:
+    - deviceconfig
     release_component: true

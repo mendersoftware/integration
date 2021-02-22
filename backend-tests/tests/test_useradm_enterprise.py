@@ -16,11 +16,14 @@ import base64
 import io
 import uuid
 from urllib import parse
+import re
+import time
 
 from PIL import Image
 from pyzbar.pyzbar import decode
 import pyotp
 
+from testutils.infra.smtpd_mock import smtp_mock
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
@@ -107,13 +110,40 @@ class Test2FAEnterprise:
 
         return secret_b32
 
-    def test_enable_disable(self, tenants_users):
+    def test_enable_disable(self, tenants_users, smtp_mock):
         user_2fa = tenants_users[0].users[0]
         user_no_2fa = tenants_users[0].users[1]
 
         r = self._login(user_2fa)
         assert r.status_code == 200
         user_2fa_tok = r.text
+
+        # verify user email address
+        r = uadm.post(useradm.URL_VERIFY_EMAIL_START, body={"email": user_2fa.name})
+        assert r.status_code == 202
+        # wait for the verification email
+        message = None
+        for i in range(15):
+            messages = smtp_mock.filtered_messages(user_2fa.name)
+            if len(messages) > 0:
+                message = messages[0]
+                break
+            time.sleep(1)
+        # be sure we received the email
+        assert message is not None
+        assert message.data != ""
+        # extract the secret hash from the link
+        match = re.search(
+            r"https://hosted.mender.io/ui/#/activate/([a-z0-9\-]+)",
+            message.data.decode("utf-8"),
+        )
+        secret_hash = match.group(1)
+        assert secret_hash != ""
+        # complete the email address
+        r = uadm.post(
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash},
+        )
+        assert r.status_code == 204
 
         # enable tfa for 1 user, straight login still works, token is not verified
         self._toggle_tfa(user_2fa_tok, on=True)

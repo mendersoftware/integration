@@ -18,6 +18,21 @@ services:
         environment:
             DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
             DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.deviceconnect.entrypoints=https
+            - traefik.http.routers.deviceconnect.rule=PathPrefix(`/api/devices/{(v[0-9]+)}/deviceconnect`)
+            - traefik.http.routers.deviceconnect.tls=true
+            - traefik.http.routers.deviceconnect.service=deviceconnect
+            - traefik.http.routers.deviceconnect.middlewares=devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.services.deviceconnect.loadbalancer.server.port=8080
+            - traefik.http.routers.deviceconnectMgmt.entrypoints=https
+            - traefik.http.routers.deviceconnectMgmt.rule=PathPrefix(`/api/management/{(v[0-9]+)}/deviceconnect`)
+            - traefik.http.routers.deviceconnectMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.deviceconnectMgmt.tls=true
+            - traefik.http.routers.deviceconnectMgmt.service=deviceconnectMgmt
+            - traefik.http.services.deviceconnectMgmt.loadbalancer.server.port=8080
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
 
     mender-nats:
         image: nats:2.1.9-alpine3.12

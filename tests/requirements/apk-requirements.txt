@@ -6,7 +6,6 @@ device-mapper
 py-pip
 iptables
 gcc
-python2-dev
 libffi-dev
 libc-dev
 openssl-dev

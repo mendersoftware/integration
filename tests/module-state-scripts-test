@@ -1,0 +1,27 @@
+#!/bin/sh
+
+set -e
+
+STATE="$1"
+
+case "$STATE" in
+
+    NeedsArtifactReboot)
+        echo "Yes"
+        ;;
+
+    SupportsRollback)
+        echo "Yes"
+        ;;
+
+    Download|ArtifactInstall|ArtifactRollback)
+        ;;
+
+    ArtifactReboot|ArtifactRollbackReboot)
+        systemctl restart mender-client
+        ;;
+
+esac
+
+exit 0
+

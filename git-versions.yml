@@ -29,6 +29,9 @@ services:
     mender-deviceconnect:
         image: mendersoftware/deviceconnect:staging
 
+    mender-deviceconfig:
+        image: mendersoftware/deviceconfig:master
+
     #mender-workflows-server:
         #image: mendersoftware/workflows:master
 

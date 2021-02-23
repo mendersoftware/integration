@@ -8,3 +8,15 @@
   # the following is required if minio is used but won't break if minio or the crt files aren't present
   certFile = "/certs/s3.docker.mender.io.crt"
   keyFile = "/certs/s3.docker.mender.io.key"
+
+[tls.options]
+  [tls.options.default]
+    minVersion = "VersionTLS12"
+    sniStrict = true
+    cipherSuites = [
+      "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384", # TLS 1.2
+      "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",  # TLS 1.2
+      "TLS_AES_256_GCM_SHA384",                # TLS 1.3
+      "TLS_CHACHA20_POLY1305_SHA256"           # TLS 1.3
+    ]
+    curvePreferences = ["CurveP521", "CurveP384"]

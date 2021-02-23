@@ -30,12 +30,14 @@ http:
         # {{ else }}
         stsSeconds: 31536000
         # {{ end }}
-        forceSTSHeader: true
-        stsPreload: true
-        stsIncludeSubdomains: true
         browserXssFilter: true
+        contentTypeNosniff: true
         customRequestHeaders:
           "X-Forwarded-Proto": "https"
+        forceSTSHeader: true
+        frameDeny: true
+        stsIncludeSubdomains: true
+        stsPreload: true
   
     compression:
       compress: true

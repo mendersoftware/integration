@@ -38,8 +38,10 @@ git:
     release_component: true
 
   integration:
-    docker_image: []
-    docker_container: []
+    docker_image:
+    - mender-client-docker-addons
+    docker_container:
+    - mender-client
     release_component: true
     independent_component: true
 
@@ -59,8 +61,8 @@ git:
 
   mender:
     docker_image:
-    - mender-client-qemu
     - mender-client-docker
+    - mender-client-qemu
     - mender-client-qemu-rofs
     docker_container:
     - mender-client
@@ -234,6 +236,13 @@ docker_image:
     - mender-client
     release_component: true
 
+  mender-client-docker-addons:
+    git:
+    - integration
+    docker_container:
+    - mender-client
+    release_component: true
+
   mender-client-qemu:
     git:
     - mender
@@ -400,8 +409,9 @@ docker_container:
     git:
     - mender
     docker_image:
-    - mender-client-qemu
     - mender-client-docker
+    - mender-client-docker-addons
+    - mender-client-qemu
     - mender-client-qemu-rofs
     release_component: true
 

@@ -26,6 +26,7 @@ import pyotp
 from testutils.infra.smtpd_mock import smtp_mock
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 from testutils.common import (
@@ -72,6 +73,9 @@ def tenants_users(clean_migrated_mongo):
     yield tenants
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not testable in a staging or production environment"
+)
 class Test2FAEnterprise:
     def _login(self, user, totp=None):
         body = {}

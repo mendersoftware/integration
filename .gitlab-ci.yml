@@ -6,9 +6,13 @@ include:
     file: '.gitlab-ci-check-python3-format.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-github-status-updates.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-docker-build.yml'
 
 stages:
   - test
+  - build
+  - publish
 
 test:check-commits:
   except:
@@ -64,6 +68,33 @@ test:extra-tools:release-tool:
     # Run release-tool unit tests.
     - python3 -m pytest extra/test_release_tool.py
 
+test:docs:
+  image: tiangolo/docker-with-compose
+  services:
+    - docker:19.03.5-dind
+  except:
+    variables:
+      - $RUN_TESTS_STAGING == "true"
+
+  before_script:
+    - apk add bash git openssl pwgen python3 jq
+    - git config --global user.name "user"
+    - git config --global user.email "user@example.com"
+    - git clone --depth=1 https://github.com/mendersoftware/mender-docs.git mender-docs
+
+  script:
+    - cd mender-docs
+    - env TEST_OPEN_SOURCE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        docker login -u ntadm_menderci -p "$REGISTRY_MENDER_IO_PASSWORD" registry.mender.io;
+      fi
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md;
+      fi
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/01.Upgrading-from-OS-to-Enterprise/docs.md;
+      fi
+
 test:staging:backend-tests:
   image: debian:buster
   stage: test
@@ -80,6 +111,7 @@ test:staging:backend-tests:
     AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
     AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
     AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
+    AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
     GATEWAY_HOSTNAME: "staging.hosted.mender.io"
     DOCKER_HOST: tcp://docker:2375
 
@@ -111,3 +143,18 @@ test:staging:backend-tests:
       - backend-tests/report_backend_integration_*.html
     reports:
       junit: backend-tests/results_backend_integration_*.xml
+
+build:docker:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:mender:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons

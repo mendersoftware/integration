@@ -1,0 +1,63 @@
+# Creates a container which acts as a bare bones non-VM based Mender
+# installation, for use in tests.
+FROM ubuntu:20.04 AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update && apt install -y make git build-essential golang liblzma-dev \
+    jq libssl-dev libglib2.0-dev
+
+ARG MENDER_CLIENT_VERSION=master
+ARG MENDER_CONNECT_VERSION=master
+
+RUN git clone https://github.com/mendersoftware/mender /src/mender
+RUN (cd /src/mender && git checkout $MENDER_CLIENT_VERSION)
+
+RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
+RUN (cd /src/mender-connect && git checkout $MENDER_CONNECT_VERSION)
+
+RUN git clone https://github.com/mendersoftware/mender-configure-module /src/mender-configure-module
+# Checkout latest tag. No-op if there are no tags (stay in master)
+RUN (cd /src/mender-configure-module && \
+    latest=$(git tag | egrep ^[0-9]+\.[0-9]+\.[0-9]+*$ | sort | tail -n1) && \
+    git checkout $latest)
+
+WORKDIR /src/mender
+RUN make prefix=/mender-install install
+RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
+    < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
+RUN echo artifact_name=original > /mender-install/etc/mender/artifact_info
+
+WORKDIR /src/mender-connect
+RUN make prefix=/mender-install install
+RUN jq ".User=\"root\"" \
+    < examples/mender-connect.conf > /mender-install/etc/mender/mender-connect.conf
+
+WORKDIR /src/mender-configure-module
+RUN make prefix=/mender-install install
+
+RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
+
+FROM ubuntu:20.04
+
+RUN mkdir -p /run/dbus && apt update && apt install -y liblzma5 dbus openssh-server
+
+# Set no password
+RUN sed -ie 's/^root:[^:]*:/root::/' /etc/shadow
+RUN sed -ie 's/^UsePAM/#UsePam/' /etc/ssh/sshd_config
+RUN echo 'PermitEmptyPasswords yes\n\
+PermitRootLogin yes\n\
+Port 22\n\
+Port 8822\n' >> /etc/ssh/sshd_config
+
+COPY --from=build /mender-install/usr/bin/mender /usr/bin/mender
+COPY --from=build /mender-install/usr/bin/mender-connect /usr/bin/mender-connect
+COPY --from=build /mender-install/etc/mender /etc/mender
+COPY --from=build /mender-install/usr/share/mender /usr/share/mender
+COPY --from=build /mender-install/usr/share/doc/mender-client /usr/share/doc/mender-client
+COPY --from=build /mender-install/lib/systemd/system/mender-client.service /lib/systemd/system/mender-client.service
+COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib/systemd/system/mender-connect.service
+COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
+COPY --from=build /mender-install/var/lib/mender /var/lib/mender
+
+COPY entrypoint.sh /
+CMD /entrypoint.sh

@@ -11,8 +11,15 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import os
 import stripe
+
 from stripe import SetupIntent
+
+
+stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
+if stripe.api_key is None:
+    raise RuntimeError("provide the TENANTADM_STRIPE_API_KEY variable!")
 
 
 def find_setup_intent(seti_secret):

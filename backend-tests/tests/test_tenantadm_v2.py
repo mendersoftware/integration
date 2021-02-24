@@ -11,7 +11,6 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import os
 import pytest
 import stripe
 import time
@@ -32,9 +31,6 @@ api_tadm_v1 = ApiClient(tenantadm_v1.URL_MGMT, host=tenantadm_v1.HOST, schema="h
 api_tadm_v2 = ApiClient(tenantadm_v2.URL_MGMT, host=tenantadm_v2.HOST, schema="http://")
 
 api_uadm = ApiClient(useradm.URL_MGMT)
-stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
-if stripe.api_key is None:
-    raise RuntimeError("provide the TENANTADM_STRIPE_API_KEY variable!")
 
 
 class TestCreateOrganizationV2EnterpriseNew:

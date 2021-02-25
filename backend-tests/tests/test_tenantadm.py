@@ -27,7 +27,7 @@ from testutils.common import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_mongo_tenant_migration(mongo):
     mongo_cleanup(mongo)
     tenant_cli = cli.CliTenantadm()

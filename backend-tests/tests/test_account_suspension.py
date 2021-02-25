@@ -30,7 +30,7 @@ from testutils.common import (
 )
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def tenants(clean_mongo):
     tenants = []
 

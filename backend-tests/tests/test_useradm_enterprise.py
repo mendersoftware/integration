@@ -39,7 +39,7 @@ from testutils.common import (
 uadm = ApiClient(useradm.URL_MGMT)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     useradm_cli = CliUseradm()
     tenantadm_cli = CliTenantadm()
@@ -51,7 +51,7 @@ def clean_migrated_mongo(clean_mongo):
     yield clean_mongo
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def tenants_users(clean_migrated_mongo):
     tenants = []
     for n in range(2):

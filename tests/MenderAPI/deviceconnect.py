@@ -48,3 +48,22 @@ class DeviceConnect:
         )
 
         return ws
+
+    def get_playback_url(self, session_id, sleep_ms=None):
+        url = "wss://%s/api/management/%s/deviceconnect/sessions/%s/playback" % (
+            get_container_manager().get_mender_gateway(),
+            api_version,
+            session_id,
+        )
+        if sleep_ms is not None:
+            url += "?sleep_ms=%d" % sleep_ms
+        return url
+
+    def get_playback_websocket(self, session_id, sleep_ms=None):
+        headers = {}
+        headers.update(self.auth.get_auth_token())
+
+        ws = websockets.Websocket(
+            self.get_playback_url(session_id, sleep_ms), headers=headers, insecure=True
+        )
+        return ws

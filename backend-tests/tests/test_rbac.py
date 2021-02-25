@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import testutils.api.deployments as deployments
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
 import testutils.api.useradm as useradm
+import testutils.api.deviceconfig as deviceconfig
 
 from testutils.common import (
     create_org,
@@ -267,4 +268,149 @@ class TestRBACDeviceGroupEnterprise:
             body={"artifact_name": "tester", "name": "dplmnt", "devices": devices},
         )
         assert rsp.status_code == test_case["status_code"], rsp.text
+        self.logger.info("PASS: %s" % test_case["name"])
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "Test RBAC deploy configuration to device belonging to a given group",
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
+                "permissions": [
+                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
+                ],
+                "device_groups": {"test": 1, "production": 1},
+                "deploy_group": "test",
+                "set_configuration_status_code": 204,
+                "deploy_configuration_status_code": 200,
+            },
+            {
+                "name": "Test RBAC configuration deployment forbidden",
+                "user": {"name": "test2-UUID@example.com", "pwd": "password"},
+                "permissions": [
+                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
+                ],
+                "device_groups": {"test": 1, "production": 1},
+                "deploy_group": "production",
+                "set_configuration_status_code": 403,
+                "deploy_configuration_status_code": 403,
+            },
+        ],
+    )
+    def test_set_and_deploy_configuration(self, clean_mongo, test_case):
+        """
+        Tests adding group restrinction to roles and checking that users
+        are not allowed to set and deploy configuration to devices outside the restricted
+        groups.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        tenant.users.append(test_user)
+        login_tenant_users(tenant)
+
+        # Initialize tenant's devices
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
+
+        # Add user to deployment group
+        role = UserRole("RBAC_DEVGRP", test_case["permissions"])
+        add_user_to_role(test_user, tenant, role)
+
+        deviceconf_MGMT = ApiClient(deviceconfig.URL_MGMT)
+
+        device_id = grouped_devices[test_case["deploy_group"]][0].id
+
+        # Attempt to set configuration
+        rsp = deviceconf_MGMT.with_auth(test_user.token).call(
+            "PUT",
+            deviceconfig.URL_MGMT_DEVICE_CONFIGURATION.format(id=device_id),
+            body={"foo": "bar"},
+        )
+        assert rsp.status_code == test_case["set_configuration_status_code"], rsp.text
+
+        # Attempt to deploy the configuration
+        rsp = deviceconf_MGMT.with_auth(test_user.token).call(
+            "POST",
+            deviceconfig.URL_MGMT_DEVICE_CONFIGURATION_DEPLOY.format(id=device_id),
+            body={"retries": 0},
+        )
+        assert (
+            rsp.status_code == test_case["deploy_configuration_status_code"]
+        ), rsp.text
+        self.logger.info("PASS: %s" % test_case["name"])
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "Test RBAC deploy configuration to device belonging to a given group",
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 1, "production": 1},
+                "view_group": "test",
+                "get_configuration_status_code": 200,
+            },
+            {
+                "name": "Test RBAC configuration deployment forbidden",
+                "user": {"name": "test2-UUID@example.com", "pwd": "password"},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 1, "production": 1},
+                "view_group": "production",
+                "get_configuration_status_code": 403,
+            },
+        ],
+    )
+    def test_get_configuration(self, clean_mongo, test_case):
+        """
+        Tests adding group restrinction to roles and checking that users
+        are not allowed to set and deploy configuration to devices outside the restricted
+        groups.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        admin_user = tenant.users[0]
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        tenant.users.append(test_user)
+        login_tenant_users(tenant)
+
+        # Initialize tenant's devices
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
+
+        # Add user to deployment group
+        role = UserRole("RBAC_DEVGRP", test_case["permissions"])
+        add_user_to_role(test_user, tenant, role)
+
+        deviceconf_MGMT = ApiClient(deviceconfig.URL_MGMT)
+
+        device_id = grouped_devices[test_case["view_group"]][0].id
+
+        # set the configuration using admin account
+        rsp = deviceconf_MGMT.with_auth(admin_user.token).call(
+            "PUT",
+            deviceconfig.URL_MGMT_DEVICE_CONFIGURATION.format(id=device_id),
+            body={"foo": "bar"},
+        )
+        assert rsp.status_code == 204, rsp.text
+
+        # Attempt to get configuration
+        rsp = deviceconf_MGMT.with_auth(test_user.token).call(
+            "GET", deviceconfig.URL_MGMT_DEVICE_CONFIGURATION.format(id=device_id),
+        )
+        assert rsp.status_code == test_case["get_configuration_status_code"], rsp.text
         self.logger.info("PASS: %s" % test_case["name"])

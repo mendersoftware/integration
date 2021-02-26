@@ -33,7 +33,7 @@ class TestMenderConnect:
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == b"Shell started"
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
@@ -204,7 +204,7 @@ class TestMenderConnect:
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == b"Shell started"
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
             assert shell.sid is not None
             session_id = shell.sid

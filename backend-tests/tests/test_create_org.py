@@ -28,7 +28,7 @@ import testutils.integration.stripe as stripeutils
 from testutils.infra.cli import CliTenantadm
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     tenantadm_cli = CliTenantadm()
     tenantadm_cli.migrate()

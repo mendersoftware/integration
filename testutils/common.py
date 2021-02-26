@@ -38,7 +38,7 @@ def mongo():
     return MongoClient("mender-mongo:27017")
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""

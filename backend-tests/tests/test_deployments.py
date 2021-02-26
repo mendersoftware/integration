@@ -1495,7 +1495,7 @@ def setup_tenant(clean_mongo):
     return tenant
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_mongo_client(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     common.MongoClient connected to the DB.

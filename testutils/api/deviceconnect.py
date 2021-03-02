@@ -13,3 +13,5 @@
 #    limitations under the License.
 URL_MGMT = "/api/management/v1/deviceconnect"
 URL_MGMT_DEVICE = "/devices/{id}"
+URL_MGMT_CONNECT = "/devices/{id}/connect"
+URL_MGMT_PLAYBACK = "/sessions/{session_id}/playback"

@@ -20,6 +20,8 @@ MSG_TYPE_SHELL_COMMAND = "shell"
 MSG_TYPE_SPAWN_SHELL = "new"
 MSG_TYPE_STOP_SHELL = "stop"
 
+MSG_BODY_SHELL_STARTED = b"Shell started"
+
 
 class ProtoShell:
     def __init__(self, ws):

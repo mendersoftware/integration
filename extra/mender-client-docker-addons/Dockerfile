@@ -10,10 +10,10 @@ ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
-RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD)
+RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
-RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD)
+RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CONNECT_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-configure-module /src/mender-configure-module
 # Checkout latest tag. No-op if there are no tags (stay in master)

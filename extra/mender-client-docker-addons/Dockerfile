@@ -6,14 +6,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y make git build-essential golang liblzma-dev \
     jq libssl-dev libglib2.0-dev
 
-ARG MENDER_CLIENT_VERSION=master
-ARG MENDER_CONNECT_VERSION=master
+ARG MENDER_CLIENT_REV=master
+ARG MENDER_CONNECT_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
-RUN (cd /src/mender && git checkout $MENDER_CLIENT_VERSION)
+RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
-RUN (cd /src/mender-connect && git checkout $MENDER_CONNECT_VERSION)
+RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CONNECT_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-configure-module /src/mender-configure-module
 # Checkout latest tag. No-op if there are no tags (stay in master)

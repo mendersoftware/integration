@@ -5,10 +5,10 @@
 # 'services' tag.
 services:
     mender-artifact:
-        image: mendersoftware/mender-artifact:3.5.0
+        image: mendersoftware/mender-artifact:master
 
     mender-cli:
-        image: mendersoftware/mender-cli:1.6.0
+        image: mendersoftware/mender-cli:master
 
     mender-connect:
-        image: mendersoftware/mender-connect:1.0.0
+        image: mendersoftware/mender-connect:master

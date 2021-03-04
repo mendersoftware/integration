@@ -13,6 +13,8 @@ COMPOSE_CMD_BASE="docker-compose -p backend-tests \
 COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
+        -f $INTEGRATION_PATH/docker-compose.connect.yml \
+        -f $INTEGRATION_PATH/docker-compose.config.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml
         -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
         "
@@ -216,8 +218,9 @@ build_backend_tests_runner
 for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
         open)
-            echo "Skipping Open Source test suite for staging testing"
-            continue
+            COMPOSE_CMD="$COMPOSE_CMD_OPEN"
+            PYTEST_FILTER="$PYTEST_FILTER_OPEN"
+            PYTEST_REPORT="$PYTEST_REPORT_OPEN"
             ;;
         enterprise)
             COMPOSE_CMD="$COMPOSE_CMD_ENTERPRISE"

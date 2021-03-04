@@ -1,10 +1,10 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
 #
-#        https://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,7 +65,7 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
             deploy.check_expected_status("finished", deployment_id)
 
-            output = mender_device.run("mender -no-syslog -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == "original"
 
             # Remove path block.
@@ -83,7 +83,7 @@ class TestUpdateModules(MenderTesting):
                 ).strip()
                 assert output == file_and_content
 
-            output = mender_device.run("mender -no-syslog -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == expected_image_id
 
         finally:
@@ -115,7 +115,7 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-            output = mender_device.run("mender -no-syslog -show-artifact").strip()
+            output = mender_device.run("mender -show-artifact").strip()
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service(

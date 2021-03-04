@@ -12,6 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-URL_MGMT = "/api/management/v2/deployments"
-
-URL_DEPLOYMENTS = "/deployments"
+URL_MGMT = "/api/management/v1/deviceconfig"
+URL_MGMT_DEVICE_CONFIGURATION = "/configurations/device/{id}"
+URL_MGMT_DEVICE_CONFIGURATION_DEPLOY = "/configurations/device/{id}/deploy"

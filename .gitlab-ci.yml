@@ -3,6 +3,8 @@ include:
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-commits.yml'
   - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-license.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-python3-format.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-github-status-updates.yml'
@@ -13,6 +15,9 @@ stages:
   - test
   - build
   - publish
+
+variables:
+  LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
 
 test:check-commits:
   except:
@@ -129,6 +134,10 @@ test:staging:backend-tests:
     - chmod 775 /usr/bin/docker-compose
     # Install python dependencies
     - apt install -yyq python3-yaml
+    # Export AWS keys, as group takes precedence over yaml specified ones
+    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
+    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
 
   script:
     - cd backend-tests

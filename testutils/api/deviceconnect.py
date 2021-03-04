@@ -4,7 +4,7 @@
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
 #
-#        https://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,3 +13,5 @@
 #    limitations under the License.
 URL_MGMT = "/api/management/v1/deviceconnect"
 URL_MGMT_DEVICE = "/devices/{id}"
+URL_MGMT_CONNECT = "/devices/{id}/connect"
+URL_MGMT_PLAYBACK = "/sessions/{session_id}/playback"

@@ -1,10 +1,10 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
 #
-#        https://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import io
 import logging
 import pytest
 import time
@@ -32,7 +33,7 @@ class TestMenderConnect:
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == b"Shell started"
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
@@ -180,3 +181,69 @@ class TestMenderConnect:
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == 12345
             assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
+
+    def test_session_recording(
+        self, class_persistent_standard_setup_one_client_bootstrapped
+    ):
+        def get_cmd(ws, timeout=1):
+            pmsg = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
+            body = b""
+            try:
+                while True:
+                    msg = ws.recv(timeout)
+                    b = pmsg.decode(msg)
+                    if pmsg.typ == proto_shell.MSG_TYPE_SHELL_COMMAND:
+                        body += b
+            except TimeoutError:
+                return body
+
+        session_id = ""
+        session_bytes = b""
+        with devconnect.get_websocket() as ws:
+            # Start shell.
+            shell = proto_shell.ProtoShell(ws)
+            body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+
+            assert shell.sid is not None
+            session_id = shell.sid
+
+            """ Record a series of commands """
+            shell.sendInput("echo 'now you see me'\n".encode())
+            session_bytes += get_cmd(ws)
+            # Disable echo
+            shell.sendInput("stty -echo\n".encode())
+            session_bytes += get_cmd(ws)
+            shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
+            session_bytes += get_cmd(ws)
+            shell.sendInput("# Invisible comment\n".encode())
+            session_bytes += get_cmd(ws)
+            # Turn echo back on
+            shell.sendInput("stty echo\n".encode())
+            session_bytes += get_cmd(ws)
+            shell.sendInput("echo 'and now echo is back on'\n".encode())
+            session_bytes += get_cmd(ws)
+
+            body = shell.stopShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert body is None
+
+        # Sleep for a second to make sure the session log propagate to the DB.
+        time.sleep(1)
+
+        playback_bytes = b""
+        with devconnect.get_playback_websocket(session_id, sleep_ms=0) as ws:
+            playback_bytes = get_cmd(ws)
+
+        assert playback_bytes == session_bytes
+
+        assert b"now you see me" in playback_bytes
+        assert b"echo 'now you see me'" in playback_bytes
+
+        # Check that the commands after echo was disabled is not present in the log
+        assert b"# Invisible comment" not in playback_bytes
+        assert b'echo "now you don\'t" > /dev/null' not in playback_bytes
+
+        # ... and after echo is enabled
+        assert b"echo 'and now echo is back on'" in playback_bytes

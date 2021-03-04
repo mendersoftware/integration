@@ -1,10 +1,10 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
 #    You may obtain a copy of the License at
 #
-#        https://www.apache.org/licenses/LICENSE-2.0
+#        http://www.apache.org/licenses/LICENSE-2.0
 #
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS,
@@ -38,7 +38,7 @@ logger = logging.getLogger("test_decomission")
 logger.setLevel(logging.INFO)
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
@@ -49,7 +49,7 @@ def clean_migrated_mongo(clean_mongo):
     yield clean_mongo
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def clean_migrated_mongo_mt(clean_mongo):
     deviceauth_cli = CliDeviceauth()
     useradm_cli = CliUseradm()
@@ -62,12 +62,12 @@ def clean_migrated_mongo_mt(clean_mongo):
     yield clean_mongo
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def user(clean_migrated_mongo):
     yield create_user("user-foo@acme.com", "correcthorse")
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def devices(clean_migrated_mongo, user):
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthm = ApiClient(deviceauth.URL_MGMT)
@@ -88,7 +88,7 @@ def devices(clean_migrated_mongo, user):
     yield devices
 
 
-@pytest.yield_fixture(scope="function")
+@pytest.fixture(scope="function")
 def tenants(clean_migrated_mongo_mt):
     tenants = []
 

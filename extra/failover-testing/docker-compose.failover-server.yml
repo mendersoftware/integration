@@ -15,9 +15,9 @@ services:
             - mender-mongo-2
         command: server --automigrate
         volumes:
-            - ./certs/storage-proxy/cert.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+            - ./cert/cert.crt:/etc/ssl/certs/docker.mender.io.crt
         environment:
-            STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
             DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io
@@ -32,8 +32,6 @@ services:
             service: mender-base
         networks:
             - mender-failover
-        environment:
-            - INTEGRATION_VERSION
         environment:
             # enable demo mode for UI
             DEMO: "true"
@@ -66,8 +64,8 @@ services:
                 aliases:
                     - docker.mender-failover.io
         volumes:
-            - ./certs/api-gateway/cert.crt:/var/www/mendersoftware/cert/cert.crt
-            - ./certs/api-gateway/private.key:/var/www/mendersoftware/cert/private.key
+            - ./cert/cert.crt:/var/www/mendersoftware/cert/cert.crt
+            - ./cert/private.key:/var/www/mendersoftware/cert/private.key
         environment:
             ALLOWED_HOSTS: ~.
 
@@ -158,8 +156,8 @@ services:
             - minio-2
         volumes:
             - ./extra/failover-testing/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
-            - ./certs/storage-proxy/cert.crt:/var/www/storage-proxy/cert/cert.crt
-            - ./certs/storage-proxy/private.key:/var/www/storage-proxy/cert/private.key
+            - ./cert/cert.crt:/var/www/storage-proxy/cert/cert.crt
+            - ./cert/private.key:/var/www/storage-proxy/cert/private.key
         environment:
             MAX_CONNECTIONS: 100
 

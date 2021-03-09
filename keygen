@@ -1,20 +1,41 @@
 #!/bin/bash
 set -e
 
-if [ -z "$CERT_API_CN" ] || [ -z "$CERT_STORAGE_CN" ] ; then
-    echo "Environment variables CERT_API_CN and CERT_STORAGE_CN need to be set."
-    echo "Example: CERT_API_CN=\"docker.mender.io\" CERT_STORAGE_CN=\"s3.docker.mender.io\" $0"
-    exit 1
-fi
+_CMD=$0
 
-CERT_VALID_DAYS="3650"
-FILE_NAME_PRIVATE_KEY="private.key"
-FILE_NAME_CERT="cert.crt"
+show_help() {
+    cat <<EOF
+Usage: ${_CMD} [--help]
 
+Generate self-signed certificate and JWT authentication keys for the Mender server.
+
+Environment variables:
+    CERT_CN  - Certificate common name
+    CERT_SAN - Comma separated list of certificate subject alternative names (SANs)
+               See openssl-req(1)
+EOF
+}
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    --help)
+        show_help
+        exit 0
+        break;;
+    *)
+        echo 'Unrecognized commandline argument "'$1'"'
+        show_help
+        exit 1
+        break;;
+    esac
+    shift 1
+done
+
+# Verify dependencies
+command -v sed >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the sed utility to generate key configuration."; exit 1; }
 
 # verify openssl is present and sufficiently recent (genpkey seems to require openssl 1.0+)
 command -v openssl >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the openssl utility version 1.0.0 or newer to generate keys."; exit 1; }
-
 OPENSSL_VERSION_REGEX_MAJOR_BACKREF="(Open|Libre)SSL ([0-9]+).*"
 OPENSSL_VERSION_STRING=$(openssl version)
 OPENSSL_VERSION_MAJOR=$(echo "$OPENSSL_VERSION_STRING" | sed -En "s/$OPENSSL_VERSION_REGEX_MAJOR_BACKREF/\2/p")
@@ -25,40 +46,51 @@ if [ "$OPENSSL_VERSION_MAJOR" -lt 1 ]; then
   exit 1
 fi
 
+if [ -z "$CERT_CN" ]; then
+    echo "Common name (CERT_CN) not set."
+    echo -n "Enter a certificate common name [docker.mender.io]:"
+    IFS='' read -r CERT_CN
+    if [ -z "$CERT_CN" ]; then
+        CERT_CN="docker.mender.io"
+    fi
+fi
+
+if [ -z "$CERT_SAN" ]; then
+    CERT_SAN="DNS:${CERT_CN},DNS:*.${CERT_CN}"
+    echo "Subject alternative name (CERT_SAN) not set, using default:"
+    echo "    CERT_SAN=\"${CERT_SAN}\""
+fi
+
+CERT_VALID_DAYS="3650"
+FILE_NAME_PRIVATE_KEY="private.key"
+FILE_NAME_CERT="cert.crt"
 
 ROOTDIR=$(pwd)/keys-generated
 
-CERTDIR=$ROOTDIR/certs
+CERTDIR=$ROOTDIR/cert
 KEYDIR=$ROOTDIR/keys
 
 
-# generate web certs and corresponding private keys
-
+# generate web cert and corresponding private key
 mkdir -p "$CERTDIR"
 cd "$CERTDIR"
 
-mkdir api-gateway storage-proxy
-
-cd api-gateway
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN="$CERT_API_CN"
-cd ..
-
-cd storage-proxy
-openssl req -x509 -sha256 -nodes -days $CERT_VALID_DAYS -newkey ec:<(openssl ecparam -name prime256v1) -keyout $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_CERT -subj /CN="$CERT_STORAGE_CN"
-cd ..
-
-# concatenate the certificates for inclusion on the Mender client
-cat api-gateway/$FILE_NAME_CERT storage-proxy/$FILE_NAME_CERT > server.crt
-
+openssl req -x509 -sha256 -nodes \
+    -days $CERT_VALID_DAYS \
+    -newkey ec:<(openssl ecparam -name prime256v1) \
+    -keyout $FILE_NAME_PRIVATE_KEY \
+    -out $FILE_NAME_CERT \
+    -subj "/CN=${CERT_CN}" \
+    -addext "extendedKeyUsage = serverAuth" \
+    -addext "subjectAltName = ${CERT_SAN}"
 
 # generate keys for signing JSON Web Tokens
-
 mkdir -p "$KEYDIR"
 cd "$KEYDIR"
 
 for DIR in deviceauth useradm
 do
-  mkdir $DIR
+  mkdir -p $DIR
   (
     cd $DIR
     openssl genpkey -algorithm RSA -out $FILE_NAME_PRIVATE_KEY -pkeyopt rsa_keygen_bits:3072

@@ -202,3 +202,66 @@ class TestInventory(MenderTesting):
             else:
                 return
         raise latest_exception
+
+    @MenderTesting.fast
+    def test_inventory_update_after_successfull_deployment(
+        self, standard_setup_one_client_bootstrapped
+    ):
+        """
+        Test that device reports inventory after a new successfull deployment,
+        and not simply after a boot.
+        """
+
+        mender_device = standard_setup_one_client_bootstrapped.device
+
+        # Give the image a larger wait interval.
+        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
+            r"\(InventoryPollInter.*:\)\( *[0-9]*\)",
+            "\\1 300",
+        )
+        mender_device.run(sedcmd)
+        client_service_name = mender_device.get_client_service_name()
+        mender_device.run("systemctl restart %s" % client_service_name)
+
+        # Get the inventory sent after first boot
+        initial_inv_json = inv.get_devices()
+        assert len(initial_inv_json) > 0
+        assert "rootfs-image.swname.version" not in str(
+            initial_inv_json
+        ), "The initial inventory is not clean"
+
+        def deploy_simple_artifact(artifact_name, extra_args):
+            # create a simple artifact (script) which doesn't do anything
+            with tempfile.NamedTemporaryFile() as tf:
+                artifact = make_script_artifact(
+                    artifact_name,
+                    conftest.machine_name,
+                    tf.name,
+                    extra_args=extra_args,
+                )
+                deploy.upload_image(artifact)
+
+            # deploy the artifact above
+            device_ids = [device["id"] for device in devauth.get_devices()]
+            deployment_id = deploy.trigger_deployment(
+                artifact_name, artifact_name=artifact_name, devices=device_ids,
+            )
+
+            # now just wait for the update to succeed
+            deploy.check_expected_statistics(deployment_id, "success", 1)
+            deploy.check_expected_status("finished", deployment_id)
+
+        deploy_simple_artifact(
+            "simple-artifact-1",
+            "--software-name swname --software-version v1"
+            + " --provides rootfs-image.swname.custom_field:value",
+        )
+
+        # Give the client a little bit of time to do the update
+        time.sleep(15)
+
+        post_deployment_inv_json = inv.get_devices()
+        assert len(post_deployment_inv_json) > 0
+        assert "rootfs-image.swname.version" in str(
+            post_deployment_inv_json
+        ), "The device has not updated the inventory after the udpate"

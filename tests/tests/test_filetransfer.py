@@ -16,7 +16,7 @@
 import hashlib
 import io
 import os
-import os.path
+import random
 import requests
 import pytest
 import urllib.parse
@@ -125,6 +125,10 @@ class TestFileTransfer(MenderTesting):
                 f.write(os.urandom(1024))
             f.close()
 
+            # random uid and gid
+            uid = random.randint(100, 200)
+            gid = random.randint(100, 200)
+
             # upload the file
             r = upload_file(
                 "/tmp/random.bin",
@@ -132,8 +136,8 @@ class TestFileTransfer(MenderTesting):
                 devid,
                 authtoken,
                 mode="600",
-                uid="0",
-                gid="0",
+                uid=str(uid),
+                gid=str(gid),
             )
             assert r.status_code == 201, r.json()
 
@@ -146,11 +150,11 @@ class TestFileTransfer(MenderTesting):
                 == 'attachment; filename="random.bin"'
             )
             assert r.headers.get("Content-Type") == "application/octet-stream"
-            assert r.headers.get("X-Men-File-Gid") == "0"
-            assert r.headers.get("X-Men-File-Uid") == "0"
             assert r.headers.get("X-Men-File-Mode") == "600"
+            assert r.headers.get("X-Men-File-Uid") == str(uid)
+            assert r.headers.get("X-Men-File-Gid") == str(gid)
             assert r.headers.get("X-Men-File-Path") == "/tmp/random.bin"
-            assert r.headers.get("X-Men-File-Size") != ""
+            assert r.headers.get("X-Men-File-Size") == str(40 * 1024 * 1024)
 
             filename_download = f.name + ".download"
             with open(filename_download, "wb") as fw:

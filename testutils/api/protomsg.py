@@ -64,6 +64,7 @@ class ProtoMsg:
 
     # Returns body, attributes can be fetched from the ProtoMsg object.
     def decode(self, buf):
+
         obj = msgpack.unpackb(buf)
         if type(obj.get("hdr")) is not dict:
             raise TypeError("Malformed protomsg received.")
@@ -78,5 +79,14 @@ class ProtoMsg:
         self.typ = hdr.get("typ")
         self.sid = hdr.get("sid")
         self.props = hdr.get("props")
+        self._body = obj.get("body", b"")
 
         return obj.get("body")
+
+    @property
+    def body_raw(self) -> bytes:
+        return self._body
+
+    @property
+    def body(self) -> dict:
+        return msgpack.loads(self._body)

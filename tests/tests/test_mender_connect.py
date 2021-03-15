@@ -176,11 +176,12 @@ class TestMenderConnect:
             msg = prot.encode(b"")
             ws.send(msg)
 
-            msg = ws.recv()
-            body = prot.decode(msg)
-            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
-            assert prot.protoType == 12345
-            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
 
     def test_session_recording(
         self, class_persistent_standard_setup_one_client_bootstrapped

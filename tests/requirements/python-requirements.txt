@@ -35,7 +35,6 @@ progress==1.5
 psutil==5.8.0
 py==1.10.0
 pycparser==2.20
-pycrypto==2.6.1
 pymongo==3.11.3
 PyNaCl==1.4.0
 pyparsing==2.4.7

@@ -18,9 +18,16 @@ URL_MGMT = "/api/management/v1/tenantadm"
 
 URL_INTERNAL_SUSPEND = "/tenants/{tid}/status"
 URL_INTERNAL_TENANTS = "/tenants"
+URL_INTERNAL_TENANT = "/tenants/{tid}"
 URL_MGMT_TENANTS = "/tenants"
 URL_MGMT_THIS_TENANT = "/user/tenant"
+
+ALL_ADDONS = ["troubleshoot", "configure"]
 
 
 def req_status(status):
     return {"status": status}
+
+
+def make_addons(addons=[]):
+    return [{"name": a, "enabled": a in addons} for a in ALL_ADDONS]

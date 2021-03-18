@@ -29,12 +29,7 @@ from testutils.infra.cli import CliUseradm, CliTenantadm
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
-from testutils.common import (
-    mongo,
-    clean_mongo,
-    create_org,
-    create_user,
-)
+from testutils.common import mongo, clean_mongo, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
@@ -58,15 +53,13 @@ def tenants_users(clean_migrated_mongo):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
+            "some.user+" + uuidv4 + "@foo.com",
             "secretsecret",
         )
         # Create tenant with two users
         tenant = create_org(tenant, username, password, "enterprise")
         tenant.users.append(
-            create_user(
-                "some.other.user+" + uuidv4 + "@example.com", password, tenant.id
-            )
+            create_user("some.other.user+" + uuidv4 + "@foo.com", password, tenant.id)
         )
         tenants.append(tenant)
 
@@ -145,7 +138,7 @@ class Test2FAEnterprise:
         assert secret_hash != ""
         # complete the email address
         r = uadm.post(
-            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash}
         )
         assert r.status_code == 204
 

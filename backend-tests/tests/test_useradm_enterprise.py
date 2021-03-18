@@ -91,10 +91,10 @@ class Test2FAEnterprise:
         r = uadm.with_auth(utoken).call("PUT", useradm.URL_2FAVERIFY, body=body)
         return r
 
-    def _toggle_tfa(self, utoken, on=True):
-        body = {"2fa": "enabled"}
+    def _toggle_tfa(self, utoken, user_id, on=True):
+        body = {"2fa": "enabled", user_id + "_2fa": "enabled"}
         if not on:
-            body = {"2fa": "disabled"}
+            body = {"2fa": "disabled", user_id + "_2fa": "disabled"}
 
         r = uadm.with_auth(utoken).call("POST", useradm.URL_SETTINGS, body)
         assert r.status_code == 201
@@ -150,7 +150,7 @@ class Test2FAEnterprise:
         assert r.status_code == 204
 
         # enable tfa for 1 user, straight login still works, token is not verified
-        self._toggle_tfa(user_2fa_tok, on=True)
+        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
         r = self._login(user_2fa)
         assert r.status_code == 200
 
@@ -184,6 +184,6 @@ class Test2FAEnterprise:
             assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, on=False)
+        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=False)
         r = self._login(user_2fa)
         assert r.status_code == 200

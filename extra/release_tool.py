@@ -525,7 +525,8 @@ def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
 def version_of(
     integration_dir, yml_component, in_integration_version=None, git_version=True
 ):
-    if yml_component.yml() == "integration":
+    if yml_component.yml() == "mender-client-docker-addons":
+        # Also known as "integration"
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version

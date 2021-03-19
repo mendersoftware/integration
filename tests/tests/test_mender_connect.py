@@ -18,16 +18,18 @@ import pytest
 import time
 
 from testutils.api import proto_shell, protomsg
+from testutils.infra.container_manager import factory
+from testutils.infra.device import MenderDevice
+from testutils.infra.mongo import MongoClient
 from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
-from ..MenderAPI import devconnect
+from ..MenderAPI import devconnect, auth, devauth, reset_mender_api
+from testutils.common import create_user
+
+container_factory = factory.get_factory()
 
 
-class TestMenderConnect:
-    def test_regular_protocol_commands(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
-
+class _TestRemoteTerminalBase:
+    def test_regular_protocol_commands(self, docker_env):
         with devconnect.get_websocket() as ws:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
@@ -96,11 +98,7 @@ class TestMenderConnect:
                 "$ ",
             ], "Could not detect shell prompt."
 
-    def test_dbus_reconnect(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
-
+    def test_dbus_reconnect(self, docker_env):
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
@@ -109,16 +107,18 @@ class TestMenderConnect:
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
-        client_service_name = device.get_client_service_name()
-        device.run(
+        client_service_name = docker_env.device.get_client_service_name()
+        docker_env.device.run(
             f"systemctl --job-mode=ignore-dependencies stop {client_service_name}"
         )
-        device.run("systemctl --job-mode=ignore-dependencies restart mender-connect")
+        docker_env.device.run(
+            "systemctl --job-mode=ignore-dependencies restart mender-connect"
+        )
 
         time.sleep(10)
 
         # At this point, mender-connect will already have queried DBus.
-        device.run(
+        docker_env.device.run(
             f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
         )
 
@@ -126,19 +126,13 @@ class TestMenderConnect:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    def test_websocket_reconnect(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
-
+    def test_websocket_reconnect(self, docker_env):
         with devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
         # Test that mender-connect recovers if it loses the connection to deviceconnect.
-        class_persistent_standard_setup_one_client_bootstrapped.restart_service(
-            "mender-deviceconnect"
-        )
+        docker_env.restart_service("mender-deviceconnect")
 
         time.sleep(10)
 
@@ -146,10 +140,7 @@ class TestMenderConnect:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    def test_bogus_shell_message(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-
+    def test_bogus_shell_message(self, docker_env):
         with devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
 
@@ -164,28 +155,7 @@ class TestMenderConnect:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
-    def test_bogus_proto_message(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-
-        with devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
-
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            data = ws.recv()
-            rsp = protomsg.ProtoMsg(0xFFFF)
-            rsp.decode(data)
-            assert rsp.typ == "error"
-            body = rsp.body
-            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
-
-    def test_session_recording(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
+    def test_session_recording(self, docker_env):
         def get_cmd(ws, timeout=1):
             pmsg = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
             body = b""
@@ -248,3 +218,64 @@ class TestMenderConnect:
 
         # ... and after echo is enabled
         assert b"echo 'and now echo is back on'" in playback_bytes
+
+
+class TestRemoteTerminal(_TestRemoteTerminalBase):
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
+        yield class_persistent_standard_setup_one_client_bootstrapped
+
+    def test_bogus_proto_message(self, docker_env):
+        with devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
+
+
+class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
+    """
+    This set of tests uses mender-connect v1.0
+    """
+
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, request):
+        env = container_factory.getMenderClient_2_5()
+        request.addfinalizer(env.teardown)
+        env.setup()
+
+        env.populate_clients(replicas=1)
+
+        clients = env.get_mender_clients()
+        assert len(clients) == 1, "Failed to setup client"
+        env.device = MenderDevice(clients[0])
+        env.device.ssh_is_opened()
+
+        reset_mender_api(env)
+        devauth.accept_devices(1)
+
+        yield env
+
+    def test_bogus_proto_message(self, docker_env):
+        with devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            msg = ws.recv()
+            body = prot.decode(msg)
+            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
+            assert prot.protoType == 12345
+            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL

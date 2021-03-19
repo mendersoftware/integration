@@ -1,0 +1,15 @@
+version: '2.1'
+services:
+  #
+  # Setup including older clients with mender-connect
+  #
+  mender-client-2-5:
+    # mender-connect 1.0
+    image: mendersoftware/mender-client-qemu:2.5
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""

@@ -72,8 +72,7 @@ class ProtoMsg:
         hdr = obj["hdr"]
         if hdr.get("proto") != self.protoType:
             raise TypeError(
-                "Decoded message is not the right type, expected %d, got %d"
-                % (self.protoType, obj.get("proto"))
+                f'Decoded message is not the right type, expected {self.protoType}, got {obj.get("proto")}'
             )
 
         self.typ = hdr.get("typ")

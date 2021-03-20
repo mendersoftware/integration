@@ -109,11 +109,13 @@ def pytest_exception_interact(node, call, report):
 
         # Hack-ish way to inspect the fixtures in use by the node to find a MenderDevice/MenderDeviceGroup
         device = None
-        env_candidates = [
-            val
-            for val in node.funcargs.values()
-            if isinstance(val, BaseContainerManagerNamespace)
-        ]
+        env_candidates = []
+        if getattr(node, "funcargs", None) is not None:
+            env_candidates = [
+                val
+                for val in node.funcargs.values()
+                if isinstance(val, BaseContainerManagerNamespace)
+            ]
         if len(env_candidates) > 0:
             env = env_candidates[0]
             dev_candidates = [

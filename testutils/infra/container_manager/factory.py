@@ -13,18 +13,21 @@
 #    limitations under the License.
 "define factories from where to create namespaces"
 
-from .docker_compose_manager import DockerComposeStandardSetup
-from .docker_compose_manager import DockerComposeDockerClientSetup
-from .docker_compose_manager import DockerComposeRofsClientSetup
-from .docker_compose_manager import DockerComposeLegacyClientSetup
-from .docker_compose_manager import DockerComposeSignedArtifactClientSetup
-from .docker_compose_manager import DockerComposeShortLivedTokenSetup
-from .docker_compose_manager import DockerComposeFailoverServerSetup
-from .docker_compose_manager import DockerComposeEnterpriseSetup
-from .docker_compose_manager import DockerComposeEnterpriseSMTPSetup
-from .docker_compose_manager import DockerComposeCustomSetup
-from .docker_compose_manager import DockerComposeCompatibilitySetup
-from .docker_compose_manager import DockerComposeMTLSSetup
+from .docker_compose_manager import (
+    DockerComposeStandardSetup,
+    DockerComposeDockerClientSetup,
+    DockerComposeRofsClientSetup,
+    DockerComposeLegacyClientSetup,
+    DockerComposeSignedArtifactClientSetup,
+    DockerComposeShortLivedTokenSetup,
+    DockerComposeFailoverServerSetup,
+    DockerComposeEnterpriseSetup,
+    DockerComposeEnterpriseSMTPSetup,
+    DockerComposeCustomSetup,
+    DockerComposeCompatibilitySetup,
+    DockerComposeMTLSSetup,
+    DockerComposeMenderClient_2_5,
+)
 
 
 class ContainerManagerFactory:
@@ -113,6 +116,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getMTLSSetup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)
+
+    def getMenderClient_2_5(self, name=None, **kwargs):
+        return DockerComposeMenderClient_2_5(name, **kwargs)
 
     def getCustomSetup(self, name=None):
         return DockerComposeCustomSetup(name)

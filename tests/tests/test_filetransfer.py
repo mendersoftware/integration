@@ -24,13 +24,13 @@ import urllib.parse
 from tempfile import NamedTemporaryFile
 
 from ..common_setup import standard_setup_one_client
-from ..MenderAPI import (
-    authentication,
-    devauth,
-    get_container_manager,
-)
+from ..MenderAPI import authentication, devauth, get_container_manager, reset_mender_api
 from .common_connect import wait_for_connect
 from .mendertesting import MenderTesting
+from testutils.infra.container_manager import factory
+from testutils.infra.device import MenderDevice
+
+container_factory = factory.get_factory()
 
 
 def download_file(path, devid, authtoken):
@@ -67,13 +67,11 @@ def md5sum(fname):
     return hash_md5.hexdigest()
 
 
-@pytest.mark.usefixtures("standard_setup_one_client")
 class TestFileTransfer(MenderTesting):
     """Tests the file transfer functionality"""
 
     def test_filetransfer(self, standard_setup_one_client):
-        """Tests the file transfer features
-        """
+        """Tests the file transfer features"""
         # accept the device
         devauth.accept_devices(1)
 
@@ -192,3 +190,40 @@ class TestFileTransfer(MenderTesting):
         )
         assert r.status_code == 400, r.json()
         assert "failed to create target file" in r.json().get("error")
+
+    @pytest.fixture(scope="function")
+    def setup_mender_connect_1_0(self, request):
+        self.env = container_factory.getMenderClient_2_5()
+        request.addfinalizer(self.env.teardown)
+        self.env.setup()
+
+        self.env.populate_clients(replicas=1)
+
+        clients = self.env.get_mender_clients()
+        assert len(clients) == 1, "Failed to setup client"
+        self.env.device = MenderDevice(clients[0])
+        self.env.device.ssh_is_opened()
+
+        reset_mender_api(self.env)
+
+        yield self.env
+
+    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
+        # accept the device
+        devauth.accept_devices(1)
+
+        auth = authentication.Authentication()
+        authtoken = auth.get_auth_token()
+
+        # list of devices
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+        devid = devices[0]
+
+        wait_for_connect(auth, devid)
+        rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
+        assert rsp.status_code == 502
+        rsp = download_file("/foo/bar", devid, authtoken)
+        assert rsp.status_code == 502

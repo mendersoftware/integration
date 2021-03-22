@@ -225,6 +225,17 @@ def enterprise_no_client(request):
     return env
 
 
+@pytest.fixture(scope="class")
+def enterprise_no_client_class(request):
+    env = container_factory.getEnterpriseSetup(num_clients=0)
+    request.addfinalizer(env.teardown)
+
+    env.setup()
+    reset_mender_api(env)
+
+    return env
+
+
 @pytest.fixture(scope="function")
 def enterprise_no_client_smtp(request):
     env = container_factory.getEnterpriseSMTPSetup()

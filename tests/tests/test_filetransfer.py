@@ -13,7 +13,6 @@
 #    limitations under the License.
 #
 
-import hashlib
 import io
 import os
 import random
@@ -26,6 +25,7 @@ from tempfile import NamedTemporaryFile
 from ..common_setup import standard_setup_one_client
 from ..MenderAPI import authentication, devauth, get_container_manager, reset_mender_api
 from .common_connect import wait_for_connect
+from .common import md5sum
 from .mendertesting import MenderTesting
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
@@ -57,14 +57,6 @@ def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
     )
     upload_url = "%s/devices/%s/upload" % (deviceconnect_url, devid)
     return requests.put(upload_url, verify=False, headers=authtoken, files=files)
-
-
-def md5sum(fname):
-    hash_md5 = hashlib.md5()
-    with open(fname, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
 
 
 class TestFileTransfer(MenderTesting):

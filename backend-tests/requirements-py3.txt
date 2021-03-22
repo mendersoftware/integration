@@ -21,4 +21,4 @@ redo==2.0.4
 requests==2.25.1
 stripe==2.56.0
 toml==0.10.2
-urllib3==1.26.3
+urllib3==1.26.4

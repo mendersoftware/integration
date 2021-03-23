@@ -165,7 +165,7 @@ class TestPortForward(MenderTesting):
             exit_code = p.wait()
             assert exit_code == 0, (stdout, stderr)
 
-            # assert the files is not corrupted
+            # assert the files are not corrupted
             logger.info("checking the checksums of the uploaded and downloaded files")
             assert md5sum(f.name) == md5sum(f.name + ".download")
         finally:

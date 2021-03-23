@@ -27,7 +27,7 @@ from .mendertesting import MenderTesting
 
 
 class TestFileTransferCLI(MenderTesting):
-    """Tests the port forward functionality"""
+    """Tests the file transfer functionality"""
 
     def test_filetransfer_cli(self, standard_setup_one_client):
         # accept the device
@@ -118,12 +118,14 @@ class TestFileTransferCLI(MenderTesting):
             exit_code = p.wait()
             assert exit_code == 0, (stdout, stderr)
 
-            # assert the files is not corrupted
+            # assert the files are not corrupted
             logger.info("checking the checksums of the uploaded and downloaded files")
             assert md5sum(f.name) == md5sum(f.name + ".download")
 
             # upload the file to a directory (fail)
-            logger.info("upload the file to a directory (fail) using mender-cli")
+            logger.info(
+                "upload the file to a directory which doesn't exist (fail) using mender-cli"
+            )
             p = subprocess.Popen(
                 [
                     "mender-cli",

@@ -16,21 +16,38 @@ import io
 import logging
 import pytest
 import time
+import json
 
 from testutils.api import proto_shell, protomsg
+from testutils.infra.cli import CliTenantadm
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
 from testutils.infra.mongo import MongoClient
-from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
-from ..MenderAPI import devconnect, auth, devauth, reset_mender_api
-from testutils.common import create_user
+from ..common_setup import (
+    class_persistent_standard_setup_one_client_bootstrapped,
+    enterprise_no_client_class,
+)
+from ..MenderAPI import (
+    devconnect,
+    auth,
+    devauth,
+    reset_mender_api,
+    DeviceAuthV2,
+    Authentication,
+    DeviceConnect,
+    get_container_manager,
+)
+from testutils.common import create_user, Tenant, User, update_tenant
+from .common_connect import wait_for_connect
 
 container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
     def test_regular_protocol_commands(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        self.assert_env(docker_env)
+
+        with docker_env.devconnect.get_websocket() as ws:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
@@ -99,7 +116,9 @@ class _TestRemoteTerminalBase:
             ], "Could not detect shell prompt."
 
     def test_dbus_reconnect(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        self.assert_env(docker_env)
+
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -122,12 +141,14 @@ class _TestRemoteTerminalBase:
             f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
         )
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
     def test_websocket_reconnect(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        self.assert_env(docker_env)
+
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -136,12 +157,14 @@ class _TestRemoteTerminalBase:
 
         time.sleep(10)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
     def test_bogus_shell_message(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        self.assert_env(docker_env)
+
+        with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
 
             prot.clear()
@@ -156,6 +179,8 @@ class _TestRemoteTerminalBase:
             assert prot.typ == "bogusmessage"
 
     def test_session_recording(self, docker_env):
+        self.assert_env(docker_env)
+
         def get_cmd(ws, timeout=1):
             pmsg = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
             body = b""
@@ -170,7 +195,7 @@ class _TestRemoteTerminalBase:
 
         session_id = ""
         session_bytes = b""
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
@@ -204,7 +229,7 @@ class _TestRemoteTerminalBase:
         time.sleep(1)
 
         playback_bytes = b""
-        with devconnect.get_playback_websocket(session_id, sleep_ms=0) as ws:
+        with docker_env.devconnect.get_playback_websocket(session_id, sleep_ms=0) as ws:
             playback_bytes = get_cmd(ws)
 
         assert playback_bytes == session_bytes
@@ -219,14 +244,27 @@ class _TestRemoteTerminalBase:
         # ... and after echo is enabled
         assert b"echo 'and now echo is back on'" in playback_bytes
 
+    def assert_env(self, docker_env):
+        """Check extra env vars  used by base test funcs - make sure they're set.
+        Mostly important for custom setups.
+        """
+        assert (
+            docker_env.device is not None
+        ), "docker_env must have a designated 'device'"
+        assert (
+            docker_env.devconnect is not None
+        ), "docker_env must have a set up 'devconnect' instance"
+
 
 class TestRemoteTerminal(_TestRemoteTerminalBase):
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
-        yield class_persistent_standard_setup_one_client_bootstrapped
+        env = class_persistent_standard_setup_one_client_bootstrapped
+        env.devconnect = devconnect
+        yield env
 
     def test_bogus_proto_message(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(12345)
 
             prot.clear()
@@ -263,10 +301,11 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         reset_mender_api(env)
         devauth.accept_devices(1)
 
+        env.devconnect = devconnect
         yield env
 
     def test_bogus_proto_message(self, docker_env):
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(12345)
 
             prot.clear()
@@ -279,3 +318,54 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == 12345
             assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
+
+
+class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
+    def connected_device(self, env):
+        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        cli = CliTenantadm(containers_namespace=env.name)
+        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        update_tenant(
+            tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+        )
+        tenant = cli.get_tenant(tid)
+        tenant = json.loads(tenant)
+        ttoken = tenant["tenant_token"]
+
+        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+        auth.create_org = False
+        auth.reset_auth_token()
+        devauth = DeviceAuthV2(auth)
+
+        env.new_tenant_client("configuration-test-container", ttoken)
+        device = MenderDevice(env.get_mender_clients()[0])
+        devauth.accept_devices(1)
+
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+
+        wait_for_connect(auth, devices[0])
+
+        devconn = DeviceConnect(auth, devauth)
+
+        return device, devconn
+
+    @pytest.fixture(scope="class")
+    def docker_env(self, enterprise_no_client_class):
+        """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
+
+        The min. plan for most RT features is 'os', but we're also
+        testing session logging - which is 'enterprise', so we need highest
+        common denominator.
+        """
+
+        env = enterprise_no_client_class
+
+        device, devconn = self.connected_device(env)
+
+        env.device = device
+        env.devconnect = devconn
+
+        yield env

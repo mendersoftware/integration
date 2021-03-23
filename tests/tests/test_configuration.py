@@ -20,7 +20,7 @@ import redo
 
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
-from testutils.common import Tenant, User
+from testutils.common import Tenant, User, update_tenant
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from ..MenderAPI import (
@@ -88,6 +88,16 @@ class TestConfigurationEnterprise(MenderTesting):
         u = User("", "bugs.bunny@acme.org", "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
         tid = cli.create_org("enterprise-tenant", u.name, u.pwd, plan="enterprise")
+
+        # what we really need is "configure"
+        # but for trigger tests we're also checking device avail. in "deviceconnect"
+        # so add "troubleshoot" as well
+        update_tenant(
+            tid,
+            addons=["configure", "troubleshoot"],
+            container_manager=get_container_manager(),
+        )
+
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
         ttoken = tenant["tenant_token"]

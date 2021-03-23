@@ -31,6 +31,7 @@ from testutils.common import (
     mongo,
     clean_mongo,
     get_mender_artifact,
+    update_tenant,
 )
 from testutils.api.client import ApiClient
 import testutils.api.useradm as useradm
@@ -63,6 +64,8 @@ def tenant_users(clean_migrated_mongo):
     )
 
     tenant.users.append(user)
+
+    update_tenant(tenant.id, addons=["troubleshoot"])
 
     for u in tenant.users:
         r = ApiClient(useradm.URL_MGMT).call(

@@ -48,7 +48,7 @@ class TestPortForward(MenderTesting):
 
         # device ID and auth token
         devid = devices[0]
-        assert devid != None
+        assert devid is not None
 
         # authenticate with mender-cli
         server_url = "https://" + get_container_manager().get_mender_gateway()
@@ -67,6 +67,7 @@ class TestPortForward(MenderTesting):
                 password,
             ],
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
         stdout, stderr = p.communicate()
         exit_code = p.wait()
@@ -86,15 +87,16 @@ class TestPortForward(MenderTesting):
                 ]
                 + list(port_mappings),
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
             stdout, stderr = p.communicate()
             p.wait()
 
-        p = Process(
+        pfw = Process(
             target=port_forward,
             args=(server_url, devid, "9922:22", "udp/9953:8.8.8.8:53"),
         )
-        p.start()
+        pfw.start()
 
         # wait a few seconds to let the port-forward start
         logger.info("port-forward started, waiting a few seconds")
@@ -136,6 +138,7 @@ class TestPortForward(MenderTesting):
                     "root@localhost:/tmp/random.bin",
                 ],
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
             stdout, stderr = p.communicate()
             exit_code = p.wait()
@@ -156,6 +159,7 @@ class TestPortForward(MenderTesting):
                     f.name + ".download",
                 ],
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
             stdout, stderr = p.communicate()
             exit_code = p.wait()
@@ -170,4 +174,4 @@ class TestPortForward(MenderTesting):
                 os.unlink(f.name + ".download")
 
         # stop the port-forwarding
-        p.kill()
+        pfw.kill()

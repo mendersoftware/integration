@@ -59,12 +59,6 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
     ]
-    LEGACY_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
-        COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
-    ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
         + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml"

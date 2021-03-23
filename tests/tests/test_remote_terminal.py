@@ -27,7 +27,7 @@ from .mendertesting import MenderTesting
 
 
 class TestRemoteTerminal(MenderTesting):
-    """Tests the port forward functionality"""
+    """Tests the remote terminal functionality"""
 
     def test_remote_terminal(self, standard_setup_one_client):
         # accept the device

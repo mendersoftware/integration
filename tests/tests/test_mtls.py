@@ -236,6 +236,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
+    @pytest.mark.xfail(reason="Test is known to be unstable: FIXME")
     def test_mtls_enterprise(self, setup_ent_mtls, algorithm):
         self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=False)
 
@@ -267,6 +268,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
+    @pytest.mark.xfail(reason="Test is known to be unstable: FIXME")
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
 
         # Check if the client has has SoftHSM (from yocto dunfell forward)

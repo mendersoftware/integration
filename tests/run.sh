@@ -96,10 +96,6 @@ function get_requirements() {
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 
-    curl --fail "https://downloads.mender.io/mender-cli/${MENDER_CLI_BRANCH}/linux/mender-cli" \
-         -o downloaded-tools/mender-cli \
-         -z downloaded-tools/mender-cli
-
     if [ $? -ne 0 ]; then
         echo "failed to download mender-artifact"
         exit 1
@@ -107,10 +103,16 @@ function get_requirements() {
 
     chmod +x downloaded-tools/mender-artifact
 
+    curl --fail "https://downloads.mender.io/mender-cli/${MENDER_CLI_BRANCH}/linux/mender-cli" \
+         -o downloaded-tools/mender-cli \
+         -z downloaded-tools/mender-cli
+
     if [ $? -ne 0 ]; then
-        echo "failed to download ext4 image"
+        echo "failed to download mender-cli"
         exit 1
     fi
+
+    chmod +x downloaded-tools/mender-cli
 
     curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
          -o downloaded-tools/directory-artifact-gen \

@@ -17,10 +17,7 @@ import os
 import subprocess
 import time
 
-from multiprocessing import Process
 from tempfile import NamedTemporaryFile
-
-from DNS import DnsRequest
 
 from ..common_setup import standard_setup_one_client_bootstrapped
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
@@ -29,10 +26,10 @@ from .common import md5sum
 from .mendertesting import MenderTesting
 
 
-class TestPortForward(MenderTesting):
-    """Tests the port forward functionality"""
+class TestFileTransferCLI(MenderTesting):
+    """Tests the file transfer functionality"""
 
-    def test_portforward(self, standard_setup_one_client_bootstrapped):
+    def test_filetransfer_cli(self, standard_setup_one_client_bootstrapped):
         # list of devices
         devices = list(
             set([device["id"] for device in devauth.get_devices_status("accepted")])
@@ -45,7 +42,7 @@ class TestPortForward(MenderTesting):
 
         # wait for the device to connect via websocket
         auth = authentication.Authentication()
-        wait_for_connect(auth, devid)
+        wait_for_connect(auth, devices[0])
 
         # authenticate with mender-cli
         server_url = "https://" + get_container_manager().get_mender_gateway()
@@ -70,47 +67,7 @@ class TestPortForward(MenderTesting):
         exit_code = p.wait()
         assert exit_code == 0, (stdout, stderr)
 
-        # start the port forwarding session in a different thread
-        def port_forward(server_url, dev_id, port_mapping, *port_mappings):
-            p = subprocess.Popen(
-                [
-                    "mender-cli",
-                    "--skip-verify",
-                    "--server",
-                    server_url,
-                    "port-forward",
-                    devid,
-                    port_mapping,
-                ]
-                + list(port_mappings),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            stdout, stderr = p.communicate()
-            p.wait()
-
-        pfw = Process(
-            target=port_forward,
-            args=(server_url, devid, "9922:22", "udp/9953:8.8.8.8:53"),
-        )
-        pfw.start()
-
-        # wait a few seconds to let the port-forward start
-        logger.info("port-forward started, waiting a few seconds")
-        time.sleep(2)
-
-        #  verify the UDP port-forward querying the Google's DNS server
-        logger.info("resolve mender.io (A record)")
-        req = DnsRequest(name="mender.io", qtype="A", server="localhost", port=9953)
-        response = req.req()
-        assert len(response.answers) >= 1, response.show()
-
-        logger.info("resolve mender.io (MX record)")
-        req = DnsRequest(name="mender.io", qtype="MX", server="localhost", port=9953)
-        response = req.req()
-        assert len(response.answers) >= 1, response.show()
-
-        # verify the TCP port-forward using scp to upload and download files
+        # upload and download files using mender-cli
         try:
             # create a 40MB random file
             f = NamedTemporaryFile(delete=False)
@@ -120,19 +77,17 @@ class TestPortForward(MenderTesting):
 
             logger.info("created a 40MB random file: " + f.name)
 
-            # upload the file using scp
-            logger.info("uploading the file to the device using scp")
+            # upload the file using mender-cli
+            logger.info("uploading the file to the device using mender-cli")
             p = subprocess.Popen(
                 [
-                    "scp",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-P",
-                    "9922",
+                    "mender-cli",
+                    "--skip-verify",
+                    "--server",
+                    server_url,
+                    "cp",
                     f.name,
-                    "root@localhost:/tmp/random.bin",
+                    devid + ":/tmp/random.bin",
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -141,18 +96,16 @@ class TestPortForward(MenderTesting):
             exit_code = p.wait()
             assert exit_code == 0, (stdout, stderr)
 
-            # download the file using scp
-            logger.info("download the file from the device using scp")
+            # download the file using mender-cli
+            logger.info("download the file from the device using mender-cli")
             p = subprocess.Popen(
                 [
-                    "scp",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-P",
-                    "9922",
-                    "root@localhost:/tmp/random.bin",
+                    "mender-cli",
+                    "--skip-verify",
+                    "--server",
+                    server_url,
+                    "cp",
+                    devid + ":/tmp/random.bin",
                     f.name + ".download",
                 ],
                 stdout=subprocess.PIPE,
@@ -165,10 +118,70 @@ class TestPortForward(MenderTesting):
             # assert the files are not corrupted
             logger.info("checking the checksums of the uploaded and downloaded files")
             assert md5sum(f.name) == md5sum(f.name + ".download")
+
+            # upload the file to a directory (fail)
+            logger.info(
+                "upload the file to a directory which doesn't exist (fail) using mender-cli"
+            )
+            p = subprocess.Popen(
+                [
+                    "mender-cli",
+                    "--skip-verify",
+                    "--server",
+                    server_url,
+                    "cp",
+                    f.name,
+                    devid + ":/tmp/path-does-not-exist/random.bin",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = p.communicate()
+            exit_code = p.wait()
+            assert exit_code == 1, (stdout, stderr)
+            assert b"failed to create target file" in stderr, (stdout, stderr)
+
         finally:
             os.unlink(f.name)
             if os.path.isfile(f.name + ".download"):
                 os.unlink(f.name + ".download")
 
-        # stop the port-forwarding
-        pfw.kill()
+        # download a file which doesn't exist (fail)
+        logger.info("download a file which doesn't exist (fail) using mender-cli")
+        p = subprocess.Popen(
+            [
+                "mender-cli",
+                "--skip-verify",
+                "--server",
+                server_url,
+                "cp",
+                "/this/file/does/not/exist",
+                devid + ":/tmp/path-does-not-exist/random.bin",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = p.communicate()
+        exit_code = p.wait()
+        assert exit_code == 1, (stdout, stderr)
+        assert b"no such file or directory" in stderr, (stdout, stderr)
+
+        # upload a file which doesn't exist (fail)
+        logger.info("upload a file which doesn't exist (fail) using mender-cli")
+        p = subprocess.Popen(
+            [
+                "mender-cli",
+                "--skip-verify",
+                "--server",
+                server_url,
+                "cp",
+                "/this/file/does/not/exist",
+                devid + ":/tmp/test.bin",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = p.communicate()
+        exit_code = p.wait()
+        assert exit_code == 1, (stdout, stderr)
+        assert b"no such file or directory" in stderr, (stdout, stderr)

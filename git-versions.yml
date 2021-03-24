@@ -13,9 +13,6 @@ services:
     mender-gui:
         image: mendersoftware/gui:master
 
-    mender-api-gateway:
-        image: mendersoftware/api-gateway:master
-
     mender-device-auth:
         image: mendersoftware/deviceauth:master
 

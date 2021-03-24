@@ -19,7 +19,7 @@ import time
 
 from tempfile import NamedTemporaryFile
 
-from ..common_setup import standard_setup_one_client
+from ..common_setup import standard_setup_one_client_bootstrapped
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
 from .common import md5sum
@@ -29,23 +29,20 @@ from .mendertesting import MenderTesting
 class TestFileTransferCLI(MenderTesting):
     """Tests the file transfer functionality"""
 
-    def test_filetransfer_cli(self, standard_setup_one_client):
-        # accept the device
-        devauth.accept_devices(1)
-
+    def test_filetransfer_cli(self, standard_setup_one_client_bootstrapped):
         # list of devices
         devices = list(
             set([device["id"] for device in devauth.get_devices_status("accepted")])
         )
         assert 1 == len(devices)
 
+        # device ID
+        devid = devices[0]
+        assert devid is not None
+
         # wait for the device to connect via websocket
         auth = authentication.Authentication()
         wait_for_connect(auth, devices[0])
-
-        # device ID and auth token
-        devid = devices[0]
-        assert devid is not None
 
         # authenticate with mender-cli
         server_url = "https://" + get_container_manager().get_mender_gateway()

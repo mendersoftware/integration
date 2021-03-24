@@ -19,7 +19,7 @@ import time
 
 from tempfile import NamedTemporaryFile
 
-from ..common_setup import standard_setup_one_client
+from ..common_setup import standard_setup_one_client_bootstrapped
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
 from .common import md5sum
@@ -29,10 +29,7 @@ from .mendertesting import MenderTesting
 class TestRemoteTerminal(MenderTesting):
     """Tests the remote terminal functionality"""
 
-    def test_remote_terminal(self, standard_setup_one_client):
-        # accept the device
-        devauth.accept_devices(1)
-
+    def test_remote_terminal(self, standard_setup_one_client_bootstrapped):
         # list of devices
         devices = list(
             set([device["id"] for device in devauth.get_devices_status("accepted")])

@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2021 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import subprocess
 import time
 
 import pytest
-from flaky import flaky
 
 from ..common_setup import running_custom_production_setup
 from ..MenderAPI import authentication, deployments, DeviceAuthV2, logger
@@ -95,7 +94,6 @@ class TestDemoArtifact(MenderTesting):
 
     # Give the test a timeframe, as the script might run forever,
     # if something goes awry, or the script is not brought down properly.
-    @flaky(max_runs=3)  # https://tracker.mender.io/browse/MEN-4495
     @pytest.mark.timeout(3000)
     def test_demo_artifact(self, run_demo_script):
         """Tests that the demo script does indeed upload the demo Artifact to the server."""

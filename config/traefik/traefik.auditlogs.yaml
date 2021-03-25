@@ -1,0 +1,25 @@
+http:
+  routers:
+    #
+    # auditlogs
+    #
+    auditlogs:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/auditlogs`)"
+      service: auditlogs
+      tls: true
+
+  services:
+
+    auditlogs:
+      loadBalancer:
+        servers:
+        - url: "http://mender-auditlogs:8080"
+

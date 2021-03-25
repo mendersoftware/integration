@@ -329,18 +329,19 @@ def wait_for_traefik(gateway_host, routers=[]):
         return
     if routers == []:
         rnames = [
-            "deployments@docker",
-            "deploymentsMgmt@docker",
-            "minio@docker",
-            "deviceauth@docker",
-            "deviceauthMgmt@docker",
-            "inventoryMgmt@docker",
-            "inventoryMgmtV1@docker",
-            "useradm@docker",
-            "useradmNoAuth@docker",
-            "deviceauth@docker",
-            "deviceauthMgmt@docker",
-            "inventoryV1@docker",
+            "deployments@file",
+            "deploymentsDL@file",
+            "deploymentsMgmt@file",
+            "deviceauth@file",
+            "deviceauthMgmt@file",
+            "gui@file",
+            "inventoryMgmtV1@file",
+            "inventoryMgmtV2@file",
+            "inventoryV1@file",
+            "inventoryV2@file",
+            "minio@file",
+            "useradm@file",
+            "useradmLogin@file",
         ]
     else:
         rnames = routers[:]

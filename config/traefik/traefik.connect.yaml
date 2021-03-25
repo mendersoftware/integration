@@ -1,0 +1,41 @@
+http:
+  routers:
+    #
+    # deviceconnect
+    #
+    deviceconnect:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - devauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+    deviceconnectMgmt:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+  services:
+    deviceconnect:
+      loadBalancer:
+        servers:
+        - url: "http://mender-deviceconnect:8080"
+

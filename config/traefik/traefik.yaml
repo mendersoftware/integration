@@ -1,0 +1,221 @@
+# Dynamic traefik configuration
+http:
+  #
+  # Routers
+  #
+  routers:
+
+    #
+    # deployments
+    #
+    deployments:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - devauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments`)"
+      service: deployments
+      tls: true
+
+    deploymentsDL:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - sec-headers
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments/download`)"
+      service: deployments
+      tls: true
+
+    deploymentsMgmt:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deployments`)"
+      service: deployments
+      tls: true
+
+    #
+    # deviceauth
+    #
+    deviceauth:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - sec-headers
+      - compression
+      rule: "PathPrefix(`/api/devices/{(v[0-9]+)}/authentication`)"
+      service: deviceauth
+      tls: true
+
+    deviceauthMgmt:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devauth`)"
+      service: deviceauth
+      tls: true
+
+
+    #
+    # gui
+    #
+    gui:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - ensure-ui-path
+      - signup-redirect
+      - ui-stripprefix
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/`)"
+      service: gui
+      tls: true
+
+    #
+    # inventory
+    #
+    inventoryV1:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - devauth
+      - inventoryV1-replacepathregex
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/v1/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryV2:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - devauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/v2/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryMgmtV1:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - inventoryMgmtV1-replacepathregex
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/v1/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryMgmtV2:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/v2/inventory`)"
+      service: inventory
+      tls: true
+
+    #
+    # useradm
+    #
+    useradm:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/useradm`)"
+      service: useradm
+      tls: true
+
+    useradmLogin:
+      entrypoints: https
+      middlewares:
+      - circuit-breaker
+      - sec-headers
+      - compression
+      - json-error-responder4
+      rule: >-
+        PathPrefix(`/api/management/{version:v[0-9]+}/useradm/{auth:(oauth2|auth/[^/]*)}`)
+      service: useradm
+      tls: true
+
+  #
+  # Services
+  #
+  services:
+
+    deviceauth:
+      loadBalancer:
+        servers:
+        - url: "http://mender-device-auth:8080"
+
+    deployments:
+      loadBalancer:
+        servers:
+        - url: "http://mender-deployments:8080"
+
+    error-responder:
+      loadBalancer:
+        servers:
+        - url: "http://mender-gui:8080"
+
+    gui:
+      loadBalancer:
+        servers:
+        - url: "http://mender-gui"
+
+    inventory:
+      loadBalancer:
+        servers:
+        - url: "http://mender-inventory:8080"
+
+    useradm:
+      loadBalancer:
+        servers:
+        - url: "http://mender-useradm:8080"

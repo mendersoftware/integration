@@ -101,7 +101,7 @@ collect_changes() {
             GIT_ARGS=
         fi
         echo "Fetching changes for $repo, rev $CHANGES" 1>&2
-        git --no-pager log --perl-regexp --author='^((?!dependabot).*)$' --use-mailmap $GIT_ARGS $CHANGES "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json' ':!**/__snapshots__/**'
+        git --no-pager log --perl-regexp --author='^((?!dependabot|mender-test-bot).*)$' --use-mailmap $GIT_ARGS $CHANGES "$@" -- '*' ':!vendor' ':!node_modules' ':!package-lock.json' ':!**/__snapshots__/**'
         popd
     done
 }

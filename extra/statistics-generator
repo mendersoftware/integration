@@ -140,5 +140,5 @@ if [ "$DRY_RUN" = 1 ]; then
     collect_changes "$@"
 else
     set -o pipefail
-    collect_changes "$@" | python2 "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
+    collect_changes "$@" | python "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
 fi

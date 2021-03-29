@@ -2,7 +2,7 @@ attrs==20.3.0
 certifi==2020.12.5
 cffi==1.14.5
 chardet==4.0.0
-cryptography==3.4.6
+cryptography==3.4.7
 idna==2.10
 iniconfig==1.1.1
 packaging==20.9

@@ -68,10 +68,14 @@ test:extra-tools:release-tool:
     - git fetch github
     # Fetch master branch for tests using --in-integration-version
     - git fetch origin master:master
+    - git fetch origin --tags
+    - git submodule update --init --recursive
 
   script:
     # Run release-tool unit tests.
     - python3 -m pytest extra/test_release_tool.py
+    - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
+    - python3 -m pytest extra/test_statistics_generator.py
 
 test:docs:
   image: tiangolo/docker-with-compose

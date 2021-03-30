@@ -183,6 +183,8 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
 
+export TENANTADM_STRIPE_API_KEY=$STRIPE_API_KEY
+
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \

@@ -79,6 +79,7 @@ class DockerComposeNamespace(DockerNamespace):
     ]
     ENTERPRISE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.auditlogs.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml",
     ]
     MT_CLIENT_FILES = [
@@ -107,7 +108,7 @@ class DockerComposeNamespace(DockerNamespace):
     ]
 
     NUM_SERVICES_OPENSOURCE = 13
-    NUM_SERVICES_ENTERPRISE = 15
+    NUM_SERVICES_ENTERPRISE = 16
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)

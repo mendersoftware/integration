@@ -28,6 +28,7 @@ from testutils.common import (
     make_accepted_device,
     mongo,
     clean_mongo,
+    update_tenant,
 )
 from testutils.util.artifact import Artifact
 from testutils.api.client import ApiClient
@@ -312,6 +313,9 @@ class TestRBACDeviceGroupEnterprise:
             "secretsecret",
         )
         tenant = create_org(tenant, username, password, "enterprise")
+
+        update_tenant(tenant.id, addons=["configure"])
+
         test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
         test_user = create_user(tid=tenant.id, **test_case["user"])
         tenant.users.append(test_user)
@@ -383,6 +387,8 @@ class TestRBACDeviceGroupEnterprise:
             "secretsecret",
         )
         tenant = create_org(tenant, username, password, "enterprise")
+        update_tenant(tenant.id, addons=["configure"])
+
         admin_user = tenant.users[0]
         test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
         test_user = create_user(tid=tenant.id, **test_case["user"])

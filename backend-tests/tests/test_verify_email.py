@@ -22,11 +22,7 @@ from testutils.api.client import ApiClient
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.smtpd_mock import smtp_mock
 
-from testutils.common import (
-    clean_mongo,
-    create_org,
-    mongo,
-)
+from testutils.common import clean_mongo, create_org, mongo
 
 
 class TestVerifyEmailEnterprise:
@@ -40,7 +36,7 @@ class TestVerifyEmailEnterprise:
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
+            "some.user+" + uuidv4 + "@foo.com",
             "secretsecret",
         )
         create_org(tenant, email, password)
@@ -79,7 +75,7 @@ class TestVerifyEmailEnterprise:
         assert secret_hash != ""
         # complete the email address
         r = self.uc.post(
-            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash}
         )
         assert r.status_code == 204
 
@@ -109,12 +105,12 @@ class TestVerifyEmailEnterprise:
 
     def test_verify_email_complete_invalid_secret(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": "dummy"},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": "dummy"}
         )
         assert r.status_code == 400
 
     def test_verify_email_complete_invalid_body(self, clean_mongo):
         r = self.uc.post(
-            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": ["dummy"]},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": ["dummy"]}
         )
         assert r.status_code == 400

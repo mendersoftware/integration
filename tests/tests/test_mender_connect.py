@@ -16,19 +16,38 @@ import io
 import logging
 import pytest
 import time
+import json
 
 from testutils.api import proto_shell, protomsg
-from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
-from ..MenderAPI import devconnect
+from testutils.infra.cli import CliTenantadm
+from testutils.infra.container_manager import factory
+from testutils.infra.device import MenderDevice
+from testutils.infra.mongo import MongoClient
+from ..common_setup import (
+    class_persistent_standard_setup_one_client_bootstrapped,
+    enterprise_no_client_class,
+)
+from ..MenderAPI import (
+    devconnect,
+    auth,
+    devauth,
+    reset_mender_api,
+    DeviceAuthV2,
+    Authentication,
+    DeviceConnect,
+    get_container_manager,
+)
+from testutils.common import create_user, Tenant, User, update_tenant
+from .common_connect import wait_for_connect
+
+container_factory = factory.get_factory()
 
 
-class TestMenderConnect:
-    def test_regular_protocol_commands(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
+class _TestRemoteTerminalBase:
+    def test_regular_protocol_commands(self, docker_env):
+        self.assert_env(docker_env)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
@@ -96,12 +115,10 @@ class TestMenderConnect:
                 "$ ",
             ], "Could not detect shell prompt."
 
-    def test_dbus_reconnect(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
+    def test_dbus_reconnect(self, docker_env):
+        self.assert_env(docker_env)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -109,48 +126,45 @@ class TestMenderConnect:
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
-        client_service_name = device.get_client_service_name()
-        device.run(
+        client_service_name = docker_env.device.get_client_service_name()
+        docker_env.device.run(
             f"systemctl --job-mode=ignore-dependencies stop {client_service_name}"
         )
-        device.run("systemctl --job-mode=ignore-dependencies restart mender-connect")
+        docker_env.device.run(
+            "systemctl --job-mode=ignore-dependencies restart mender-connect"
+        )
 
         time.sleep(10)
 
         # At this point, mender-connect will already have queried DBus.
-        device.run(
+        docker_env.device.run(
             f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
         )
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    def test_websocket_reconnect(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
-        device = class_persistent_standard_setup_one_client_bootstrapped.device
+    def test_websocket_reconnect(self, docker_env):
+        self.assert_env(docker_env)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
         # Test that mender-connect recovers if it loses the connection to deviceconnect.
-        class_persistent_standard_setup_one_client_bootstrapped.restart_service(
-            "mender-deviceconnect"
-        )
+        docker_env.restart_service("mender-deviceconnect")
 
         time.sleep(10)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    def test_bogus_shell_message(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
+    def test_bogus_shell_message(self, docker_env):
+        self.assert_env(docker_env)
 
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
 
             prot.clear()
@@ -164,27 +178,9 @@ class TestMenderConnect:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
-    def test_bogus_proto_message(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
+    def test_session_recording(self, docker_env):
+        self.assert_env(docker_env)
 
-        with devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
-
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            msg = ws.recv()
-            body = prot.decode(msg)
-            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
-            assert prot.protoType == 12345
-            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
-
-    def test_session_recording(
-        self, class_persistent_standard_setup_one_client_bootstrapped
-    ):
         def get_cmd(ws, timeout=1):
             pmsg = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
             body = b""
@@ -199,7 +195,7 @@ class TestMenderConnect:
 
         session_id = ""
         session_bytes = b""
-        with devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket() as ws:
             # Start shell.
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
@@ -233,7 +229,7 @@ class TestMenderConnect:
         time.sleep(1)
 
         playback_bytes = b""
-        with devconnect.get_playback_websocket(session_id, sleep_ms=0) as ws:
+        with docker_env.devconnect.get_playback_websocket(session_id, sleep_ms=0) as ws:
             playback_bytes = get_cmd(ws)
 
         assert playback_bytes == session_bytes
@@ -247,3 +243,129 @@ class TestMenderConnect:
 
         # ... and after echo is enabled
         assert b"echo 'and now echo is back on'" in playback_bytes
+
+    def assert_env(self, docker_env):
+        """Check extra env vars  used by base test funcs - make sure they're set.
+        Mostly important for custom setups.
+        """
+        assert (
+            docker_env.device is not None
+        ), "docker_env must have a designated 'device'"
+        assert (
+            docker_env.devconnect is not None
+        ), "docker_env must have a set up 'devconnect' instance"
+
+
+class TestRemoteTerminal(_TestRemoteTerminalBase):
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
+        env = class_persistent_standard_setup_one_client_bootstrapped
+        env.devconnect = devconnect
+        yield env
+
+    def test_bogus_proto_message(self, docker_env):
+        with docker_env.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
+
+
+class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
+    """
+    This set of tests uses mender-connect v1.0
+    """
+
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, request):
+        env = container_factory.getMenderClient_2_5()
+        request.addfinalizer(env.teardown)
+        env.setup()
+
+        env.populate_clients(replicas=1)
+
+        clients = env.get_mender_clients()
+        assert len(clients) == 1, "Failed to setup client"
+        env.device = MenderDevice(clients[0])
+        env.device.ssh_is_opened()
+
+        reset_mender_api(env)
+        devauth.accept_devices(1)
+
+        env.devconnect = devconnect
+        yield env
+
+    def test_bogus_proto_message(self, docker_env):
+        with docker_env.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            msg = ws.recv()
+            body = prot.decode(msg)
+            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
+            assert prot.protoType == 12345
+            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
+
+
+class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
+    def connected_device(self, env):
+        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        cli = CliTenantadm(containers_namespace=env.name)
+        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        update_tenant(
+            tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+        )
+        tenant = cli.get_tenant(tid)
+        tenant = json.loads(tenant)
+        ttoken = tenant["tenant_token"]
+
+        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+        auth.create_org = False
+        auth.reset_auth_token()
+        devauth = DeviceAuthV2(auth)
+
+        env.new_tenant_client("configuration-test-container", ttoken)
+        device = MenderDevice(env.get_mender_clients()[0])
+        devauth.accept_devices(1)
+
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+
+        wait_for_connect(auth, devices[0])
+
+        devconn = DeviceConnect(auth, devauth)
+
+        return device, devconn
+
+    @pytest.fixture(scope="class")
+    def docker_env(self, enterprise_no_client_class):
+        """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
+
+        The min. plan for most RT features is 'os', but we're also
+        testing session logging - which is 'enterprise', so we need highest
+        common denominator.
+        """
+
+        env = enterprise_no_client_class
+
+        device, devconn = self.connected_device(env)
+
+        env.device = device
+        env.devconnect = devconn
+
+        yield env

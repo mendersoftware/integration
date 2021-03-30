@@ -19,6 +19,7 @@ import shutil
 import tempfile
 import time
 import re
+from flaky import flaky
 
 from testutils.common import create_org
 from testutils.infra.container_manager import factory
@@ -236,6 +237,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
+    @flaky(max_runs=3)  # https://tracker.mender.io/browse/QA-243
     def test_mtls_enterprise(self, setup_ent_mtls, algorithm):
         self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=False)
 
@@ -267,6 +269,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
+    @flaky(max_runs=3)  # https://tracker.mender.io/browse/QA-243
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
 
         # Check if the client has has SoftHSM (from yocto dunfell forward)

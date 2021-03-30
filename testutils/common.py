@@ -265,8 +265,8 @@ def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
 
 
 def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devices=1):
-    """ Create accepted devices.
-        returns list of Device objects."""
+    """Create accepted devices.
+    returns list of Device objects."""
     devices = []
 
     # some 'accepted' devices, single authset
@@ -321,7 +321,7 @@ def get_mender_artifact(
 
 
 def wait_for_traefik(gateway_host, routers=[]):
-    """ Wait until provided routers are installed.
+    """Wait until provided routers are installed.
     Prevents race conditions where services are already up but traefik hasn't yet registered their routers. This causes subtle timing issues.
     By default checks the basic routers (incl. deployments - startup so time consuming, in practice it guarantees success).
     """
@@ -358,3 +358,23 @@ def wait_for_traefik(gateway_host, routers=[]):
             print("connection error while waiting for routers - but that's ok")
     else:
         assert False, "timeout hit waiting for traefik routers {}".format(rnames)
+
+
+def update_tenant(tid, addons=None, plan=None, container_manager=None):
+    """ Call internal PUT tenantadm/tenants/{tid} """
+    host = tenantadm.HOST
+    if container_manager is not None:
+        host = container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"
+
+    update = {}
+    if addons is not None:
+        update["addons"] = tenantadm.make_addons(addons)
+
+    if plan is not None:
+        update["plan"] = plan
+
+    tadm = ApiClient(tenantadm.URL_INTERNAL, host=host, schema="http://")
+    res = tadm.call(
+        "PUT", tenantadm.URL_INTERNAL_TENANT, body=update, path_params={"tid": tid},
+    )
+    assert res.status_code == 202

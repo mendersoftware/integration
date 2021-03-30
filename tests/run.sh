@@ -51,20 +51,26 @@ while [ -n "$1" ]; do
 done
 
 MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
-
 if [[ $? -ne 0 ]]; then
     echo "Failed to determine mender version using release_tool.py"
     exit 1
 fi
-MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
 
+MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
 if [[ $? -ne 0 ]]; then
     echo "Failed to determine mender-artifact version using release_tool.py"
     exit 1
 fi
 
+MENDER_CLI_BRANCH=$(../extra/release_tool.py --version-of mender-cli)
+if [[ $? -ne 0 ]]; then
+    echo "Failed to determine mender-cli version using release_tool.py"
+    exit 1
+fi
+
 echo "Detected Mender branch: $MENDER_BRANCH"
-echo "Detected Mender artifact branch: $MENDER_ARTIFACT_BRANCH"
+echo "Detected mender-artifact branch: $MENDER_ARTIFACT_BRANCH"
+echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
 
 function modify_services_for_testing() {
     # Remove all published ports for testing
@@ -97,10 +103,16 @@ function get_requirements() {
 
     chmod +x downloaded-tools/mender-artifact
 
+    curl --fail "https://downloads.mender.io/mender-cli/${MENDER_CLI_BRANCH}/linux/mender-cli" \
+         -o downloaded-tools/mender-cli \
+         -z downloaded-tools/mender-cli
+
     if [ $? -ne 0 ]; then
-        echo "failed to download ext4 image"
+        echo "failed to download mender-cli"
         exit 1
     fi
+
+    chmod +x downloaded-tools/mender-cli
 
     curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
          -o downloaded-tools/directory-artifact-gen \

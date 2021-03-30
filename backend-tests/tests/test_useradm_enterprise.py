@@ -29,12 +29,7 @@ from testutils.infra.cli import CliUseradm, CliTenantadm
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
-from testutils.common import (
-    mongo,
-    clean_mongo,
-    create_org,
-    create_user,
-)
+from testutils.common import mongo, clean_mongo, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
@@ -58,15 +53,13 @@ def tenants_users(clean_migrated_mongo):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
+            "some.user+" + uuidv4 + "@foo.com",
             "secretsecret",
         )
         # Create tenant with two users
         tenant = create_org(tenant, username, password, "enterprise")
         tenant.users.append(
-            create_user(
-                "some.other.user+" + uuidv4 + "@example.com", password, tenant.id
-            )
+            create_user("some.other.user+" + uuidv4 + "@foo.com", password, tenant.id)
         )
         tenants.append(tenant)
 
@@ -91,10 +84,10 @@ class Test2FAEnterprise:
         r = uadm.with_auth(utoken).call("PUT", useradm.URL_2FAVERIFY, body=body)
         return r
 
-    def _toggle_tfa(self, utoken, on=True):
-        body = {"2fa": "enabled"}
+    def _toggle_tfa(self, utoken, user_id, on=True):
+        body = {"2fa": "enabled", user_id + "_2fa": "enabled"}
         if not on:
-            body = {"2fa": "disabled"}
+            body = {"2fa": "disabled", user_id + "_2fa": "disabled"}
 
         r = uadm.with_auth(utoken).call("POST", useradm.URL_SETTINGS, body)
         assert r.status_code == 201
@@ -145,12 +138,12 @@ class Test2FAEnterprise:
         assert secret_hash != ""
         # complete the email address
         r = uadm.post(
-            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash},
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash}
         )
         assert r.status_code == 204
 
         # enable tfa for 1 user, straight login still works, token is not verified
-        self._toggle_tfa(user_2fa_tok, on=True)
+        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
         r = self._login(user_2fa)
         assert r.status_code == 200
 
@@ -184,6 +177,6 @@ class Test2FAEnterprise:
             assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, on=False)
+        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=False)
         r = self._login(user_2fa)
         assert r.status_code == 200

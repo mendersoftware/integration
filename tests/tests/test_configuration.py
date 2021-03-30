@@ -20,9 +20,7 @@ import redo
 
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
-from testutils.common import Tenant, User
-from testutils.api.client import ApiClient
-import testutils.api.deviceconnect as deviceconnect
+from testutils.common import Tenant, User, update_tenant
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from ..MenderAPI import (
@@ -35,6 +33,7 @@ from ..MenderAPI import (
 )
 from ..MenderAPI.requests_helpers import requests_retry
 from .mendertesting import MenderTesting
+from .common_connect import wait_for_connect
 
 
 @pytest.mark.usefixtures("standard_setup_one_client")
@@ -89,6 +88,16 @@ class TestConfigurationEnterprise(MenderTesting):
         u = User("", "bugs.bunny@acme.org", "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
         tid = cli.create_org("enterprise-tenant", u.name, u.pwd, plan="enterprise")
+
+        # what we really need is "configure"
+        # but for trigger tests we're also checking device avail. in "deviceconnect"
+        # so add "troubleshoot" as well
+        update_tenant(
+            tid,
+            addons=["configure", "troubleshoot"],
+            container_manager=get_container_manager(),
+        )
+
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
         ttoken = tenant["tenant_token"]
@@ -157,26 +166,6 @@ def was_update_forced(mender_device):
         raise RuntimeError(
             "fatal: no expected evidence of an update was found in device logs"
         )
-
-
-def wait_for_connect(auth, devid):
-    devconn = ApiClient(
-        host=get_container_manager().get_mender_gateway(),
-        base_url=deviceconnect.URL_MGMT,
-    )
-
-    for _ in redo.retrier(attempts=60, sleeptime=1):
-        logger.info("waiting for device in deviceconnect")
-        res = devconn.call(
-            "GET",
-            deviceconnect.URL_MGMT_DEVICE,
-            headers=auth.get_auth_token(),
-            path_params={"id": devid},
-        )
-        if res.status_code == 200 and res.json()["status"] == "connected":
-            break
-    else:
-        assert False, "timed out waiting for /connect"
 
 
 def set_and_verify_config(config, devid, authtoken):

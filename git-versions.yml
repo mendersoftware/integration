@@ -14,9 +14,6 @@ services:
     mender-gui:
         image: mendersoftware/gui:staging
 
-    mender-api-gateway:
-        image: mendersoftware/api-gateway:staging
-
     mender-device-auth:
         image: mendersoftware/deviceauth:staging
 

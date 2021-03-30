@@ -11,23 +11,14 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+#
 
-HOST = "mender-tenantadm:8080"
-URL_INTERNAL = "/api/internal/v1/tenantadm"
-URL_MGMT = "/api/management/v1/tenantadm"
-
-URL_INTERNAL_SUSPEND = "/tenants/{tid}/status"
-URL_INTERNAL_TENANTS = "/tenants"
-URL_INTERNAL_TENANT = "/tenants/{tid}"
-URL_MGMT_TENANTS = "/tenants"
-URL_MGMT_THIS_TENANT = "/user/tenant"
-
-ALL_ADDONS = ["troubleshoot", "configure"]
+import hashlib
 
 
-def req_status(status):
-    return {"status": status}
-
-
-def make_addons(addons=[]):
-    return [{"name": a, "enabled": a in addons} for a in ALL_ADDONS]
+def md5sum(fname):
+    hash_md5 = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()

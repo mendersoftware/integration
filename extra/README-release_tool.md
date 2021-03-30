@@ -115,7 +115,7 @@ carried out.
    type 'T' into the menu. What this will do is to generate new build tags in
    all the repositories that need them, and push these.
 
-2. Next, you will want to build using these tags in Jenkins. For that type 'B'
+2. Next, you will want to build using these tags in GitLab. For that type 'B'
    into the menu. This will give you a series of build parameters that you can
    check for validity. If you answer no, you'll get the chance to change them,
    otherwise proceed by saying yes.
@@ -186,12 +186,12 @@ files. Then it will tag the using this new commit. See the section about
 illustration about what this means for the Git history.
 
 
-#### Trigger new Jenkins build
+#### Trigger new GitLab build
 
-This will trigger a new Jenkins build using the current build tags.
+This will trigger a new GitLab build using the current build tags.
 
 In addition to the revisions to build, there are additional default parameters
-passed to Jenkins. These can be changed by answering no when asked to submit the
+passed to GitLab. These can be changed by answering no when asked to submit the
 build and changing the parameters of the user's choice. Parameters that don't
 describe component versions will be saved and used in subsequent builds.
 

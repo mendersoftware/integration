@@ -59,6 +59,12 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
     ]
+    LEGACY_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
+    ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
         + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml"
@@ -95,6 +101,9 @@ class DockerComposeNamespace(DockerNamespace):
     ]
     COMPAT_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
+    ]
+    MENDER_2_5_FILES = [
+        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
 
     NUM_SERVICES_OPENSOURCE = 13
@@ -278,8 +287,8 @@ class DockerComposeNamespace(DockerNamespace):
 
     def get_mender_gateway(self):
         """Returns IP address of mender-api-gateway service
-           Has internal retry - upon setup 'up', the gateway
-           will not be available for a while.
+        Has internal retry - upon setup 'up', the gateway
+        will not be available for a while.
         """
         for _ in redo.retrier(attempts=10, sleeptime=1):
             gateway = self.get_ip_of_service("mender-api-gateway")
@@ -501,6 +510,22 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         )
         logger.info("creating client connected to tenant: " + tenant)
         time.sleep(45)
+
+
+class DockerComposeMenderClient_2_5(DockerComposeCompatibilitySetup):
+    """
+    Setup is identical to DockerComposeCompatiblitySetup but excluding images
+    without mender-connect.
+    """
+
+    def __init__(self, name, enterprise=False):
+        self._enterprise = enterprise
+        extra_files = self.MENDER_2_5_FILES
+        if self._enterprise:
+            extra_files += self.ENTERPRISE_FILES
+        super(DockerComposeCompatibilitySetup, self).__init__(
+            name, extra_files=extra_files
+        )
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

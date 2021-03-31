@@ -15,6 +15,7 @@
 import os
 import sys
 import shutil
+import subprocess
 import re
 from unittest.mock import patch
 
@@ -170,6 +171,46 @@ def test_version_of(capsys):
     run_main_assert_result(
         capsys, ["--version-of", "deviceauth", "--version-type", "git"], "1.2.3-git"
     )
+
+    # A commit matching a tag should return the tag.
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "integration",
+            "--in-integration-version",
+            "b09145b9520a24ab76bde0345e8d6c85f366083b^2",
+        ],
+        "2.6.0",
+    )
+
+    remote = (
+        subprocess.check_output(
+            "git remote -v | grep mendersoftware/integration | head -n 1 | awk '{print $1}'",
+            shell=True,
+        )
+        .decode()
+        .strip()
+    )
+    subprocess.check_call(
+        ["git", "symbolic-ref", "TEST_REF", f"refs/remotes/{remote}/2.6.x"]
+    )
+    try:
+        # A symbolic ref matching a branch should return that branch.
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "integration", "--in-integration-version", "TEST_REF"],
+            f"{remote}/2.6.x",
+        )
+        # Else return the ref.
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "integration", "--in-integration-version", "TEST_REF~1"],
+            "TEST_REF~1",
+        )
+
+    finally:
+        subprocess.check_call(["git", "symbolic-ref", "--delete", "TEST_REF"])
 
 
 def test_version_of_with_in_integration_version(capsys):

@@ -528,8 +528,31 @@ def version_of(
     if yml_component.yml() == "mender-client-docker-addons":
         # Also known as "integration"
         if in_integration_version is not None:
-            # Just return the supplied version string.
-            return in_integration_version
+            # If the commit specified is a tag, return that, else if it's a
+            # symbolic ref (branch), return that, else just return the supplied
+            # version string.
+            try:
+                output = execute_git(
+                    None,
+                    integration_dir,
+                    ["describe", "--exact-match", in_integration_version],
+                    capture=True,
+                    capture_stderr=True,
+                )
+                return output
+            except subprocess.CalledProcessError:
+                pass
+            try:
+                output = execute_git(
+                    None,
+                    integration_dir,
+                    ["symbolic-ref", "--short", in_integration_version],
+                    capture=True,
+                    capture_stderr=True,
+                )
+                return output
+            except subprocess.CalledProcessError:
+                return in_integration_version
         else:
             # Return "closest" branch or tag name. Basically we measure the
             # distance in commits from the merge base of most refs to the

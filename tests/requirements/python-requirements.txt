@@ -9,11 +9,11 @@ cffi==1.14.5
 chardet==4.0.0
 colorama==0.4.4
 contextlib2==0.6.0.post1
-cryptography==3.4.6
+cryptography==3.4.7
 distlib==0.3.1
 distro==1.5.0
 docker==4.4.4
-docker-compose==1.28.5
+docker-compose==1.28.6
 dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.8.0
@@ -47,7 +47,7 @@ pytest-html==3.1.1
 pytest-metadata==1.11.0
 pytest-timeout==1.4.2
 pytest-xdist==2.2.1
-python-dotenv==0.15.0
+python-dotenv==0.16.0
 pytoml==0.1.21
 PyYAML==5.4.1
 redo==2.0.4

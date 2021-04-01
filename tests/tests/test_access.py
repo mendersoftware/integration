@@ -211,15 +211,15 @@ class TestAccessEnterprise(_TestAccessBase):
             tenant = docker_env.tenants[plan]
             self.check_access_remote_term(tenant.auth, tenant.device_id, forbid=True)
             self.check_access_file_transfer(tenant.auth, tenant.device_id, forbid=True)
-            self.check_access_auditlogs(tenant.auth, forbid=True)
             self.check_access_sessionlogs(tenant.auth, forbid=True)
             self.check_access_deviceconfig(tenant.auth, tenant.device_id, forbid=True)
 
             if plan == "enterprise":
                 self.check_access_rbac(tenant.auth)
+                self.check_access_auditlogs(tenant.auth, forbid=False)
             else:
+                self.check_access_auditlogs(tenant.auth, forbid=True)
                 # self.check_access_rbac(tenant.auth, forbid=True)
-                pass
 
         for plan in ["trial"]:
             tenant = docker_env.tenants[plan]

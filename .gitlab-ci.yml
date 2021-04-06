@@ -33,27 +33,7 @@ test:check-python3-formatting:
     variables:
       - $RUN_TESTS_STAGING == "true"
 
-test:extra-tools:changelog-generator:
-  image: "python:3"
-  stage: test
-
-  except:
-    variables:
-      - $RUN_TESTS_STAGING == "true"
-
-  before_script:
-    # Rename the branch we're on, so that it's not in the way for the
-    # subsequent fetch. It's ok if this fails, it just means we're not on any
-    # branch.
-    - git branch -m temp-branch || true
-    # Set up git identity
-    - git config --global user.name "Northern.tech" && git config --global user.email "info@northern.tech"
-
-  script:
-    # Check changelog-generator test.
-    - ( cd extra/changelog-generator && ./test-changelog-generator )
-
-test:extra-tools:release-tool:
+test:extra-tools:
   image: "python:3"
   stage: test
 
@@ -63,6 +43,14 @@ test:extra-tools:release-tool:
 
   before_script:
     - pip install pytest pyyaml
+    # Rename the branch we're on, so that it's not in the way for the
+    # subsequent fetch. It's ok if this fails, it just means we're not on any
+    # branch.
+    - git branch -m temp-branch || true
+    # Set up git identity
+    - git config --global user.name "Northern.tech" && git config --global user.email "info@northern.tech"
+    # Needed for the statistics generator
+    - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
     # Add github remote for tests using --integration-versions-including
     - git remote add github https://github.com/mendersoftware/integration.git
     - git fetch github
@@ -72,9 +60,8 @@ test:extra-tools:release-tool:
     - git submodule update --init --recursive
 
   script:
-    # Run release-tool unit tests.
+    - ( cd extra/changelog-generator && ./test-changelog-generator )
     - python3 -m pytest extra/test_release_tool.py
-    - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
     - python3 -m pytest extra/test_statistics_generator.py
 
 test:docs:

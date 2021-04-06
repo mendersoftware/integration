@@ -221,6 +221,15 @@ To start the backend and a demo client run the following command:
 ```
 docker-compose -f docker-compose.yml -f docker-compose.client.yml up
 ```
+## Known issues
+
+For some a ValueError with the message "password and salt must not be empty" may occur when the `device.ssh_is_opened()` method in `device.py` gets called. If this happens the test tries to use your personal ssh key. A simple work around is to use the command
+
+```
+export HOME = /dummy
+```
+
+You may also be asked to "Enter password to private key". If you enter the keys password, the tests will continue. Your private key will not be used.
 
 ## Contributing
 

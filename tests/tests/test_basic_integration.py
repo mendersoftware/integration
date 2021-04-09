@@ -24,9 +24,10 @@ from ..common_setup import (
     standard_setup_with_short_lived_token,
     setup_failover,
     standard_setup_one_client_bootstrapped,
+    standard_setup_one_client,
 )
 from .common_update import update_image, update_image_failed
-from ..MenderAPI import image, inv, logger
+from ..MenderAPI import image, inv, logger, devauth, authentication
 from .mendertesting import MenderTesting
 
 
@@ -241,3 +242,60 @@ class TestBasicIntegration(MenderTesting):
             time.sleep(10)
 
         pytest.fail("The inventory was not updated")
+
+
+class TestDecommission(MenderTesting):
+    """Tests the decommission and re authentication functionality"""
+
+    def test_decommission(self, standard_setup_one_client):
+        mender_device = standard_setup_one_client.device
+
+        # accept the device
+        devauth.accept_devices(1)
+        # list of authorized devices
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        # check that there is a authorized device
+        assert 1 == len(devices)
+        # check from client side that the authorization was successful
+        journal_info = self.get_device_journal(mender_device)
+        self.verify_device_authorized(journal_info)
+
+        # decommission the device
+        devauth.decommission(devices[0])
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        # check that there is no authorized devices after decommission
+        assert 0 == len(devices)
+        old_journal_info = journal_info
+        journal_info = self.get_device_journal(mender_device)
+        new_journal_info = self.remove_old_journal_info(old_journal_info, journal_info)
+        # check on the client side that no new authorization has happened
+        self.verify_device_authorized(new_journal_info, False)
+
+        # accept the device again
+        devauth.accept_devices(1)
+        # check again that the device is authorized
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+        old_journal_info = journal_info
+        journal_info = self.get_device_journal(mender_device)
+        new_journal_info = self.remove_old_journal_info(old_journal_info, journal_info)
+        self.verify_device_authorized(new_journal_info)
+
+    def get_device_journal(self, device):
+        return device.run("journalctl -u %s" % device.get_client_service_name())
+
+    def verify_device_authorized(self, journal, expect_authorized=True):
+        assert ("Server authorization successful" in journal) is expect_authorized
+
+    # returns a substring without the old journal info
+    def remove_old_journal_info(self, old, new):
+        numer_of_lines_in_old = len(old.split("\n"))
+        new = new.split("\n")
+        new = new[numer_of_lines_in_old:]
+        return "\n".join(new)

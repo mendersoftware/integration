@@ -337,7 +337,7 @@ def wait_for_traefik(gateway_host, routers=[]):
             "inventoryMgmt@docker",
             "inventoryMgmtV1@docker",
             "useradm@docker",
-            "useradmLogin@docker",
+            "useradmNoAuth@docker",
             "deviceauth@docker",
             "deviceauthMgmt@docker",
             "inventoryV1@docker",

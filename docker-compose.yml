@@ -13,7 +13,7 @@ services:
             - traefik.enable=true
             # Devices API
             - traefik.http.routers.deployments.entrypoints=https
-            - traefik.http.routers.deployments.rule=PathPrefix(`/api/devices/{ver:(v[0-9]+)}/deployments`)
+            - traefik.http.routers.deployments.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/deployments`)
             - traefik.http.routers.deployments.middlewares=devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deployments.tls=true
             - traefik.http.routers.deployments.service=deployments
@@ -24,7 +24,7 @@ services:
             - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=5s
             # Devices API download endpoint - we won't use compression here
             - traefik.http.routers.deploymentsDL.entrypoints=https
-            - traefik.http.routers.deploymentsDL.rule=PathPrefix(`/api/devices/{ver:(v[0-9]+)}/deployments/download`)
+            - traefik.http.routers.deploymentsDL.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/deployments/download`)
             - traefik.http.routers.deploymentsDL.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deploymentsDL.tls=true
             - traefik.http.routers.deploymentsDL.service=deploymentsDL
@@ -35,7 +35,7 @@ services:
             - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.timeout=3s
             # Management API
             - traefik.http.routers.deploymentsMgmt.entrypoints=https
-            - traefik.http.routers.deploymentsMgmt.rule=PathPrefix(`/api/management/{ver:(v[0-9]+)}/deployments`)
+            - traefik.http.routers.deploymentsMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/deployments`)
             - traefik.http.routers.deploymentsMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deploymentsMgmt.tls=true
             - traefik.http.routers.deploymentsMgmt.service=deploymentsMgmt
@@ -161,13 +161,13 @@ services:
         labels:
             - traefik.enable=true
             - traefik.http.routers.deviceauth.entrypoints=https
-            - traefik.http.routers.deviceauth.rule=PathPrefix(`/api/devices/{ver:(v[0-9]+)}/authentication`)
+            - traefik.http.routers.deviceauth.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/authentication`)
             - traefik.http.routers.deviceauth.tls=true
             - traefik.http.routers.deviceauth.service=deviceauth
             - traefik.http.services.deviceauth.loadbalancer.server.port=8080
             
             - traefik.http.routers.deviceauthMgmt.entrypoints=https
-            - traefik.http.routers.deviceauthMgmt.rule=PathPrefix(`/api/management/{ver:(v[0-9]+)}/devauth`)
+            - traefik.http.routers.deviceauthMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/devauth`)
             - traefik.http.routers.deviceauthMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.deviceauthMgmt.tls=true
             - traefik.http.routers.deviceauthMgmt.service=deviceauthMgmt
@@ -233,13 +233,13 @@ services:
             - traefik.enable=true
             - traefik.http.routers.useradm.entrypoints=https
             - traefik.http.routers.useradm.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.useradm.rule=PathPrefix(`/api/management/{ver:(v[0-9]+)}/useradm`)
+            - traefik.http.routers.useradm.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/useradm`)
             - traefik.http.routers.useradm.tls=true
             - traefik.http.routers.useradm.service=useradm
             - traefik.http.services.useradm.loadbalancer.server.port=8080
 
             - traefik.http.routers.useradmLogin.entrypoints=https
-            - traefik.http.routers.useradmLogin.rule=Path(`/api/management/{ver:(v[0-9]+)}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:(v[0-9]+)}/useradm/{ep:(oauth2|auth\/password-reset)}`)
+            - traefik.http.routers.useradmLogin.rule=Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:oauth2|auth\/password-reset}`)
             # traefik should automatically forward the x-forwarded-host header
             - traefik.http.routers.useradmLogin.middlewares=sec-headers,compression,json-error-responder2,json-error-responder3,json-error-responder4
             - traefik.http.routers.useradmLogin.tls=true

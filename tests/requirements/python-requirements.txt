@@ -13,7 +13,7 @@ cryptography==3.4.7
 distlib==0.3.1
 distro==1.5.0
 docker==5.0.0
-docker-compose==1.28.6
+docker-compose==1.29.1
 dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.8.0

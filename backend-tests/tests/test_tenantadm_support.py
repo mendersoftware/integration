@@ -34,9 +34,6 @@ api_useradm = ApiClient(useradm.URL_MGMT)
 
 
 class TestContactSupportEnterprise:
-    @pytest.mark.skipif(
-        isK8S(), reason="not testable in a staging or production environment"
-    )
     def test_contact_support_bad_request(self, clean_mongo):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
@@ -54,6 +51,9 @@ class TestContactSupportEnterprise:
         )
         assert r.status_code == 400
 
+    @pytest.mark.skipif(
+        isK8S(), reason="not testable in a staging or production environment"
+    )
     def test_contact_support(self, clean_mongo, smtp_mock):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (

@@ -57,7 +57,7 @@ if [ -z "$BASE_DIR" -a "$REPO_ONLY" != 1 ]; then
 fi
 
 collect_changes() {
-    RELEASE_TOOL="$(dirname "$0")/release_tool.py"
+    RELEASE_TOOL="$(dirname $0)/release_tool.py"
     if [ "$REPO_ONLY" = 1 ]; then
         REPO_LIST=.
     else

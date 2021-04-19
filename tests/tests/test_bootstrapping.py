@@ -105,3 +105,9 @@ class TestBootstrapping(MenderTesting):
 
         # Check that we can accept again the device from the server
         devauth.accept_devices(1)
+
+        # Check from client side that it can be authorized
+        mender_device.run(
+            "journalctl -u %s -l -n 12 | grep -q 'Server authorization successful'"
+            % mender_device.get_client_service_name()
+        )

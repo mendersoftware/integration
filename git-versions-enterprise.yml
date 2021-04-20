@@ -8,7 +8,7 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:master
+        image: registry.mender.io/mendersoftware/deployments-enterprise:feature-update_control_maps
 
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master

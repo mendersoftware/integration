@@ -3,7 +3,7 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-master
+        image: registry.mender.io/mendersoftware/deployments-enterprise:feature-update_control_maps
 
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master

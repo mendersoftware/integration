@@ -32,6 +32,7 @@ from ..MenderAPI import (
     get_container_manager,
     reset_mender_api,
     DeviceAuthV2,
+    logger,
 )
 from .common_connect import wait_for_connect
 from .common import md5sum
@@ -51,7 +52,23 @@ def download_file(path, devid, authtoken):
     )
     download_url = "%s/devices/%s/download" % (deviceconnect_url, devid)
     download_url_with_path = download_url + "?path=" + urllib.parse.quote(path)
-    return requests.get(download_url_with_path, verify=False, headers=authtoken)
+    max_tries = 255
+    while max_tries > 0:
+        r = requests.get(download_url_with_path, verify=False, headers=authtoken)
+        if r.status_code == 503:
+            logger.info(
+                "test_filetransfer::download_file: got 503; retrying %d" % max_tries
+            )
+        else:
+            break
+        max_tries = max_tries - 1
+        time.sleep(1)
+    if r.status_code == 503:
+        logger.info(
+            "test_filetransfer::download_file: after all the tries, still: 503; returning"
+        )
+
+    return r
 
 
 def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
@@ -74,9 +91,10 @@ class _TestFileTransferBase(MenderTesting):
     def test_filetransfer(self, devid, authtoken):
         # download a file and check its content
         path = "/etc/mender/mender.conf"
-        r = download_file(path, devid, authtoken)
-        assert r.status_code == 200, r.json()
-        assert "ServerURL" in str(r.content)
+        for i in range(255):
+            r = download_file(path, devid, authtoken)
+            assert r.status_code == 200, r.json()
+            assert "ServerURL" in str(r.content)
         assert (
             r.headers.get("Content-Disposition") == 'attachment; filename="mender.conf"'
         )

@@ -62,6 +62,7 @@ class MenderDevice:
                 "banner_timeout": 60,
                 "auth_timeout": 60,
                 "look_for_keys": False,
+                "allow_agent": False,
             },
         )
         self._conn.client.set_missing_host_key_policy(IgnorePolicy())

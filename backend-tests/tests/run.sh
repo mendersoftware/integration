@@ -2,9 +2,7 @@
 
 set -e
 
-if [ -z "$K8S" ]; then
-    sleep 30
-else
+if [ -n "$K8S" ]; then
     aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $AWS_EKS_CLUSTER_NAME
     kubectl config set-context --current --namespace=$K8S
     kubectl get pods -o wide

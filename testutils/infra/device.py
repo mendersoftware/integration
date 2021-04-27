@@ -57,7 +57,13 @@ class MenderDevice:
             user=self.user,
             port=self.port,
             connect_timeout=60,
-            connect_kwargs={"password": "", "banner_timeout": 60, "auth_timeout": 60},
+            connect_kwargs={
+                "password": "",
+                "banner_timeout": 60,
+                "auth_timeout": 60,
+                "look_for_keys": False,
+                "allow_agent": False,
+            },
         )
         self._conn.client.set_missing_host_key_policy(IgnorePolicy())
         self._service_name = None

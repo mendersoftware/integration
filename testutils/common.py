@@ -19,9 +19,11 @@ import string
 import tempfile
 import os
 import subprocess
+from contextlib import contextmanager
+
+import docker
 import redo
 import requests
-from contextlib import contextmanager
 
 import testutils.api.deviceauth as deviceauth
 import testutils.api.tenantadm as tenantadm
@@ -44,7 +46,6 @@ def clean_mongo(mongo):
     pymongo.MongoClient connected to the DB."""
     mongo_cleanup(mongo)
     yield mongo.client
-    mongo_cleanup(mongo)
 
 
 def mongo_cleanup(mongo):
@@ -159,10 +160,9 @@ def create_org(
             break
         time.sleep(1)
 
-    if rsp.status_code != 200:
-        raise ValueError(
-            "User could not log in within three minutes after organization has been created."
-        )
+    assert (
+        rsp.status_code == 200
+    ), "User could not log in within three minutes after organization has been created."
 
     user_token = rsp.text
     rsp = api.with_auth(user_token).call("GET", useradm.URL_USERS)
@@ -359,6 +359,69 @@ def wait_for_traefik(gateway_host, routers=[]):
             print("connection error while waiting for routers - but that's ok")
     else:
         assert False, "timeout hit waiting for traefik routers {}".format(rnames)
+
+
+def wait_until_healthy(compose_project: str = "", timeout: int = 60):
+    """
+    wait_until_healthy polls all running containers health check
+    endpoints until they return a non-error status code.
+    :param compose_project: the docker-compose project ID, if empty it
+                            checks all running containers.
+    :param timeout: timeout in seconds.
+    """
+    client = docker.from_env()
+    kwargs = {}
+    services = []
+    if compose_project != "":
+        kwargs["filters"] = {"label": f"com.docker.compose.project={compose_project}"}
+
+    path_map = {
+        "mender-api-gateway": "/ping",
+        "mender-auditlogs": "/api/internal/v1/auditlogs/health/alive",
+        "mender-deviceconnect": "/api/internal/v1/deviceconnect/health",
+        "mender-deviceconfig": "/api/internal/v1/deviceconfig/health",
+        "mender-device-auth": "/api/internal/v1/devauth/health",
+        "mender-deployments": "/api/internal/v1/deployments/health",
+        "mender-inventory": "/api/internal/v1/inventory/health",
+        "mender-tenantadm": "/api/internal/v1/tenantadm/health",
+        "mender-useradm": "/api/internal/v1/useradm/health",
+        "mender-workflows": "/api/v1/health",
+        "minio": "/minio/health/live",
+    }
+
+    containers = client.containers.list(all=True, **kwargs)
+    for container in containers:
+
+        container_ip = None
+        for _, net in container.attrs["NetworkSettings"]["Networks"].items():
+            container_ip = net["IPAddress"]
+            break
+        if container_ip is None:
+            continue
+
+        service = container.labels.get(
+            "com.docker.compose.service", container.name
+        ).split("-enterprise")[0]
+        if service.startswith("mender-workflows-server"):
+            service = "mender-workflows"
+
+        path = path_map.get(service)
+        if path is None:
+            continue
+        port = 8080 if service != "minio" else 9000
+
+        for _ in redo.retrier(attempts=timeout, sleeptime=1):
+            try:
+                rsp = requests.request("GET", f"http://{container_ip}:{port}{path}")
+            except requests.exceptions.ConnectionError:
+                # A ConnectionError is expected if the service is not running yet
+                continue
+            if rsp.status_code < 300:
+                break
+        else:
+            raise TimeoutError(
+                f"Timed out waiting for service '{service}' to become healthy"
+            )
 
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):

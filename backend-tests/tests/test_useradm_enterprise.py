@@ -74,6 +74,28 @@ def tenants_users(clean_migrated_mongo):
     isK8S(), reason="not testable in a staging or production environment"
 )
 class Test2FAEnterprise:
+    # 2fa enabled?
+    #
+    # verify settings - very important, ui can't get confused
+    #   after every step even
+    #
+    # error scenarios:
+    # just 'me'
+    #  can't modify other user
+    #  can't enable when unverified/enabled
+    #  can't verify if not unverified/enabled
+    #  can't get qr when not unverified
+    #  can't enable if enabled/verified
+    # unverified email can't
+    #
+    # positive:
+    # jeszcze 'me' - na obu
+    # settings change accordingly
+    # osobny: post settings - doesn't change anything?
+    #
+    # do pozytywnego dodac settings
+    # test_errors
+    # test_post_settings
     def _login(self, user, totp=None):
         body = {}
         if totp is not None:
@@ -205,7 +227,7 @@ class Test2FAEnterprise:
             assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=False)
+        self._toggle_tfa(user_2fa_tok, "me", on=False)
         r = self._login(user_2fa)
         assert r.status_code == 200
 

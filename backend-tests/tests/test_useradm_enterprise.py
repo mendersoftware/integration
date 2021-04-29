@@ -33,6 +33,10 @@ from testutils.common import mongo, clean_mongo, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
+TFA_ENABLED = "enabled"
+TFA_DISABLED = "disabled"
+TFA_UNVERIFIED = "unverified"
+
 
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
@@ -108,6 +112,18 @@ class Test2FAEnterprise:
 
         return secret_b32
 
+    def _get_settings(self, utoken):
+        r = uadm.with_auth(utoken).call("GET", useradm.URL_SETTINGS)
+        assert r.status_code == 200
+        return r.json()
+
+    def _make_2fa_settings(self, user_statuses):
+        s = {}
+        for k, v in user_statuses.items():
+            s[k + "_2fa"] = v
+
+        return s
+
     def test_enable_disable(self, tenants_users, smtp_mock):
         user_2fa = tenants_users[0].users[0]
         user_no_2fa = tenants_users[0].users[1]
@@ -115,6 +131,9 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
         user_2fa_tok = r.text
+
+        s = self._get_settings(user_2fa_tok)
+        assert s == {}
 
         # verify user email address
         r = uadm.post(useradm.URL_VERIFY_EMAIL_START, body={"email": user_2fa.name})
@@ -148,6 +167,10 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
 
+        s = self._get_settings(user_2fa_tok)
+        exp_s = self._make_2fa_settings({user_2fa.id: TFA_UNVERIFIED})
+        assert s == exp_s
+
         # grab qr code, extract token, calc TOTP
         r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
 
@@ -160,6 +183,10 @@ class Test2FAEnterprise:
         # verify token
         r = self._verify(user_2fa_tok, tok)
         assert r.status_code == 202
+
+        s = self._get_settings(user_2fa_tok)
+        exp_s = self._make_2fa_settings({user_2fa.id: TFA_ENABLED})
+        assert s == exp_s
 
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
@@ -181,3 +208,7 @@ class Test2FAEnterprise:
         self._toggle_tfa(user_2fa_tok, user_2fa.id, on=False)
         r = self._login(user_2fa)
         assert r.status_code == 200
+
+        s = self._get_settings(user_2fa_tok)
+        exp_s = self._make_2fa_settings({user_2fa.id: TFA_DISABLED})
+        assert s == exp_s

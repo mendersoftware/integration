@@ -134,9 +134,9 @@ get_runner_requirements() {
 
 run_tests() {
     # Need to start the backend first
-    $COMPOSE_CMD up --scale mender-backend-tests-runner=0 -d
+    $COMPOSE_CMD up --scale mender-backend-tests-runner=0 -d --remove-orphans
     # ... then the runner
-    $COMPOSE_CMD run mender-backend-tests-runner
+    $COMPOSE_CMD run --use-aliases mender-backend-tests-runner
     return $?
 }
 
@@ -200,7 +200,12 @@ prepare_pytest_args() {
 }
 
 cleanup(){
-    [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down -v --remove-orphans && $COMPOSE_CMD rm || true
+    if [ -z $SKIP_CLEANUP ]; then
+        $COMPOSE_CMD down -v --remove-orphans
+    else
+        # Remove stopped container created by docker-compose run
+        $COMPOSE_CMD rm -f
+    fi
 }
 
 parse_args "$@"

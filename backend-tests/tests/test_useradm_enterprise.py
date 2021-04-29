@@ -85,12 +85,13 @@ class Test2FAEnterprise:
         return r
 
     def _toggle_tfa(self, utoken, user_id, on=True):
-        body = {"2fa": "enabled", user_id + "_2fa": "enabled"}
-        if not on:
-            body = {"2fa": "disabled", user_id + "_2fa": "disabled"}
+        if on:
+            url = useradm.URL_2FA_ENABLE
+        else:
+            url = useradm.URL_2FA_DISABLE
 
-        r = uadm.with_auth(utoken).call("POST", useradm.URL_SETTINGS, body)
-        assert r.status_code == 201
+        r = uadm.with_auth(utoken).call("POST", url, path_params={"id": user_id})
+        assert r.status_code == 200
 
     def _qr_dec(self, qr_b64):
         # decode png from temp inmem file

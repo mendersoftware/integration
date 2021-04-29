@@ -74,28 +74,6 @@ def tenants_users(clean_migrated_mongo):
     isK8S(), reason="not testable in a staging or production environment"
 )
 class Test2FAEnterprise:
-    # 2fa enabled?
-    #
-    # verify settings - very important, ui can't get confused
-    #   after every step even
-    #
-    # error scenarios:
-    # just 'me'
-    #  can't modify other user
-    #  can't enable when unverified/enabled
-    #  can't verify if not unverified/enabled
-    #  can't get qr when not unverified
-    #  can't enable if enabled/verified
-    # unverified email can't
-    #
-    # positive:
-    # jeszcze 'me' - na obu
-    # settings change accordingly
-    # osobny: post settings - doesn't change anything?
-    #
-    # do pozytywnego dodac settings
-    # test_errors
-    # test_post_settings
     def _login(self, user, totp=None):
         body = {}
         if totp is not None:
@@ -157,6 +135,22 @@ class Test2FAEnterprise:
         s = self._get_settings(user_2fa_tok)
         assert s == {}
 
+        # some error scenarios related to invalid 2fa state
+        # before email verification - can't touch settings
+        for on in [True, False]:
+            r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+            assert r.status_code == 403
+
+        # /2faqr available only in 'unverified' state
+        r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
+
+        assert r.status_code == 400
+
+        # /verify available only in 'unverified' state
+        r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
+
+        assert r.status_code == 400
+
         # verify user email address
         r = uadm.post(useradm.URL_VERIFY_EMAIL_START, body={"email": user_2fa.name})
         assert r.status_code == 202
@@ -215,6 +209,10 @@ class Test2FAEnterprise:
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
         assert r.status_code == 200
+
+        # already enabled - can't enable twice
+        r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        assert r.status_code == 400
 
         # logi without otp now does not work
         r = self._login(user_2fa)

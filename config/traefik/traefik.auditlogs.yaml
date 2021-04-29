@@ -5,8 +5,8 @@ http:
     #
     auditlogs:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}
       - userauth
       - sec-headers
       - compression

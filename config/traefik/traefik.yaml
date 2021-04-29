@@ -4,14 +4,13 @@ http:
   # Routers
   #
   routers:
-
     #
     # deployments
     #
     deployments:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}{{end}}
       - devauth
       - sec-headers
       - compression
@@ -25,8 +24,7 @@ http:
 
     deploymentsDL:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - sec-headers
       - json-error-responder1
       - json-error-responder2
@@ -38,8 +36,7 @@ http:
 
     deploymentsMgmt:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - sec-headers
       - compression
@@ -54,8 +51,7 @@ http:
     #
     deviceauth:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - sec-headers
       - compression
       rule: "PathPrefix(`/api/devices/{(v[0-9]+)}/authentication`)"
@@ -64,8 +60,7 @@ http:
 
     deviceauthMgmt:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - sec-headers
       - compression
@@ -81,8 +76,7 @@ http:
     #
     gui:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - ensure-ui-path
       - signup-redirect
       - ui-stripprefix
@@ -101,8 +95,7 @@ http:
     #
     inventoryV1:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - devauth
       - inventoryV1-replacepathregex
       - sec-headers
@@ -117,8 +110,7 @@ http:
 
     inventoryV2:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - devauth
       - sec-headers
       - compression
@@ -132,8 +124,7 @@ http:
 
     inventoryMgmtV1:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - inventoryMgmtV1-replacepathregex
       - sec-headers
@@ -146,8 +137,7 @@ http:
 
     inventoryMgmtV2:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - sec-headers
       - compression
@@ -162,8 +152,7 @@ http:
     #
     useradm:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - sec-headers
       - compression
@@ -175,8 +164,7 @@ http:
 
     useradmLogin:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - sec-headers
       - compression
       - json-error-responder4

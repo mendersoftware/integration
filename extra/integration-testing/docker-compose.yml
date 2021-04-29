@@ -1,0 +1,6 @@
+version: '2.1'
+
+services:
+  mender-api-gateway:
+    environment:
+      TESTING: "true"

@@ -10,8 +10,8 @@ http:
     #
     tenantadm:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}{{end}}
       - userauth
       - sec-headers
       - compression
@@ -21,8 +21,7 @@ http:
 
     tenantadmSignup:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - sec-headers
       - compression
       rule: >-

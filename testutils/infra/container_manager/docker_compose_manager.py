@@ -42,6 +42,7 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.config.yml",
         COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
+        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.yml",
     ]
     QEMU_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",

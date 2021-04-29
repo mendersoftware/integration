@@ -5,8 +5,8 @@ http:
     #
     deviceconnect:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}{{end}}
       - devauth
       - sec-headers
       - compression
@@ -20,8 +20,7 @@ http:
 
     deviceconnectMgmt:
       entrypoints: https
-      middlewares:
-      - circuit-breaker
+      middlewares: #{{- template "circuit-breaker"}}
       - userauth
       - sec-headers
       - compression

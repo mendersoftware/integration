@@ -18,3 +18,9 @@ updates:
     package-ecosystem: docker
     schedule:
       interval: weekly
+  - commit-message:
+      prefix: "Changelog:All"
+    directory: /extra/
+    package-ecosystem: pip
+    schedule:
+      interval: weekly

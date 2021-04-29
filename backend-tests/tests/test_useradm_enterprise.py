@@ -117,7 +117,7 @@ class Test2FAEnterprise:
             url = useradm.URL_2FA_DISABLE
 
         r = uadm.with_auth(utoken).call("POST", url, path_params={"id": user_id})
-        assert r.status_code == 200
+        return r
 
     def _qr_dec(self, qr_b64):
         # decode png from temp inmem file
@@ -185,7 +185,9 @@ class Test2FAEnterprise:
         assert r.status_code == 204
 
         # enable tfa for 1 user, straight login still works, token is not verified
-        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        assert r.status_code == 200
+
         r = self._login(user_2fa)
         assert r.status_code == 200
 
@@ -221,13 +223,25 @@ class Test2FAEnterprise:
         # the other user, and other tenant's users, are unaffected
         r = self._login(user_no_2fa)
         assert r.status_code == 200
+        user_no_2fa_tok = r.text
+
+        # other users can't change our settings
+        r = self._toggle_tfa(user_no_2fa_tok, user_2fa.id, on=False)
+        assert r.status_code == 401
+
+        s = self._get_settings(user_2fa_tok)
+        exp_s = self._make_2fa_settings({user_2fa.id: TFA_ENABLED})
+        assert s == exp_s
+
 
         for other_user in tenants_users[1].users:
             r = self._login(other_user)
             assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, "me", on=False)
+        r = self._toggle_tfa(user_2fa_tok, "me", on=False)
+        assert r.status_code == 200
+
         r = self._login(user_2fa)
         assert r.status_code == 200
 

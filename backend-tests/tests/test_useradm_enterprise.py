@@ -233,7 +233,6 @@ class Test2FAEnterprise:
         exp_s = self._make_2fa_settings({user_2fa.id: TFA_ENABLED})
         assert s == exp_s
 
-
         for other_user in tenants_users[1].users:
             r = self._login(other_user)
             assert r.status_code == 200
@@ -247,4 +246,32 @@ class Test2FAEnterprise:
 
         s = self._get_settings(user_2fa_tok)
         exp_s = self._make_2fa_settings({user_2fa.id: TFA_DISABLED})
+        assert s == exp_s
+
+        # although POST /settings is still functional,
+        # it will not save any 2fa settings, and will not break
+        # any user's statuses
+
+        # simulate overwriting user statuses - no effect
+        signore = self._make_2fa_settings(
+            {user_2fa.id: TFA_ENABLED, user_no_2fa.id: TFA_ENABLED}
+        )
+        r = uadm.with_auth(user_2fa_tok).call("POST", useradm.URL_SETTINGS, signore)
+        assert r.status_code == 201
+
+        s = self._get_settings(user_2fa_tok)
+        exp_s = self._make_2fa_settings({user_2fa.id: TFA_DISABLED})
+        assert s == exp_s
+
+        # 2fa still disabled
+        r = self._login(user_2fa)
+        assert r.status_code == 200
+
+        # try save some unrelated settings - preserved
+        sother = {"ui-setting-foo": {"foo": "fooval"}}
+        r = uadm.with_auth(user_2fa_tok).call("POST", useradm.URL_SETTINGS, sother)
+        assert r.status_code == 201
+
+        exp_s.update(sother)
+        s = self._get_settings(user_2fa_tok)
         assert s == exp_s

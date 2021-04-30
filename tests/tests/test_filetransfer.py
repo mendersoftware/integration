@@ -565,7 +565,21 @@ class TestFileTransferLimits:
         assert owner_group == str(uid) + " " + str(gid) + "\n"
         assert r.status_code == 201
 
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, standard_setup_one_client):
+        not_implemented_error = False
+
+        def assert_forbidden(rsp, message):
+            try:
+                assert rsp.status_code == 403
+                assert rsp.json().get("error") == message
+            except AssertionError as e:
+                if r.status_code == 500:
+                    # Expected (current) behavior
+                    not_implemented_error = True
+                else:
+                    raise e
+
         mender_device, devid, auth = self.setup_test_filetransfer_limits(
             standard_setup_one_client
         )
@@ -588,11 +602,7 @@ class TestFileTransferLimits:
             "-- testcase: File Transfer limits: file outside chroot; download forbidden"
         )
 
-        assert r.status_code == 500, r.json()
-        assert (
-            r.json().get("error")
-            == "access denied: the target file path is outside chroot"
-        )
+        assert_forbidden(r, "access denied: the target file path is outside chroot")
 
         set_limits(
             mender_device,
@@ -608,8 +618,7 @@ class TestFileTransferLimits:
         path = "/etc/profile"
         r = download_file(path, devid, authtoken)
 
-        assert r.status_code == 500, r.json()
-        assert r.json().get("error") == "access denied: the file size is over the limit"
+        assert_forbidden(r, "access denied: the file size is over the limit")
 
         set_limits(
             mender_device,
@@ -626,8 +635,7 @@ class TestFileTransferLimits:
         mender_device.run("ln -s /etc/profile " + path)
         r = download_file(path, devid, authtoken)
 
-        assert r.status_code == 500, r.json()
-        assert r.json().get("error") == "access denied: forbidden to follow the link"
+        assert_forbidden(r, "access denied: forbidden to follow the link")
 
         logger.info(
             "-- testcase: File Transfer limits: not allowed to follow a link on path part; download forbidden"
@@ -638,8 +646,7 @@ class TestFileTransferLimits:
         path = "/tmp/level0/etc/profile"
         r = download_file(path, devid, authtoken)
 
-        assert r.status_code == 500, r.json()
-        assert r.json().get("error") == "access denied: forbidden to follow the link"
+        assert_forbidden(r, "access denied: forbidden to follow the link")
 
         set_limits(
             mender_device,
@@ -685,8 +692,7 @@ class TestFileTransferLimits:
         path = "/etc/profile"
         r = download_file(path, devid, authtoken)
 
-        assert r.status_code == 500, r.json()
-        assert r.json().get("error") == "access denied: the file owner does not match"
+        assert_forbidden(r, "access denied: the file owner does not match")
 
         set_limits(
             mender_device,
@@ -702,8 +708,7 @@ class TestFileTransferLimits:
         path = "/etc/profile"
         r = download_file(path, devid, authtoken)
 
-        assert r.status_code == 500, r.json()
-        assert r.json().get("error") == "access denied: the file group does not match"
+        assert_forbidden(r, "access denied: the file group does not match")
 
         set_limits(
             mender_device,
@@ -741,3 +746,9 @@ class TestFileTransferLimits:
 
         assert r.status_code == 200, r.json()
         assert "PATH" in str(r.content)
+
+        if not_implemented_error:
+            raise NotImplementedError(
+                "[MEN-4659] Deviceconnect should not respond with 5xx errors "
+                + "on user restriction errors"
+            )

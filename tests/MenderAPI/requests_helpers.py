@@ -23,7 +23,7 @@ def requests_retry(status_forcelist=[500, 502]):
         total=5,
         backoff_factor=1,
         status_forcelist=status_forcelist,
-        method_whitelist=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
+        allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
     )
     s.mount("https://", HTTPAdapter(max_retries=retries))
     return s

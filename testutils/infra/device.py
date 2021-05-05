@@ -117,7 +117,7 @@ class MenderDevice:
         return output
 
     def get_active_partition(self):
-        cmd = "mount | awk '/on \/ / { print $1}'"
+        cmd = r"mount | awk '/on \/ / { print $1}'"
         active = self.run(cmd, hide=True)
         return active.strip()
 

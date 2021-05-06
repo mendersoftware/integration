@@ -1,0 +1,36 @@
+version: '2.1'
+services:
+
+    #
+    # mender-devicemonitor
+    #
+    mender-devicemonitor:
+        image: mendersoftware/devicemonitor:mender-master
+        command: server --automigrate
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        environment:
+            DEVICEMONITOR_MONGO_URL: "mongodb://mender-mongo"
+            DEVICEMONITOR_USERADM_URL: "http://mender-useradm"
+            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server"
+        labels:
+            - traefik.enable=true
+            - traefik.http.routers.devicemonitor.entrypoints=https
+            - traefik.http.routers.devicemonitor.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/devicemonitor`)
+            - traefik.http.routers.devicemonitor.tls=true
+            - traefik.http.routers.devicemonitor.service=devicemonitor
+            - traefik.http.routers.devicemonitor.middlewares=circuitbreaker,devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.services.devicemonitor.loadbalancer.server.port=8080
+            - traefik.http.routers.devicemonitorMgmt.entrypoints=https
+            - traefik.http.routers.devicemonitorMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/devicemonitor`)
+            - traefik.http.routers.devicemonitorMgmt.middlewares=circuitbreaker,userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
+            - traefik.http.routers.devicemonitorMgmt.tls=true
+            - traefik.http.routers.devicemonitorMgmt.service=devicemonitorMgmt
+            - traefik.http.services.devicemonitorMgmt.loadbalancer.server.port=8080
+            - mender.testprefix=${MENDER_TESTPREFIX:-""}
+

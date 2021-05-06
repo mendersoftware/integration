@@ -235,6 +235,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "deviceconnect": "DEVICECONNECT_REV",
     "mender-connect": "MENDER_CONNECT_REV",
     "deviceconfig": "DEVICECONFIG_REV",
+    "devicemonitor": "DEVICEMONITOR_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -253,6 +254,7 @@ BACKEND_SERVICES_ENT = {
     "workflows-enterprise",
     "auditlogs",
     "mtls-ambassador",
+    "devicemonitor",
 }
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = (

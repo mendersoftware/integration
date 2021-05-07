@@ -418,6 +418,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.auditlogs.yml",
         "docker-compose.connect.yml",
         "docker-compose.config.yml",
+        "docker-compose.monitor.yml",
         "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]

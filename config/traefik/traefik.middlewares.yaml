@@ -24,8 +24,12 @@ http:
   
     sec-headers:
       headers:
-        referrerPolicy: "no-referrer"
+        referrerPolicy: "no-referrer" # {{- if (env "MENDER_DEMO") }}
+        stsSeconds: 0
+        isDevelopment: true
+        # {{ else }}
         stsSeconds: 31536000
+        # {{ end }}
         forceSTSHeader: true
         stsPreload: true
         stsIncludeSubdomains: true

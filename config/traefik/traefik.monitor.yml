@@ -1,9 +1,9 @@
 http:
   routers:
     #
-    # devicecmonitor
+    # devicemonitor
     #
-    devicecmonitor:
+    devicemonitor:
       entrypoints: https
       middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
       - circuit-breaker #{{- end}}{{end}}
@@ -15,10 +15,10 @@ http:
       - json-error-responder3
       - json-error-responder4
       rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/devicemonitor`)"
-      service: devicecmonitor
+      service: devicemonitor
       tls: true
 
-    devicecmonitorMgmt:
+    devicemonitorMgmt:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
       - userauth
@@ -29,11 +29,11 @@ http:
       - json-error-responder3
       - json-error-responder4
       rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devicemonitor`)"
-      service: devicecmonitor
+      service: devicemonitor
       tls: true
 
   services:
-    devicecmonitor:
+    devicemonitor:
       loadBalancer:
         servers:
-        - url: "http://mender-devicecmonitor:8080"
+        - url: "http://mender-devicemonitor:8080"

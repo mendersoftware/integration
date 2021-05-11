@@ -9,10 +9,10 @@ services:
         image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-master
+        image: registry.mender.io/mendersoftware/workflows-enterprise:feature-update_control_maps
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-master
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:feature-update_control_maps
 
     # add services
     mender-tenantadm:

@@ -22,21 +22,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.tenantadm.entrypoints=https
-            - traefik.http.routers.tenantadm.middlewares=circuitbreaker,userauth,sec-headers,compression
-            - traefik.http.routers.tenantadm.rule=PathPrefix(`/api/management/{v[0-9]+}/tenantadm`)
-            - traefik.http.routers.tenantadm.tls=true
-            - traefik.http.routers.tenantadm.service=tenantadm
-            - traefik.http.services.tenantadm.loadbalancer.server.port=8080
-
-            - traefik.http.routers.tenantadmSignup.entrypoints=https
-            - traefik.http.routers.tenantadmSignup.middlewares=circuitbreaker,sec-headers,compression
-            - traefik.http.routers.tenantadmSignup.rule=Path(`/api/management/{v[0-9]+}/tenantadm/tenants`) || Path(`/api/management/{v[0-9]+}/tenantadm/tenants/trial`) && Method(`OPTIONS`,`POST`)
-            - traefik.http.routers.tenantadmSignup.tls=true
-            - traefik.http.routers.tenantadmSignup.service=tenantadm
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -55,8 +40,8 @@ services:
             USERADM_HAVE_ADDONS: 1
 
     mender-api-gateway:
-        environment:
-            HAVE_MULTITENANT: 1
+      volumes:
+        - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml
 
     mender-gui:
         environment:

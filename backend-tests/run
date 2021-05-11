@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 HERE=$(dirname $(readlink -f "$0"))
 INTEGRATION_PATH=$(dirname "$HERE")
@@ -16,6 +15,7 @@ COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.connect.yml \
         -f $INTEGRATION_PATH/docker-compose.config.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml
+        -f $INTEGRATION_PATH/extra/integration-testing/docker-compose.yml
         -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
         "
 COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} \
@@ -96,6 +96,11 @@ parse_args(){
             -c | --skip-cleanup)
                 SKIP_CLEANUP=1
                 ;;
+            --)
+                shift 1
+                USER_PYTEST_ARGS="$USER_PYTEST_ARGS $@"
+                return 0
+                ;;
             *)
                 USER_PYTEST_ARGS="$USER_PYTEST_ARGS $1"
                 ;;
@@ -115,37 +120,25 @@ build_backend_tests_runner() {
 }
 
 get_runner_requirements() {
-    MENDER_ARTIFACT_BRANCH=$($INTEGRATION_PATH/extra/release_tool.py --version-of mender-artifact)
-    echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
+    local MENDER_ARTIFACT_PATH="$TOOLS/mender-artifact"
+    local MENDER_ARTIFACT_BRANCH=$($INTEGRATION_PATH/extra/release_tool.py --version-of mender-artifact)
 
-    curl --fail "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
-         -o "$TOOLS/mender-artifact"
+    if [ ! -f "$MENDER_ARTIFACT_PATH" ]; then
+        echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
+        curl -s --fail --create-file-mode 0755 \
+             -o "$MENDER_ARTIFACT_PATH" \
+             "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact"
 
-    chmod +x "$TOOLS/mender-artifact"
+        chmod +x "$MENDER_ARTIFACT_PATH"
+    fi
 }
 
 run_tests() {
-    $COMPOSE_CMD up -d
-
-    cid=""
-    declare retries=5
-    while [[ $retries -gt 0 && -z $cid ]]; do
-        cid=$(get_container_id mender-backend-tests-runner)
-        sleep 1
-        retries=$((retries-1))
-    done
-
-    if [[ -z $cid ]]; then
-        echo "failed to get container id"
-        return 1
-    fi
-
-    run_tests_failed=""
-    docker attach $cid || run_tests_failed=1
-    rc=$(get_container_exit_code $cid)
-    if [ "$run_tests_failed" != "1" ] && [ "$rc" != "0" ]; then
-        run_tests_failed=$rc
-    fi
+    # Need to start the backend first
+    $COMPOSE_CMD up --scale mender-backend-tests-runner=0 -d --remove-orphans
+    # ... then the runner
+    $COMPOSE_CMD run --use-aliases mender-backend-tests-runner
+    return $?
 }
 
 get_container_id() {
@@ -208,12 +201,18 @@ prepare_pytest_args() {
 }
 
 cleanup(){
-    [ -z $SKIP_CLEANUP ] && $COMPOSE_CMD down -v --remove-orphans && $COMPOSE_CMD rm || true
+    if [ -z $SKIP_CLEANUP ]; then
+        $COMPOSE_CMD down -v --remove-orphans
+    else
+        # Remove stopped container created by docker-compose run
+        $COMPOSE_CMD rm -f
+    fi
 }
 
 parse_args "$@"
 build_backend_tests_runner
 
+script_failed=1
 
 for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
@@ -235,9 +234,9 @@ for suite in "${TEST_SUITES[@]}"; do
 
     prepare_pytest_args
     run_tests
+    script_failed=$?
 
-    if [ "$run_tests_failed" != "" ]; then
-        script_failed=$run_tests_failed
+    if [ $? != 0 ]; then
         tmppath=$(mktemp ${HERE}/acceptance.XXXXXX)
         echo "-- tests failed, dumping logs to $tmppath"
         $COMPOSE_CMD logs > $tmppath

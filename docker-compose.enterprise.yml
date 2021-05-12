@@ -41,7 +41,7 @@ services:
 
     mender-api-gateway:
       volumes:
-        - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml
+        - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml:ro
 
     mender-gui:
         environment:

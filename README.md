@@ -44,27 +44,37 @@ A provided `docker-compose.yml` file will provision the following set of
 services:
 
 ```
-       |
-  port |        +-----------------------+         +------------------------+
-   443 | <----> |  API Gateway          |    +--->|  Device Authentication |
-       |        |  (mender-api-gateway) |<---|    |  (mender-device-auth)  | <---+
-       |        +-----------------------+    |    +------------------------+     |
-       |                                     +--->|  Inventory             |     |
-       |                                     |    |  (mender-inventory)    | <---+
-       |                                     |    +------------------------+     |     +----------------------------------+
-       |                                     +--->|  User Administration   |     +---> |  Workflows Engine                |
-       |                                     |    |  (mender-useradm)      | <---+     |  (mender-workflows-server)       |
-       |                                     |    +------------------------+     |     |  (mender-workflows-worker)       |
-       |                                     +--->|  Deployments           |     |     |  (mender-create-artifact-worker) |
-       |                 +----------------------->|  (mender-deployments)  | <---+     +----------------------------------+
-       |                 |                        +------------------------+
-       |                 |
-       |                 v
-  port |        +------------------+              +----------+
-  9000 | <----> |  Storage Proxy   |<------------>|  Minio   |
-       |        |  (storage-proxy) |              |  (minio) |
-       |        +------------------+              +----------+
-       |
+        |
+        |                                            +-------------------------+
+        |                                            |                         |
+        |                                       +--->|  Device Authentication  |<---+
+        |                                       |    |  (mender-device-auth)   |    |
+        |                                       |    +-------------------------+    |
+        |        +-----------------------+      |    |                         |    |
+   port |        |                       |      +--->|  Inventory              |<---+     +----------------------------------+
+    443 | <----> |  API Gateway          |      |    |  (mender-inventory)     |    +---> |  Workflows Engine                |
+        |        |  (traefik)            |<-----+    +-------------------------+    |     |  (mender-workflows-server)       |
+        |        +-----------------------+      |    |                         |    |     |  (mender-workflows-worker)       |
+        |                                       +--->|  User Administration    |    |     |  (mender-create-artifact-worker) |
+        |                                       |    |  (mender-useradm)       |<---+     +----------------------------------+
+        |                                       |    +-------------------------+    |
+        |                                       +--->|                         |    |
+        |                                       |    |  Device Config          |<---+
+        |                                       |    |  (mender-deviceconfig)  |    |
+        |                                       |    +-------------------------+    |
+        |                                       +--->|                         |    |
+        |                                       |    |  Deployments            |<---+
+        |                                       |    |  (mender-deployments)   |    |
+        |                                       |    +-------------------------+    |
+        |                                       +--->|                         |<---+
+        |                                       |    |  Device Connect         |          +--------+
+        |                                       |    |  (mender-deviceconnect) |<-------->|        |
+        |                                       |    +-------------------------+          |  Nats  |
+        |                                       +--->|                         |          |        |
+        |                                            |  Minio                  |          +--------+
+        |                                            |                         |
+        |                                            +-------------------------+
+        |
 ```
 
 It is customary to provide deployment specific overrides in a separate compose

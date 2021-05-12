@@ -16,6 +16,8 @@ services:
         command: server /export
 
     mender-api-gateway:
+      environment:
+        STORAGE_URL: ${STORAGE_URL:-s3.docker.mender.io}
       volumes:
         - ./config/traefik/traefik.minio.yaml:/etc/traefik/config/traefik.minio.yaml:ro
 

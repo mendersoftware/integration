@@ -57,7 +57,13 @@ class MenderDevice:
             user=self.user,
             port=self.port,
             connect_timeout=60,
-            connect_kwargs={"password": "", "banner_timeout": 60, "auth_timeout": 60},
+            connect_kwargs={
+                "password": "",
+                "banner_timeout": 60,
+                "auth_timeout": 60,
+                "look_for_keys": False,
+                "allow_agent": False,
+            },
         )
         self._conn.client.set_missing_host_key_policy(IgnorePolicy())
         self._service_name = None
@@ -111,7 +117,7 @@ class MenderDevice:
         return output
 
     def get_active_partition(self):
-        cmd = "mount | awk '/on \/ / { print $1}'"
+        cmd = r"mount | awk '/on \/ / { print $1}'"
         active = self.run(cmd, hide=True)
         return active.strip()
 

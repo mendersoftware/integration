@@ -1,0 +1,85 @@
+http:
+  middlewares:
+
+    circuit-breaker:
+      circuitBreaker:
+        expression: >-
+          ResponseCodeRatio(500, 600, 0, 600) > 0.25 ||
+          NetworkErrorRatio() > 0.10
+  
+    ui-stripprefix:
+      stripprefix:
+        prefixes: "/ui"
+  
+    ensure-ui-path:
+      redirectregex:
+        regex: "^(https?://[^/]+)(/[a-z]*)?$"
+        replacement: "${1}/ui/"
+        permanent: true
+  
+    signup-redirect:
+      redirectregex:
+        regex: "^(https://[^/]+)/signup"
+        replacement: "${1}/ui/#/signup"
+  
+    sec-headers:
+      headers:
+        referrerPolicy: "no-referrer" # {{- if (env "MENDER_DEMO") }}
+        stsSeconds: 0
+        isDevelopment: true
+        # {{ else }}
+        stsSeconds: 31536000
+        # {{ end }}
+        forceSTSHeader: true
+        stsPreload: true
+        stsIncludeSubdomains: true
+        browserXssFilter: true
+        customRequestHeaders:
+          "X-Forwarded-Proto": "https"
+  
+    compression:
+      compress: true
+  
+    devauth:
+      forwardAuth:
+        address: "http://mender-device-auth:8080/api/internal/v1/devauth/tokens/verify"
+        authResponseHeaders: "X-MEN-RequestID"
+  
+    userauth:
+      forwardAuth:
+        address: "http://mender-useradm:8080/api/internal/v1/useradm/auth/verify"
+        authResponseHeaders: "X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups"
+  
+    json-error-responder1:
+      errors:
+        service: error-responder
+        query: "/{status}.json"
+        status: "401-404"
+  
+    json-error-responder2:
+      errors:
+        service: error-responder
+        query: "/{status}.json"
+        status: "500-504"
+  
+    json-error-responder3:
+      errors:
+        service: error-responder
+        query: "/{status}.json"
+        status: "408"
+  
+    json-error-responder4:
+      errors:
+        service: error-responder
+        query: "/{status}.json"
+        status: "429"
+  
+    inventoryV1-replacepathregex:
+      replacepathregex:
+        regex: "^/api/devices/v1/inventory/(.*)"
+        replacement: "/api/0.1.0/attributes"
+  
+    inventoryMgmtV1-replacepathregex:
+      replacepathregex:
+        regex: "^/api/management/v1/inventory/(.*)"
+        replacement: "/api/0.1.0/$1"

@@ -1,8 +1,9 @@
-attrs==20.3.0
+attrs==21.2.0
 certifi==2020.12.5
 cffi==1.14.5
 chardet==4.0.0
 cryptography==3.4.7
+docker==5.0.0
 idna==2.10
 iniconfig==1.1.1
 packaging==20.9
@@ -10,10 +11,10 @@ Pillow==8.2.0
 pluggy==0.13.1
 py==1.10.0
 pycparser==2.20
-pymongo==3.11.3
+pymongo==3.11.4
 pyotp==2.6.0
 pyparsing==2.4.7
-pytest==6.2.3
+pytest==6.2.4
 pytest-html==3.1.1
 pytest-metadata==1.11.0
 pyzbar==0.1.8

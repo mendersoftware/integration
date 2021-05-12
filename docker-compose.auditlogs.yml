@@ -14,19 +14,10 @@ services:
         depends_on:
             - mender-mongo
         command: server --automigrate
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.auditlogs.entrypoints=https
-            - traefik.http.routers.auditlogs.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder4
-            - traefik.http.routers.auditlogs.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/auditlogs`)
-            - traefik.http.routers.auditlogs.tls=true
-            - traefik.http.routers.auditlogs.service=auditlogs
-            - traefik.http.services.auditlogs.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
 
     mender-api-gateway:
-        environment:
-            HAVE_AUDITLOGS: 1
+      volumes:
+        - ./config/traefik/traefik.auditlogs.yaml:/etc/traefik/config/traefik.auditlogs.yaml:ro
 
     mender-useradm:
         environment:

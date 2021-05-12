@@ -40,7 +40,7 @@ from testutils.common import (
     create_authset,
     get_device_by_id_data,
     change_authset_status,
-    wait_for_traefik,
+    wait_until_healthy,
 )
 
 
@@ -1413,7 +1413,7 @@ class TestDefaultTenantTokenEnterprise(object):
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        wait_for_traefik("mender-api-gateway")
+        wait_until_healthy("backend-tests")
 
         # Retrieve user token for management API
         r = self.uc.call(
@@ -1455,7 +1455,7 @@ class TestDefaultTenantTokenEnterprise(object):
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        wait_for_traefik("mender-api-gateway")
+        wait_until_healthy("backend-tests")
 
         # Get default user token for management api
         r = self.uc.call(
@@ -1515,7 +1515,7 @@ class TestDefaultTenantTokenEnterprise(object):
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.add_default_tenant_token(default_tenant.tenant_token)
 
-        wait_for_traefik("mender-api-gateway")
+        wait_until_healthy("backend-tests")
 
         # Get default user auth token for management api
         r = self.uc.call(

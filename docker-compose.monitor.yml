@@ -1,0 +1,24 @@
+version: '2.1'
+services:
+
+    #
+    # mender-devicemonitor
+    #
+    mender-devicemonitor:
+        image: mendersoftware/devicemonitor:mender-master
+        command: server --automigrate
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        environment:
+            DEVICEMONITOR_MONGO_URL: "mongodb://mender-mongo"
+            DEVICEMONITOR_USERADM_URL: "http://mender-useradm"
+            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server"
+
+    mender-api-gateway:
+      volumes:
+        - ./config/traefik/traefik.monitor.yaml:/etc/traefik/config/traefik.monitor.yaml:ro

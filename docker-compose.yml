@@ -9,42 +9,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            # Devices API
-            - traefik.http.routers.deployments.entrypoints=https
-            - traefik.http.routers.deployments.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/deployments`)
-            - traefik.http.routers.deployments.middlewares=devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.deployments.tls=true
-            - traefik.http.routers.deployments.service=deployments
-            - traefik.http.services.deployments.loadbalancer.server.port=8080
-            - traefik.http.services.deployments.loadbalancer.healthcheck.path=/api/internal/v1/deployments/health
-            - traefik.http.services.deployments.loadbalancer.healthcheck.port=8080
-            - traefik.http.services.deployments.loadbalancer.healthcheck.interval=5s
-            - traefik.http.services.deployments.loadbalancer.healthcheck.timeout=5s
-            # Devices API download endpoint - we won't use compression here
-            - traefik.http.routers.deploymentsDL.entrypoints=https
-            - traefik.http.routers.deploymentsDL.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/deployments/download`)
-            - traefik.http.routers.deploymentsDL.middlewares=sec-headers,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.deploymentsDL.tls=true
-            - traefik.http.routers.deploymentsDL.service=deploymentsDL
-            - traefik.http.services.deploymentsDL.loadbalancer.server.port=8080
-            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.path=/api/internal/v1/deployments/alive
-            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.port=8080
-            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.interval=10s
-            - traefik.http.services.deploymentsDL.loadbalancer.healthcheck.timeout=3s
-            # Management API
-            - traefik.http.routers.deploymentsMgmt.entrypoints=https
-            - traefik.http.routers.deploymentsMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/deployments`)
-            - traefik.http.routers.deploymentsMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.deploymentsMgmt.tls=true
-            - traefik.http.routers.deploymentsMgmt.service=deploymentsMgmt
-            - traefik.http.services.deploymentsMgmt.loadbalancer.server.port=8080
-            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.path=/api/internal/v1/deployments/alive
-            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.port=8080
-            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.interval=5s
-            - traefik.http.services.deploymentsMgmt.loadbalancer.healthcheck.timeout=3s
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -58,54 +22,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.gui.entrypoints=https
-            - traefik.http.routers.gui.middlewares=ensure-ui-path,signup-redirect,ui-stripprefix,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.gui.rule=PathPrefix(`/`)
-            - traefik.http.routers.gui.service=gui
-            - traefik.http.routers.gui.tls=true
-            - traefik.http.services.gui.loadbalancer.server.port=80
-            
-            - traefik.http.routers.error-responder.entrypoints=https,http
-            # - traefik.http.routers.error-responder.rule=HostRegexp(`{host:.+}`)
-            - traefik.http.routers.error-responder.service=error-responder
-            - traefik.http.routers.error-responder.tls=true
-            - traefik.http.services.error-responder.loadbalancer.server.port=8080
-
-            - traefik.http.middlewares.ui-stripprefix.stripprefix.prefixes=/ui
-            - traefik.http.middlewares.ensure-ui-path.redirectregex.regex=^(https?://[^/]+)(/[a-z]*)?$$
-            - traefik.http.middlewares.ensure-ui-path.redirectregex.replacement=$${1}/ui/
-            - traefik.http.middlewares.ensure-ui-path.redirectregex.permanent=true
-            - traefik.http.middlewares.signup-redirect.redirectregex.regex=^(https://[^/]+)/signup
-            - traefik.http.middlewares.signup-redirect.redirectregex.replacement=$${1}/ui/#/signup
-            # definitions of shared middlewares
-            - traefik.http.middlewares.sec-headers.headers.referrerPolicy=no-referrer
-            - traefik.http.middlewares.sec-headers.headers.stsSeconds=31536000
-            - traefik.http.middlewares.sec-headers.headers.forceSTSHeader=true
-            - traefik.http.middlewares.sec-headers.headers.stsPreload=true
-            - traefik.http.middlewares.sec-headers.headers.stsIncludeSubdomains=true
-            - traefik.http.middlewares.sec-headers.headers.browserXssFilter=true
-            - traefik.http.middlewares.sec-headers.headers.customRequestHeaders.X-Forwarded-Proto=https
-            - traefik.http.middlewares.compression.compress=true
-            - traefik.http.middlewares.devauth.forwardAuth.address=http://mender-device-auth:8080/api/internal/v1/devauth/tokens/verify
-            - traefik.http.middlewares.devauth.forwardAuth.authResponseHeaders=X-MEN-RequestID
-            - traefik.http.middlewares.userauth.forwardAuth.address=http://mender-useradm:8080/api/internal/v1/useradm/auth/verify
-            - traefik.http.middlewares.userauth.forwardAuth.authResponseHeaders=X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups
-            # errorhandling 
-            - traefik.http.middlewares.json-error-responder1.errors.service=error-responder
-            - traefik.http.middlewares.json-error-responder1.errors.query=/{status}.json
-            - traefik.http.middlewares.json-error-responder1.errors.status=401-404
-            - traefik.http.middlewares.json-error-responder2.errors.service=error-responder
-            - traefik.http.middlewares.json-error-responder2.errors.query=/{status}.json
-            - traefik.http.middlewares.json-error-responder2.errors.status=500-504
-            - traefik.http.middlewares.json-error-responder3.errors.service=error-responder
-            - traefik.http.middlewares.json-error-responder3.errors.query=/{status}.json
-            - traefik.http.middlewares.json-error-responder3.errors.status=408
-            - traefik.http.middlewares.json-error-responder4.errors.service=error-responder
-            - traefik.http.middlewares.json-error-responder4.errors.query=/{status}.json
-            - traefik.http.middlewares.json-error-responder4.errors.status=429
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         environment:
@@ -126,18 +42,21 @@ services:
         # Enables the web UI and tells Traefik to listen to docker
         command: 
             - --accesslog=true
-            - --providers.docker=true
-            - --providers.docker.exposedbydefault=false
             - --entrypoints.http.address=:80
+            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --entrypoints.http.http.redirections.entryPoint.to=https
             - --entrypoints.https.address=:443
             - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --providers.file.directory=/etc/traefik/config
         volumes:
             # So that Traefik can listen to the Docker events
             - /var/run/docker.sock:/var/run/docker.sock:ro
+            # Dynamic configuration files
+            - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
+            - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
+
         networks:
             - mender
         # critical - otherwise nginx may not detect
@@ -158,23 +77,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.deviceauth.entrypoints=https
-            - traefik.http.routers.deviceauth.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/authentication`)
-            - traefik.http.routers.deviceauth.tls=true
-            - traefik.http.routers.deviceauth.service=deviceauth
-            - traefik.http.services.deviceauth.loadbalancer.server.port=8080
-            
-            - traefik.http.routers.deviceauthMgmt.entrypoints=https
-            - traefik.http.routers.deviceauthMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/devauth`)
-            - traefik.http.routers.deviceauthMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.deviceauthMgmt.tls=true
-            - traefik.http.routers.deviceauthMgmt.service=deviceauthMgmt
-            - traefik.http.services.deviceauthMgmt.loadbalancer.server.port=8080
-            # the X-Original-URI and X-Original-Method headers are added by traefik automatically, however as X-Forwarded-Uri and X-Forwarded-Method
-            # https://github.com/containous/traefik/blob/125470f1106373ff42cf03ae28467055a8186de5/pkg/middlewares/forwardedheaders/forwarded_header.go#L12-L38
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -189,33 +91,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.inventoryMgmt.entrypoints=https
-            - traefik.http.routers.inventoryMgmt.rule=PathPrefix(`/api/management/v2/inventory`)
-            - traefik.http.routers.inventoryMgmt.service=inventoryMgmt
-            - traefik.http.routers.inventoryMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.inventoryMgmt.tls=true
-            - traefik.http.services.inventoryMgmt.loadbalancer.server.port=8080
-
-            - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.regex=^/api/management/v1/inventory/(.*)
-            - traefik.http.middlewares.inventoryMgmtV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/$$1
-            - traefik.http.routers.inventoryMgmtV1.entrypoints=https
-            - traefik.http.routers.inventoryMgmtV1.middlewares=userauth,inventoryMgmtV1-replacepathregex,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.inventoryMgmtV1.rule=PathPrefix(`/api/management/v1/inventory`)
-            - traefik.http.routers.inventoryMgmtV1.service=inventoryMgmtV1
-            - traefik.http.routers.inventoryMgmtV1.tls=true
-            - traefik.http.services.inventoryMgmtV1.loadbalancer.server.port=8080
-
-            - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.regex=^/api/devices/v1/inventory/(.*)
-            - traefik.http.middlewares.inventoryV1-replacepathregex.replacepathregex.replacement=/api/0.1.0/attributes
-            - traefik.http.routers.inventoryV1.entrypoints=https
-            - traefik.http.routers.inventoryV1.middlewares=devauth,inventoryV1-replacepathregex,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.inventoryV1.rule=PathPrefix(`/api/devices/v1/inventory`)
-            - traefik.http.routers.inventoryV1.service=inventoryV1
-            - traefik.http.routers.inventoryV1.tls=true
-            - traefik.http.services.inventoryV1.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:
@@ -229,23 +104,6 @@ services:
         extends:
             file: common.yml
             service: mender-base
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.useradm.entrypoints=https
-            - traefik.http.routers.useradm.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.useradm.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/useradm`)
-            - traefik.http.routers.useradm.tls=true
-            - traefik.http.routers.useradm.service=useradm
-            - traefik.http.services.useradm.loadbalancer.server.port=8080
-
-            - traefik.http.routers.useradmNoAuth.entrypoints=https
-            - traefik.http.routers.useradmNoAuth.rule=Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:oauth2|auth\/password-reset|auth\/verify-email}`)
-            # traefik should automatically forward the x-forwarded-host header
-            - traefik.http.routers.useradmNoAuth.middlewares=sec-headers,compression,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.routers.useradmNoAuth.tls=true
-            - traefik.http.routers.useradmNoAuth.service=useradmNoAuth
-            - traefik.http.services.useradmNoAuth.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         networks:
             - mender
         depends_on:

@@ -137,6 +137,7 @@ class Component:
         only_release=None,
         only_non_release=False,
         only_independent_component=False,
+        only_non_independent_component=False,
     ):
         Component._initialize_component_maps()
         if only_release is None:
@@ -146,17 +147,24 @@ class Component:
                 only_release = True
         if only_release and only_non_release:
             raise Exception("only_release and only_non_release can't both be true")
+        if only_independent_component and only_non_independent_component:
+            raise Exception(
+                "only_independent_component and only_non_independent_component can't both be true"
+            )
         components = []
         for comp in Component.COMPONENT_MAPS[type]:
-            if only_independent_component:
-                if not Component(comp, type).is_independent_component():
-                    continue
-            if Component.COMPONENT_MAPS[type][comp]["release_component"]:
-                if only_non_release:
-                    continue
-            else:
-                if only_release:
-                    continue
+            is_independent_component = Component(comp, type).is_independent_component()
+            is_release_component = Component.COMPONENT_MAPS[type][comp][
+                "release_component"
+            ]
+            if is_independent_component and only_non_independent_component:
+                continue
+            if not is_independent_component and only_independent_component:
+                continue
+            if is_release_component and only_non_release:
+                continue
+            if not is_release_component and only_release:
+                continue
             components.append(Component(comp, type))
         return components
 
@@ -235,6 +243,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "deviceconnect": "DEVICECONNECT_REV",
     "mender-connect": "MENDER_CONNECT_REV",
     "deviceconfig": "DEVICECONFIG_REV",
+    "devicemonitor": "DEVICEMONITOR_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -253,6 +262,7 @@ BACKEND_SERVICES_ENT = {
     "workflows-enterprise",
     "auditlogs",
     "mtls-ambassador",
+    "devicemonitor",
 }
 BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
 BACKEND_SERVICES = (
@@ -416,6 +426,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.auditlogs.yml",
         "docker-compose.connect.yml",
         "docker-compose.config.yml",
+        "docker-compose.monitor.yml",
         "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
@@ -634,7 +645,7 @@ def do_version_of(args):
     )
 
 
-def do_list_repos(args, optional_too):
+def do_list_repos(args, optional_too, only_backend):
     """Lists the repos, using the provided type."""
 
     cli_types = {
@@ -648,7 +659,9 @@ def do_list_repos(args, optional_too):
     repos = [
         comp.name
         for comp in Component.get_components_of_type(
-            type, only_release=(not optional_too)
+            type,
+            only_release=(not optional_too),
+            only_non_independent_component=(only_backend),
         )
     ]
 
@@ -3195,6 +3208,12 @@ def main():
         + "When used with -f, include local branches in addition to upstream branches.",
     )
     parser.add_argument(
+        "--only-backend",
+        action="store_true",
+        default=False,
+        help="When used with -l, list only backend repositories; ignored otherwise",
+    )
+    parser.add_argument(
         "-m",
         "--map-name",
         metavar=("FROM-TYPE", "SERVICE", "TO-TYPE"),
@@ -3275,7 +3294,7 @@ def main():
     if args.version_of is not None:
         do_version_of(args)
     elif args.list is not None:
-        do_list_repos(args, optional_too=args.all)
+        do_list_repos(args, optional_too=args.all, only_backend=args.only_backend)
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:

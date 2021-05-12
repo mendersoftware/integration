@@ -23,7 +23,7 @@ from flaky import flaky
 from ..common_setup import running_custom_production_setup
 from ..MenderAPI import authentication, deployments, DeviceAuthV2, logger
 from .mendertesting import MenderTesting
-from testutils.common import wait_for_traefik
+from testutils.common import wait_until_healthy
 
 
 class TestDemoArtifact(MenderTesting):
@@ -84,7 +84,7 @@ class TestDemoArtifact(MenderTesting):
             logger.info("Started the demo script")
             password = ""
 
-            wait_for_traefik(running_custom_production_setup.get_mender_gateway())
+            wait_until_healthy(running_custom_production_setup.name)
             for line in proc.stdout:
                 line = line.decode()
                 logger.info(line)

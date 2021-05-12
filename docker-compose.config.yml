@@ -14,25 +14,10 @@ services:
         depends_on:
             - mender-mongo
         command: server --automigrate
-        labels:
-            - traefik.enable=true
-            - traefik.http.routers.deviceconfig.entrypoints=https
-            - traefik.http.routers.deviceconfig.rule=PathPrefix(`/api/devices/{ver:v[0-9]+}/deviceconfig`)
-            - traefik.http.routers.deviceconfig.tls=true
-            - traefik.http.routers.deviceconfig.service=deviceconfig
-            - traefik.http.routers.deviceconfig.middlewares=devauth,sec-headers,compression,json-error-responder1,json-error-responder2,json-error-responder3,json-error-responder4
-            - traefik.http.services.deviceconfig.loadbalancer.server.port=8080
-            - traefik.http.routers.deviceconfigMgmt.entrypoints=https
-            - traefik.http.routers.deviceconfigMgmt.middlewares=userauth,sec-headers,compression,json-error-responder1,json-error-responder4
-            - traefik.http.routers.deviceconfigMgmt.rule=PathPrefix(`/api/management/{ver:v[0-9]+}/deviceconfig`)
-            - traefik.http.routers.deviceconfigMgmt.tls=true
-            - traefik.http.routers.deviceconfigMgmt.service=deviceconfig
-            - traefik.http.services.deviceconfigMgmt.loadbalancer.server.port=8080
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
 
     mender-api-gateway:
-        environment:
-            HAVE_DEVICECONFIG: 1
+      volumes:
+        - ./config/traefik/traefik.config.yaml:/etc/traefik/config/traefik.config.yaml:ro
 
     mender-workflows-worker:
         environment:

@@ -80,6 +80,7 @@ services:
             - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
             - --entrypoints.http.http.redirections.entryPoint.to=https
             - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --providers.file.directory=/etc/traefik/config
         volumes:
             - ./tls.toml:/config/tls.toml
             - ./production/keys-generated/certs/api-gateway/cert.crt:/certs/cert.crt:ro

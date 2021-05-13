@@ -20,7 +20,7 @@ import filelock
 import logging
 import copy
 import redo
-from testutils.common import wait_for_traefik
+from testutils.common import wait_until_healthy
 
 from .docker_manager import DockerNamespace
 
@@ -42,6 +42,7 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.config.yml",
         COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
+        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.yml",
     ]
     QEMU_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
@@ -125,12 +126,7 @@ class DockerComposeNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "MENDER_TESTPREFIX=%s docker-compose -p %s %s %s" % (
-            self.name,
-            self.name,
-            files_args,
-            arg_list,
-        )
+        cmd = "docker-compose -p %s %s %s" % (self.name, files_args, arg_list)
 
         logger.info("running with: %s" % cmd)
 
@@ -166,7 +162,7 @@ class DockerComposeNamespace(DockerNamespace):
             )
             running_countainers_count = len(out.split())
             if running_countainers_count == expected_containers:
-                wait_for_traefik(self.get_mender_gateway())
+                wait_until_healthy(self.name)
                 return
             else:
                 time.sleep(1)

@@ -114,12 +114,17 @@ else:
 if args.all:
     repo_list = (
         subprocess.check_output(
-            [os.path.join(base_dir, "integration/extra/release_tool.py"), "--list"]
+            [
+                os.path.join(base_dir, "integration/extra/release_tool.py"),
+                "--list",
+                "--only-backend",
+            ]
         )
         .decode()
         .strip()
     )
     repos += [os.path.join(base_dir, repo) for repo in repo_list.split()]
+    repos.append(os.path.join(base_dir, "integration"))
 else:
     repos.append(".")
 

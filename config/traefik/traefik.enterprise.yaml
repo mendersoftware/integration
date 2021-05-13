@@ -1,0 +1,40 @@
+# Dynamic traefik configuration
+http:
+  #
+  # Routers
+  #
+  routers:
+
+    #
+    # tenantadm
+    #
+    tenantadm:
+      entrypoints: https
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}{{end}}
+      - userauth
+      - sec-headers
+      - compression
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/tenantadm`)"
+      service: tenantadm
+      tls: true
+
+    tenantadmSignup:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+      - sec-headers
+      - compression
+      rule: >-
+        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants`) ||
+        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants/trial`)
+      service: tenantadm
+      tls: true
+
+  #
+  # Services
+  #
+  services:
+    tenantadm:
+      loadBalancer:
+        servers:
+        - url: "http://mender-tenantadm:8080"

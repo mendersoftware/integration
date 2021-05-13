@@ -35,7 +35,7 @@ class Websocket:
             ssl_context.verify_mode = ssl.CERT_NONE
 
         async def connect():
-            self.ws = await websockets.client.connect(
+            self.ws = await websockets.connect(
                 self.url, extra_headers=self.headers, ssl=ssl_context
             )
 
@@ -44,7 +44,7 @@ class Websocket:
             try:
                 asyncio.get_event_loop().run_until_complete(connect())
                 break
-            except websockets.exceptions.InvalidStatusCode:
+            except websockets.InvalidStatusCode:
                 if self.retry_connect and attempts > 0:
                     attempts -= 1
                     time.sleep(5)

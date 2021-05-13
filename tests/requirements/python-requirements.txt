@@ -20,7 +20,7 @@ execnet==1.8.0
 fabric==2.6.0
 filelock==3.0.12
 html5lib==1.1
-idna==3.1
+idna==2.10
 iniconfig==1.1.1
 invoke==1.5.0
 jsonschema==3.2.0
@@ -47,7 +47,7 @@ pytest-html==3.1.1
 pytest-metadata==1.11.0
 pytest-timeout==1.4.2
 pytest-xdist==2.2.1
-python-dotenv==0.17.0
+python-dotenv==0.17.1
 pytoml==0.1.21
 PyYAML==5.4.1
 redo==2.0.4
@@ -58,7 +58,7 @@ texttable==1.6.3
 toml==0.10.2
 urllib3==1.26.4
 webencodings==0.5.1
-websocket-client==0.58.0
-websockets==8.1
+websocket-client==0.59.0
+websockets==9.0.1
 flaky==3.7.0
 stripe==2.56.0

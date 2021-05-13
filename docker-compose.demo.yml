@@ -20,32 +20,34 @@ services:
             - 443:443
             - 8080:8080
         command:
+            - --accesslog=true
             - --api.dashboard=true
             - --api.insecure=true
-            - --accesslog=true
-            - --log.level=DEBUG
-            - --providers.file.filename=/config/tls.toml
-            - --providers.docker.constraints=Label(`mender.testprefix`,`${MENDER_TESTPREFIX:-""}`)
-            - --providers.docker=true
-            - --providers.docker.exposedbydefault=false
             - --entrypoints.http.address=:80
+            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --entrypoints.http.http.redirections.entryPoint.to=https
             - --entrypoints.https.address=:443
             - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --log.level=DEBUG
+            - --ping=true
+            - --providers.file.directory=/etc/traefik/config
+        environment:
+          MENDER_DEMO: "true"
         networks:
             mender:
                 aliases:
                     - docker.mender.io
                     - s3.docker.mender.io
+        environment:
+          TRAEFIK_API: "true"
         volumes:
-            - ./tls.toml:/config/tls.toml
-            - ./certs/api-gateway/cert.crt:/certs/cert.crt
-            - ./certs/api-gateway/private.key:/certs/private.key
-            - ./certs/storage-proxy/cert.crt:/certs/s3.docker.mender.io.crt
-            - ./certs/storage-proxy/private.key:/certs/s3.docker.mender.io.key
+            - ./config/traefik/traefik.demo.yaml:/etc/traefik/config/traefik.demo.yaml:ro
+            - ./certs/api-gateway/cert.crt:/etc/traefik/certs/cert.crt
+            - ./certs/api-gateway/private.key:/etc/traefik/certs/private.key
+            - ./certs/storage-proxy/cert.crt:/etc/traefik/certs/s3.docker.mender.io.crt
+            - ./certs/storage-proxy/private.key:/etc/traefik/certs/s3.docker.mender.io.key
 
     mender-deployments:
         command: server --automigrate
@@ -76,9 +78,6 @@ services:
         environment:
             # enable demo mode for UI ["true"/"false"]
             DEMO: "true"
-        labels:
-            - traefik.http.middlewares.sec-headers.headers.stsSeconds=0
-            - traefik.http.middlewares.sec-headers.headers.isDevelopment=true
 
     mender-workflows-server:
         command: server --automigrate

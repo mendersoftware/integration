@@ -13,14 +13,11 @@ services:
                     - minio.s3.docker.mender.io
         environment:
             MINIO_HTTP_TRACE: /dev/stdout
-        labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.minio.entrypoints=https"
-            - "traefik.http.routers.minio.rule=Host(`${STORAGE_URL:-s3.docker.mender.io}`)||Headers(`X-Forwarded-Host`,`${STORAGE_URL:-s3.docker.mender.io}`)||PathPrefix(`/mender-artifact-storage`)"
-            - "traefik.http.routers.minio.tls=true"
-            - "traefik.http.services.minio.loadbalancer.server.port=9000"
-            - mender.testprefix=${MENDER_TESTPREFIX:-""}
         command: server /export
+
+    mender-api-gateway:
+      volumes:
+        - ./config/traefik/traefik.minio.yaml:/etc/traefik/config/traefik.minio.yaml:ro
 
     #
     # mender-deployments depends on minio if minio is in use

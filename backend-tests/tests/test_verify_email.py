@@ -47,8 +47,9 @@ class TestVerifyEmailEnterprise:
         r = self.uc.call("POST", useradm.URL_LOGIN, auth=(email, password))
         assert r.status_code == 200
         utoken = r.text
+
         r = self.uc.with_auth(utoken).call(
-            "POST", useradm.URL_SETTINGS, body={"2fa": "enabled"}
+            "POST", useradm.URL_2FA_ENABLE, path_params={"id": "me"}
         )
         assert r.status_code == 403
 

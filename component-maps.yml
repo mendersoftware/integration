@@ -173,6 +173,13 @@ git:
     - mender-deviceconnect
     release_component: true
 
+  devicemonitor:
+    docker_image:
+    - devicemonitor
+    docker_container:
+    - mender-devicemonitor
+    release_component: false
+
   mender-connect:
     docker_image: []
     docker_container: []
@@ -369,6 +376,13 @@ docker_image:
     - mender-deviceconnect
     release_component: true
 
+  devicemonitor:
+    git:
+    - devicemonitor
+    docker_container:
+    - mender-devicemonitor
+    release_component: false
+
   deviceconfig:
     git:
     - deviceconfig
@@ -500,6 +514,13 @@ docker_container:
     docker_image:
     - deviceconnect
     release_component: true
+
+  mender-devicemonitor:
+    git:
+    - devicemonitor
+    docker_image:
+    - devicemonitor
+    release_component: false
 
   mender-deviceconfig:
     git:

@@ -112,8 +112,8 @@ class Test2FAEnterprise:
 
         return secret_b32
 
-    def _get_settings(self, utoken):
-        r = uadm.with_auth(utoken).call("GET", useradm.URL_SETTINGS)
+    def _get_user(self, utoken):
+        r = uadm.with_auth(utoken).call("GET", useradm.URL_USERS_ID.format(id="me"))
         assert r.status_code == 200
         return r.json()
 
@@ -131,9 +131,6 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
         user_2fa_tok = r.text
-
-        s = self._get_settings(user_2fa_tok)
-        assert s == {}
 
         # some error scenarios related to invalid 2fa state
         # before email verification - can't touch settings
@@ -185,9 +182,9 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
 
-        s = self._get_settings(user_2fa_tok)
-        exp_s = self._make_2fa_settings({user_2fa.id: TFA_UNVERIFIED})
-        assert s == exp_s
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_UNVERIFIED
 
         # grab qr code, extract token, calc TOTP
         r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
@@ -202,9 +199,9 @@ class Test2FAEnterprise:
         r = self._verify(user_2fa_tok, tok)
         assert r.status_code == 202
 
-        s = self._get_settings(user_2fa_tok)
-        exp_s = self._make_2fa_settings({user_2fa.id: TFA_ENABLED})
-        assert s == exp_s
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_ENABLED
 
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
@@ -227,9 +224,9 @@ class Test2FAEnterprise:
         r = self._toggle_tfa(user_no_2fa_tok, user_2fa.id, on=False)
         assert r.status_code == 401
 
-        s = self._get_settings(user_2fa_tok)
-        exp_s = self._make_2fa_settings({user_2fa.id: TFA_ENABLED})
-        assert s == exp_s
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_ENABLED
 
         for other_user in tenants_users[1].users:
             r = self._login(other_user)
@@ -242,9 +239,9 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
 
-        s = self._get_settings(user_2fa_tok)
-        exp_s = self._make_2fa_settings({user_2fa.id: TFA_DISABLED})
-        assert s == exp_s
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_DISABLED
 
         # although POST /settings is still functional,
         # it will not save any 2fa settings, and will not break
@@ -257,19 +254,6 @@ class Test2FAEnterprise:
         r = uadm.with_auth(user_2fa_tok).call("POST", useradm.URL_SETTINGS, signore)
         assert r.status_code == 201
 
-        s = self._get_settings(user_2fa_tok)
-        exp_s = self._make_2fa_settings({user_2fa.id: TFA_DISABLED})
-        assert s == exp_s
-
-        # 2fa still disabled
-        r = self._login(user_2fa)
-        assert r.status_code == 200
-
-        # try save some unrelated settings - preserved
-        sother = {"ui-setting-foo": {"foo": "fooval"}}
-        r = uadm.with_auth(user_2fa_tok).call("POST", useradm.URL_SETTINGS, sother)
-        assert r.status_code == 201
-
-        exp_s.update(sother)
-        s = self._get_settings(user_2fa_tok)
-        assert s == exp_s
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_DISABLED

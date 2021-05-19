@@ -125,10 +125,8 @@ get_runner_requirements() {
 
     if [ ! -f "$MENDER_ARTIFACT_PATH" ]; then
         echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
-        curl -s --fail --create-file-mode 0755 \
-             -o "$MENDER_ARTIFACT_PATH" \
-             "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact"
-
+        curl -s --fail "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
+             -o "$MENDER_ARTIFACT_PATH"
         chmod +x "$MENDER_ARTIFACT_PATH"
     fi
 }

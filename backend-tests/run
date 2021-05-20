@@ -139,14 +139,6 @@ run_tests() {
     return $?
 }
 
-get_container_id() {
-    echo "$(docker ps --filter label=com.docker.compose.service=$1 -q)"
-}
-
-get_container_exit_code() {
-    echo "$(docker inspect --format '{{.State.ExitCode}}' $1 || echo 1)"
-}
-
 copy_test_reports_if_args() {
     while [ -n "$1" ]; do
         case "$1" in
@@ -168,6 +160,7 @@ copy_test_reports_if_args() {
         shift
     done
 
+    cid=$($COMPOSE_CMD ps -aq mender-backend-tests-runner | head -n 1)
     if [ -n "$RESULTS_FILE" ]; then
         echo "-- copying file $RESULTS_FILE"
         docker cp ${cid}:/$RESULTS_FILE . || true

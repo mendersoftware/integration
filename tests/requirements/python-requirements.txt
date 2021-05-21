@@ -17,6 +17,6 @@ fabric==2.5.0              ; python_version >= "3.0"
 pycrypto                   ; python_version >= "3.0"
 paramiko==2.7.2            ; python_version >= "3.0"
 msgpack>=1.0.0             ; python_version >= "3.0"
-websockets>=8.1            ; python_version >= "3.0"
+websockets>=9.0            ; python_version >= "3.0"
 cryptography==3.3.2        ; python_version >= "3.0"
 flaky==3.7.0

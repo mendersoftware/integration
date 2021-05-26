@@ -84,7 +84,6 @@ class TestDemoArtifact(MenderTesting):
             logger.info("Started the demo script")
             password = ""
 
-            wait_until_healthy(running_custom_production_setup.name)
             for line in proc.stdout:
                 line = line.decode()
                 logger.info(line)
@@ -96,6 +95,7 @@ class TestDemoArtifact(MenderTesting):
                         self.auth.password = password
                         assert len(password) == 12
                     break
+            wait_until_healthy(running_custom_production_setup.name)
             return proc
 
         running_custom_production_setup.run_demo_script_up = run_demo_script_up

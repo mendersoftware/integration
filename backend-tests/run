@@ -125,10 +125,8 @@ get_runner_requirements() {
 
     if [ ! -f "$MENDER_ARTIFACT_PATH" ]; then
         echo "downloading mender-artifact/$MENDER_ARTIFACT_BRANCH"
-        curl -s --fail --create-file-mode 0755 \
-             -o "$MENDER_ARTIFACT_PATH" \
-             "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact"
-
+        curl -s --fail "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
+             -o "$MENDER_ARTIFACT_PATH"
         chmod +x "$MENDER_ARTIFACT_PATH"
     fi
 }
@@ -139,14 +137,6 @@ run_tests() {
     # ... then the runner
     $COMPOSE_CMD run --use-aliases mender-backend-tests-runner
     return $?
-}
-
-get_container_id() {
-    echo "$(docker ps --filter label=com.docker.compose.service=$1 -q)"
-}
-
-get_container_exit_code() {
-    echo "$(docker inspect --format '{{.State.ExitCode}}' $1 || echo 1)"
 }
 
 copy_test_reports_if_args() {
@@ -170,6 +160,7 @@ copy_test_reports_if_args() {
         shift
     done
 
+    cid=$($COMPOSE_CMD ps -aq mender-backend-tests-runner | head -n 1)
     if [ -n "$RESULTS_FILE" ]; then
         echo "-- copying file $RESULTS_FILE"
         docker cp ${cid}:/$RESULTS_FILE . || true
@@ -212,7 +203,7 @@ cleanup(){
 parse_args "$@"
 build_backend_tests_runner
 
-script_failed=1
+script_failed=0
 
 for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
@@ -233,7 +224,10 @@ for suite in "${TEST_SUITES[@]}"; do
 
     prepare_pytest_args
     run_tests
-    script_failed=$?
+    run_tests_retcode=$?
+    if [ $script_failed -eq 0 ]; then
+        script_failed=$run_tests_retcode
+    fi
 
     if [ $? != 0 ]; then
         tmppath=$(mktemp ${HERE}/acceptance.XXXXXX)

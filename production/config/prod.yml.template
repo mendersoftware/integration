@@ -70,22 +70,22 @@ services:
                     - set-my-alias-here.com
         command:
             - --accesslog=true
-            - --providers.file.filename=/config/tls.toml
-            - --providers.docker=true
-            - --providers.docker.exposedbydefault=false
             - --entrypoints.http.address=:80
+            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --entrypoints.http.http.redirections.entryPoint.to=https
             - --entrypoints.https.address=:443
             - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
             - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
+            - --providers.file.directory=/etc/traefik/config
         volumes:
-            - ./tls.toml:/config/tls.toml
-            - ./production/keys-generated/certs/api-gateway/cert.crt:/certs/cert.crt:ro
-            - ./production/keys-generated/certs/api-gateway/private.key:/certs/private.key:ro
-            - ./production/keys-generated/certs/storage-proxy/cert.crt:/certs/s3.docker.mender.io.crt
-            - ./production/keys-generated/certs/storage-proxy/private.key:/certs/s3.docker.mender.io.key
+            - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
+            - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
+            - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
+            - ./production/keys-generated/certs/api-gateway/cert.crt:/etc/traefik/certs/cert.crt:ro
+            - ./production/keys-generated/certs/api-gateway/private.key:/etc/traefik/certs/private.key:ro
+            - ./production/keys-generated/certs/storage-proxy/cert.crt:/etc/traefik/certs/s3.docker.mender.io.crt
+            - ./production/keys-generated/certs/storage-proxy/private.key:/etc/traefik/certs/s3.docker.mender.io.key
         logging:
             options:
                 max-file: "10"

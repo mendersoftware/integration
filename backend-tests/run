@@ -209,7 +209,12 @@ for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
         open)
             echo "Skipping Open Source test suite for staging testing"
-            continue
+            # Let pytest actually run to generate the report and results files,
+            # otherwise CI will fail collecting them and reporting status to PR.
+            # To do so, just filter for a dummy unexisting test.
+            COMPOSE_CMD="$COMPOSE_CMD_OPEN"
+            PYTEST_FILTER="SkipOpenTestsMatchingUnexistingTest"
+            PYTEST_REPORT="$PYTEST_REPORT_OPEN"
             ;;
         enterprise)
             COMPOSE_CMD="$COMPOSE_CMD_ENTERPRISE"

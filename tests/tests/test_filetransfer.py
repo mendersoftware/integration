@@ -667,6 +667,7 @@ class TestFileTransfer(_TestFileTransferBase):
         rsp = download_file("/foo/bar", devid, authtoken)
         assert rsp.status_code == 502
 
+    @pytest.mark.min_mender_client_version("2.7.0")
     def test_filetransfer_limits_upload(self, standard_setup_one_client):
         """Tests the file transfer upload limits"""
         devid, _, auth, = self.prepare_env()
@@ -674,6 +675,7 @@ class TestFileTransfer(_TestFileTransferBase):
             standard_setup_one_client.device, devid, auth
         )
 
+    @pytest.mark.min_mender_client_version("2.7.0")
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, standard_setup_one_client):
         """Tests the file transfer download limits"""
@@ -734,11 +736,13 @@ class TestFileTransferEnterprise(_TestFileTransferBase):
         devid, authtoken, _, _ = self.prepare_env(enterprise_no_client)
         super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
 
+    @pytest.mark.min_mender_client_version("2.7.0")
     def test_filetransfer_limits_upload(self, enterprise_no_client):
         """Tests the file transfer upload limits"""
         devid, _, auth, mender_device = self.prepare_env(enterprise_no_client)
         super().test_filetransfer_limits_upload(mender_device, devid, auth)
 
+    @pytest.mark.min_mender_client_version("2.7.0")
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, enterprise_no_client):
         """Tests the file transfer download limits"""

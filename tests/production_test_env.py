@@ -102,7 +102,7 @@ if args.start:
     if not os.path.exists("../keys-generated"):
         ret = subprocess.call(
             ["./keygen"],
-            env={"CERT_API_CN": "localhost", "CERT_STORAGE_CN": "localhost"},
+            env={"CERT_CN": "localhost", "CERT_SAN": "DNS:localhost"},
             cwd="../",
         )
         assert ret == 0, "failed to generate keys"

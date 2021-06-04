@@ -13,3 +13,6 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt

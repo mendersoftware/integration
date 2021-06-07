@@ -4,7 +4,7 @@ attrs==21.2.0
 bcrypt==3.2.0
 CacheControl==0.12.6
 cached-property==1.5.2
-certifi==2020.12.5
+certifi==2021.5.30
 cffi==1.14.5
 chardet==4.0.0
 colorama==0.4.4
@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==9.1
 flaky==3.7.0
-stripe==2.57.0
+stripe==2.58.0

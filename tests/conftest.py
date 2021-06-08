@@ -12,19 +12,25 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import distutils.spawn
 import logging
-import requests
-import filelock
-import uuid
-import subprocess
 import os
 import re
+import subprocess
+import uuid
+from distutils.version import LooseVersion
+
+import filelock
 import pytest
-import distutils.spawn
-from . import log
-from .tests.mendertesting import MenderTesting
+import requests
 from testutils.infra.container_manager.base import BaseContainerManagerNamespace
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
+
+from . import log
+from .tests.mendertesting import MenderTesting
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+RELEASE_TOOL = os.path.join(THIS_DIR, "..", "extra", "release_tool.py")
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -71,6 +77,11 @@ def pytest_configure(config):
     machine_name = config.getoption("--machine-name")
 
     MenderTesting.set_test_conditions(config)
+
+    config.addinivalue_line(
+        "markers",
+        "min_mender_client_version: indicate lowest Mender client version for which the test will run",
+    )
 
 
 def unique_test_name(request):
@@ -169,3 +180,33 @@ def verify_sane_test_environment():
         raise SystemExit(
             "not able to use docker, is your user part of the docker group?"
         )
+
+
+@pytest.fixture(autouse=True)
+def min_mender_client_version(request):
+    version_marker = request.node.get_closest_marker("min_mender_client_version")
+    if version_marker is None:
+        # No marker, assume it shall run for all versions
+        return
+
+    mender_client_version = (
+        subprocess.check_output([RELEASE_TOOL, "--version-of", "mender"])
+        .decode()
+        .strip()
+    )
+    min_required_version = version_marker.args[0]
+
+    if not version_is_minimum(mender_client_version, min_required_version):
+        pytest.skip("Test requires Mender client %s or newer" % min_required_version)
+
+
+def version_is_minimum(version, min_version):
+    try:
+        if LooseVersion(min_version) > LooseVersion(version):
+            return False
+        else:
+            return True
+    except TypeError:
+        # Type error indicates that 'version' is likely a string (branch
+        # name). Default to always consider them higher than the minimum version.
+        return True

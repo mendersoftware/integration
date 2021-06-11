@@ -33,6 +33,10 @@ from testutils.common import mongo, clean_mongo, create_org, create_user
 
 uadm = ApiClient(useradm.URL_MGMT)
 
+TFA_ENABLED = "enabled"
+TFA_DISABLED = "disabled"
+TFA_UNVERIFIED = "unverified"
+
 
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
@@ -85,12 +89,13 @@ class Test2FAEnterprise:
         return r
 
     def _toggle_tfa(self, utoken, user_id, on=True):
-        body = {"2fa": "enabled", user_id + "_2fa": "enabled"}
-        if not on:
-            body = {"2fa": "disabled", user_id + "_2fa": "disabled"}
+        if on:
+            url = useradm.URL_2FA_ENABLE
+        else:
+            url = useradm.URL_2FA_DISABLE
 
-        r = uadm.with_auth(utoken).call("POST", useradm.URL_SETTINGS, body)
-        assert r.status_code == 201
+        r = uadm.with_auth(utoken).call("POST", url, path_params={"id": user_id})
+        return r
 
     def _qr_dec(self, qr_b64):
         # decode png from temp inmem file
@@ -107,6 +112,18 @@ class Test2FAEnterprise:
 
         return secret_b32
 
+    def _get_user(self, utoken):
+        r = uadm.with_auth(utoken).call("GET", useradm.URL_USERS_ID.format(id="me"))
+        assert r.status_code == 200
+        return r.json()
+
+    def _make_2fa_settings(self, user_statuses):
+        s = {}
+        for k, v in user_statuses.items():
+            s[k + "_2fa"] = v
+
+        return s
+
     def test_enable_disable(self, tenants_users, smtp_mock):
         user_2fa = tenants_users[0].users[0]
         user_no_2fa = tenants_users[0].users[1]
@@ -114,6 +131,22 @@ class Test2FAEnterprise:
         r = self._login(user_2fa)
         assert r.status_code == 200
         user_2fa_tok = r.text
+
+        # some error scenarios related to invalid 2fa state
+        # before email verification - can't touch settings
+        for on in [True, False]:
+            r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+            assert r.status_code == 403
+
+        # /2faqr available only in 'unverified' state
+        r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
+
+        assert r.status_code == 400
+
+        # /verify available only in 'unverified' state
+        r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
+
+        assert r.status_code == 400
 
         # verify user email address
         r = uadm.post(useradm.URL_VERIFY_EMAIL_START, body={"email": user_2fa.name})
@@ -143,9 +176,15 @@ class Test2FAEnterprise:
         assert r.status_code == 204
 
         # enable tfa for 1 user, straight login still works, token is not verified
-        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        assert r.status_code == 200
+
         r = self._login(user_2fa)
         assert r.status_code == 200
+
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_UNVERIFIED
 
         # grab qr code, extract token, calc TOTP
         r = uadm.with_auth(user_2fa_tok).call("GET", useradm.URL_2FAQR)
@@ -160,9 +199,17 @@ class Test2FAEnterprise:
         r = self._verify(user_2fa_tok, tok)
         assert r.status_code == 202
 
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_ENABLED
+
         # login with totp succeeds
         r = self._login(user_2fa, totp=tok)
         assert r.status_code == 200
+
+        # already enabled - can't enable twice
+        r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
+        assert r.status_code == 400
 
         # logi without otp now does not work
         r = self._login(user_2fa)
@@ -171,12 +218,42 @@ class Test2FAEnterprise:
         # the other user, and other tenant's users, are unaffected
         r = self._login(user_no_2fa)
         assert r.status_code == 200
+        user_no_2fa_tok = r.text
+
+        # other users can't change our settings
+        r = self._toggle_tfa(user_no_2fa_tok, user_2fa.id, on=False)
+        assert r.status_code == 401
+
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_ENABLED
 
         for other_user in tenants_users[1].users:
             r = self._login(other_user)
             assert r.status_code == 200
 
         # after disabling - straight login works again
-        self._toggle_tfa(user_2fa_tok, user_2fa.id, on=False)
+        r = self._toggle_tfa(user_2fa_tok, "me", on=False)
+        assert r.status_code == 200
+
         r = self._login(user_2fa)
         assert r.status_code == 200
+
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_DISABLED
+
+        # although POST /settings is still functional,
+        # it will not save any 2fa settings, and will not break
+        # any user's statuses
+
+        # simulate overwriting user statuses - no effect
+        signore = self._make_2fa_settings(
+            {user_2fa.id: TFA_ENABLED, user_no_2fa.id: TFA_ENABLED}
+        )
+        r = uadm.with_auth(user_2fa_tok).call("POST", useradm.URL_SETTINGS, signore)
+        assert r.status_code == 201
+
+        # get the user info and verify 2fa status
+        user = self._get_user(user_2fa_tok)
+        assert user["tfa_status"] == TFA_DISABLED

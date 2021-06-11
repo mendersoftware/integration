@@ -13,21 +13,45 @@
 #    limitations under the License.
 
 import os
-import sys
-import shutil
-import re
 import pathlib
+import re
+import shutil
+import sys
 from unittest.mock import patch
 
 import pytest
-
-from release_tool import main
-from release_tool import docker_compose_files_list
-from release_tool import Component
+import yaml
+from release_tool import Component, docker_compose_files_list, main
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
 INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
+
+# Samples of the different "types" of repos for listing tests
+SAMPLE_REPOS_BACKEND_BASE = ["deviceauth", "gui", "tenantadm"]
+SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm"]
+SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
+SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "integration"]
+SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
+
+
+@pytest.fixture(scope="session")
+def is_staging():
+    """Fixture to figure out if we are running the tests in staging branch
+
+    Inspect git-versions.yml and ensure that the core OS repositories that have
+    enterprise forks (i.e. deployments, inventory, and useradm) do not exist; as
+    they shall exist only in git-versions-enterprise.yml.
+    """
+
+    non_staging_components = [
+        "mender-deployments",
+        "mender-inventory",
+        "mender-useradm",
+    ]
+    with open(os.path.join(INTEGRATION_DIR, "git-versions.yml")) as fd:
+        content = yaml.safe_load(fd)
+        return not any(c in non_staging_components for c in content["services"])
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -238,7 +262,7 @@ def test_version_of_with_in_integration_version(capsys):
     )
 
 
-def test_set_version_of(capsys):
+def test_set_version_of(capsys, is_staging):
     # Using --set-version-of modifies both versions, regardless of using the repo name
     run_main_assert_result(
         capsys, ["--set-version-of", "deviceauth", "--version", "1.2.3-test"]
@@ -267,8 +291,7 @@ def test_set_version_of(capsys):
         "4.5.6-test",
     )
     # NOTE: skip check for OS flavor for branches without it (namely staging)
-    list_repos = run_main_assert_result(capsys, ["--list", "git"], None)
-    if "deployments" in list_repos.split("\n"):
+    if not is_staging:
         run_main_assert_result(capsys, ["--version-of", "deployments"], "4.5.6-test")
         run_main_assert_result(
             capsys,
@@ -358,195 +381,90 @@ def test_docker_compose_files_list():
 
 
 @patch("release_tool.integration_dir")
-def test_get_components_of_type(integration_dir_func):
+def test_get_components_of_type(integration_dir_func, is_staging):
     integration_dir_func.return_value = pathlib.Path(__file__).parent.parent.absolute()
 
     # standard query (only_release=None)
     repos_comp = Component.get_components_of_type("git")
     repos_name = [r.name for r in repos_comp]
-    assert "deployments" in repos_name
-    assert "deployments-enterprise" in repos_name
-    assert "deviceauth" in repos_name
-    assert "gui" in repos_name
-    assert "integration" in repos_name
-    assert "inventory" in repos_name
-    assert "inventory-enterprise" in repos_name
-    assert "mender" in repos_name
-    assert "mender-artifact" in repos_name
-    assert "mender-cli" in repos_name
-    assert "tenantadm" in repos_name
-    assert "useradm" in repos_name
-    assert "useradm-enterprise" in repos_name
-    assert "workflows" in repos_name
-    assert "workflows-enterprise" in repos_name
-    assert "create-artifact-worker" in repos_name
-    assert "auditlogs" in repos_name
-    assert "mtls-ambassador" in repos_name
-    assert "deviceconnect" in repos_name
-    assert "mender-connect" in repos_name
-    assert "deviceconfig" in repos_name
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
 
     # only_release=False
     repos_comp = Component.get_components_of_type("git", only_release=False)
     repos_name = [r.name for r in repos_comp]
-    assert "deployments" in repos_name
-    assert "deployments-enterprise" in repos_name
-    assert "deviceauth" in repos_name
-    assert "gui" in repos_name
-    assert "integration" in repos_name
-    assert "inventory" in repos_name
-    assert "inventory-enterprise" in repos_name
-    assert "mender" in repos_name
-    assert "mender-artifact" in repos_name
-    assert "mender-cli" in repos_name
-    assert "tenantadm" in repos_name
-    assert "useradm" in repos_name
-    assert "useradm-enterprise" in repos_name
-    assert "workflows" in repos_name
-    assert "workflows-enterprise" in repos_name
-    assert "create-artifact-worker" in repos_name
-    assert "auditlogs" in repos_name
-    assert "mtls-ambassador" in repos_name
-    assert "deviceconnect" in repos_name
-    assert "mender-connect" in repos_name
-    assert "deviceconfig" in repos_name
-    # should also include deprecated repos
-    assert "deviceadm" in repos_name
-    assert "mender-api-gateway-docker" in repos_name
-    assert "mender-conductor" in repos_name
-    assert "mender-conductor-enterprise" in repos_name
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
 
     # only_non_release=True
     repos_comp = Component.get_components_of_type("git", only_non_release=True)
     repos_name = [r.name for r in repos_comp]
-    assert "deployments" not in repos_name
-    assert "deployments-enterprise" not in repos_name
-    assert "deviceauth" not in repos_name
-    assert "gui" not in repos_name
-    assert "integration" not in repos_name
-    assert "inventory" not in repos_name
-    assert "inventory-enterprise" not in repos_name
-    assert "mender" not in repos_name
-    assert "mender-artifact" not in repos_name
-    assert "mender-cli" not in repos_name
-    assert "tenantadm" not in repos_name
-    assert "useradm" not in repos_name
-    assert "useradm-enterprise" not in repos_name
-    assert "workflows" not in repos_name
-    assert "workflows-enterprise" not in repos_name
-    assert "create-artifact-worker" not in repos_name
-    assert "auditlogs" not in repos_name
-    assert "mtls-ambassador" not in repos_name
-    assert "deviceconnect" not in repos_name
-    assert "mender-connect" not in repos_name
-    assert "deviceconfig" not in repos_name
-    # should only include deprecated repos
-    assert "deviceadm" in repos_name
-    assert "mender-api-gateway-docker" in repos_name
-    assert "mender-conductor" in repos_name
-    assert "mender-conductor-enterprise" in repos_name
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
 
     # only_independent_component=True
     repos_comp = Component.get_components_of_type(
         "git", only_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert "deployments" not in repos_name
-    assert "deployments-enterprise" not in repos_name
-    assert "deviceauth" not in repos_name
-    assert "gui" not in repos_name
-    assert "inventory" not in repos_name
-    assert "inventory-enterprise" not in repos_name
-    assert "tenantadm" not in repos_name
-    assert "useradm" not in repos_name
-    assert "useradm-enterprise" not in repos_name
-    assert "workflows" not in repos_name
-    assert "workflows-enterprise" not in repos_name
-    assert "create-artifact-worker" not in repos_name
-    assert "auditlogs" not in repos_name
-    assert "mtls-ambassador" not in repos_name
-    assert "deviceconnect" not in repos_name
-    assert "deviceconfig" not in repos_name
-    # should only include non backend repos
-    assert "integration" in repos_name
-    assert "mender" in repos_name
-    assert "mender-artifact" in repos_name
-    assert "mender-cli" in repos_name
-    assert "mender-connect" in repos_name
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
 
     # only_non_independent_component=True
     repos_comp = Component.get_components_of_type(
         "git", only_non_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert "integration" not in repos_name
-    assert "mender" not in repos_name
-    assert "mender-artifact" not in repos_name
-    assert "mender-cli" not in repos_name
-    assert "mender-connect" not in repos_name
-    # should only include backend repos
-    assert "deployments" in repos_name
-    assert "deployments-enterprise" in repos_name
-    assert "deviceauth" in repos_name
-    assert "gui" in repos_name
-    assert "inventory" in repos_name
-    assert "inventory-enterprise" in repos_name
-    assert "tenantadm" in repos_name
-    assert "useradm" in repos_name
-    assert "useradm-enterprise" in repos_name
-    assert "workflows" in repos_name
-    assert "workflows-enterprise" in repos_name
-    assert "create-artifact-worker" in repos_name
-    assert "auditlogs" in repos_name
-    assert "mtls-ambassador" in repos_name
-    assert "deviceconnect" in repos_name
-    assert "deviceconfig" in repos_name
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_OS])
 
 
-def test_list_repos(capsys):
-    run_main_assert_result(
-        capsys,
-        ["--list"],
-        """auditlogs
-create-artifact-worker
-deployments
-deployments-enterprise
-deviceauth
-deviceconfig
-deviceconnect
-gui
-integration
-inventory
-inventory-enterprise
-mender
-mender-artifact
-mender-cli
-mender-connect
-mtls-ambassador
-tenantadm
-useradm
-useradm-enterprise
-workflows
-workflows-enterprise""",
-    )
+def test_list_repos(capsys, is_staging):
 
-    run_main_assert_result(
-        capsys,
-        ["--list", "--only-backend"],
-        """auditlogs
-create-artifact-worker
-deployments
-deployments-enterprise
-deviceauth
-deviceconfig
-deviceconnect
-gui
-inventory
-inventory-enterprise
-mtls-ambassador
-tenantadm
-useradm
-useradm-enterprise
-workflows
-workflows-enterprise""",
-    )
+    # release_tool.py --list
+    captured = run_main_assert_result(capsys, ["--list"], None)
+    repos_list = captured.split("\n")
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+
+    # release_tool.py --list --only-backend
+    captured = run_main_assert_result(capsys, ["--list", "--only-backend"], None)
+    repos_list = captured.split("\n")
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert not any([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])

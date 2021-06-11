@@ -396,7 +396,7 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
         for _, net in container.attrs["NetworkSettings"]["Networks"].items():
             container_ip = net["IPAddress"]
             break
-        if container_ip is None:
+        if container_ip is None or container_ip == "":
             continue
 
         service = container.labels.get(

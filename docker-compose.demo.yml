@@ -43,7 +43,7 @@ services:
         environment:
           TRAEFIK_API: "true"
         volumes:
-            - ./config/traefik/traefik.demo.yaml:/etc/traefik/config/traefik.demo.yaml:ro
+            - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
             - ./certs/api-gateway/cert.crt:/etc/traefik/certs/cert.crt
             - ./certs/api-gateway/private.key:/etc/traefik/certs/private.key
             - ./certs/storage-proxy/cert.crt:/etc/traefik/certs/s3.docker.mender.io.crt

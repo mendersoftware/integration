@@ -33,7 +33,7 @@ RUN jq ".User=\"root\"" \
     < examples/mender-connect.conf > /mender-install/etc/mender/mender-connect.conf
 
 WORKDIR /src/mender-configure-module
-RUN make prefix=/mender-install install
+RUN make DESTDIR=/mender-install install
 
 RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
 

@@ -85,13 +85,15 @@ class TestAuditLogsEnterprise:
         """ Baseline test - deployment create event is logged with correct fields."""
         user = tenant_users.users[0]
 
-        d = make_deployment(user.token)
+        d, _ = make_deployment(user.token)
         expected = evt_deployment_create(user, d)
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
             alogs = ApiClient(auditlogs.URL_MGMT)
-            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=deployment"
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -168,26 +170,7 @@ class TestAuditLogsEnterprise:
     def test_get_params(self, tenant_users):
         """ Mix up some audiltog events, check GET with various params """
 
-        # N various events from both users
-        events = []
-        for i in range(10):
-            uidx = i % 2
-            user = tenant_users.users[uidx]
-
-            evt = None
-            oid = None
-            if i % 3 == 0:
-                uuidv4 = str(uuid.uuid4())
-                uid = make_user(user.token, uuidv4 + "@acme.com", "secretsecret")
-                evt = evt_user_create(user, uid, uuidv4 + "@acme.com")
-                oid = uid
-            else:
-                d = make_deployment(user.token)
-                evt = evt_deployment_create(user, d)
-                oid = d["id"]
-
-            time.sleep(0.5)
-
+        def get_auditlog_time(oid):
             # get exact time for filter testing
             found = None
             for _ in redo.retrier(attempts=3, sleeptime=1):
@@ -198,32 +181,58 @@ class TestAuditLogsEnterprise:
                 resp = resp.json()
                 found = [e for e in resp if e["object"]["id"] == oid]
                 if len(found) == 1:
-                    break
+                    return found[0]["time"]
             else:
                 assert False, "max GET /logs retries hit"
 
-            evt["time"] = found[0]["time"]
+        # N various events from both users
+        events = []
+        for i in range(10):
+            uidx = i % 2
+            user = tenant_users.users[uidx]
 
+            evt = None
+            evt_artifact = None
+            oid = None
+            if i % 3 == 0:
+                uuidv4 = str(uuid.uuid4())
+                uid = make_user(user.token, uuidv4 + "@acme.com", "secretsecret")
+                evt = evt_user_create(user, uid, uuidv4 + "@acme.com")
+                oid = uid
+            else:
+                d, a = make_deployment(user.token)
+                evt_artifact = evt_artifact_upload(user, a)
+                evt = evt_deployment_create(user, d)
+                oid = d["id"]
+
+            time.sleep(0.5)
+
+            evt["time"] = get_auditlog_time(oid)
             events.append(evt)
 
+            if evt_artifact is not None:
+                evt_artifact["time"] = get_auditlog_time(a["id"])
+                events.append(evt_artifact)
+
         # default sorting is desc by time
-        events.reverse()
+        events = sorted(events, key=lambda x: x["time"], reverse=True)
 
         self._test_args_paging(tenant_users, events)
         self._test_args_actor(tenant_users, events)
         self._test_args_before_after(tenant_users, events)
         self._test_args_object(tenant_users, events)
+        self._test_args_sort(tenant_users, events)
 
     def _test_args_paging(self, tenant_users, events):
         alogs = ApiClient(auditlogs.URL_MGMT)
 
         cases = [
             # default
-            {"expected": events},
+            {"expected": events[:10]},
             # default, but specified
             {"page": "1", "per_page": "20", "expected": events},
             # past bounds
-            {"page": "2", "expected": []},
+            {"page": "10", "expected": []},
             # >1 page, custom number
             {"page": "2", "per_page": "3", "expected": events[3:6]},
         ]
@@ -257,7 +266,7 @@ class TestAuditLogsEnterprise:
             expected = [e for e in events if e["actor"]["id"] == id]
 
             resp = alogs.with_auth(tenant_users.users[0].token).call(
-                "GET", auditlogs.URL_LOGS + "?actor_id=" + id
+                "GET", auditlogs.URL_LOGS + "?per_page=20&actor_id=" + id
             )
 
             assert resp.status_code == 200
@@ -271,7 +280,10 @@ class TestAuditLogsEnterprise:
             expected = [e for e in events if e["actor"]["email"] == email]
 
             resp = alogs.with_auth(tenant_users.users[0].token).call(
-                "GET", auditlogs.URL_LOGS + "?actor_email=" + urllib.parse.quote(email)
+                "GET",
+                auditlogs.URL_LOGS
+                + "?per_page=20&actor_email="
+                + urllib.parse.quote(email),
             )
 
             assert resp.status_code == 200
@@ -323,7 +335,10 @@ class TestAuditLogsEnterprise:
             )
 
             resp = alogs.with_auth(tenant_users.users[0].token).call(
-                "GET", "{}?{}={}".format(auditlogs.URL_LOGS, case["arg"], time_unix)
+                "GET",
+                "{}?per_page=20&{}={}".format(
+                    auditlogs.URL_LOGS, case["arg"], time_unix
+                ),
             )
 
             assert resp.status_code == 200
@@ -347,7 +362,8 @@ class TestAuditLogsEnterprise:
 
         # id filter
         resp = alogs.with_auth(tenant_users.users[0].token).call(
-            "GET", auditlogs.URL_LOGS + "?object_id=" + expected["object"]["id"]
+            "GET",
+            auditlogs.URL_LOGS + "?per_page=20&object_id=" + expected["object"]["id"],
         )
 
         resp = resp.json()
@@ -378,14 +394,14 @@ class TestAuditLogsEnterprise:
 
         for case in cases:
             resp = alogs.with_auth(tenant_users.users[0].token).call(
-                "GET", auditlogs.URL_LOGS + "?sort=" + case["arg"]
+                "GET", auditlogs.URL_LOGS + "?per_page=20&sort=" + case["arg"]
             )
 
             resp = resp.json()
-            assert len(resp) == len(expected)
+            assert len(resp) == len(case["expected"])
 
             for i in range(len(resp)):
-                check_log(resp[i], expected[i])
+                check_log(resp[i], case["expected"][i])
 
 
 def make_deployment(token):
@@ -411,6 +427,7 @@ def make_deployment(token):
             ),
         )
     assert r.status_code == 201
+    artifact = {"id": r.headers["Location"].rsplit("/", 1)[1]}
 
     request_body = {
         "name": name,
@@ -427,8 +444,17 @@ def make_deployment(token):
     found = [d for d in depl_resp if d["name"] == name]
 
     assert len(found) == 1
+    deployment = found[0]
 
-    return found[0]
+    return deployment, artifact
+
+
+def evt_artifact_upload(user, artifact):
+    return {
+        "action": "upload",
+        "actor": {"id": user.id, "type": "user", "email": user.name},
+        "object": {"id": artifact["id"], "type": "artifact"},
+    }
 
 
 def evt_deployment_create(user, deployment):

@@ -203,7 +203,7 @@ cleanup(){
 parse_args "$@"
 build_backend_tests_runner
 
-script_failed=1
+script_failed=0
 
 for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
@@ -225,7 +225,10 @@ for suite in "${TEST_SUITES[@]}"; do
 
     prepare_pytest_args
     run_tests
-    script_failed=$?
+    run_tests_retcode=$?
+    if [ $script_failed -eq 0 ]; then
+        script_failed=$run_tests_retcode
+    fi
 
     if [ $? != 0 ]; then
         tmppath=$(mktemp ${HERE}/acceptance.XXXXXX)

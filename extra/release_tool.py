@@ -656,17 +656,46 @@ def do_list_repos(args, optional_too, only_backend):
     assert args.list in cli_types.keys(), "%s is not a valid name type!" % args.list
     type = cli_types[args.list]
 
-    repos = [
-        comp.name
-        for comp in Component.get_components_of_type(
-            type,
-            only_release=(not optional_too),
-            only_non_independent_component=(only_backend),
-        )
-    ]
+    assert args.list_format in ["simple", "table", "json"], (
+        "%s is not a valid name list format!" % args.list_format
+    )
 
-    for repo in sorted(repos):
-        print(repo)
+    repos = Component.get_components_of_type(
+        type,
+        only_release=(not optional_too),
+        only_non_independent_component=(only_backend),
+    )
+    repos.sort(key=lambda x: x.name)
+
+    repos_versions_dict = {}
+    for repo in repos:
+        if repo.name == "integration":
+            repos_versions_dict[repo.name] = args.in_integration_version
+        else:
+            repos_versions_dict[repo.name] = version_of(
+                integration_dir(),
+                repo.yml_components()[0],
+                args.in_integration_version,
+                git_version=(args.list == "git"),
+            )
+
+    if args.list_format == "simple":
+        print("\n".join(repos_versions_dict.keys()))
+    elif args.list_format == "table":
+        name_len_max = str(max([len(r) for r in repos_versions_dict.keys()]))
+        version_len_max = str(max([len(r) for r in repos_versions_dict.values()]))
+        row_format = "| {:<" + name_len_max + "} | {:<" + version_len_max + "} |"
+        print(row_format.format("COMPONENT", "VERSION"))
+        print(
+            "\n".join(
+                [
+                    row_format.format(name, version)
+                    for name, version in repos_versions_dict.items()
+                ]
+            )
+        )
+    elif args.list_format == "json":
+        print(json.dumps(repos_versions_dict))
 
 
 def version_sort_key(version):
@@ -3212,6 +3241,14 @@ def main():
         action="store_true",
         default=False,
         help="When used with -l, list only backend repositories; ignored otherwise",
+    )
+    parser.add_argument(
+        "--list-format",
+        metavar="simple|table|json",
+        default="simple",
+        nargs="?",
+        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions"
+        + "of each component in a table format, and 'json' composes a json object",
     )
     parser.add_argument(
         "-m",

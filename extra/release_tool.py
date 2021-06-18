@@ -244,6 +244,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "mender-connect": "MENDER_CONNECT_REV",
     "deviceconfig": "DEVICECONFIG_REV",
     "devicemonitor": "DEVICEMONITOR_REV",
+    "monitor-client": "MONITOR_CLIENT_REV",
 }
 
 # categorize backend services wrt open/enterprise versions

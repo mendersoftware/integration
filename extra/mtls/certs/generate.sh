@@ -39,6 +39,7 @@ emailAddress=myusername@example.com
 countryName=NO
 localityName=Oslo
 stateOrProvinceName=Oslo
+subjectAltName=DNS:my-server.com
 EOF
 $OPENSSL req -new -key server/server.key -out server/server.req -config server/cert.conf
 $OPENSSL x509 -req -CA tenant-ca/tenant.ca.crt -CAkey tenant-ca/tenant.ca.key -CAcreateserial -in server/server.req -out server/server.crt -days $DAYS

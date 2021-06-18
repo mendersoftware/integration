@@ -16,3 +16,5 @@ services:
     volumes:
       # Provision demo certificate
       - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py

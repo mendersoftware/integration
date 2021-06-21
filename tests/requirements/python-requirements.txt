@@ -16,7 +16,7 @@ docker==5.0.0
 docker-compose==1.29.2
 dockerpty==0.4.1
 docopt==0.6.2
-execnet==1.8.1
+execnet==1.9.0
 fabric==2.6.0
 filelock==3.0.12
 html5lib==1.1

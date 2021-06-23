@@ -669,15 +669,12 @@ def do_list_repos(args, optional_too, only_backend):
 
     repos_versions_dict = {}
     for repo in repos:
-        if repo.name == "integration":
-            repos_versions_dict[repo.name] = args.in_integration_version
-        else:
-            repos_versions_dict[repo.name] = version_of(
-                integration_dir(),
-                repo.yml_components()[0],
-                args.in_integration_version,
-                git_version=(args.list == "git"),
-            )
+        repos_versions_dict[repo.name] = version_of(
+            integration_dir(),
+            repo.yml_components()[0],
+            args.in_integration_version,
+            git_version=(args.list == "git"),
+        )
 
     if args.list_format == "simple":
         print("\n".join(repos_versions_dict.keys()))

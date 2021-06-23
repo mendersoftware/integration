@@ -669,12 +669,16 @@ def do_list_repos(args, optional_too, only_backend):
 
     repos_versions_dict = {}
     for repo in repos:
-        repos_versions_dict[repo.name] = version_of(
-            integration_dir(),
-            repo.yml_components()[0],
-            args.in_integration_version,
-            git_version=(args.list == "git"),
-        )
+        try:
+            repos_versions_dict[repo.name] = version_of(
+                integration_dir(),
+                repo.yml_components()[0],
+                args.in_integration_version,
+                git_version=(args.list == "git"),
+            )
+        except KeyError:
+            # This repo doesn't exist in the given integration version
+            repos_versions_dict[repo.name] = "UNRELEASED"
 
     if args.list_format == "simple":
         print("\n".join(repos_versions_dict.keys()))

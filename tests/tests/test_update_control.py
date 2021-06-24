@@ -127,3 +127,67 @@ class TestUpdateControlEnterprise:
         )
 
         deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)
+
+    def test_update_control_with_broken_map(
+        self, enterprise_no_client, valid_image,
+    ):
+        """
+        Schedule an update with an invalid map, which should fail.
+        """
+
+        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
+        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        tenant = cli.get_tenant(tid)
+        tenant = json.loads(tenant)
+        ttoken = tenant["tenant_token"]
+
+        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+        auth.create_org = False
+        auth.reset_auth_token()
+        devauth = DeviceAuthV2(auth)
+
+        enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
+        device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
+        devauth.accept_devices(1)
+
+        deploy = Deployments(auth, devauth)
+
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+
+        wait_for_connect(auth, devices[0])
+
+        with tempfile.NamedTemporaryFile() as artifact_file:
+            created_artifact = image.make_rootfs_artifact(
+                valid_image,
+                conftest.machine_name,
+                "test-update-control",
+                artifact_file.name,
+            )
+
+            deploy.upload_image(
+                artifact_file.name, description="control map update test"
+            )
+
+        deployment_id = deploy.trigger_deployment(
+            name="New valid update",
+            artifact_name="test-update-control",
+            devices=devices,
+            update_control_map={
+                "Priority": 1,
+                "States": {"BogusState_Enter": {"action": "pause",},},
+            },
+        )
+
+        # Query the deployment, and verify that the map returned contains the
+        # deployment ID
+        res_json = deploy.get_deployment(deployment_id)
+        assert deployment_id == res_json.get("update_control_map").get("id"), res_json
+
+        # Wait for the device to reject it and fail.
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "failure", 1)

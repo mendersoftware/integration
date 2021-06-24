@@ -18,7 +18,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:mender-master
+        image: mendersoftware/gui:feature-update_control_maps
         extends:
             file: common.yml
             service: mender-base

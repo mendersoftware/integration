@@ -167,11 +167,34 @@ class Deployments:
                 time.sleep(polling_frequency)
                 continue
 
-        if time.time() > timeout:
-            pytest.fail(
-                "Never found status: %s for %s after %d seconds"
-                % (expected_status, deployment_id, max_wait)
-            )
+        pytest.fail(
+            "Never found status: %s for %s after %d seconds"
+            % (expected_status, deployment_id, max_wait)
+        )
+
+    def check_not_in_status(
+        self, expected_status, deployment_id, max_wait=60 * 60, polling_frequency=0.2
+    ):
+        timeout = time.time() + max_wait
+
+        while time.time() <= timeout:
+            data = self.get_status(status=expected_status)
+
+            for deployment in data:
+                if deployment["id"] == deployment_id:
+                    time.sleep(polling_frequency)
+                    continue
+            else:
+                logger.info(
+                    "left deployment status (%s) as expected for: %s"
+                    % (expected_status, deployment_id)
+                )
+                return
+
+        pytest.fail(
+            "Never left status: %s for %s after %d seconds"
+            % (expected_status, deployment_id, max_wait)
+        )
 
     def check_expected_statistics(
         self,

@@ -112,7 +112,7 @@ class MenderDevice:
         self.run("true", hide=True, wait=wait)
 
     def yocto_id_installed_on_machine(self):
-        cmd = "mender -show-artifact"
+        cmd = "mender show-artifact"
         output = self.run(cmd, hide=True).strip()
         return output
 

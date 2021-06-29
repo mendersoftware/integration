@@ -667,6 +667,10 @@ def do_list_repos(args, optional_too, only_backend):
     )
     repos.sort(key=lambda x: x.name)
 
+    if args.list_format == "simple":
+        print("\n".join([r.name for r in repos]))
+        return
+
     repos_versions_dict = {}
     for repo in repos:
         try:
@@ -680,9 +684,7 @@ def do_list_repos(args, optional_too, only_backend):
             # This repo doesn't exist in the given integration version
             repos_versions_dict[repo.name] = "UNRELEASED"
 
-    if args.list_format == "simple":
-        print("\n".join(repos_versions_dict.keys()))
-    elif args.list_format == "table":
+    if args.list_format == "table":
         name_len_max = str(max([len(r) for r in repos_versions_dict.keys()]))
         version_len_max = str(max([len(r) for r in repos_versions_dict.values()]))
         row_format = "| {:<" + name_len_max + "} | {:<" + version_len_max + "} |"

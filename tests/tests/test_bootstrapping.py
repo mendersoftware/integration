@@ -75,6 +75,8 @@ class TestBootstrapping(MenderTesting):
 
         mender_device = standard_setup_one_client_bootstrapped.device
 
+        reject_time = time.time()
+
         # iterate over devices and reject them
         for device in devauth.get_devices():
             devauth.set_device_auth_set_status(
@@ -99,15 +101,23 @@ class TestBootstrapping(MenderTesting):
 
         # Check from client side
         mender_device.run(
-            "journalctl -u %s -l -n 3 | grep -q 'authentication request rejected'"
-            % mender_device.get_client_service_name()
+            "journalctl -u %s -l -S '%s' | grep -q 'authentication request rejected'"
+            % (
+                mender_device.get_client_service_name(),
+                time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(reject_time)),
+            )
         )
+
+        accept_time = time.time()
 
         # Check that we can accept again the device from the server
         devauth.accept_devices(1)
 
         # Check from client side that it can be authorized
         mender_device.run(
-            "journalctl -u %s -l -n 12 | grep -q 'Server authorization successful'"
-            % mender_device.get_client_service_name()
+            "journalctl -u %s -l -S '%s' | grep -q 'Server authorization successful'"
+            % (
+                mender_device.get_client_service_name(),
+                time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(accept_time)),
+            )
         )

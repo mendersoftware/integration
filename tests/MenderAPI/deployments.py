@@ -69,7 +69,9 @@ class Deployments:
         assert r.status_code == requests.status_codes.codes.created
         return r.headers["location"]
 
-    def trigger_deployment(self, name, artifact_name, devices, retries=0):
+    def trigger_deployment(
+        self, name, artifact_name, devices, retries=0, update_control_map=None
+    ):
         deployments_path_url = self.get_deployments_base_path() + "deployments"
 
         trigger_data = {
@@ -78,6 +80,8 @@ class Deployments:
             "devices": devices,
             "retries": retries,
         }
+        if update_control_map:
+            trigger_data["update_control_map"] = update_control_map
 
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
@@ -167,11 +171,34 @@ class Deployments:
                 time.sleep(polling_frequency)
                 continue
 
-        if time.time() > timeout:
-            pytest.fail(
-                "Never found status: %s for %s after %d seconds"
-                % (expected_status, deployment_id, max_wait)
-            )
+        pytest.fail(
+            "Never found status: %s for %s after %d seconds"
+            % (expected_status, deployment_id, max_wait)
+        )
+
+    def check_not_in_status(
+        self, expected_status, deployment_id, max_wait=60 * 60, polling_frequency=0.2
+    ):
+        timeout = time.time() + max_wait
+
+        while time.time() <= timeout:
+            data = self.get_status(status=expected_status)
+
+            for deployment in data:
+                if deployment["id"] == deployment_id:
+                    time.sleep(polling_frequency)
+                    continue
+            else:
+                logger.info(
+                    "left deployment status (%s) as expected for: %s"
+                    % (expected_status, deployment_id)
+                )
+                return
+
+        pytest.fail(
+            "Never left status: %s for %s after %d seconds"
+            % (expected_status, deployment_id, max_wait)
+        )
 
     def check_expected_statistics(
         self,
@@ -285,3 +312,15 @@ class Deployments:
         )
         time.sleep(5)
         assert r.status_code == requests.status_codes.codes.unprocessable_entity
+
+    def patch_deployment(self, deployment_id, update_control_map):
+        deployments_url = self.get_deployments_base_path() + "deployments/%s" % (
+            deployment_id
+        )
+        r = requests_retry().patch(
+            deployments_url,
+            headers=self.auth.get_auth_token(),
+            verify=False,
+            json={"update_control_map": update_control_map},
+        )
+        assert r.status_code == requests.status_codes.codes.no_content

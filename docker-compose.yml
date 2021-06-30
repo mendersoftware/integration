@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:feature-update_control_maps
+        image: mendersoftware/deployments:mender-master
         extends:
             file: common.yml
             service: mender-base
@@ -18,7 +18,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:feature-update_control_maps
+        image: mendersoftware/gui:mender-master
         extends:
             file: common.yml
             service: mender-base

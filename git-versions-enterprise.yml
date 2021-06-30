@@ -8,16 +8,16 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:feature-update_control_maps
+        image: registry.mender.io/mendersoftware/deployments-enterprise:master
 
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:master
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:feature-update_control_maps
+        image: registry.mender.io/mendersoftware/workflows-enterprise:master
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:feature-update_control_maps
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
 
     mender-tenantadm:
         image: registry.mender.io/mendersoftware/tenantadm:master

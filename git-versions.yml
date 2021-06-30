@@ -8,10 +8,10 @@ services:
     # backend open source services
     #
     mender-deployments:
-        image: mendersoftware/deployments:master
+        image: mendersoftware/deployments:feature-update_control_maps
 
     mender-gui:
-        image: mendersoftware/gui:master
+        image: mendersoftware/gui:feature-update_control_maps
 
     mender-device-auth:
         image: mendersoftware/deviceauth:master

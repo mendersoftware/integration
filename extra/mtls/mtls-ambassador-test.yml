@@ -1,12 +1,13 @@
 version: '2.1'
 services:
   mtls-ambassador:
-    image: registry.mender.io/mendersoftware/mtls-ambassador:master
+    image: registry.mender.io/mendersoftware/mtls-ambassador:mender-2.6.x
     networks:
       - mender
     volumes:
-      - ${MTLS_CERT:-./extra/mtls/certs/server/server.crt}:/etc/mtls/certs/server/server.crt
-      - ${MTLS_KEY:-./extra/mtls/certs/server/server.key}:/etc/mtls/certs/server/server.key
+      - ${MTLS_CERT:-./extra/mtls/certs/server/server.crt}:/etc/mtls/certs/server/server.crt:ro
+      - ${MTLS_KEY:-./extra/mtls/certs/server/server.key}:/etc/mtls/certs/server/server.key:ro
+      - ${MTLS_TENANT_CA:-./extra/mtls/certs/tenant-ca/tenant.ca.crt}:/etc/mtls/certs/tenant-ca/tenant.ca.pem:ro
     environment:
       MTLS_MENDER_USER: "mtls@mender.io"
       MTLS_MENDER_PASS: "correcthorsebatterystaple"

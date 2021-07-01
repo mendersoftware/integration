@@ -14,5 +14,6 @@ services:
       MTLS_MENDER_BACKEND: "https://mender-api-gateway"
       MTLS_DEBUG_LOG: "true"
       MTLS_INSECURE_SKIP_VERIFY: "true"
+      MTLS_TENANT_CA_PEM: "/etc/mtls/certs/tenant-ca/tenant.ca.crt"
     labels:
         - mender.testprefix=${MENDER_TESTPREFIX:-""}

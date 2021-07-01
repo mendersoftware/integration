@@ -2267,6 +2267,20 @@ def do_docker_compose_branches_from_follows(state):
                     checkout, repo, tag=mender_branch, git_tag=bare_branch,
                 )
 
+                # Update extra files used in integration tests
+                set_docker_compose_version_to(
+                    os.path.join(checkout, "extra", "mtls"),
+                    repo,
+                    tag=mender_branch,
+                    git_tag=bare_branch,
+                )
+                set_docker_compose_version_to(
+                    os.path.join(checkout, "extra", "failover-testing"),
+                    repo,
+                    tag=mender_branch,
+                    git_tag=bare_branch,
+                )
+
         print("This is the diff:")
         execute_git(state, checkout, ["diff"])
 

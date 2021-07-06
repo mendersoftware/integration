@@ -81,7 +81,7 @@ class TestFaultTolerance(MenderTesting):
                 hide=True,
             )
             time.sleep(2)
-            if int(output) >= 2:  # check that some retries have occured
+            if int(output) >= 2:  # check that some retries have occurred
                 logger.info(
                     "Looks like the download was retried 2 times, restoring download functionality"
                 )
@@ -160,7 +160,7 @@ class TestFaultTolerance(MenderTesting):
     ):
         """
             Install an update, and block storage connection when we detect it's
-            being copied over to the inactive parition.
+            being copied over to the inactive partition.
 
             The test should result in a successful download retry.
         """

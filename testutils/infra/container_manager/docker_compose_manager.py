@@ -92,7 +92,7 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
     MTLS_FILES = [
-        COMPOSE_FILES_PATH + "/extra/mtls/mtls-ambassador-test.yml",
+        COMPOSE_FILES_PATH + "/extra/mtls/docker-compose.mtls-ambassador-test.yml",
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]

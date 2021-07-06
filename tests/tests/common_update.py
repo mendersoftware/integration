@@ -88,7 +88,7 @@ def common_update_procedure(
     deployment_triggered_callback()
     # wait until deployment is in correct state
     if verify_status:
-        deploy.check_expected_status("inprogress", deployment_id)
+        deploy.check_not_in_status("pending", deployment_id)
 
     return deployment_id, artifact_name
 

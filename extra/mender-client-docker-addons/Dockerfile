@@ -33,7 +33,7 @@ RUN jq ".User=\"root\"" \
     < examples/mender-connect.conf > /mender-install/etc/mender/mender-connect.conf
 
 WORKDIR /src/mender-configure-module
-RUN make prefix=/mender-install install
+RUN make DESTDIR=/mender-install install
 
 RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
 
@@ -57,6 +57,7 @@ COPY --from=build /mender-install/usr/share/doc/mender-client /usr/share/doc/men
 COPY --from=build /mender-install/lib/systemd/system/mender-client.service /lib/systemd/system/mender-client.service
 COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib/systemd/system/mender-connect.service
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
+COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
 COPY --from=build /mender-install/var/lib/mender /var/lib/mender
 
 COPY entrypoint.sh /

@@ -656,17 +656,49 @@ def do_list_repos(args, optional_too, only_backend):
     assert args.list in cli_types.keys(), "%s is not a valid name type!" % args.list
     type = cli_types[args.list]
 
-    repos = [
-        comp.name
-        for comp in Component.get_components_of_type(
-            type,
-            only_release=(not optional_too),
-            only_non_independent_component=(only_backend),
-        )
-    ]
+    assert args.list_format in ["simple", "table", "json"], (
+        "%s is not a valid name list format!" % args.list_format
+    )
 
-    for repo in sorted(repos):
-        print(repo)
+    repos = Component.get_components_of_type(
+        type,
+        only_release=(not optional_too),
+        only_non_independent_component=(only_backend),
+    )
+    repos.sort(key=lambda x: x.name)
+
+    if args.list_format == "simple":
+        print("\n".join([r.name for r in repos]))
+        return
+
+    repos_versions_dict = {}
+    for repo in repos:
+        try:
+            repos_versions_dict[repo.name] = version_of(
+                integration_dir(),
+                repo.yml_components()[0],
+                args.in_integration_version,
+                git_version=(args.list == "git"),
+            )
+        except KeyError:
+            # This repo doesn't exist in the given integration version
+            repos_versions_dict[repo.name] = "UNRELEASED"
+
+    if args.list_format == "table":
+        name_len_max = str(max([len(r) for r in repos_versions_dict.keys()]))
+        version_len_max = str(max([len(r) for r in repos_versions_dict.values()]))
+        row_format = "| {:<" + name_len_max + "} | {:<" + version_len_max + "} |"
+        print(row_format.format("COMPONENT", "VERSION"))
+        print(
+            "\n".join(
+                [
+                    row_format.format(name, version)
+                    for name, version in repos_versions_dict.items()
+                ]
+            )
+        )
+    elif args.list_format == "json":
+        print(json.dumps(repos_versions_dict))
 
 
 def version_sort_key(version):
@@ -1540,18 +1572,30 @@ def get_extra_buildparams_from_yaml():
 
 
 def trigger_build(state, tag_avail):
-    extra_buildparams = get_extra_buildparams()
-
-    for param in extra_buildparams.keys():
-        if state_value(state, ["extra_buildparams", param]) is None:
-            update_state(
-                state, ["extra_buildparams", param], extra_buildparams[param].value
-            )
-
+    extra_buildparams = None
     params = None
+
+    def set_param(name, value):
+        params[name] = value
+        if extra_buildparams.get(name) is not None:
+            # Extra build parameters, that are not part of the build tags for
+            # each repository, should be saved persistently in the state file so
+            # that they can be repeated in subsequent builds.
+            update_state(state, ["extra_buildparams", name], params[name])
 
     # Allow changing of build parameters.
     while True:
+        if extra_buildparams is None:
+            extra_buildparams = get_extra_buildparams()
+
+            for param in extra_buildparams.keys():
+                if state_value(state, ["extra_buildparams", param]) is None:
+                    update_state(
+                        state,
+                        ["extra_buildparams", param],
+                        extra_buildparams[param].value,
+                    )
+
         if params is None:
             # We'll be adding parameters here that shouldn't be in 'state', so make a
             # copy.
@@ -1576,12 +1620,51 @@ def trigger_build(state, tag_avail):
 
         reply = ask("Will trigger a build with these values, ok? (no) ")
         if reply.startswith("Y") or reply.startswith("y"):
-            break
+            if USE_GITLAB:
+                trigger_gitlab_build(params, extra_buildparams)
+            else:
+                trigger_jenkins_build(params, extra_buildparams)
+            return
 
         reply = ask(
-            "Do you want to change any of the parameters (Y/N/open in Editor)? "
-        )
-        if reply.upper().startswith("E"):
+            """Do you want to change any of the parameters?
+Y = Yes
+N = No (Quit)
+E = Open in editor
+R = Reset all to default
+ET = Enable all tests (and platforms)
+DT = Disable all tests
+EI = Enable integration tests (and integration platforms)
+DI = Disable integration tests
+EC = Enable client tests (and associated platforms)
+DC = Disable client tests
+EP = Enable all platforms
+DP = Disable all platforms
+ER = Enable automatic publishing of the release (and release platforms)
+DR = Disable automatic publishing of the release
+? """
+        ).upper()
+        if reply.startswith("Y"):
+            substr = ask("Which one (substring is ok as long as it's unique)? ")
+            found = 0
+            for param in params.keys():
+                if param == substr:
+                    # Exact match
+                    name = param
+                    found = 1
+                    break
+                if param.find(substr) >= 0:
+                    name = param
+                    found += 1
+            if found == 0:
+                print("Parameter not found!")
+                continue
+            elif found > 1:
+                print("String not unique!")
+                continue
+            set_param(name, ask("Ok. New value? "))
+
+        elif reply == "E":
             if os.environ.get("EDITOR"):
                 editor = os.environ.get("EDITOR")
             else:
@@ -1592,39 +1675,54 @@ def trigger_build(state, tag_avail):
                 state.update(yaml.safe_load(fd))
             # Trigger update of parameters from disk.
             params = None
-            continue
-        elif not reply.upper().startswith("Y"):
+
+        elif reply == "R":
+            extra_buildparams = None
+            params = None
+            update_state(state, ["extra_buildparams"], {})
+
+        elif re.match("^[ED][TIC]$", reply) is not None:
+            if reply.startswith("E"):
+                action = "true"
+            else:
+                action = "false"
+
+            if reply[1] == "T" or reply[1] == "I":
+                if action == "true":
+                    set_param("BUILD_CLIENT", action)
+                    set_param("BUILD_SERVERS", action)
+                set_param("RUN_INTEGRATION_TESTS", action)
+
+            if reply[1] == "T" or reply[1] == "C":
+                for param in params.keys():
+                    if param.startswith("TEST_"):
+                        set_param(param, action)
+                        build_param = re.sub("^TEST_", "BUILD_", param)
+                        if action == "true" and params.get(build_param) is not None:
+                            set_param(build_param, action)
+
+        elif reply == "EP" or reply == "DP":
+            if reply.startswith("E"):
+                action = "true"
+            else:
+                action = "false"
+            set_param("BUILD_CLIENT", action)
+            set_param("BUILD_SERVERS", action)
+            for param in params.keys():
+                if param.startswith("BUILD_"):
+                    set_param(param, action)
+
+        elif reply == "ER" or reply == "DR":
+            if reply.startswith("E"):
+                action = "true"
+                set_param("BUILD_CLIENT", action)
+                set_param("BUILD_SERVERS", action)
+            else:
+                action = "false"
+            set_param("PUBLISH_RELEASE_AUTOMATIC", action)
+
+        else:
             return
-
-        substr = ask("Which one (substring is ok as long as it's unique)? ")
-        found = 0
-        for param in params.keys():
-            if param == substr:
-                # Exact match
-                name = param
-                found = 1
-                break
-            if param.find(substr) >= 0:
-                name = param
-                found += 1
-        if found == 0:
-            print("Parameter not found!")
-            continue
-        elif found > 1:
-            print("String not unique!")
-            continue
-        params[name] = ask("Ok. New value? ")
-
-        if extra_buildparams.get(name) is not None:
-            # Extra build parameters, that are not part of the build tags for
-            # each repository, should be saved persistently in the state file so
-            # that they can be repeated in subsequent builds.
-            update_state(state, ["extra_buildparams", name], params[name])
-
-    if USE_GITLAB:
-        trigger_gitlab_build(params, extra_buildparams)
-    else:
-        trigger_jenkins_build(params, extra_buildparams)
 
 
 def trigger_jenkins_build(params, extra_buildparams):
@@ -2167,6 +2265,20 @@ def do_docker_compose_branches_from_follows(state):
             else:
                 set_docker_compose_version_to(
                     checkout, repo, tag=mender_branch, git_tag=bare_branch,
+                )
+
+                # Update extra files used in integration tests
+                set_docker_compose_version_to(
+                    os.path.join(checkout, "extra", "mtls"),
+                    repo,
+                    tag=mender_branch,
+                    git_tag=bare_branch,
+                )
+                set_docker_compose_version_to(
+                    os.path.join(checkout, "extra", "failover-testing"),
+                    repo,
+                    tag=mender_branch,
+                    git_tag=bare_branch,
                 )
 
         print("This is the diff:")
@@ -3212,6 +3324,14 @@ def main():
         action="store_true",
         default=False,
         help="When used with -l, list only backend repositories; ignored otherwise",
+    )
+    parser.add_argument(
+        "--list-format",
+        metavar="simple|table|json",
+        default="simple",
+        nargs="?",
+        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions"
+        + "of each component in a table format, and 'json' composes a json object",
     )
     parser.add_argument(
         "-m",

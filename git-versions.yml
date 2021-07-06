@@ -23,7 +23,7 @@ services:
         image: mendersoftware/useradm:1.15.x
 
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:1.1.x
+        image: mendersoftware/deviceconnect:1.2.x
 
     mender-deviceconfig:
         image: mendersoftware/deviceconfig:1.1.x

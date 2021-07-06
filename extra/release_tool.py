@@ -698,7 +698,16 @@ def do_list_repos(args, optional_too, only_backend):
             )
         )
     elif args.list_format == "json":
-        print(json.dumps(repos_versions_dict))
+        json_object = {
+            "release": repos_versions_dict["integration"],
+            "repos": list(
+                map(
+                    lambda item: {"name": item[0], "version": item[1]},
+                    repos_versions_dict.items(),
+                )
+            ),
+        }
+        print(json.dumps(json_object))
 
 
 def version_sort_key(version):

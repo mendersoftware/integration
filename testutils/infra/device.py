@@ -70,7 +70,7 @@ class MenderDevice:
         """Run given cmd in remote SSH host
 
         Argument:
-        cmd - sring with the command to execute remotely
+        cmd - string with the command to execute remotely
 
         Recognized keyword arguments:
         hide - do not print stdout nor stderr, and do not fail on errors

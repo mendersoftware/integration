@@ -61,8 +61,6 @@ class TestUpdateControlEnterprise:
         )
         assert 1 == len(devices)
 
-        wait_for_connect(auth, devices[0])
-
         with tempfile.NamedTemporaryFile() as artifact_file:
             created_artifact = image.make_rootfs_artifact(
                 valid_image,
@@ -158,8 +156,6 @@ class TestUpdateControlEnterprise:
             set([device["id"] for device in devauth.get_devices_status("accepted")])
         )
         assert 1 == len(devices)
-
-        wait_for_connect(auth, devices[0])
 
         with tempfile.NamedTemporaryFile() as artifact_file:
             created_artifact = image.make_rootfs_artifact(

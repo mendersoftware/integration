@@ -329,9 +329,7 @@ class TestRBACDeploymentsToGroupEnterprise:
             {
                 "name": "Test RBAC deploy configuration to device belonging to a given group",
                 "user": {"name": "test1-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "test",
                 "set_configuration_status_code": 204,
@@ -340,9 +338,7 @@ class TestRBACDeploymentsToGroupEnterprise:
             {
                 "name": "Test RBAC configuration deployment forbidden",
                 "user": {"name": "test2-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "production",
                 "set_configuration_status_code": 403,

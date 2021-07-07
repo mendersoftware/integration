@@ -224,7 +224,19 @@ class TestFaultTolerance(MenderTesting):
             if test_set["blockAfterStart"]:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(valid_image)
-                mender_device.run("fuser -mv %s" % (inactive_part))
+                mender_device.run(
+                    "start=$(date -u +%s);"
+                    + 'output="";'
+                    + 'while [ -z "$output" ]; do '
+                    + "sleep 0.1;"
+                    + 'output="$(fuser -mv %s)";' % inactive_part
+                    + "now=$(date -u +%s);"
+                    + "if [ $(($now - $start)) -gt 600 ]; then "
+                    + "exit 1;"
+                    + "fi;"
+                    + "done",
+                    wait=10 * 60,
+                )
 
                 # storage must be blocked by ip to kill an ongoing connection
                 # so block the whole gateway

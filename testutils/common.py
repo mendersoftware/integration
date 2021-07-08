@@ -377,7 +377,7 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
 
     path_map = {
         "mender-api-gateway": "/ping",
-        "mender-auditlogs": "/api/internal/v1/auditlogs/health/alive",
+        "mender-auditlogs": "/api/internal/v1/auditlogs/health",
         "mender-deviceconnect": "/api/internal/v1/deviceconnect/health",
         "mender-deviceconfig": "/api/internal/v1/deviceconfig/health",
         "mender-device-auth": "/api/internal/v1/devauth/health",

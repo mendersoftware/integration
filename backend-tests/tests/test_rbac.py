@@ -157,12 +157,12 @@ def add_user_to_role(user, tenant, role):
     assert rsp.status_code == 201
 
     rsp = useradm_MGMT.with_auth(admin_user.token).call(
-        "PUT", useradm.URL_USERS_ID.format(id=user.id), body={"roles": roles},
+        "PUT", useradm.URL_USERS_ID.format(id=user.id), body={"roles": roles}
     )
     assert rsp.status_code == 204, rsp.text
 
 
-class TestRBACDeviceGroupEnterprise:
+class TestRBACDeploymentsEnterprise:
     @property
     def logger(self):
         return logging.getLogger(self.__class__.__name__)
@@ -171,54 +171,28 @@ class TestRBACDeviceGroupEnterprise:
         "test_case",
         [
             {
-                "name": "Test RBAC deploy to device group",
+                "name": "Test RBAC: single device deployment",
                 "user": {"name": "test1-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
-                "device_groups": {"test": 5, "production": 30, "staging": 20},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 1, "production": 3, "staging": 2},
                 "deploy_groups": ["test"],
                 "status_code": 201,
             },
             {
-                "name": "Test RBAC deployment forbidden",
-                "user": {"name": "test2-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
-                "device_groups": {"test": 5, "production": 25},
-                "deploy_groups": ["production"],
-                "status_code": 405,
-            },
-            # { TODO: This test-case should pass, but deployments only
-            #         expect device IDs to come from the same group
-            #   "name": "Test RBAC deployment multiple device groups",
-            #   "user": {"name": "test3-UUID@example.com", "pwd": "password"},
-            #   "permissions": [
-            #       UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test"),
-            #       UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "staging"),
-            #   ],
-            #   "device_groups": {"test": 5, "staging": 15, "production": 25},
-            #   "deploy_groups": ["test", "staging"],
-            #   "status_code": 201,
-            # },
-            {
-                "name": "Test RBAC deploy to devices outside group",
-                "user": {"name": "test4-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test"),
-                ],
-                "device_groups": {"test": 5, "staging": 15, "production": 25},
-                "deploy_groups": ["test", "staging"],
-                "status_code": 405,
+                "name": "Test RBAC: deploy to list of devices - forbidden",
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 5, "production": 30, "staging": 20},
+                "deploy_groups": ["test"],
+                "status_code": 403,
             },
         ],
     )
-    def test_deploy_to_group(self, clean_mongo, test_case):
+    def test_deploy_to_devices(self, clean_mongo, test_case):
         """
         Tests adding group restrinction to roles and checking that users
-        are not allowed to deploy to devices outside the restricted
-        groups.
+        are not allowed to deploy to devices by providing list of device IDs.
+        The only exception is single device deployment.
         """
         self.logger.info("RUN: %s", test_case["name"])
 
@@ -251,7 +225,7 @@ class TestRBACDeviceGroupEnterprise:
             files=(
                 (
                     "artifact",
-                    ("artifact.mender", artifact.make(), "application/octet-stream",),
+                    ("artifact.mender", artifact.make(), "application/octet-stream"),
                 ),
             ),
         )
@@ -271,15 +245,91 @@ class TestRBACDeviceGroupEnterprise:
         assert rsp.status_code == test_case["status_code"], rsp.text
         self.logger.info("PASS: %s" % test_case["name"])
 
+
+class TestRBACDeploymentsToGroupEnterprise:
+    @property
+    def logger(self):
+        return logging.getLogger(self.__class__.__name__)
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "Test RBAC: deploy to group",
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 3, "production": 3, "staging": 2},
+                "deploy_group": "test",
+                "status_code": 201,
+            },
+            {
+                "name": "Test RBAC: deploy to group - forbidden",
+                "user": {"name": "test1-UUID@example.com", "pwd": "password"},
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
+                "device_groups": {"test": 5, "production": 30, "staging": 20},
+                "deploy_group": "production",
+                "status_code": 403,
+            },
+        ],
+    )
+    def test_deploy_to_group(self, clean_mongo, test_case):
+        """
+        Tests adding group restrinction to roles and checking that users
+        are only allowed to deploy to their group.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        tenant.users.append(test_user)
+        login_tenant_users(tenant)
+
+        # Initialize tenant's devices
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
+
+        # Add user to deployment group
+        role = UserRole("RBAC_DEVGRP", test_case["permissions"])
+        add_user_to_role(test_user, tenant, role)
+
+        # Upload a bogus artifact
+        artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
+
+        dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
+        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS,
+            files=(
+                (
+                    "artifact",
+                    ("artifact.mender", artifact.make(), "application/octet-stream"),
+                ),
+            ),
+        )
+        assert rsp.status_code == 201, rsp.text
+
+        # Attempt to create deployment with test user
+        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_GROUP.format(name=test_case["deploy_group"]),
+            body={"artifact_name": "tester", "name": "dplmnt"},
+        )
+        assert rsp.status_code == test_case["status_code"], rsp.text
+        self.logger.info("PASS: %s" % test_case["name"])
+
     @pytest.mark.parametrize(
         "test_case",
         [
             {
                 "name": "Test RBAC deploy configuration to device belonging to a given group",
                 "user": {"name": "test1-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "test",
                 "set_configuration_status_code": 204,
@@ -288,9 +338,7 @@ class TestRBACDeviceGroupEnterprise:
             {
                 "name": "Test RBAC configuration deployment forbidden",
                 "user": {"name": "test2-UUID@example.com", "pwd": "password"},
-                "permissions": [
-                    UserPermission("CREATE_DEPLOYMENT", "DEVICE_GROUP", "test")
-                ],
+                "permissions": [UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "production",
                 "set_configuration_status_code": 403,
@@ -416,7 +464,7 @@ class TestRBACDeviceGroupEnterprise:
 
         # Attempt to get configuration
         rsp = deviceconf_MGMT.with_auth(test_user.token).call(
-            "GET", deviceconfig.URL_MGMT_DEVICE_CONFIGURATION.format(id=device_id),
+            "GET", deviceconfig.URL_MGMT_DEVICE_CONFIGURATION.format(id=device_id)
         )
         assert rsp.status_code == test_case["get_configuration_status_code"], rsp.text
         self.logger.info("PASS: %s" % test_case["name"])

@@ -118,6 +118,8 @@ class TestConfigurationEnterprise(MenderTesting):
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
         mender_device.ssh_is_opened()
 
+        enterprise_no_client.device = mender_device
+
         devauth_tenant.accept_devices(1)
 
         # list of devices

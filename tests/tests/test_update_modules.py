@@ -54,7 +54,7 @@ class TestUpdateModules(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-            output = mender_device.run("mender -no-syslog -show-artifact").strip()
+            output = mender_device.run("mender --no-syslog show-artifact").strip()
             assert output == "original"
 
             output = standard_setup_one_docker_client_bootstrapped.get_logs_of_service(

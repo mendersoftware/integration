@@ -263,7 +263,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
         # verify the update was actually installed on the device
         out = setup_ent_mtls.device.run(
-            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender -show-artifact"
+            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
         ).strip()
         assert out == "mtls-artifact"
 
@@ -310,7 +310,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
             # verify the update was actually installed on the device
             out = setup_ent_mtls.device.run(
-                "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender -show-artifact"
+                "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
             ).strip()
             assert out == "mtls-artifact"
         finally:

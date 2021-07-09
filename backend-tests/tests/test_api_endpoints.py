@@ -49,6 +49,9 @@ REPO_TO_ENV_VARIABLE = {
 
 
 def get_api_docs(repo):
+    # do not proceed if the SSH_PRIVATE_KEY env variable is not set
+    if not bool(os.environ.get("SSH_PRIVATE_KEY")):
+        return
     git_repository = f"git@github.com:mendersoftware/{repo}.git"
     with tempfile.TemporaryDirectory() as tmp:
         tmp_repo = os.path.join(tmp, repo)
@@ -158,6 +161,10 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
         "workflows",
     )
 
+    @pytest.mark.skipif(
+        not bool(os.environ.get("SSH_PRIVATE_KEY")),
+        reason="SSH_PRIVATE_KEY not provided",
+    )
     @pytest.mark.parametrize(
         "kind,auth,method,scheme,host,path", get_all_api_endpoints(REPOS),
     )
@@ -178,6 +185,10 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "workflows-enterprise",
     )
 
+    @pytest.mark.skipif(
+        not bool(os.environ.get("SSH_PRIVATE_KEY")),
+        reason="SSH_PRIVATE_KEY not provided",
+    )
     @pytest.mark.parametrize(
         "kind,auth,method,scheme,host,path", get_all_api_endpoints(REPOS),
     )

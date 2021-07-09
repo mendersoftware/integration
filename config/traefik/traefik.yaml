@@ -162,14 +162,13 @@ http:
       service: useradm
       tls: true
 
-    useradmLogin:
+    useradmNoAuth:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
       - sec-headers
       - compression
       - json-error-responder4
-      rule: >-
-        PathPrefix(`/api/management/{version:v[0-9]+}/useradm/{auth:(oauth2|auth/[^/]*)}`)
+      rule: "Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(oauth2|auth/password-reset|auth/verify-email|auth/plan-verify)}`)"
       service: useradm
       tls: true
 

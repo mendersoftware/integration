@@ -1049,7 +1049,13 @@ def check_tag_availability(state):
 
 def repo_sort_key(repo):
     """Used in sorted() calls to sort by Git name."""
-    return repo.name
+    if repo.name.endswith("-enterprise"):
+        return repo.name
+    else:
+        # Sort Enterprise repositories before Open Source ones. This helps when
+        # making releases since the decision for an Open Source repository often
+        # depends on whether the Enterprise one has changes.
+        return repo.name + "-xxx"
 
 
 def report_release_state(state, tag_avail):

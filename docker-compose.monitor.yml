@@ -5,7 +5,7 @@ services:
     # mender-devicemonitor
     #
     mender-devicemonitor:
-        image: mendersoftware/devicemonitor:feature-next-master
+        image: registry.mender.io/mendersoftware/devicemonitor:feature-next-master
         command: server --automigrate
         extends:
             file: common.yml
@@ -16,8 +16,8 @@ services:
             - mender-mongo
         environment:
             DEVICEMONITOR_MONGO_URL: "mongodb://mender-mongo"
-            DEVICEMONITOR_USERADM_URL: "http://mender-useradm"
-            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server"
+            DEVICEMONITOR_USERADM_URL: "http://mender-useradm:8080"
+            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server:8080"
 
     mender-api-gateway:
       volumes:

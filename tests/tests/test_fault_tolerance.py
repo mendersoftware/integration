@@ -81,7 +81,7 @@ class TestFaultTolerance(MenderTesting):
                 hide=True,
             )
             time.sleep(2)
-            if int(output) >= 2:  # check that some retries have occured
+            if int(output) >= 2:  # check that some retries have occurred
                 logger.info(
                     "Looks like the download was retried 2 times, restoring download functionality"
                 )
@@ -160,7 +160,7 @@ class TestFaultTolerance(MenderTesting):
     ):
         """
             Install an update, and block storage connection when we detect it's
-            being copied over to the inactive parition.
+            being copied over to the inactive partition.
 
             The test should result in a successful download retry.
         """
@@ -182,7 +182,19 @@ class TestFaultTolerance(MenderTesting):
             if test_set["blockAfterStart"]:
                 # Block after we start the download.
                 deployment_id, new_yocto_id = common_update_procedure(valid_image)
-                mender_device.run("fuser -mv %s" % (inactive_part))
+                mender_device.run(
+                    "start=$(date -u +%s);"
+                    + 'output="";'
+                    + 'while [ -z "$output" ]; do '
+                    + "sleep 0.1;"
+                    + 'output="$(fuser -mv %s)";' % inactive_part
+                    + "now=$(date -u +%s);"
+                    + "if [ $(($now - $start)) -gt 600 ]; then "
+                    + "exit 1;"
+                    + "fi;"
+                    + "done",
+                    wait=10 * 60,
+                )
 
             # use iptables to block traffic to storage
             TestFaultTolerance.manipulate_network_connectivity(

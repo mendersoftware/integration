@@ -4,5 +4,12 @@ services:
     #
     # monitor-client
     #
-    monitor-client:
+    mender-client:
         image: registry.mender.io/mendersoftware/mender-monitor-qemu-commercial:master
+        networks:
+            - mender
+        stdin_open: true
+        tty: true
+        privileged: true
+        environment:
+            - TENANT_TOKEN=$TENANT_TOKEN

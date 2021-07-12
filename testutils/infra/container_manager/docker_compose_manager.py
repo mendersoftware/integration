@@ -47,6 +47,9 @@ class DockerComposeNamespace(DockerNamespace):
     QEMU_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
     ]
+    MONITOR_CLIENT_COMMERCIAL_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.monitor-client.commercial.yml",
+    ]
     QEMU_CLIENT_ROFS_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.client.rofs.yml",
@@ -81,6 +84,7 @@ class DockerComposeNamespace(DockerNamespace):
     ENTERPRISE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
         COMPOSE_FILES_PATH + "/docker-compose.auditlogs.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.monitor.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml",
     ]
     MT_CLIENT_FILES = [
@@ -101,6 +105,12 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH
         + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
     ]
+    SMTP_MOCK_FILES = [
+        COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-mock.yml",
+        COMPOSE_FILES_PATH
+        + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
+        COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
+    ]
     COMPAT_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
     ]
@@ -109,7 +119,7 @@ class DockerComposeNamespace(DockerNamespace):
     ]
 
     NUM_SERVICES_OPENSOURCE = 13
-    NUM_SERVICES_ENTERPRISE = 16
+    NUM_SERVICES_ENTERPRISE = 17
 
     def __init__(self, name, extra_files=[]):
         DockerNamespace.__init__(self, name)
@@ -306,6 +316,10 @@ class DockerComposeNamespace(DockerNamespace):
         self._docker_compose_cmd("scale %s=0" % service)
         self._docker_compose_cmd("scale %s=1" % service)
 
+    def get_file(self, container_name, path):
+        container_id = super().getid([container_name])
+        return super().execute(container_id, ["cat", path])
+
 
 class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
@@ -317,6 +331,46 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+
+
+class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.SMTP_MOCK_FILES
+            )
+
+    def setup(self, recreate=True, env=None):
+        cmd = "up -d"
+        if not recreate:
+            cmd += " --no-recreate"
+        self._docker_compose_cmd(cmd, env=env)
+        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+
+    def new_tenant_client(self, name, tenant):
+        if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MONITOR_CLIENT_COMMERCIAL_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+    def new_tenant_docker_client(self, name, tenant):
+        if not self.MT_DOCKER_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_DOCKER_CLIENT_FILES
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(5)
 
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):

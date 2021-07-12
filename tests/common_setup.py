@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+import time
 import pytest
 from . import conftest
 
@@ -34,6 +36,17 @@ def standard_setup_one_client(request):
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
 
+    reset_mender_api(env)
+
+    return env
+
+
+@pytest.fixture(scope="function")
+def monitor_commercial_setup_no_client(request):
+    env = container_factory.getMonitorCommercialSetup(num_clients=0)
+    request.addfinalizer(env.teardown)
+
+    env.setup()
     reset_mender_api(env)
 
     return env

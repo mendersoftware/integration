@@ -15,6 +15,7 @@
 
 from .docker_compose_manager import (
     DockerComposeStandardSetup,
+    DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
     DockerComposeLegacyClientSetup,
@@ -33,6 +34,13 @@ from .docker_compose_manager import (
 class ContainerManagerFactory:
     def getStandardSetup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
+
+        The num_clients define how many QEMU Mender clients will be spawn.
+        """
+        pass
+
+    def getMonitorCommercialSetup(self, name=None, num_clients=1):
+        """Monitor client setup consisting on all core backend services and monitor-client
 
         The num_clients define how many QEMU Mender clients will be spawn.
         """
@@ -86,6 +94,9 @@ class ContainerManagerFactory:
 class DockerComposeManagerFactory(ContainerManagerFactory):
     def getStandardSetup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
+
+    def getMonitorCommercialSetup(self, name=None, num_clients=0):
+        return DockerComposeMonitorCommercialSetup(name, num_clients)
 
     def getDockerClientSetup(self, name=None):
         return DockerComposeDockerClientSetup(name)

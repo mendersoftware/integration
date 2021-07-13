@@ -4,7 +4,7 @@ FROM ubuntu:20.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update && apt install -y make git build-essential golang liblzma-dev \
-    jq libssl-dev libglib2.0-dev
+    jq libssl-dev libglib2.0-dev curl
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master

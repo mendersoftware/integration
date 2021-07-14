@@ -698,7 +698,16 @@ def do_list_repos(args, optional_too, only_backend):
             )
         )
     elif args.list_format == "json":
-        print(json.dumps(repos_versions_dict))
+        json_object = {
+            "release": repos_versions_dict["integration"],
+            "repos": list(
+                map(
+                    lambda item: {"name": item[0], "version": item[1]},
+                    repos_versions_dict.items(),
+                )
+            ),
+        }
+        print(json.dumps(json_object))
 
 
 def version_sort_key(version):
@@ -1093,7 +1102,13 @@ def check_tag_availability(state):
 
 def repo_sort_key(repo):
     """Used in sorted() calls to sort by Git name."""
-    return repo.name
+    if repo.name.endswith("-enterprise"):
+        return repo.name
+    else:
+        # Sort Enterprise repositories before Open Source ones. This helps when
+        # making releases since the decision for an Open Source repository often
+        # depends on whether the Enterprise one has changes.
+        return repo.name + "-xxx"
 
 
 def report_release_state(state, tag_avail):

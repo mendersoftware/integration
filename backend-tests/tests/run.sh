@@ -8,4 +8,12 @@ if [ -n "$K8S" ]; then
     kubectl get pods -o wide
 fi
 
+if [ -n "$SSH_PRIVATE_KEY" ]; then
+    eval $(ssh-agent -s)
+    echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+fi
+
 python3 -m pytest -v -s /tests/test_*.py "$@"

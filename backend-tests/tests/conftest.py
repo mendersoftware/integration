@@ -14,12 +14,12 @@
 import urllib3
 import pytest
 
+# See https://docs.pytest.org/en/latest/writing_plugins.html#assertion-rewriting
+pytest.register_assert_rewrite("testutils")
+
 from requests.packages import urllib3
 from testutils.common import wait_until_healthy
 
 urllib3.disable_warnings()
-
-# See https://docs.pytest.org/en/latest/writing_plugins.html#assertion-rewriting
-pytest.register_assert_rewrite("testutils")
 
 wait_until_healthy("backend-tests")

@@ -14,10 +14,6 @@ services:
             - mender
         depends_on:
             - mender-mongo
-        environment:
-            DEVICEMONITOR_MONGO_URL: "mongodb://mender-mongo"
-            DEVICEMONITOR_USERADM_URL: "http://mender-useradm:8080"
-            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server:8080"
 
     mender-api-gateway:
       volumes:

@@ -30,3 +30,11 @@ services:
             - 9300:9300
         networks:
             - mender
+
+    #
+    # mender-inventory
+    #
+    mender-inventory:
+        environment:
+            INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+            INVENTORY_ENABLE_REPORTING: 1

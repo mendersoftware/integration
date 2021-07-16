@@ -1,0 +1,27 @@
+http:
+  routers:
+    #
+    # reporting
+    #
+    reporting:
+      entrypoints: https
+      middlewares: #{{- if not (env "TESTING") }}
+      - circuit-breaker #{{- end}}
+      - userauth
+      - reportingMgmtSearch-replacepathregex
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/v2/inventory/filters/search`)"
+      service: reporting
+      tls: true
+
+  services:
+
+    reporting:
+      loadBalancer:
+        servers:
+        - url: "http://mender-reporting:8080"

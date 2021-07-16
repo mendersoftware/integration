@@ -83,3 +83,8 @@ http:
       replacepathregex:
         regex: "^/api/management/v1/inventory/(.*)"
         replacement: "/api/0.1.0/$1"
+
+    reportingMgmtSearch-replacepathregex:
+      replacepathregex:
+        regex: "^/api/management/v2/inventory/filters/search(.*)"
+        replacement: "/api/management/v1/reporting/inventory/search"

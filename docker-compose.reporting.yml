@@ -17,6 +17,13 @@ services:
             REPORTING_ELASTICSEARCH_ADDRESSES: "http://mender-elasticsearch:9200"
 
     #
+    # mender-api-gateway
+    #
+    mender-api-gateway:
+      volumes:
+        - ./config/traefik/traefik.reporting.yaml:/etc/traefik/config/traefik.reporting.yaml:ro
+
+    #
     # elasticsearch
     #
     mender-elasticsearch:

@@ -30,7 +30,7 @@ ordered-set==4.0.2
 packaging==20.9
 paramiko==2.7.2
 pathlib2==2.3.6
-pep517==0.9.1
+pep517==0.11.0
 pluggy==0.13.1
 progress==1.5
 psutil==5.8.0
@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==9.1
 flaky==3.7.0
-stripe==2.58.0
+stripe==2.60.0

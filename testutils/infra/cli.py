@@ -20,7 +20,9 @@ from testutils.infra.container_manager.kubernetes_manager import (
 
 
 class BaseCli:
-    def __init__(self, microservice, containers_namespace, container_manager):
+    def __init__(
+        self, microservice, containers_namespace="backend-tests", container_manager=None
+    ):
         if isK8S():
             self.container_manager = KubernetesNamespace()
             base_filter = microservice
@@ -194,3 +196,15 @@ class CliDeployments(BaseCli):
             cmd.extend(["--tenant", tenant_id])
 
         self.container_manager.execute(self.cid, cmd)
+
+
+class CliDeviceMonitor(BaseCli):
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        super().__init__("devicemonitor", containers_namespace, container_manager)
+        self.path = "/usr/bin/devicemonitor"
+
+    def migrate(self):
+        if isK8S():
+            return
+
+        self.container_manager.execute(self.cid, [self.path, "migrate"])

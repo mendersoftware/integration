@@ -11,15 +11,16 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import urllib3
-import pytest
 
-# See https://docs.pytest.org/en/latest/writing_plugins.html#assertion-rewriting
-pytest.register_assert_rewrite("testutils")
+import json
 
-from requests.packages import urllib3
-from testutils.common import wait_until_healthy
+import testutils.util.crypto
 
-urllib3.disable_warnings()
+HOST = "mender-devicemonitor:8080"
 
-wait_until_healthy("backend-tests")
+URL_DEVICES = "/api/devices/v1/devicemonitor"
+URL_INTERNAL = "/api/internal/v1/devicemonitor"
+URL_MGMT = "/api/management/v1/devicemonitor"
+
+URL_ALERT = "/alert"
+URL_DEVICE_ALERTS = lambda device_id: f"/devices/{id}/alerts".format(id=device_id)

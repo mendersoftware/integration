@@ -23,7 +23,9 @@ COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} \
         -f $INTEGRATION_PATH/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
         -f $INTEGRATION_PATH/extra/smtp-testing/workflows-worker-smtp-test.yml \
         -f $INTEGRATION_PATH/extra/stripe-testing/stripe-test.docker-compose.yml
+        -f $INTEGRATION_PATH/docker-compose.monitor.yml \
         -f $INTEGRATION_PATH/docker-compose.auditlogs.yml
+        -f $INTEGRATION_PATH/docker-compose.auditlogs.connect.yml
         "
 COMPOSE_CMD=""
 

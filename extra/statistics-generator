@@ -79,6 +79,9 @@ collect_changes() {
             pushd .
         else
             CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$given_range")"
+            if [ -z "$CHANGES" ]; then
+                continue
+            fi
             pushd "$BASE_DIR/$repo"
             case "$repo" in
                 *-enterprise)

@@ -178,7 +178,7 @@ git:
     - devicemonitor
     docker_container:
     - mender-devicemonitor
-    release_component: false
+    release_component: true
 
   mender-connect:
     docker_image: []
@@ -192,6 +192,14 @@ git:
     docker_container:
     - mender-deviceconfig
     release_component: true
+
+  monitor-client:
+    docker_image:
+    - mender-monitor-qemu-commercial
+    docker_container:
+    - monitor-client
+    release_component: true
+    independent_component: true
 
 docker_image:
   deployments:
@@ -381,13 +389,20 @@ docker_image:
     - devicemonitor
     docker_container:
     - mender-devicemonitor
-    release_component: false
+    release_component: true
 
   deviceconfig:
     git:
     - deviceconfig
     docker_container:
     - mender-deviceconfig
+    release_component: true
+
+  mender-monitor-qemu-commercial:
+    git:
+    - monitor-client
+    docker_container:
+    - monitor-client
     release_component: true
 
 docker_container:
@@ -530,11 +545,18 @@ docker_container:
     - devicemonitor
     docker_image:
     - devicemonitor
-    release_component: false
+    release_component: true
 
   mender-deviceconfig:
     git:
     - deviceconfig
     docker_image:
     - deviceconfig
+    release_component: true
+
+  monitor-client:
+    git:
+    - monitor-client
+    docker_image:
+    - mender-monitor-qemu-commercial
     release_component: true

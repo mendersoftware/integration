@@ -12,12 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import smtpd
 import asyncore
 import pytest
 import time
+import smtpd
+import logging
 
-from threading import Thread
+from threading import Thread, Condition
 
 
 class Message:
@@ -32,9 +33,21 @@ class SMTPServerMock(smtpd.SMTPServer):
     def __init__(self, *args, **kwargs):
         self.messages = []
         smtpd.SMTPServer.__init__(self, *args, **kwargs)
+        self._msg_cond = Condition()
 
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         self.messages.append(Message(peer, mailfrom, rcpttos, data))
+        logging.warning("got a message: %s" % mailfrom)
+        with self._msg_cond:
+            self._msg_cond.notify_all()
+
+    def wait_for_messages(self, n=1, timeout=None):
+        with self._msg_cond:
+            while True:
+                if len(self.messages) >= n:
+                    break
+                if not self._msg_cond.wait(timeout):
+                    raise TimeoutError("timed out waiting for email")
 
 
 class SMTPMock:
@@ -44,6 +57,12 @@ class SMTPMock:
 
     def stop(self):
         self.server.close()
+
+    def await_messages(self, n=1, timeout=None) -> None:
+        self.server.wait_for_messages(n, timeout)
+
+    def messages(self):
+        return self.server.messages.copy()
 
     def filtered_messages(self, email):
         return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))

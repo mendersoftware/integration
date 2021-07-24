@@ -14,9 +14,12 @@
 import os
 import os.path
 import subprocess
+import warnings
 
 import requests
 import time
+
+from urllib3.exceptions import InsecureRequestWarning
 
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
@@ -61,17 +64,19 @@ class ApiClient:
                 url = "http://localhost:8080/" + url.split("/", 3)[-1]
                 # wait a few seconds to let the port-forwarding fully initialize
                 time.sleep(3)
-            return requests.request(
-                method,
-                url,
-                json=body,
-                data=data,
-                params=qs_params,
-                headers=self.__make_headers(headers),
-                auth=auth,
-                verify=False,
-                files=files,
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=InsecureRequestWarning)
+                return requests.request(
+                    method,
+                    url,
+                    json=body,
+                    data=data,
+                    params=qs_params,
+                    headers=self.__make_headers(headers),
+                    auth=auth,
+                    verify=False,
+                    files=files,
+                )
         finally:
             if p is not None:
                 p.terminate()

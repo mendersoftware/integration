@@ -79,6 +79,9 @@ collect_changes() {
             pushd .
         else
             CHANGES="$("$RELEASE_TOOL" --version-of $repo --in-integration-version "$given_range")"
+            if [ -z "$CHANGES" ]; then
+                continue
+            fi
             pushd "$BASE_DIR/$repo"
             case "$repo" in
                 *-enterprise)
@@ -141,5 +144,5 @@ if [ "$DRY_RUN" = 1 ]; then
     collect_changes "$@"
 else
     set -o pipefail
-    collect_changes "$@" | python "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
+    collect_changes "$@" | python3 "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
 fi

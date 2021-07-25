@@ -5,7 +5,7 @@ services:
     # mender-devicemonitor
     #
     mender-devicemonitor:
-        image: mendersoftware/devicemonitor:mender-master
+        image: registry.mender.io/mendersoftware/devicemonitor:master
         command: server --automigrate
         extends:
             file: common.yml
@@ -14,10 +14,6 @@ services:
             - mender
         depends_on:
             - mender-mongo
-        environment:
-            DEVICEMONITOR_MONGO_URL: "mongodb://mender-mongo"
-            DEVICEMONITOR_USERADM_URL: "http://mender-useradm"
-            DEVICEMONITOR_WORKFLOWS_URL: "http://mender-workflows-server"
 
     mender-api-gateway:
       volumes:

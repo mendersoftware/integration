@@ -1,5 +1,6 @@
 http:
   routers:
+
     #
     # deviceconfig
     #
@@ -30,9 +31,44 @@ http:
       service: deviceconfig
       tls: true
 
+    #
+    # devicemonitor
+    #
+    devicemonitor:
+      entrypoints: https
+      middlewares:
+      - devauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/devicemonitor`)"
+      service: devicemonitor
+      tls: true
+
+    devicemonitorMgmt:
+      entrypoints: https
+      middlewares:
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devicemonitor`)"
+      service: devicemonitor
+      tls: true
+
   services:
+
+    devicemonitor:
+      loadBalancer:
+        servers:
+        - url: "http://mender-devicemonitor:8080"
 
     deviceconfig:
       loadBalancer:
         servers:
         - url: "http://mender-deviceconfig:8080"
+

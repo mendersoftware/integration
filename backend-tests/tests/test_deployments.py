@@ -755,7 +755,7 @@ class TestPhasedRolloutDeploymentsEnterprise:
                     # Spam update requests from random non-updated devices
                     dev = random.choice(devices)
                     status_code = try_update(dev)
-                    assert status_code == 204
+                    assert status_code == 204 or status_code == 429
                     now = datetime.utcnow()
                 # Sleep the last 500ms to let the next phase start
                 time.sleep(0.5 * WAITING_MULTIPLIER)
@@ -1065,12 +1065,14 @@ class TestPhasedRolloutConcurrencyEnterprise:
                         # Create status code map for usefull debug
                         # message if we receive a non-empty response
                         status_code_map = {}
-                        for s in [200, 204, 400, 404, 500]:
+                        for s in [200, 204, 400, 404, 429, 500]:
                             status_code_map[s] = sum(
                                 (map(lambda sc: sc == s, status_codes))
                             )
                         # Check that all requests received an empty response
-                        assert status_code_map[204] == len(status_codes), (
+                        assert (status_code_map[204] + status_code_map[429]) == len(
+                            status_codes
+                        ), (
                             "Expected empty response (204) during inactive "
                             + "phase, but received the following status "
                             + "code frequencies: %s" % status_code_map

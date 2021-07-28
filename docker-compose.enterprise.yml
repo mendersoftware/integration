@@ -1,6 +1,15 @@
 version: '2.1'
 services:
 
+    # redis cache
+    mender-redis:
+        image: redis:6.0.5-alpine
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+
     # add services
     mender-tenantadm:
         image: registry.mender.io/mendersoftware/tenantadm:staging
@@ -17,11 +26,23 @@ services:
     # configure the rest
     mender-device-auth:
         environment:
+            DEVICEAUTH_REDIS_ADDR: "mender-redis:6379"
+            DEVICEAUTH_REDIS_USERNAME: ""
+            DEVICEAUTH_REDIS_PASSWORD: ""
+            DEVICEAUTH_REDIS_DB: "1"
+            DEVICEAUTH_REDIS_TIMEOUT_SEC: "1"
+            DEVICEAUTH_REDIS_LIMITS_EXPIRE_SEC: "3600"
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             DEVICEAUTH_HAVE_ADDONS: 1
 
     mender-useradm:
         environment:
+            USERADM_REDIS_ADDR: "mender-redis:6379"
+            USERADM_REDIS_USERNAME: ""
+            USERADM_REDIS_PASSWORD: ""
+            USERADM_REDIS_DB: "2"
+            USERADM_REDIS_TIMEOUT_SEC: "1"
+            USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             USERADM_HAVE_ADDONS: 1
 

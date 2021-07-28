@@ -89,7 +89,7 @@ class Tenant:
 
 
 def create_random_authset(dauthd1, dauthm, utoken, tenant_token=""):
-    """ create_device with random id data and keypair"""
+    """create_device with random id data and keypair"""
     priv, pub = testutils.util.crypto.get_keypair_rsa()
     mac = ":".join(["{:02x}".format(random.randint(0x00, 0xFF), "x") for i in range(6)])
     id_data = {"mac": mac}
@@ -425,7 +425,7 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
 
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):
-    """ Call internal PUT tenantadm/tenants/{tid} """
+    """Call internal PUT tenantadm/tenants/{tid}"""
     host = tenantadm.HOST
     if container_manager is not None:
         host = container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"

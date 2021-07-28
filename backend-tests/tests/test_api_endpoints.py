@@ -129,13 +129,15 @@ def get_all_api_endpoints(repos):
 
 
 class BaseTestAPIEndpoints:
-    def do_test_api_endpoints(self, kind, auth, method, scheme, host, path):
+    def do_test_api_endpoints(
+        self, kind, auth, method, scheme, host, path, get_endpoint_url
+    ):
         assert method in ("get", "post", "put", "delete", "patch")
         requests_method = getattr(requests, method)
         if host == "hosted.mender.io" or kind in ("management", "devices"):
             base_url = f"{scheme}://{GATEWAY_HOSTNAME}"
         else:
-            base_url = f"{scheme}://{host}"
+            base_url = get_endpoint_url(f"{scheme}://{host}")
         r = requests_method(
             base_url + "/" + path.lstrip("/"), verify=False, timeout=2.0
         )
@@ -168,8 +170,12 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
     @pytest.mark.parametrize(
         "kind,auth,method,scheme,host,path", get_all_api_endpoints(REPOS),
     )
-    def test_api_endpoints(self, kind, auth, method, scheme, host, path):
-        self.do_test_api_endpoints(kind, auth, method, scheme, host, path)
+    def test_api_endpoints(
+        self, kind, auth, method, scheme, host, path, get_endpoint_url
+    ):
+        self.do_test_api_endpoints(
+            kind, auth, method, scheme, host, path, get_endpoint_url
+        )
 
 
 class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
@@ -192,5 +198,9 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
     @pytest.mark.parametrize(
         "kind,auth,method,scheme,host,path", get_all_api_endpoints(REPOS),
     )
-    def test_api_endpoints(self, kind, auth, method, scheme, host, path):
-        self.do_test_api_endpoints(kind, auth, method, scheme, host, path)
+    def test_api_endpoints(
+        self, kind, auth, method, scheme, host, path, get_endpoint_url
+    ):
+        self.do_test_api_endpoints(
+            kind, auth, method, scheme, host, path, get_endpoint_url
+        )

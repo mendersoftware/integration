@@ -18,6 +18,7 @@ import uuid
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.inventory as inventory
@@ -1325,6 +1326,9 @@ class TestDeviceFilteringEnterprise:
                 )
                 assert rsp.status_code == 200
                 devices[dev.id] = dev
+            # when running against staging, wait 5 seconds to avoid hitting
+            # the rate limits for the devices (one inventory update / 5 seconds)
+            isK8S() and time.sleep(5.0)
 
         # Remove devices
         for fltr in test_case["remove"]:

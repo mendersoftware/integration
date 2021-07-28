@@ -1974,14 +1974,26 @@ class TestDynamicDeploymentsEnterprise:
         )
         assert_get_next(200, dev.token, "bar")
 
+        # when running against staging, wait 5 seconds to avoid hitting
+        # the rate limits for the devices (one inventory update / 5 seconds)
+        isK8S() and time.sleep(5.0)
+
         # after finishing 'bar' - no other deployments qualify
         set_status(depbar["id"], "success", dev.token)
         assert_get_next(204, dev.token)
+
+        # when running against staging, wait 5 seconds to avoid hitting
+        # the rate limits for the devices (one inventory update / 5 seconds)
+        isK8S() and time.sleep(5.0)
 
         # after updating inventory, the device would qualify for both 'foo' deployments, but
         # the ordering mechanism will prevent it
         submit_inventory([{"name": "foo", "value": "foo"}], dev.token)
         assert_get_next(204, dev.token)
+
+        # when running against staging, wait 5 seconds to avoid hitting
+        # the rate limits for the devices (one inventory update / 5 seconds)
+        isK8S() and time.sleep(5.0)
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
         create_dynamic_deployment(

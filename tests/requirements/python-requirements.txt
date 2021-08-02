@@ -32,7 +32,7 @@ paramiko==2.7.2
 pathlib2==2.3.6
 pep517==0.9.1
 pluggy==0.13.1
-progress==1.5
+progress==1.6
 psutil==5.8.0
 py==1.10.0
 py3dns==3.2.1

@@ -65,8 +65,8 @@ services:
                     # and the deployments service will;
                     #
                     # if devices and deployments will access storage
-                    # using https://s3.acme.org:9000, then
-                    # set this to https://s3.acme.org:9000
+                    # using https://s3.acme.org, then
+                    # set this to s3.acme.org
                     - set-my-alias-here.com
         command:
             - --accesslog=true
@@ -106,8 +106,8 @@ services:
 
             # deployments service uses signed URLs, hence it needs to access
             # storage-proxy using exactly the same name as devices will; if
-            # devices will access storage using https://s3.acme.org:9000, then
-            # set this to https://s3.acme.org:9000
+            # devices will access storage using https://s3.acme.org, then
+            # set this to https://s3.acme.org
             DEPLOYMENTS_AWS_URI: https://set-my-alias-here.com
         logging:
             options:

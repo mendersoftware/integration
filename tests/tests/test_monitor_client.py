@@ -212,3 +212,77 @@ class TestMonitorClientEnterprise:
             m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
         )
         logger.info("test_monitorclient_alert_email: got OK alert email.")
+
+    def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client flapping support"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 120
+        expected_from = "alert@mender.io"
+        service_name = "crond"
+        user_name = "bugs.bunny@acme.org"
+        devid, authtoken, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_monitorclient_flapping: env ready.")
+
+        prepare_service_monitoring(mender_device, service_name)
+
+        max_start_stop_iterations = 32
+        not_running_time = 2.2
+        logger.info(
+            "test_monitorclient_flapping: running stop/start for %s, %d interations, sleep in-between: %.1fs"
+            % (service_name, max_start_stop_iterations, not_running_time)
+        )
+        while max_start_stop_iterations > 0:
+            max_start_stop_iterations = max_start_stop_iterations - 1
+            mender_device.run("systemctl stop %s" % service_name)
+            time.sleep(not_running_time)
+            mender_device.run("systemctl start %s" % service_name)
+            time.sleep(not_running_time)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        assert len(messages) > 1
+        messages_count_flapping = len(messages)
+        for m in messages:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["To"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+        m = messages[-1]
+        logger.debug("(1) last message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert (
+            m["Subject"]
+            == "[CRITICAL_FLAPPING] "
+            + service_name
+            + " on "
+            + devid
+            + " status: flapping"
+        )
+        logger.info("test_monitorclient_flapping: got CRITICAL_FLAPPING alert email.")
+
+        logger.info(
+            "test_monitorclient_flapping: waiting for %s seconds"
+            % wait_for_alert_interval_s
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        m = messages[-1]
+        logger.debug("(2) last message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert messages_count_flapping + 1 == len(messages)
+        assert (
+            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
+        )
+        logger.info("test_monitorclient_flapping: got OK alert email.")

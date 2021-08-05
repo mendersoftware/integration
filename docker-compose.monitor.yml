@@ -18,3 +18,7 @@ services:
     mender-api-gateway:
       volumes:
         - ./config/traefik/traefik.monitor.yaml:/etc/traefik/config/traefik.monitor.yaml:ro
+
+    mender-gui:
+        environment:
+            HAVE_MONITOR: 1

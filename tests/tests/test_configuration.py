@@ -18,6 +18,8 @@ import pytest
 import time
 import redo
 
+from flaky import flaky
+
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
 from testutils.common import Tenant, User, update_tenant
@@ -75,6 +77,7 @@ class TestConfiguration(MenderTesting):
 class TestConfigurationEnterprise(MenderTesting):
     """Tests the configuration deployment functionality in the enterprise setup"""
 
+    @flaky(max_runs=3)
     def test_configuration(self, enterprise_no_client):
         """Tests the deployment and reporting of the configuration
 

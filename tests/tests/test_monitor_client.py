@@ -31,6 +31,8 @@ from ..MenderAPI import (
     logger,
 )
 
+from testutils.api import useradm
+from testutils.api.client import ApiClient
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
 from testutils.common import Tenant, User, update_tenant
@@ -110,7 +112,7 @@ class TestMonitorClientEnterprise:
     def prepare_env(self, env, user_name):
         u = User("", user_name, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("os-tenant", u.name, u.pwd, plan="os")
+        tid = cli.create_org("monitor-tenant", u.name, u.pwd, plan="enterprise")
 
         # at the moment we do not have a notion of a monitor add-on in the
         # backend, but this will be needed here, see MEN-4809
@@ -122,7 +124,7 @@ class TestMonitorClientEnterprise:
         tenant = json.loads(tenant)
 
         auth = authentication.Authentication(
-            name="os-tenant", username=u.name, password=u.pwd
+            name="monitor-tenant", username=u.name, password=u.pwd
         )
         auth.create_org = False
         auth.reset_auth_token()
@@ -219,7 +221,7 @@ class TestMonitorClientEnterprise:
         wait_for_alert_interval_s = 120
         expected_from = "alert@mender.io"
         service_name = "crond"
-        user_name = "bugs.bunny@acme.org"
+        user_name = "bugs.bunny@monitoring.acme.org"
         devid, authtoken, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -286,3 +288,142 @@ class TestMonitorClientEnterprise:
             m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
         )
         logger.info("test_monitorclient_flapping: got OK alert email.")
+
+    def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client email alerting respecting RBAC"""
+        # first let's get the OK and CRITICAL email alerts {{{
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        service_name = "crond"
+        user_name = "bugs.bunny@acme.org"
+        devid, authtoken, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_monitorclient_alert_email_rbac: env ready.")
+
+        prepare_service_monitoring(mender_device, service_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+        assert len(messages) > 0
+
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+        )
+        logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
+
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        for m in messages:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["To"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+
+        messages_count = len(messages)
+        assert messages_count > 1
+        m = messages[1]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
+        )
+        logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
+        # }}} we got the CRITICAL and OK emails
+
+        # let's add a role, that will allow user to view only devices of given group {{{
+        uadm = ApiClient(
+            host=get_container_manager().get_mender_gateway(),
+            base_url=useradm.URL_MGMT,
+        )
+
+        role = {
+            "name": "deviceaccess",
+            "permissions": [
+                {
+                    "action": "VIEW_DEVICE",
+                    "object": {"type": "DEVICE_GROUP", "value": "fullTestDevices"},
+                }
+            ],
+        }
+        res = uadm.call(
+            "POST", useradm.URL_ROLES, headers=auth.get_auth_token(), body=role
+        )
+        assert res.status_code == 201
+        logger.info(
+            "test_monitorclient_alert_email_rbac: added role: restrict access to a group."
+        )
+        # }}} role added
+
+        # let's set the role for the user {{{
+        res = uadm.call("GET", useradm.URL_USERS, headers=auth.get_auth_token())
+        assert res.status_code == 200
+        logger.info(
+            "test_monitorclient_alert_email_rbac: "
+            "get users: http rc: %d; response body: '%s'; "
+            % (res.status_code, res.json())
+        )
+        users = res.json()
+        res = uadm.call(
+            "PUT",
+            useradm.URL_USERS_ID.format(id=users[0]["id"]),
+            headers=auth.get_auth_token(),
+            body={"roles": ["deviceaccess"]},
+        )
+        assert res.status_code == 204
+        logger.info("test_monitorclient_alert_email_rbac: role assigned to user.")
+        # }}} user has access only to fullTestDevices group
+
+        # let's stop the service by name=service_name
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+        assert len(messages) == messages_count
+        # we did not receive any email -- user has no access to the device
+        logger.info(
+            "test_monitorclient_alert_email_rbac: did not receive CRITICAL email alert."
+        )
+
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+        assert len(messages) == messages_count
+        # we did not receive any email -- user has no access to the device
+        logger.info(
+            "test_monitorclient_alert_email_rbac: did not receive OK email alert."
+        )

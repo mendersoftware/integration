@@ -336,6 +336,8 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
+        # Lock to avoid concurrent tests using SMTP mock (port 1025)
+        self.smtp_mock_lock = filelock.FileLock("smtp_mock_lock")
         if self.num_clients > 0:
             raise NotImplementedError(
                 "Clients not implemented on setup time, use new_tenant_client"
@@ -346,11 +348,16 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
             )
 
     def setup(self, recreate=True, env=None):
+        self.smtp_mock_lock.acquire(timeout=20 * 60)
         cmd = "up -d"
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
         self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+
+    def teardown(self):
+        super().teardown()
+        self.smtp_mock_lock.release()
 
     def new_tenant_client(self, name, tenant):
         if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:

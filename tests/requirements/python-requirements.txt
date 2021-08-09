@@ -11,7 +11,7 @@ colorama==0.4.4
 contextlib2==21.6.0
 cryptography==3.4.7
 distlib==0.3.1
-distro==1.5.0
+distro==1.6.0
 docker==5.0.0
 docker-compose==1.29.2
 dockerpty==0.4.1
@@ -32,7 +32,7 @@ paramiko==2.7.2
 pathlib2==2.3.6
 pep517==0.9.1
 pluggy==0.13.1
-progress==1.5
+progress==1.6
 psutil==5.8.0
 py==1.10.0
 py3dns==3.2.1
@@ -47,7 +47,7 @@ pytest-html==3.1.1
 pytest-metadata==1.11.0
 pytest-timeout==1.4.2
 pytest-xdist==2.3.0
-python-dotenv==0.18.0
+python-dotenv==0.19.0
 pytoml==0.1.21
 PyYAML==5.4.1
 redo==2.0.4

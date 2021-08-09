@@ -106,6 +106,34 @@ def prepare_service_monitoring(mender_device, service_name):
         shutil.rmtree(tmpdir)
 
 
+def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
+    try:
+        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
+        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
+        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+        mender_device.run("systemctl restart %s" % service_name)
+        tmpdir = tempfile.mkdtemp()
+        service_check_file = os.path.join(tmpdir, "log_" + service_name + ".sh")
+        f = open(service_check_file, "w")
+        f.write(
+            'SERVICE_NAME="%s"\nLOG_FILE="%s"\nLOG_PATTERN="%s"\n'
+            % (service_name, log_file, log_pattern)
+        )
+        f.close()
+        mender_device.put(
+            os.path.basename(service_check_file),
+            local_path=os.path.dirname(service_check_file),
+            remote_path=monitor_available_dir,
+        )
+        mender_device.run(
+            "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
+            % (monitor_available_dir, service_name, monitor_enabled_dir, service_name)
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -163,6 +191,9 @@ class TestMonitorClientEnterprise:
         )
         logger.info("test_monitorclient_alert_email: env ready.")
 
+        logger.info(
+            "test_monitorclient_alert_email: email alert on systemd service not running scenario."
+        )
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -203,7 +234,8 @@ class TestMonitorClientEnterprise:
             logger.debug("             From: %s", m["From"])
             logger.debug("             Subject: %s", m["Subject"])
 
-        assert len(messages) > 1
+        messages_count = len(messages)
+        assert messages_count > 1
         m = messages[1]
         assert "To" in m
         assert "From" in m
@@ -214,6 +246,45 @@ class TestMonitorClientEnterprise:
             m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
         )
         logger.info("test_monitorclient_alert_email: got OK alert email.")
+
+        logger.info(
+            "test_monitorclient_alert_email: email alert on log file containing a pattern scenario."
+        )
+        log_file = "/tmp/mylog.log"
+        mender_device.run("echo 'some line' >> " + log_file)
+        prepare_log_monitoring(
+            mender_device, service_name, log_file, "session opened for user [a-z]*",
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+        mender_device.run("echo 'some line' >> " + log_file)
+        time.sleep(wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+        assert messages_count == len(messages)
+
+        mender_device.run(
+            "echo 'a new session opened for user root now' >> " + log_file
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("echo 'some line' " + log_file)
+        time.sleep(2 * wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        m = messages[-1]
+        logger.debug("got message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert m["Subject"].startswith(
+            "[LOGCONTAINS] " + service_name + " on " + devid + " status: log-contains"
+        )
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""

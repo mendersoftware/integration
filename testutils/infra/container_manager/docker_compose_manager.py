@@ -26,7 +26,7 @@ from .docker_manager import DockerNamespace
 
 logger = logging.getLogger("root")
 
-# Global lock to sycronize calls to docker-compose
+# Global lock to synchronize calls to docker-compose
 docker_lock = filelock.FileLock("docker_lock")
 
 

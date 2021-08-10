@@ -498,3 +498,69 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_email_rbac: did not receive OK email alert."
         )
+
+    def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client alert local store"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        service_name = "rpcbind"
+        user_name = "bugs.bunny@acme.org"
+        devid, authtoken, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_monitorclient_alert_store: env ready.")
+
+        logger.info(
+            "test_monitorclient_alert_store: store alerts when offline scenario."
+        )
+
+        prepare_service_monitoring(mender_device, service_name)
+        mender_device.run(
+            "gw=`netstat -rn | grep UG | awk '{print($2);}'`; echo -ne \"#!/bin/bash\n[ -f /tmp/stop-running ] && exit 0; touch /tmp/stop-running; sleep 4; /sbin/route del default gw $gw; max_iterations=4; while [ \$max_iterations -gt 0 ]; do systemctl stop %s; sleep %d; systemctl start %s; let max_iterations--; done; /sbin/route add default gw $gw;\n\" > /tmp/stop-net.sh; chmod 755 /tmp/stop-net.sh;"
+            % (service_name, wait_for_alert_interval_s, service_name)
+        )
+        mender_device.run('echo "* * * * * /tmp/stop-net.sh" | crontab -')
+        time.sleep(wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) == 0
+        logger.info("test_monitorclient_alert_store: got no alerts, device is offline.")
+
+        time.sleep(16 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        for m in messages:
+            logger.info("got message:")
+            logger.info("             body: %s", m.get_body().get_content())
+            logger.info("             To: %s", m["To"])
+            logger.info("             From: %s", m["From"])
+            logger.info("             Subject: %s", m["Subject"])
+
+        assert len(messages) > 1
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+        )
+        logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
+
+        m = messages[1]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
+        )
+        logger.info("test_monitorclient_alert_store: got OK alert email.")

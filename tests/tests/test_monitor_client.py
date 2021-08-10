@@ -186,7 +186,7 @@ class TestMonitorClientEnterprise:
         expected_from = "alert@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
-        devid, authtoken, auth, mender_device = self.prepare_env(
+        devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         logger.info("test_monitorclient_alert_email: env ready.")
@@ -290,10 +290,9 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client flapping support"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 120
-        expected_from = "alert@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@monitoring.acme.org"
-        devid, authtoken, auth, mender_device = self.prepare_env(
+        devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         logger.info("test_monitorclient_flapping: env ready.")
@@ -368,7 +367,7 @@ class TestMonitorClientEnterprise:
         expected_from = "alert@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
-        devid, authtoken, auth, mender_device = self.prepare_env(
+        devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         logger.info("test_monitorclient_alert_email_rbac: env ready.")

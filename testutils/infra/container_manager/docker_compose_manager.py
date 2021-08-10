@@ -100,11 +100,6 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
-    SMTP_FILES = [
-        COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-test.yml",
-        COMPOSE_FILES_PATH
-        + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
-    ]
     SMTP_MOCK_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-mock.yml",
         COMPOSE_FILES_PATH
@@ -457,18 +452,6 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(5)
-
-
-class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
-    def __init__(self, name):
-        DockerComposeNamespace.__init__(
-            self, name, self.ENTERPRISE_FILES + self.SMTP_FILES
-        )
-
-    def setup(self):
-        host_ip = socket.gethostbyname(socket.gethostname())
-        self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
 
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):

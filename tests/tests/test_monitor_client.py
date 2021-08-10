@@ -159,7 +159,7 @@ class TestMonitorClientEnterprise:
         devauth_tenant = DeviceAuthV2(auth)
 
         env.new_tenant_client("configuration-test-container", tenant["tenant_token"])
-        mender_device = MenderDevice(env.get_mender_clients()[0])
+        env.device = mender_device = MenderDevice(env.get_mender_clients()[0])
         mender_device.ssh_is_opened()
 
         devauth_tenant.accept_devices(1)

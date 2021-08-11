@@ -497,3 +497,84 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_email_rbac: did not receive OK email alert."
         )
+
+    def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client alert local store"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        service_name = "rpcbind"
+        user_name = "bugs.bunny@acme.org"
+        devid, authtoken, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_monitorclient_alert_store: env ready.")
+
+        logger.info(
+            "test_monitorclient_alert_store: store alerts when offline scenario."
+        )
+
+        prepare_service_monitoring(mender_device, service_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        logger.info(
+            "test_monitorclient_alert_store disabling accces to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) == 0
+        logger.info("test_monitorclient_alert_store: got no alerts, device is offline.")
+
+        logger.info(
+            "test_monitorclient_alert_store re-enabling accces to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        logger.info("test_monitorclient_alert_store waiting for alerts to come.")
+        time.sleep(wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        for m in messages:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["To"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+
+        assert len(messages) > 1
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+        )
+        logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
+
+        m = messages[1]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
+        )
+        logger.info("test_monitorclient_alert_store: got OK alert email.")

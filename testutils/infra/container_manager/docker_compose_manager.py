@@ -100,11 +100,6 @@ class DockerComposeNamespace(DockerNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
-    SMTP_FILES = [
-        COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-test.yml",
-        COMPOSE_FILES_PATH
-        + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
-    ]
     SMTP_MOCK_FILES = [
         COMPOSE_FILES_PATH + "/extra/smtp-testing/workflows-worker-smtp-mock.yml",
         COMPOSE_FILES_PATH
@@ -336,8 +331,6 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
-        # Lock to avoid concurrent tests using SMTP mock (port 1025)
-        self.smtp_mock_lock = filelock.FileLock("smtp_mock_lock")
         if self.num_clients > 0:
             raise NotImplementedError(
                 "Clients not implemented on setup time, use new_tenant_client"
@@ -348,16 +341,11 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
             )
 
     def setup(self, recreate=True, env=None):
-        self.smtp_mock_lock.acquire(timeout=20 * 60)
         cmd = "up -d"
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
         self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
-
-    def teardown(self):
-        super().teardown()
-        self.smtp_mock_lock.release()
 
     def new_tenant_client(self, name, tenant):
         if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
@@ -464,18 +452,6 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(5)
-
-
-class DockerComposeEnterpriseSMTPSetup(DockerComposeNamespace):
-    def __init__(self, name):
-        DockerComposeNamespace.__init__(
-            self, name, self.ENTERPRISE_FILES + self.SMTP_FILES
-        )
-
-    def setup(self):
-        host_ip = socket.gethostbyname(socket.gethostname())
-        self._docker_compose_cmd("up -d", env={"HOST_IP": host_ip})
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
 
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):

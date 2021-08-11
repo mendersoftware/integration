@@ -7,8 +7,8 @@ services:
             - PYTHONUNBUFFERED=1
         command: bash -c "mkdir -p /var/spool/mail; stdbuf -oL python -m smtpd -n -c DebuggingServer 0.0.0.0:1025 > /var/spool/mail/local"
         ports:
-            - 1025:1025
+            - "1025"
         networks:
-            mender:
+            - mender
 networks:
     mender:

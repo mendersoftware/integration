@@ -245,6 +245,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "deviceconfig": "DEVICECONFIG_REV",
     "devicemonitor": "DEVICEMONITOR_REV",
     "monitor-client": "MONITOR_CLIENT_REV",
+    "reporting": "REPORTING_REV",
 }
 
 # categorize backend services wrt open/enterprise versions
@@ -254,6 +255,7 @@ BACKEND_SERVICES_OPEN = {
     "deviceconnect",
     "create-artifact-worker",
     "deviceconfig",
+    "reporting",
 }
 BACKEND_SERVICES_ENT = {
     "tenantadm",
@@ -428,6 +430,7 @@ def filter_docker_compose_files_list(list, version):
         "docker-compose.connect.yml",
         "docker-compose.config.yml",
         "docker-compose.monitor.yml",
+        "docker-compose.reporting.yml",
         "other-components-docker.yml",
     ]
     _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]

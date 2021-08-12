@@ -286,6 +286,40 @@ class TestMonitorClientEnterprise:
             "[LOGCONTAINS] " + service_name + " on " + devid + " status: log-contains"
         )
 
+        logger.info(
+            "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
+        )
+        service_name = "mender-client"
+        prepare_log_monitoring(
+            mender_device,
+            service_name,
+            "@journalctl -u " + service_name,
+            "State transition: .*",
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        time.sleep(wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        m = messages[-1]
+        logger.debug("got message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert m["Subject"].startswith(
+            "[LOGCONTAINS] "
+            + service_name
+            + " on "
+            + devid
+            + " status: log-contains State transition:"
+        )
+
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
         mailbox_path = "/var/spool/mail/local"

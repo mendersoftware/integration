@@ -201,6 +201,13 @@ git:
     release_component: true
     independent_component: true
 
+  reporting:
+    docker_image:
+    - reporting
+    docker_container:
+    - mender-reporting
+    release_component: true
+
 docker_image:
   deployments:
     git:
@@ -405,6 +412,13 @@ docker_image:
     - monitor-client
     release_component: true
 
+  reporting:
+    git:
+    - reporting
+    docker_container:
+    - mender-reporting
+    release_component: true
+
 docker_container:
   mender-deployments:
     git:
@@ -559,4 +573,11 @@ docker_container:
     - monitor-client
     docker_image:
     - mender-monitor-qemu-commercial
+    release_component: true
+
+  mender-reporting:
+    git:
+    - reporting
+    docker_image:
+    - reporting
     release_component: true

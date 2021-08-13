@@ -290,6 +290,8 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
         )
         service_name = "mender-client"
+        mender_device.run("systemctl stop mender-monitor")
+        time.sleep(wait_for_alert_interval_s)
         prepare_log_monitoring(
             mender_device,
             service_name,

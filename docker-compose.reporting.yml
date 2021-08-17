@@ -47,6 +47,13 @@ services:
             INVENTORY_ENABLE_REPORTING: 1
 
     #
+    # mender-deployments
+    #
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_REPORTING_ADDR: http://mender-reporting:8080
+
+    #
     # gui
     #
     mender-gui:

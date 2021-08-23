@@ -23,7 +23,6 @@ from .docker_compose_manager import (
     DockerComposeShortLivedTokenSetup,
     DockerComposeFailoverServerSetup,
     DockerComposeEnterpriseSetup,
-    DockerComposeEnterpriseSMTPSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
@@ -118,9 +117,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
-
-    def getEnterpriseSMTPSetup(self, name=None):
-        return DockerComposeEnterpriseSMTPSetup(name)
 
     def getCompatibilitySetup(self, name=None, **kwargs):
         return DockerComposeCompatibilitySetup(name, **kwargs)

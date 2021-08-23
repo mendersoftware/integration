@@ -45,7 +45,7 @@ class CliUseradm(BaseCli):
         # is it an open useradm, or useradm-enterprise?
         for path in ["/usr/bin/useradm", "/usr/bin/useradm-enterprise"]:
             try:
-                self.container_manager.execute(self.cid, [path, "--version"])
+                self.container_manager.execute(self.cid, [path, "--help"])
                 self.path = path
             except:
                 continue
@@ -178,7 +178,7 @@ class CliDeployments(BaseCli):
         # is it an open version, or enterprise?
         for path in ["/usr/bin/deployments", "/usr/bin/deployments-enterprise"]:
             try:
-                self.container_manager.execute(self.cid, [path, "--version"])
+                self.container_manager.execute(self.cid, [path, "--help"])
                 self.path = path
             except:
                 continue

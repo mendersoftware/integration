@@ -22,7 +22,7 @@ URL_INTERNAL_TENANT = "/tenants/{tid}"
 URL_MGMT_TENANTS = "/tenants"
 URL_MGMT_THIS_TENANT = "/user/tenant"
 
-ALL_ADDONS = ["troubleshoot", "configure"]
+ALL_ADDONS = ["troubleshoot", "configure", "monitor"]
 
 
 def req_status(status):

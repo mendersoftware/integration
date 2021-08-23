@@ -5,6 +5,8 @@ services:
     # minio
     #
     minio:
+        # DO NOT upgrade this to any version "2021.05" or later.
+        # We want to stay on Apache license for now.
         image: minio/minio:RELEASE.2019-04-23T23-50-36Z
         restart: on-failure
         networks:

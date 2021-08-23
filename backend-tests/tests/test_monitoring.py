@@ -137,7 +137,7 @@ class _TestMonitoringAlertsBase:
             regex = [regex]
 
         for message in messages:
-            data = message.data.decode("ascii")
+            data = message.data.decode("utf-8")
             assert device.id in data
             assert user.name in data
             for ex in regex:

@@ -215,7 +215,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
 
@@ -242,18 +242,17 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
         logger.info(
             "test_monitorclient_alert_email: email alert on log file containing a pattern scenario."
         )
         log_file = "/tmp/mylog.log"
+        log_pattern = "session opened for user [a-z]*"
         mender_device.run("echo 'some line' >> " + log_file)
         prepare_log_monitoring(
-            mender_device, service_name, log_file, "session opened for user [a-z]*",
+            mender_device, service_name, log_file, log_pattern,
         )
         time.sleep(2 * wait_for_alert_interval_s)
         mender_device.run("echo 'some line' >> " + log_file)
@@ -283,7 +282,10 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "[LOGCONTAINS] " + service_name + " on " + devid + " status: log-contains"
+            "LOGCONTAINS: Monitor Alert for Log file contains "
+            + log_pattern
+            + " on "
+            + devid
         )
 
         logger.info(
@@ -313,11 +315,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "[LOGCONTAINS] "
-            + service_name
-            + " on "
-            + devid
-            + " status: log-contains State transition:"
+            "LOGCONTAINS: Monitor Alert for Log file contains State transition:"
         )
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
@@ -365,11 +363,8 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert (
             m["Subject"]
-            == "[CRITICAL_FLAPPING] "
-            + service_name
-            + " on "
+            == "CRITICAL_FLAPPING: Monitor Alert for Service going up and down on "
             + devid
-            + " status: flapping"
         )
         logger.info("test_monitorclient_flapping: got CRITICAL_FLAPPING alert email.")
 
@@ -388,9 +383,7 @@ class TestMonitorClientEnterprise:
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
     def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
@@ -427,7 +420,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
 
@@ -454,9 +447,7 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
         # }}} we got the CRITICAL and OK emails
 
@@ -598,7 +589,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
@@ -608,7 +599,5 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_store: got OK alert email.")

@@ -1042,7 +1042,7 @@ class TestAuthsetMgmtBase:
         utoken = r.text
 
         devs = []
-        for status in ["pending", "accepted", "preauthorized"]:
+        for status in ["pending", "accepted"]:
             found = filter_and_page_devs(devs_authsets, status=status)
             devs.extend(found)
 
@@ -1050,9 +1050,9 @@ class TestAuthsetMgmtBase:
             aset = None
             dtoken = None
 
-            # for accepted or preauthd devs, reject the accepted/preauthd set
+            # for accepted, reject the accepted set
             # otherwise just select something
-            if dev.status in ["accepted", "preauthorized"]:
+            if dev.status == "accepted":
                 aset = [a for a in dev.authsets if a.status == dev.status]
                 assert len(aset) == 1
                 aset = aset[0]
@@ -1073,7 +1073,8 @@ class TestAuthsetMgmtBase:
                 dtoken = r.text
 
             # reject the authset
-            change_authset_status(devauthm, dev.id, aset.id, "rejected", utoken)
+            if aset.status == "accepted" or aset.status == "pending":
+                change_authset_status(devauthm, dev.id, aset.id, "rejected", utoken)
 
             # the given authset always changes to 'rejected'
             aset.status = "rejected"

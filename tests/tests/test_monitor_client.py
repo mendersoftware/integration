@@ -134,6 +134,30 @@ def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
         shutil.rmtree(tmpdir)
 
 
+def prepare_dbus_monitoring(mender_device, dbus_name):
+    try:
+        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
+        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
+        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+        tmpdir = tempfile.mkdtemp()
+        dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
+        f = open(dbus_check_file, "w")
+        f.write("DBUS_NAME=%s\n" % dbus_name)
+        f.close()
+        mender_device.put(
+            os.path.basename(dbus_check_file),
+            local_path=os.path.dirname(dbus_check_file),
+            remote_path=monitor_available_dir,
+        )
+        mender_device.run(
+            "ln -s '%s/dbus_test.sh' '%s/dbus_test.sh'"
+            % (monitor_available_dir, monitor_enabled_dir)
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -601,3 +625,32 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_store: got OK alert email.")
+
+    def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_subsystem: env ready.")
+
+        logger.info("test_dbus_subsystem: email alert on dbus signal scenario.")
+        prepare_dbus_monitoring(mender_device, dbus_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert m["Subject"] == "CRITICAL: Monitor Alert for D-Bus signal " + devid
+        logger.info("test_dbus_subsystem: got CRITICAL alert email.")

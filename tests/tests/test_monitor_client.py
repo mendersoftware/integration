@@ -306,7 +306,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "LOGCONTAINS: Monitor Alert for Log file contains "
+            "CRITICAL: Monitor Alert for Log file contains "
             + log_pattern
             + " on "
             + devid
@@ -339,7 +339,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "LOGCONTAINS: Monitor Alert for Log file contains State transition:"
+            "CRITICAL: Monitor Alert for Log file contains State transition:"
         )
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
@@ -387,10 +387,9 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert (
             m["Subject"]
-            == "CRITICAL_FLAPPING: Monitor Alert for Service going up and down on "
-            + devid
+            == "CRITICAL: Monitor Alert for Service going up and down on " + devid
         )
-        logger.info("test_monitorclient_flapping: got CRITICAL_FLAPPING alert email.")
+        logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
 
         logger.info(
             "test_monitorclient_flapping: waiting for %s seconds"
@@ -652,5 +651,9 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert m["Subject"] == "CRITICAL: Monitor Alert for D-Bus signal " + devid
+        assert (
+            m["Subject"]
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")

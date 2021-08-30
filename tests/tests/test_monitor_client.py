@@ -616,14 +616,15 @@ class TestMonitorClientEnterprise:
         )
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
-        m = messages[1]
+        m=messages[1]
         assert "To" in m
         assert "From" in m
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
-        logger.info("test_monitorclient_alert_store: got OK alert email.")
+
+        logger.info("test_monitorclient_alert_store: got OK alert email")
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""

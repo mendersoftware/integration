@@ -82,8 +82,8 @@ services:
             - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
             - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
             - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
-            - ./production/keys-generated/cert/cert.crt:/certs/cert.crt:ro
-            - ./production/keys-generated/cert/private.key:/certs/private.key:ro
+            - ./production/keys-generated/cert/cert.crt:/etc/traefik/certs/cert.crt:ro
+            - ./production/keys-generated/cert/private.key:/etc/traefik/certs/private.key:ro
         logging:
             options:
                 max-file: "10"

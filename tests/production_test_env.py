@@ -62,7 +62,7 @@ def fill_production_template():
         shell=True,
     )
     subprocess.check_output(
-        "sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://localhost|' ../production-testing-env.yml",
+        "sed -i 's|DEPLOYMENTS_AWS_URI:.*|DEPLOYMENTS_AWS_URI: https://mender-api-gateway|' ../production-testing-env.yml",
         shell=True,
     )
     subprocess.check_output(
@@ -102,7 +102,10 @@ if args.start:
     if not os.path.exists("../keys-generated"):
         ret = subprocess.call(
             ["./keygen"],
-            env={"CERT_CN": "localhost", "CERT_SAN": "DNS:localhost"},
+            env={
+                "CERT_CN": "localhost",
+                "CERT_SAN": "DNS:localhost,DNS:mender-api-gateway",
+            },
             cwd="../",
         )
         assert ret == 0, "failed to generate keys"

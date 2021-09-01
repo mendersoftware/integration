@@ -16,4 +16,11 @@ if [ -n "$SSH_PRIVATE_KEY" ]; then
     ssh-keyscan github.com >> ~/.ssh/known_hosts
 fi
 
-python3 -m pytest -v -s /tests/test_*.py "$@"
+force_sugar=""
+if python3 -m pip show pytest-sugar >/dev/null; then
+    # Force pytest-sugar in CI/CD containers
+    # ref https://github.com/Teemu/pytest-sugar/issues/219
+    force_sugar="--force-sugar"
+fi
+
+python3 -m pytest -v -s /tests/test_*.py $force_sugar "$@"

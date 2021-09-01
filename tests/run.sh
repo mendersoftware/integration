@@ -146,10 +146,8 @@ debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-$MACHIN
 
 dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
-# Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
+# Set to either the arguments for xdists, or '--maxfail=1'
 EXTRA_TEST_ARGS=
-HTML_REPORT="--html=report.html --self-contained-html"
-
 if ! python3 -m pip show pytest-xdist >/dev/null; then
     EXTRA_TEST_ARGS="--maxfail=1"
     echo "WARNING: install pytest-xdist for running tests in parallel"
@@ -158,9 +156,16 @@ else
     EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
 fi
 
+HTML_REPORT="--html=report.html --self-contained-html"
 if ! python3 -m pip show pytest-html >/dev/null; then
     HTML_REPORT=""
     echo "WARNING: install pytest-html for html results report"
+fi
+
+if python3 -m pip show pytest-sugar >/dev/null; then
+    # Force pytest-sugar in CI/CD containers
+    # ref https://github.com/Teemu/pytest-sugar/issues/219
+    EXTRA_TEST_ARGS="$EXTRA_TEST_ARGS --force-sugar"
 fi
 
 if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then

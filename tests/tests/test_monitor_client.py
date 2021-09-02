@@ -134,6 +134,30 @@ def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
         shutil.rmtree(tmpdir)
 
 
+def prepare_dbus_monitoring(mender_device, dbus_name):
+    try:
+        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
+        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
+        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+        tmpdir = tempfile.mkdtemp()
+        dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
+        f = open(dbus_check_file, "w")
+        f.write("DBUS_NAME=%s\n" % dbus_name)
+        f.close()
+        mender_device.put(
+            os.path.basename(dbus_check_file),
+            local_path=os.path.dirname(dbus_check_file),
+            remote_path=monitor_available_dir,
+        )
+        mender_device.run(
+            "ln -s '%s/dbus_test.sh' '%s/dbus_test.sh'"
+            % (monitor_available_dir, monitor_enabled_dir)
+        )
+    finally:
+        shutil.rmtree(tmpdir)
+
+
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -215,7 +239,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
 
@@ -242,18 +266,17 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
         logger.info(
             "test_monitorclient_alert_email: email alert on log file containing a pattern scenario."
         )
         log_file = "/tmp/mylog.log"
+        log_pattern = "session opened for user [a-z]*"
         mender_device.run("echo 'some line' >> " + log_file)
         prepare_log_monitoring(
-            mender_device, service_name, log_file, "session opened for user [a-z]*",
+            mender_device, service_name, log_file, log_pattern,
         )
         time.sleep(2 * wait_for_alert_interval_s)
         mender_device.run("echo 'some line' >> " + log_file)
@@ -283,7 +306,10 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "[LOGCONTAINS] " + service_name + " on " + devid + " status: log-contains"
+            "CRITICAL: Monitor Alert for Log file contains "
+            + log_pattern
+            + " on "
+            + devid
         )
 
         logger.info(
@@ -313,11 +339,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
-            "[LOGCONTAINS] "
-            + service_name
-            + " on "
-            + devid
-            + " status: log-contains State transition:"
+            "CRITICAL: Monitor Alert for Log file contains State transition:"
         )
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
@@ -365,13 +387,9 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert (
             m["Subject"]
-            == "[CRITICAL_FLAPPING] "
-            + service_name
-            + " on "
-            + devid
-            + " status: flapping"
+            == "CRITICAL: Monitor Alert for Service going up and down on " + devid
         )
-        logger.info("test_monitorclient_flapping: got CRITICAL_FLAPPING alert email.")
+        logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
 
         logger.info(
             "test_monitorclient_flapping: waiting for %s seconds"
@@ -388,9 +406,7 @@ class TestMonitorClientEnterprise:
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
     def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
@@ -427,7 +443,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
 
@@ -454,9 +470,7 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
         # }}} we got the CRITICAL and OK emails
 
@@ -598,7 +612,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] " + service_name + " on " + devid + " status: not-running"
+            == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
@@ -608,7 +622,38 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert (
-            m["Subject"] == "[OK] " + service_name + " on " + devid + " status: running"
-        )
+        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
         logger.info("test_monitorclient_alert_store: got OK alert email.")
+
+    def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_subsystem: env ready.")
+
+        logger.info("test_dbus_subsystem: email alert on dbus signal scenario.")
+        prepare_dbus_monitoring(mender_device, dbus_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
+        logger.info("test_dbus_subsystem: got CRITICAL alert email.")

@@ -137,7 +137,7 @@ class _TestMonitoringAlertsBase:
             regex = [regex]
 
         for message in messages:
-            data = message.data.decode("ascii")
+            data = message.data.decode("utf-8")
             assert device.id in data
             assert user.name in data
             for ex in regex:
@@ -164,7 +164,9 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                             "name": "mender-connect",
                             "status": "killed",
                             "type": "systemd.unit",
-                            "details": "Something terrible actually happened!",
+                            "details": {
+                                "description": "Something terrible actually happened!"
+                            },
                         },
                     },
                 ],
@@ -180,7 +182,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                             "name": "mender-connect",
                             "status": "running",
                             "type": "systemd.unit",
-                            "details": "It's all good",
+                            "details": {"description": "It's all good"},
                         },
                     },
                     {
@@ -191,7 +193,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                             "name": "sshd",
                             "status": "killed",
                             "type": "systemd.unit",
-                            "details": "Well, this is awkward",
+                            "details": {"description": "Well, this is awkward"},
                         },
                     },
                     {
@@ -202,7 +204,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                             "name": "gopls",
                             "status": "killed",
                             "type": "process",
-                            "details": "not again...",
+                            "details": {"description": "not again..."},
                         },
                     },
                 ],

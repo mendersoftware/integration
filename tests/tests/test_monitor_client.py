@@ -28,6 +28,7 @@ from ..MenderAPI import (
     authentication,
     get_container_manager,
     DeviceAuthV2,
+    DeviceMonitor,
     logger,
 )
 
@@ -106,13 +107,20 @@ def prepare_service_monitoring(mender_device, service_name):
         shutil.rmtree(tmpdir)
 
 
-def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
+def prepare_log_monitoring(
+    mender_device,
+    service_name,
+    log_file,
+    log_pattern,
+    log_pattern_expiration=None,
+    update_check_file_only=False,
+):
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
-        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
-        mender_device.run("systemctl restart %s" % service_name)
+        if not update_check_file_only:
+            mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+            mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
         tmpdir = tempfile.mkdtemp()
         service_check_file = os.path.join(tmpdir, "log_" + service_name + ".sh")
         f = open(service_check_file, "w")
@@ -120,16 +128,24 @@ def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
             'SERVICE_NAME="%s"\nLOG_FILE="%s"\nLOG_PATTERN="%s"\n'
             % (service_name, log_file, log_pattern)
         )
+        if log_pattern_expiration:
+            f.write("LOG_PATTERN_EXPIRATION=%d\n" % log_pattern_expiration)
         f.close()
         mender_device.put(
             os.path.basename(service_check_file),
             local_path=os.path.dirname(service_check_file),
             remote_path=monitor_available_dir,
         )
-        mender_device.run(
-            "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
-            % (monitor_available_dir, service_name, monitor_enabled_dir, service_name)
-        )
+        if not update_check_file_only:
+            mender_device.run(
+                "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
+                % (
+                    monitor_available_dir,
+                    service_name,
+                    monitor_enabled_dir,
+                    service_name,
+                )
+            )
     finally:
         shutil.rmtree(tmpdir)
 
@@ -216,7 +232,7 @@ class TestMonitorClientEnterprise:
         expected_from = "noreply@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
-        devid, _, _, mender_device = self.prepare_env(
+        devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         logger.info("test_monitorclient_alert_email: env ready.")
@@ -247,7 +263,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
-        assert not "${workflow.input" in mail
+        assert not "${workflow.input." in mail
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
 
         mender_device.run("systemctl start %s" % service_name)
@@ -282,22 +298,29 @@ class TestMonitorClientEnterprise:
         )
         log_file = "/tmp/mylog.log"
         log_pattern = "session opened for user [a-z]*"
-        mender_device.run("echo 'some line' >> " + log_file)
+
+        service_name = "mylog"
         prepare_log_monitoring(
             mender_device, service_name, log_file, log_pattern,
         )
         time.sleep(2 * wait_for_alert_interval_s)
-        mender_device.run("echo 'some line' >> " + log_file)
+
+        mender_device.run("echo 'some line 1' >> " + log_file)
+        mender_device.run("echo 'some line 2' >> " + log_file)
         time.sleep(wait_for_alert_interval_s)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
         assert messages_count == len(messages)
 
         mender_device.run(
-            "echo 'a new session opened for user root now' >> " + log_file
+            "echo -ne 'a new session opened for user root now\nsome line 3\n' >> "
+            + log_file
         )
+
         time.sleep(wait_for_alert_interval_s)
-        mender_device.run("echo 'some line' " + log_file)
+        mender_device.run("echo 'some line 4' >> " + log_file)
+        mender_device.run("echo 'some line 5' >> " + log_file)
+
         time.sleep(2 * wait_for_alert_interval_s)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)
@@ -319,7 +342,84 @@ class TestMonitorClientEnterprise:
             + " on "
             + devid
         )
-        assert not "${workflow.input" in mail
+
+        pattern_expiration_seconds = 32
+        logger.info(
+            "test_monitorclient_alert_email: CRITICAL received; setting pattern expiration time=%ds and waiting.",
+            pattern_expiration_seconds,
+        )
+        prepare_log_monitoring(
+            mender_device,
+            service_name,
+            log_file,
+            log_pattern,
+            log_pattern_expiration=pattern_expiration_seconds,
+            update_check_file_only=True,
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        m = messages[-1]
+        logger.debug("got message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert m["Subject"] == (
+            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
+        )
+        logger.info(
+            "test_monitorclient_alert_email: got OK alert email after log pattern expiration."
+        )
+        device_monitor = DeviceMonitor(auth)
+        alerts = device_monitor.get_alerts(devid)
+        assert len(alerts) > 1
+        assert "subject" in alerts[1]
+        assert "details" in alerts[1]["subject"]
+        assert "line_matching" in alerts[1]["subject"]["details"]
+        assert "data" in alerts[1]["subject"]["details"]["line_matching"]
+        assert (
+            "a new session opened for user root now"
+            == alerts[1]["subject"]["details"]["line_matching"]["data"]
+        )
+        assert "subject" in alerts[1]
+        assert "details" in alerts[1]["subject"]
+        assert "lines_before" in alerts[1]["subject"]["details"]
+        assert len(alerts[1]["subject"]["details"]["lines_before"]) == 2
+        assert len(alerts[1]["subject"]["details"]["lines_after"]) == 1
+        assert "data" in alerts[1]["subject"]["details"]["lines_before"][0]
+        assert "data" in alerts[1]["subject"]["details"]["lines_before"][1]
+        assert (
+            "some line 1" == alerts[1]["subject"]["details"]["lines_before"][0]["data"]
+        )
+        assert (
+            "some line 2" == alerts[1]["subject"]["details"]["lines_before"][1]["data"]
+        )
+        assert "data" in alerts[1]["subject"]["details"]["lines_after"][0]
+        assert (
+            "some line 3" == alerts[1]["subject"]["details"]["lines_after"][0]["data"]
+        )
+        logger.debug(
+            "test_monitorclient_alert_email: got %s alerts" % json.dumps(alerts)
+        )
+        logger.debug(
+            "test_monitorclient_alert_email: got line -B1: '%s' from alerts"
+            % alerts[1]["subject"]["details"]["lines_before"][0]["data"]
+        )
+        logger.debug(
+            "test_monitorclient_alert_email: got line -B2: '%s' from alerts"
+            % alerts[1]["subject"]["details"]["lines_before"][1]["data"]
+        )
+        logger.debug(
+            "test_monitorclient_alert_email: got line -A1: '%s' from alerts"
+            % alerts[1]["subject"]["details"]["lines_after"][0]["data"]
+        )
 
         logger.info(
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
@@ -580,7 +680,7 @@ class TestMonitorClientEnterprise:
         time.sleep(2 * wait_for_alert_interval_s)
 
         logger.info(
-            "test_monitorclient_alert_store disabling accces to docker.mender.io (point to localhost in /etc/hosts)"
+            "test_monitorclient_alert_store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
         mender_device.run("systemctl stop %s" % service_name)
@@ -601,7 +701,7 @@ class TestMonitorClientEnterprise:
         logger.info("test_monitorclient_alert_store: got no alerts, device is offline.")
 
         logger.info(
-            "test_monitorclient_alert_store re-enabling accces to docker.mender.io (restoring /etc/hosts)"
+            "test_monitorclient_alert_store re-enabling access to docker.mender.io (restoring /etc/hosts)"
         )
         mender_device.run("mv /etc/hosts.backup /etc/hosts")
         logger.info("test_monitorclient_alert_store waiting for alerts to come.")

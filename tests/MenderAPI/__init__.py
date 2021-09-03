@@ -38,6 +38,7 @@ from .deployments import Deployments
 from .devauth import DeviceAuthV2
 from .deviceconnect import DeviceConnect
 from .inventory import Inventory
+from .devicemonitor import DeviceMonitor
 
 auth = Authentication()
 devauth = DeviceAuthV2(auth)
@@ -45,6 +46,7 @@ devconnect = DeviceConnect(auth, devauth)
 deploy = Deployments(auth, devauth)
 image = Artifacts()
 inv = Inventory(auth)
+devmonitor = DeviceMonitor(auth)
 # -- When adding something here, also add a reset method and add it below --
 
 
@@ -55,6 +57,7 @@ def reset_mender_api(manager=None):
     deploy.reset()
     image.reset()
     inv.reset()
+    devmonitor.reset()
     global container_manager
     container_manager = manager
 

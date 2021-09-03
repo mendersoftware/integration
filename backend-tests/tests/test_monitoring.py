@@ -111,11 +111,10 @@ class _TestMonitoringAlertsBase:
 
     def test_alerting_email(self, test_case, user, devices, smtp_mock):
         device = devices.pop(1)
-        for alert in test_case["alerts"]:
-            r = self.devmond.with_auth(device.token).call(
-                "POST", devicemonitor.URL_ALERT, alert,
-            )
-            assert r.status_code < 300
+        r = self.devmond.with_auth(device.token).call(
+            "POST", devicemonitor.URL_ALERT, test_case["alerts"],
+        )
+        assert r.status_code < 300
 
         try:
             wait_start = datetime.now()

@@ -134,7 +134,9 @@ def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
         shutil.rmtree(tmpdir)
 
 
-def prepare_dbus_monitoring(mender_device, dbus_name):
+def prepare_dbus_monitoring(
+    mender_device, dbus_name, log_pattern=None, dbus_pattern=None
+):
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
@@ -144,6 +146,10 @@ def prepare_dbus_monitoring(mender_device, dbus_name):
         dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
         f = open(dbus_check_file, "w")
         f.write("DBUS_NAME=%s\n" % dbus_name)
+        if log_pattern:
+            f.write("DBUS_PATTERN=%s\n" % log_pattern)
+        if dbus_pattern:
+            f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
         f.close()
         mender_device.put(
             os.path.basename(dbus_check_file),
@@ -657,3 +663,75 @@ class TestMonitorClientEnterprise:
             + devid
         )
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")
+
+    def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_pattern_match: env ready.")
+
+        logger.info(
+            "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
+        )
+        prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "[CRITICAL] D-Bus test alert on " + devid + " status: DBUS_SIGNAL"
+        )
+        logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
+
+    def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "alert@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_bus_filter: env ready.")
+
+        logger.info(
+            "test_dbus_bus_filter: email alert on single dbus filter signal scenario."
+        )
+        prepare_dbus_monitoring(
+            mender_device,
+            dbus_name,
+            dbus_pattern="type='signal',interface='io.mender.Authentication1'",
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "[CRITICAL] D-Bus test alert on " + devid + " status: DBUS_SIGNAL"
+        )
+        logger.info("test_dbus_bus_filter: got CRITICAL alert email.")

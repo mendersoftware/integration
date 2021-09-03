@@ -213,7 +213,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -420,7 +420,7 @@ class TestMonitorClientEnterprise:
         # first let's get the OK and CRITICAL email alerts {{{
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
         devid, _, auth, mender_device = self.prepare_env(
@@ -556,7 +556,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client alert local store"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "rpcbind"
         user_name = "bugs.bunny@acme.org"
         devid, authtoken, auth, mender_device = self.prepare_env(
@@ -635,7 +635,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(

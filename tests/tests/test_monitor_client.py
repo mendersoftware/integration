@@ -668,7 +668,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -694,7 +694,8 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] D-Bus test alert on " + devid + " status: DBUS_SIGNAL"
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
         )
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
@@ -702,7 +703,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -732,6 +733,7 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "[CRITICAL] D-Bus test alert on " + devid + " status: DBUS_SIGNAL"
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
         )
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")

@@ -3,7 +3,7 @@ certifi==2021.5.30
 cffi==1.14.6
 chardet==4.0.0
 cryptography==3.4.8
-docker==5.0.0
+docker==5.0.2
 idna==2.10
 iniconfig==1.1.1
 packaging==21.0

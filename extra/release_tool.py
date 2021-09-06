@@ -703,7 +703,12 @@ def do_list_repos(args, optional_too, only_backend):
         )
     elif args.list_format == "json":
         json_object = {
-            "release": repos_versions_dict["integration"],
+            "release": version_of(
+                integration_dir(),
+                Component.get_component_of_any_type("integration").yml_components()[0],
+                args.in_integration_version,
+                git_version=True,
+            ),
             "repos": list(
                 map(
                     lambda item: {"name": item[0], "version": item[1]},

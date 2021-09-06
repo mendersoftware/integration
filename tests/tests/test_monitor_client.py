@@ -668,7 +668,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -703,7 +703,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(

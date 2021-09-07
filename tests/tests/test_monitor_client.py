@@ -247,6 +247,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
 
         mender_device.run("systemctl start %s" % service_name)
@@ -273,6 +274,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
         logger.info(
@@ -317,6 +319,7 @@ class TestMonitorClientEnterprise:
             + " on "
             + devid
         )
+        assert not "${workflow.input" in mail
 
         logger.info(
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
@@ -347,6 +350,7 @@ class TestMonitorClientEnterprise:
         assert m["Subject"].startswith(
             "CRITICAL: Monitor Alert for Log file contains State transition:"
         )
+        assert not "${workflow.input" in mail
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
@@ -395,6 +399,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service going up and down on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
 
         logger.info(
@@ -413,6 +418,7 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
     def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
@@ -451,6 +457,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
 
         mender_device.run("systemctl start %s" % service_name)
@@ -477,6 +484,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
         # }}} we got the CRITICAL and OK emails
 
@@ -620,6 +628,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
         m = messages[1]
@@ -629,6 +638,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
@@ -662,6 +672,7 @@ class TestMonitorClientEnterprise:
             == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
             + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")
 
     def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
@@ -697,6 +708,7 @@ class TestMonitorClientEnterprise:
             == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
             + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
@@ -736,4 +748,5 @@ class TestMonitorClientEnterprise:
             == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
             + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")

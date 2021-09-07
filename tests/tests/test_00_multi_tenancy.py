@@ -61,9 +61,11 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
         devauth.get_devices(expected_devices=1)
 
-    def test_multi_tenancy_deployment(self, enterprise_no_client, valid_image):
-        """ Simply make sure we are able to run the multi tenancy setup and
-           bootstrap 2 different devices to different tenants """
+    def test_multi_tenancy_deployment(
+        self, enterprise_no_client, valid_image_with_mender_conf
+    ):
+        """Simply make sure we are able to run the multi tenancy setup and
+           bootstrap 2 different devices to different tenants"""
 
         auth.reset_auth_token()
 
@@ -98,7 +100,19 @@ class TestMultiTenancyEnterprise(MenderTesting):
                     user["container"]
                 )
             )
+
+            # By default the valid_image has a tenant_token=dummy in the mender.conf
+            # Therefore, replace the 'mender.conf' in the image with the one from the
+            # currently running image, which has a valid 'mender.conf'.
+            mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+            logger.info(
+                "Injecting the mender.conf into the update image:\n{conf}\n".format(
+                    conf=mender_conf
+                )
+            )
+            update_image_name = valid_image_with_mender_conf(mender_conf)
+
             host_ip = enterprise_no_client.get_virtual_network_host_ip()
             update_image(
-                mender_device, host_ip, install_image=valid_image,
+                mender_device, host_ip, install_image=update_image_name,
             )

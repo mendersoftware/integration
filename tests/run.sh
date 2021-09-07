@@ -133,7 +133,7 @@ fi
 # Extract file system images from Docker images
 mkdir -p output
 docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker) || ret=$?
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker)
 docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
         mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
 mv output/* .

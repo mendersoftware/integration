@@ -649,7 +649,7 @@ def do_version_of(args):
     )
 
 
-def do_list_repos(args, optional_too, only_backend):
+def do_list_repos(args, optional_too, only_backend, only_client):
     """Lists the repos, using the provided type."""
 
     cli_types = {
@@ -668,6 +668,7 @@ def do_list_repos(args, optional_too, only_backend):
         type,
         only_release=(not optional_too),
         only_non_independent_component=(only_backend),
+        only_independent_component=(only_client),
     )
     repos.sort(key=lambda x: x.name)
 
@@ -703,7 +704,12 @@ def do_list_repos(args, optional_too, only_backend):
         )
     elif args.list_format == "json":
         json_object = {
-            "release": repos_versions_dict["integration"],
+            "release": version_of(
+                integration_dir(),
+                Component.get_component_of_any_type("integration").yml_components()[0],
+                args.in_integration_version,
+                git_version=True,
+            ),
             "repos": list(
                 map(
                     lambda item: {"name": item[0], "version": item[1]},
@@ -3212,6 +3218,12 @@ def main():
         help="When used with -l, list only backend repositories; ignored otherwise",
     )
     parser.add_argument(
+        "--only-client",
+        action="store_true",
+        default=False,
+        help="When used with -l, list only non-backend repositories; ignored otherwise",
+    )
+    parser.add_argument(
         "--list-format",
         metavar="simple|table|json",
         default="simple",
@@ -3289,7 +3301,12 @@ def main():
     if args.version_of is not None:
         do_version_of(args)
     elif args.list is not None:
-        do_list_repos(args, optional_too=args.all, only_backend=args.only_backend)
+        do_list_repos(
+            args,
+            optional_too=args.all,
+            only_backend=args.only_backend,
+            only_client=args.only_client,
+        )
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:

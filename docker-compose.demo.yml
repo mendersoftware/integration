@@ -35,26 +35,23 @@ services:
             - --providers.file.directory=/etc/traefik/config
         environment:
           MENDER_DEMO: "true"
+          TRAEFIK_API: "true"
         networks:
             mender:
                 aliases:
                     - docker.mender.io
                     - s3.docker.mender.io
-        environment:
-          TRAEFIK_API: "true"
         volumes:
             - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
-            - ./certs/api-gateway/cert.crt:/etc/traefik/certs/cert.crt
-            - ./certs/api-gateway/private.key:/etc/traefik/certs/private.key
-            - ./certs/storage-proxy/cert.crt:/etc/traefik/certs/s3.docker.mender.io.crt
-            - ./certs/storage-proxy/private.key:/etc/traefik/certs/s3.docker.mender.io.key
+            - ./cert/cert.crt:/etc/traefik/certs/cert.crt
+            - ./cert/private.key:/etc/traefik/certs/private.key
 
     mender-deployments:
         command: server --automigrate
         volumes:
-            - ./certs/storage-proxy/cert.crt:/etc/ssl/certs/s3.docker.mender.io.crt
+            - ./cert/cert.crt:/etc/ssl/certs/docker.mender.io.crt
         environment:
-            STORAGE_BACKEND_CERT: /etc/ssl/certs/s3.docker.mender.io.crt
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
             DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io

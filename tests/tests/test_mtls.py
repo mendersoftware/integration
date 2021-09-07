@@ -165,7 +165,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         )
         env.device.put(
             "cert.crt",
-            local_path=os.path.join(basedir, "certs", "storage-proxy"),
+            local_path=os.path.join(basedir, "cert"),
             remote_path="/etc/mender",
         )
         env.device.run(

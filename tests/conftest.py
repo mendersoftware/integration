@@ -17,6 +17,8 @@ import logging
 import os
 import re
 import subprocess
+import shutil
+import tempfile
 import uuid
 from distutils.version import LooseVersion
 
@@ -63,6 +65,56 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def valid_image(request):
     return "core-image-full-cmdline-%s.ext4" % machine_name
+
+
+def add_mender_conf_to_image(image, d, mender_conf):
+    """Copy image to the dir 'd', and replace the images /etc/mender/mender.conf
+    with the contents of the string 'mender_conf'"""
+
+    mender_conf_tmp = os.path.join(d, "mender.conf")
+
+    with open(mender_conf_tmp, "w") as f:
+        f.write(mender_conf)
+
+    new_image = os.path.join(d, image)
+    shutil.copy(image, new_image)
+
+    instr_file = os.path.join(d, "write.instr")
+    with open(os.path.join(d, "write.instr"), "w") as f:
+        f.write(
+            """cd /etc/mender
+        rm mender.conf
+        write {local} mender.conf""".format(
+                local=mender_conf_tmp
+            )
+        )
+    subprocess.run(
+        ["debugfs", "-w", "-f", instr_file, new_image,],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+
+    res = subprocess.run(
+        ["debugfs", "-R", "cat /etc/mender/mender.conf", new_image,],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+
+    assert "ServerURL" in res.stdout.decode()
+
+    return new_image
+
+
+@pytest.fixture(scope="function")
+def valid_image_with_mender_conf(request, valid_image):
+    """Insert the given mender_conf into a valid_image"""
+    with tempfile.TemporaryDirectory() as d:
+
+        def cleanup():
+            shutil.rmtree(d, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
 @pytest.fixture(scope="session")

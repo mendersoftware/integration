@@ -29,7 +29,7 @@ from .common_connect import wait_for_connect
 
 class TestUpdateControlEnterprise:
     def test_update_control(
-        self, enterprise_no_client, valid_image,
+        self, enterprise_no_client, valid_image_with_mender_conf,
     ):
         """
         Schedule an update with a pause in ArtifactInstall_Enter,
@@ -61,9 +61,11 @@ class TestUpdateControlEnterprise:
         )
         assert 1 == len(devices)
 
+        mender_conf = device.run("cat /etc/mender/mender.conf")
+
         with tempfile.NamedTemporaryFile() as artifact_file:
             created_artifact = image.make_rootfs_artifact(
-                valid_image,
+                valid_image_with_mender_conf(mender_conf),
                 conftest.machine_name,
                 "test-update-control",
                 artifact_file.name,

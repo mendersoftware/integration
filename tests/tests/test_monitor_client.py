@@ -134,7 +134,9 @@ def prepare_log_monitoring(mender_device, service_name, log_file, log_pattern):
         shutil.rmtree(tmpdir)
 
 
-def prepare_dbus_monitoring(mender_device, dbus_name):
+def prepare_dbus_monitoring(
+    mender_device, dbus_name, log_pattern=None, dbus_pattern=None
+):
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
@@ -144,6 +146,10 @@ def prepare_dbus_monitoring(mender_device, dbus_name):
         dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
         f = open(dbus_check_file, "w")
         f.write("DBUS_NAME=%s\n" % dbus_name)
+        if log_pattern:
+            f.write("DBUS_PATTERN=%s\n" % log_pattern)
+        if dbus_pattern:
+            f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
         f.close()
         mender_device.put(
             os.path.basename(dbus_check_file),
@@ -207,7 +213,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -241,6 +247,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
 
         mender_device.run("systemctl start %s" % service_name)
@@ -267,6 +274,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
         logger.info(
@@ -311,6 +319,7 @@ class TestMonitorClientEnterprise:
             + " on "
             + devid
         )
+        assert not "${workflow.input" in mail
 
         logger.info(
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
@@ -341,6 +350,7 @@ class TestMonitorClientEnterprise:
         assert m["Subject"].startswith(
             "CRITICAL: Monitor Alert for Log file contains State transition:"
         )
+        assert not "${workflow.input" in mail
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
@@ -389,6 +399,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service going up and down on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
 
         logger.info(
@@ -407,6 +418,7 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
     def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
@@ -414,7 +426,7 @@ class TestMonitorClientEnterprise:
         # first let's get the OK and CRITICAL email alerts {{{
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "crond"
         user_name = "bugs.bunny@acme.org"
         devid, _, auth, mender_device = self.prepare_env(
@@ -445,6 +457,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
 
         mender_device.run("systemctl start %s" % service_name)
@@ -471,6 +484,7 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
         # }}} we got the CRITICAL and OK emails
 
@@ -550,7 +564,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client alert local store"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         service_name = "rpcbind"
         user_name = "bugs.bunny@acme.org"
         devid, authtoken, auth, mender_device = self.prepare_env(
@@ -614,6 +628,7 @@ class TestMonitorClientEnterprise:
             m["Subject"]
             == "CRITICAL: Monitor Alert for Service not running on " + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
         m = messages[1]
@@ -623,13 +638,14 @@ class TestMonitorClientEnterprise:
         assert m["To"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "alert@mender.io"
+        expected_from = "noreply@mender.io"
         dbus_name = "test"
         user_name = "bugs.bunny@acme.org"
         devid, _, _, mender_device = self.prepare_env(
@@ -656,4 +672,81 @@ class TestMonitorClientEnterprise:
             == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
             + devid
         )
+        assert not "${workflow.input" in mail
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")
+
+    def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "noreply@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_pattern_match: env ready.")
+
+        logger.info(
+            "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
+        )
+        prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
+        assert not "${workflow.input" in mail
+        logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
+
+    def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
+        """Test the dbus subsystem"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "noreply@mender.io"
+        dbus_name = "test"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_dbus_bus_filter: env ready.")
+
+        logger.info(
+            "test_dbus_bus_filter: email alert on single dbus filter signal scenario."
+        )
+        prepare_dbus_monitoring(
+            mender_device,
+            dbus_name,
+            dbus_pattern="type='signal',interface='io.mender.Authentication1'",
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 0
+        m = messages[0]
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
+        assert not "${workflow.input" in mail
+        logger.info("test_dbus_bus_filter: got CRITICAL alert email.")

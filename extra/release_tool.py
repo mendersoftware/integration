@@ -649,7 +649,7 @@ def do_version_of(args):
     )
 
 
-def do_list_repos(args, optional_too, only_backend):
+def do_list_repos(args, optional_too, only_backend, only_client):
     """Lists the repos, using the provided type."""
 
     cli_types = {
@@ -668,6 +668,7 @@ def do_list_repos(args, optional_too, only_backend):
         type,
         only_release=(not optional_too),
         only_non_independent_component=(only_backend),
+        only_independent_component=(only_client),
     )
     repos.sort(key=lambda x: x.name)
 
@@ -703,7 +704,12 @@ def do_list_repos(args, optional_too, only_backend):
         )
     elif args.list_format == "json":
         json_object = {
-            "release": repos_versions_dict["integration"],
+            "release": version_of(
+                integration_dir(),
+                Component.get_component_of_any_type("integration").yml_components()[0],
+                args.in_integration_version,
+                git_version=True,
+            ),
             "repos": list(
                 map(
                     lambda item: {"name": item[0], "version": item[1]},
@@ -2851,73 +2857,6 @@ def do_integration_versions_including(args):
         print(match)
 
 
-def figure_out_checked_out_revision(state, repo_git):
-    """Finds out what is currently checked out, and returns a list of pairs. The
-    first element is the name of what is checked out, the second is either
-    "branch" or "tag", referring to what is currently checked out. If neither a
-    tag nor branch is checked out, returns None."""
-
-    try:
-        ref = execute_git(
-            None,
-            repo_git,
-            ["symbolic-ref", "--short", "HEAD"],
-            capture=True,
-            capture_stderr=True,
-        )
-        # If the above didn't produce an exception, then we are on a branch.
-        return [(ref, "branch")]
-    except subprocess.CalledProcessError:
-        # Not a branch, fall through to below.
-        pass
-
-    # We are not on a branch. Or maybe we are on a branch, but CI
-    # checked out the SHA anyway.
-    ref = os.environ.get(GIT_TO_BUILDPARAM_MAP[os.path.basename(repo_git)])
-
-    if ref is not None:
-        try:
-            # Make sure it matches the checked out SHA.
-            checked_out_sha = execute_git(
-                None, repo_git, ["rev-parse", "HEAD"], capture=True
-            )
-            remote = find_upstream_remote(None, repo_git)
-            ref_sha = execute_git(
-                None,
-                repo_git,
-                ["rev-parse", "%s/%s" % (remote, ref)],
-                capture=True,
-                capture_stderr=True,
-            )
-            if ref_sha != checked_out_sha:
-                # Why isn't the branch mentioned in the build parameters checked
-                # out? This should not happen.
-                raise Exception(
-                    (
-                        "%s: SHA %s from %s does not match checked out SHA %s. "
-                        + "Although rare, this sometimes happens if a repository is "
-                        + "updated in the very same instant it is pulled. Just restarting "
-                        + "the build should get rid of the problem in most cases."
-                    )
-                    % (repo_git, ref_sha, ref, checked_out_sha)
-                )
-
-            return [(ref, "branch")]
-        except subprocess.CalledProcessError:
-            # Not a branch. Then fall through to part below.
-            pass
-
-    # Not a branch checked out as a SHA either. Try tag then.
-    refs = execute_git(
-        None, repo_git, ["tag", "--points-at", "HEAD"], capture=True
-    ).split()
-    if len(refs) == 0:
-        # We are not on a tag either.
-        return None
-
-    return [(ref, "tag") for ref in refs]
-
-
 def find_repo_path(name, paths):
     """ Try to find the git repo 'name' under some known paths.
         Return abspath or None if not found.
@@ -3083,72 +3022,6 @@ def do_hosted_release(version=None):
         )
 
     print("Tags for release %s successfully created" % version)
-
-
-def do_verify_integration_references(args, optional_too):
-    int_dir = integration_dir()
-    problem = False
-
-    repos = Component.get_components_of_type("git", only_release=(not optional_too))
-
-    for repo in repos:
-        # integration is not checked, since the current checkout records the
-        # version of that one.
-        if repo.git() == "integration":
-            continue
-
-        # Try some common locations.
-        paths = ["..", "../go/src/github.com/mendersoftware"]
-        path = find_repo_path(repo.git(), paths)
-
-        if path is None:
-            print("%s not found. Tried: %s" % (repo.git(), ", ".join(paths)))
-            sys.exit(2)
-
-        revs = figure_out_checked_out_revision(None, path)
-        if revs is None:
-            # Unrecognized checkout. Skip the check then.
-            continue
-
-        if all(
-            [
-                reftype == "branch"
-                and not re.match(r"^([1-9][0-9]*\.[0-9]+\.([0-9]+|x)|master)$", ref)
-                for ref, reftype in revs
-            ]
-        ):
-            # Skip the check if the branch doesn't have a well known name,
-            # either a version (with or without beta and build appendix) or
-            # "master". If it does not have a well known name, then most likely
-            # this is a pull request, and we don't require those to be recorded
-            # in the YAML files.
-            continue
-
-        for yml in repo.yml_components():
-            data = get_docker_compose_data(int_dir, version="git")
-            # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
-            # would be missing the backend components. Try loading the old "docker" versions.
-            if data.get(yml.yml()) is None:
-                data = get_docker_compose_data(int_dir, version="docker")
-
-            version = data[yml.yml()]["version"]
-
-            if version not in [ref for ref, reftype in revs]:
-                if len(revs) > 1:
-                    checked_out = "(one of '%s')" % "', '".join(
-                        [ref for ref, reftype in revs]
-                    )
-                else:
-                    checked_out = "'%s'" % revs[0][0]
-                print(
-                    "%s: Checked out Git ref %s does not match tag/branch recorded in integration/*.yml: '%s' (from image tag: '%s')"
-                    % (repo.git(), checked_out, version, yml.yml())
-                )
-                problem = True
-
-    if problem:
-        print("\nMake sure all *.yml files contain the correct versions.")
-        sys.exit(1)
 
 
 def is_repo_on_known_branch(path):
@@ -3345,6 +3218,12 @@ def main():
         help="When used with -l, list only backend repositories; ignored otherwise",
     )
     parser.add_argument(
+        "--only-client",
+        action="store_true",
+        default=False,
+        help="When used with -l, list only non-backend repositories; ignored otherwise",
+    )
+    parser.add_argument(
         "--list-format",
         metavar="simple|table|json",
         default="simple",
@@ -3386,17 +3265,6 @@ def main():
     parser.add_argument(
         "-n", "--dry-run", action="store_true", help="Don't take any action at all"
     )
-    parser.add_argument(
-        "--verify-integration-references",
-        action="store_true",
-        help="Checks that references in the yaml files match the tags that "
-        + "are checked out in Git. This is intended to catch cases where "
-        + "references to images or tools are out of date. It requires checked-out "
-        + "repositories to exist next to the integration repository, and is "
-        + "usually used only in builds. For branch names (not tags), only "
-        + 'well known names are checked: version numbers and "master" (to avoid '
-        + "pull requests triggering a failure). Respects -a argument.",
-    )
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -3433,7 +3301,12 @@ def main():
     if args.version_of is not None:
         do_version_of(args)
     elif args.list is not None:
-        do_list_repos(args, optional_too=args.all, only_backend=args.only_backend)
+        do_list_repos(
+            args,
+            optional_too=args.all,
+            only_backend=args.only_backend,
+            only_client=args.only_client,
+        )
     elif args.set_version_of is not None:
         do_set_version_to(args)
     elif args.integration_versions_including is not None:
@@ -3449,8 +3322,6 @@ def main():
         do_release(release_state_file)
     elif args.hosted_release:
         do_hosted_release(args.version)
-    elif args.verify_integration_references:
-        do_verify_integration_references(args, optional_too=args.all)
     elif args.select_test_suite:
         do_select_test_suite()
     else:

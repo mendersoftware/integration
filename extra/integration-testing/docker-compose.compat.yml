@@ -3,6 +3,18 @@ services:
   #
   # Setup including older clients
   #
+  # <TEMPLATE>
+  # mender-client-X-X:
+  #   image: mendersoftware/mender-client-qemu:3.0
+  #   networks:
+  #      - mender
+  #   stdin_open: true
+  #   tty: true
+  #   privileged: true
+  #   environment:
+  #     TENANT_TOKEN: ""
+  # </TEMPLATE>
+  #
   mender-client-3-0:
     image: mendersoftware/mender-client-qemu:3.0
     networks:
@@ -12,6 +24,12 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # NOTE: These volume mounts are only necessary for <= 3.0
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-6:
     image: mendersoftware/mender-client-qemu:2.6
@@ -22,6 +40,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-5:
     image: mendersoftware/mender-client-qemu:2.5
@@ -32,6 +55,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-4:
     image: mendersoftware/mender-client-qemu:2.4
@@ -42,6 +70,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-3:
     image: mendersoftware/mender-client-qemu:2.3
@@ -52,6 +85,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-2:
     image: mendersoftware/mender-client-qemu:2.2
@@ -62,6 +100,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-1:
     image: mendersoftware/mender-client-qemu:2.1
@@ -72,6 +115,11 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-2-0:
     image: mendersoftware/mender-client-qemu:2.0
@@ -82,3 +130,8 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py

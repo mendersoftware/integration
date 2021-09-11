@@ -29,6 +29,7 @@ from ..MenderAPI import (
     get_container_manager,
     DeviceAuthV2,
     DeviceMonitor,
+    Inventory,
     logger,
 )
 
@@ -225,6 +226,24 @@ class TestMonitorClientEnterprise:
 
         return devid, authtoken, auth, mender_device
 
+    def get_alerts_and_alert_count_for_device(self, inventory, devid):
+        r = inventory.get_device(devid)
+        assert r.status_code == 200
+        inventory_data = r.json()
+        alert_count = alerts = None
+        for inventory_item in inventory_data["attributes"]:
+            if (
+                inventory_item["scope"] == "monitor"
+                and inventory_item["name"] == "alert_count"
+            ):
+                alert_count = inventory_item["value"]
+            elif (
+                inventory_item["scope"] == "monitor"
+                and inventory_item["name"] == "alerts"
+            ):
+                alerts = inventory_item["value"]
+        return alerts, alert_count
+
     def test_monitorclient_alert_email(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting"""
         mailbox_path = "/var/spool/mail/local"
@@ -235,6 +254,7 @@ class TestMonitorClientEnterprise:
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
+        inventory = Inventory(auth)
         logger.info("test_monitorclient_alert_email: env ready.")
 
         logger.info(
@@ -248,6 +268,11 @@ class TestMonitorClientEnterprise:
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
         )
         time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
@@ -271,6 +296,12 @@ class TestMonitorClientEnterprise:
             "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
         )
         time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (False, 0) == (alerts, alert_count)
+
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)
         messages = parse_email(mail)
@@ -532,6 +563,7 @@ class TestMonitorClientEnterprise:
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
+        inventory = Inventory(auth)
         logger.info("test_monitorclient_alert_email_rbac: env ready.")
 
         prepare_service_monitoring(mender_device, service_name)
@@ -542,6 +574,11 @@ class TestMonitorClientEnterprise:
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
         )
         time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
@@ -565,6 +602,12 @@ class TestMonitorClientEnterprise:
             "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
         )
         time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (False, 0) == (alerts, alert_count)
+
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)
         messages = parse_email(mail)

@@ -206,7 +206,7 @@ git:
     - reporting
     docker_container:
     - mender-reporting
-    release_component: true
+    release_component: false
 
 docker_image:
   deployments:
@@ -417,7 +417,7 @@ docker_image:
     - reporting
     docker_container:
     - mender-reporting
-    release_component: true
+    release_component: false
 
 docker_container:
   mender-deployments:
@@ -575,4 +575,4 @@ docker_container:
     - reporting
     docker_image:
     - reporting
-    release_component: true
+    release_component: false

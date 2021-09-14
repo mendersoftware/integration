@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments-2:
-        image: mendersoftware/deployments:master
+        image: mendersoftware/deployments:mender-3.1.x
         extends:
             file: common.yml
             service: mender-base
@@ -26,7 +26,7 @@ services:
     # mender-gui
     #
     mender-gui-2:
-        image: mendersoftware/gui:master
+        image: mendersoftware/gui:mender-3.1.x
         extends:
             file: common.yml
             service: mender-base
@@ -73,7 +73,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth-2:
-        image: mendersoftware/deviceauth:master
+        image: mendersoftware/deviceauth:mender-3.1.x
         extends:
             file: common.yml
             service: mender-base
@@ -89,7 +89,7 @@ services:
     # mender-inventory
     #
     mender-inventory-2:
-        image: mendersoftware/inventory:master
+        image: mendersoftware/inventory:mender-3.1.x
         extends:
             file: common.yml
             service: mender-base
@@ -103,7 +103,7 @@ services:
     # mender-useradm
     #
     mender-useradm-2:
-        image: mendersoftware/useradm:master
+        image: mendersoftware/useradm:mender-3.1.x
         extends:
             file: common.yml
             service: mender-base

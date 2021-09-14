@@ -5,7 +5,7 @@ services:
     # mender-devicemonitor
     #
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:mender-master
+        image: registry.mender.io/mendersoftware/devicemonitor:mender-3.1.x
         command: server --automigrate
         extends:
             file: common.yml

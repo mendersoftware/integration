@@ -492,6 +492,49 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
 
+        logger.info(
+            "test_monitorclient_alert_email: email alert on streaming logs pattern expiration scenario."
+        )
+        prepare_log_monitoring(
+            mender_device,
+            service_name,
+            "@tail -f " + log_file,
+            log_pattern,
+            log_pattern_expiration=pattern_expiration_seconds,
+            update_check_file_only=True,
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        mender_device.run(
+            "echo -ne 'another line\na new session opened for user root now\nsome line 3\n' >> "
+            + log_file
+        )
+
+        logger.info(
+            "test_monitorclient_alert_email: '@tail -f logfile' scenario, waiting %ds for pattern to expire."
+            % (2 * pattern_expiration_seconds)
+        )
+        time.sleep(2 * pattern_expiration_seconds)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        m = messages[-1]
+        logger.debug("got message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             To: %s", m["To"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+        assert "To" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["To"] == user_name
+        assert m["From"] == expected_from
+        assert m["Subject"] == (
+            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
+        )
+        logger.info(
+            "test_monitorclient_alert_email: got OK alert email after log pattern expiration in case of streaming log file."
+        )
+
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
         mailbox_path = "/var/spool/mail/local"

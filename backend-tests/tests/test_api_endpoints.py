@@ -17,14 +17,15 @@ import glob
 import json
 import logging
 import os
-import pytest
-import requests
+import re
 import subprocess
 import tempfile
+
+import pytest
+import requests
 import yaml
 
 from testutils.api.client import GATEWAY_HOSTNAME
-
 
 logging.basicConfig(format="%(asctime)s %(message)s")
 logger = logging.getLogger("test_decomission")
@@ -57,13 +58,20 @@ def get_api_docs(repo):
         tmp_repo = os.path.join(tmp, repo)
         subprocess.check_output(["git", "clone", git_repository, tmp_repo])
         env_var_name = REPO_TO_ENV_VARIABLE.get(repo)
-        branch_name = env_var_name and os.getenv(env_var_name) or "master"
-        branch_name != "master" and subprocess.check_output(
-            ["git", "fetch", "origin", branch_name + ":prtest"], cwd=tmp_repo,
-        )
-        branch_name != "master" and subprocess.check_output(
-            ["git", "checkout", "prtest"], cwd=tmp_repo,
-        )
+        ref_name = env_var_name and os.getenv(env_var_name) or "master"
+        if ref_name != "master":
+            tag_match = re.match(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-build[0-9]+)?", ref_name)
+            if tag_match:
+                subprocess.check_output(
+                    ["git", "checkout", "-b", "prtest", ref_name], cwd=tmp_repo,
+                )
+            else:
+                subprocess.check_output(
+                    ["git", "fetch", "origin", ref_name + ":prtest"], cwd=tmp_repo,
+                )
+                subprocess.check_output(
+                    ["git", "checkout", "prtest"], cwd=tmp_repo,
+                )
         files = glob.glob(os.path.join(tmp_repo, "docs", "*.yml"))
         for file in files:
             basename = os.path.basename(file)

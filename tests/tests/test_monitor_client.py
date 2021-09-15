@@ -286,7 +286,10 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "CRITICAL: Monitor Alert for Service not running on " + devid
+            == "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
         )
         assert not "${workflow.input." in mail
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
@@ -320,7 +323,13 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+        )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
@@ -528,7 +537,10 @@ class TestMonitorClientEnterprise:
         logger.debug("             Subject: %s", m["Subject"])
         assert (
             m["Subject"]
-            == "CRITICAL: Monitor Alert for Service going up and down on " + devid
+            == "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " going up and down on "
+            + devid
         )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
@@ -548,7 +560,13 @@ class TestMonitorClientEnterprise:
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
-        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+        )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
@@ -592,7 +610,10 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "CRITICAL: Monitor Alert for Service not running on " + devid
+            == "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
         )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
@@ -626,7 +647,13 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+        )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
         # }}} we got the CRITICAL and OK emails
@@ -769,7 +796,10 @@ class TestMonitorClientEnterprise:
         assert m["From"] == expected_from
         assert (
             m["Subject"]
-            == "CRITICAL: Monitor Alert for Service not running on " + devid
+            == "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
         )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
@@ -780,7 +810,13 @@ class TestMonitorClientEnterprise:
         assert "Subject" in m
         assert m["To"] == user_name
         assert m["From"] == expected_from
-        assert m["Subject"] == "OK: Monitor Alert for Service not running on " + devid
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+        )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
 

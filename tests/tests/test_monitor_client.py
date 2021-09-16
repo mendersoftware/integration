@@ -83,29 +83,40 @@ def parse_email(spool):
     return headers
 
 
-def prepare_service_monitoring(mender_device, service_name):
-    try:
-        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
-        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
-        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
-        mender_device.run("systemctl restart %s" % service_name)
-        tmpdir = tempfile.mkdtemp()
-        service_check_file = os.path.join(tmpdir, "service_cron.sh")
-        f = open(service_check_file, "w")
-        f.write("SERVICE_NAME=%s\nSERVICE_TYPE=systemd\n" % service_name)
-        f.close()
-        mender_device.put(
-            os.path.basename(service_check_file),
-            local_path=os.path.dirname(service_check_file),
-            remote_path=monitor_available_dir,
-        )
+def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
+    if use_ctl:
         mender_device.run(
-            "ln -s '%s/service_cron.sh' '%s/service_cron.sh'"
-            % (monitor_available_dir, monitor_enabled_dir)
+            'mender-monitorctl create service "%s" systemd' % (service_name)
         )
-    finally:
-        shutil.rmtree(tmpdir)
+        mender_device.run('mender-monitorctl enable service "%s"' % (service_name))
+    else:
+        try:
+            monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
+            monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
+            mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+            mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+            mender_device.run("systemctl restart %s" % service_name)
+            tmpdir = tempfile.mkdtemp()
+            service_check_file = os.path.join(tmpdir, "service_" + service_name + ".sh")
+            f = open(service_check_file, "w")
+            f.write("SERVICE_NAME=%s\nSERVICE_TYPE=systemd\n" % service_name)
+            f.close()
+            mender_device.put(
+                os.path.basename(service_check_file),
+                local_path=os.path.dirname(service_check_file),
+                remote_path=monitor_available_dir,
+            )
+            mender_device.run(
+                "ln -s '%s/service_%s.sh' '%s/service_%s.sh'"
+                % (
+                    monitor_available_dir,
+                    service_name,
+                    monitor_enabled_dir,
+                    service_name,
+                )
+            )
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 def prepare_log_monitoring(
@@ -115,40 +126,49 @@ def prepare_log_monitoring(
     log_pattern,
     log_pattern_expiration=None,
     update_check_file_only=False,
+    use_ctl=False,
 ):
-    try:
-        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
-        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
-        if not update_check_file_only:
-            mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-            mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
-        tmpdir = tempfile.mkdtemp()
-        service_check_file = os.path.join(tmpdir, "log_" + service_name + ".sh")
-        f = open(service_check_file, "w")
-        f.write(
-            'SERVICE_NAME="%s"\nLOG_FILE="%s"\nLOG_PATTERN="%s"\n'
-            % (service_name, log_file, log_pattern)
+    if use_ctl:
+        # create log mender-client "State transition: .*" "@journalctl -u mender-client -f"
+        mender_device.run(
+            'mender-monitorctl create log "%s" "%s" "%s"'
+            % (service_name, log_pattern, log_file)
         )
-        if log_pattern_expiration:
-            f.write("LOG_PATTERN_EXPIRATION=%d\n" % log_pattern_expiration)
-        f.close()
-        mender_device.put(
-            os.path.basename(service_check_file),
-            local_path=os.path.dirname(service_check_file),
-            remote_path=monitor_available_dir,
-        )
-        if not update_check_file_only:
-            mender_device.run(
-                "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
-                % (
-                    monitor_available_dir,
-                    service_name,
-                    monitor_enabled_dir,
-                    service_name,
-                )
+        mender_device.run('mender-monitorctl enable log "%s"' % (service_name))
+    else:
+        try:
+            monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
+            monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
+            if not update_check_file_only:
+                mender_device.run("mkdir -p '%s'" % monitor_available_dir)
+                mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+            tmpdir = tempfile.mkdtemp()
+            service_check_file = os.path.join(tmpdir, "log_" + service_name + ".sh")
+            f = open(service_check_file, "w")
+            f.write(
+                'SERVICE_NAME="%s"\nLOG_FILE="%s"\nLOG_PATTERN="%s"\n'
+                % (service_name, log_file, log_pattern)
             )
-    finally:
-        shutil.rmtree(tmpdir)
+            if log_pattern_expiration:
+                f.write("LOG_PATTERN_EXPIRATION=%d\n" % log_pattern_expiration)
+            f.close()
+            mender_device.put(
+                os.path.basename(service_check_file),
+                local_path=os.path.dirname(service_check_file),
+                remote_path=monitor_available_dir,
+            )
+            if not update_check_file_only:
+                mender_device.run(
+                    "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
+                    % (
+                        monitor_available_dir,
+                        service_name,
+                        monitor_enabled_dir,
+                        service_name,
+                    )
+                )
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 def prepare_dbus_monitoring(
@@ -972,3 +992,172 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
+
+    def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client email alerting for multiple services with extra checks"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "noreply@mender.io"
+        user_name = "bugs.bunny@acme.org"
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        inventory = Inventory(auth)
+        logger.info("test_monitorclient_alert_email: env ready.")
+
+        logger.info(
+            "test_monitorclient_logs_and_services: email alert on systemd service not running scenario."
+        )
+        for service_name in ["crond", "mender-connect"]:
+            prepare_service_monitoring(mender_device, service_name, use_ctl=True)
+
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        for service_name in ["crond", "mender-connect"]:
+            mender_device.run("systemctl stop %s" % service_name)
+            logger.info(
+                "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+            )
+            time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 2) == (alerts, alert_count)
+
+        for service_name in ["crond", "mender-connect"]:
+            mender_device.run("systemctl start %s" % service_name)
+            logger.info(
+                "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+            )
+            time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (False, 0) == (alerts, alert_count)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        assert "Content-Type: multipart/alternative;" in mail
+        assert "Content-Type: text/html" in mail
+        assert "Content-Type: text/plain" in mail
+        assert devid in mail
+        assert service_name in mail
+        assert not "${workflow.input." in mail
+        messages = parse_email(mail)
+        messages_count = len(messages)
+        assert messages_count == 4
+        for m in messages:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["Bcc"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+
+        assert len(messages) > 0
+        i = 0
+        for service_name in ["crond", "mender-connect"]:
+            m = messages[i]
+            i = i + 1
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert (
+                m["Subject"]
+                == "CRITICAL: Monitor Alert for Service "
+                + service_name
+                + " not running on "
+                + devid
+            )
+            logger.info(
+                "test_monitorclient_logs_and_services: got CRITICAL alert email for %s."
+                % service_name
+            )
+
+        for service_name in ["crond", "mender-connect"]:
+            m = messages[i]
+            i = i + 1
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert (
+                m["Subject"]
+                == "OK: Monitor Alert for Service "
+                + service_name
+                + " not running on "
+                + devid
+            )
+            assert not "${workflow.input" in mail
+            logger.info(
+                "test_monitorclient_logs_and_services: got OK alert email for %s."
+                % service_name
+            )
+
+        logger.info(
+            "test_monitorclient_logs_and_services: email alert on log file containing a pattern scenario."
+        )
+        log_file = "/tmp/mylog.log"
+        log_pattern = "session opened for user [a-z]*"
+
+        service_name = "mylog"
+        prepare_log_monitoring(
+            mender_device, service_name, log_file, log_pattern, use_ctl=True
+        )
+        prepare_log_monitoring(
+            mender_device,
+            service_name + "-tail",
+            "@tail -f " + log_file,
+            log_pattern,
+            use_ctl=True,
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mender_device.run("echo 'some line 1' >> " + log_file)
+        mender_device.run("echo 'some line 2' >> " + log_file)
+        time.sleep(wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+        assert messages_count == len(messages)
+
+        mender_device.run(
+            "echo -ne 'a new session opened for user root now\nsome line 3\n' >> "
+            + log_file
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        mender_device.run("echo 'some line 4' >> " + log_file)
+        mender_device.run("echo 'some line 5' >> " + log_file)
+
+        mender_device.run(
+            "echo -ne 'a new session opened for user root now\nsome line 3\n' >> "
+            + log_file
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        time.sleep(2 * wait_for_alert_interval_s)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        assert messages_count > 3
+        for m in [messages[-1], messages[-2]]:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["Bcc"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert m["Subject"].startswith(
+                "CRITICAL: Monitor Alert for Log file contains "
+                + log_pattern
+                + " on "
+                + devid
+            )

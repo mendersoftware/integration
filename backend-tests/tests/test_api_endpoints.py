@@ -164,7 +164,8 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
     REPOS = (
         "deployments",
         "deviceauth",
-        "deviceconfig",
+        # Mender 3.1.x re-uses deviceconfig 1.1.0, which can't run this test
+        # "deviceconfig",
         "deviceconnect",
         "inventory",
         "useradm",
@@ -191,7 +192,8 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "auditlogs",
         "deployments-enterprise",
         "deviceauth",
-        "deviceconfig",
+        # Mender 3.1.x re-uses deviceconfig 1.1.0, which can't run this test
+        # "deviceconfig",
         "deviceconnect",
         "devicemonitor",
         "inventory-enterprise",

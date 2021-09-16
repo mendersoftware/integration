@@ -193,6 +193,7 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "deviceauth",
         "deviceconfig",
         "deviceconnect",
+        "devicemonitor",
         "inventory-enterprise",
         "tenantadm",
         "useradm-enterprise",

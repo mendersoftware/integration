@@ -279,10 +279,10 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) > 0
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -311,17 +311,17 @@ class TestMonitorClientEnterprise:
         for m in messages:
             logger.debug("got message:")
             logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["To"])
+            logger.debug("             Bcc: %s", m["Bcc"])
             logger.debug("             From: %s", m["From"])
             logger.debug("             Subject: %s", m["Subject"])
 
         messages_count = len(messages)
         assert messages_count > 1
         m = messages[1]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -368,13 +368,13 @@ class TestMonitorClientEnterprise:
         m = messages[-1]
         logger.debug("got message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
             "CRITICAL: Monitor Alert for Log file contains "
@@ -403,13 +403,13 @@ class TestMonitorClientEnterprise:
         m = messages[-1]
         logger.debug("got message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == (
             "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
@@ -479,13 +479,13 @@ class TestMonitorClientEnterprise:
         m = messages[-1]
         logger.debug("got message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"].startswith(
             "CRITICAL: Monitor Alert for Log file contains State transition:"
@@ -520,13 +520,13 @@ class TestMonitorClientEnterprise:
         m = messages[-1]
         logger.debug("got message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert m["Subject"] == (
             "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
@@ -569,13 +569,13 @@ class TestMonitorClientEnterprise:
         for m in messages:
             logger.debug("got message:")
             logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["To"])
+            logger.debug("             Bcc: %s", m["Bcc"])
             logger.debug("             From: %s", m["From"])
             logger.debug("             Subject: %s", m["Subject"])
         m = messages[-1]
         logger.debug("(1) last message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
         assert (
@@ -599,7 +599,7 @@ class TestMonitorClientEnterprise:
         m = messages[-1]
         logger.debug("(2) last message:")
         logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             To: %s", m["To"])
+        logger.debug("             Bcc: %s", m["Bcc"])
         logger.debug("             From: %s", m["From"])
         logger.debug("             Subject: %s", m["Subject"])
         assert messages_count_flapping + 1 == len(messages)
@@ -646,10 +646,10 @@ class TestMonitorClientEnterprise:
         assert len(messages) > 0
 
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -678,17 +678,17 @@ class TestMonitorClientEnterprise:
         for m in messages:
             logger.debug("got message:")
             logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["To"])
+            logger.debug("             Bcc: %s", m["Bcc"])
             logger.debug("             From: %s", m["From"])
             logger.debug("             Subject: %s", m["Subject"])
 
         messages_count = len(messages)
         assert messages_count > 1
         m = messages[1]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -826,16 +826,16 @@ class TestMonitorClientEnterprise:
         for m in messages:
             logger.debug("got message:")
             logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["To"])
+            logger.debug("             Bcc: %s", m["Bcc"])
             logger.debug("             From: %s", m["From"])
             logger.debug("             Subject: %s", m["Subject"])
 
         assert len(messages) > 1
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -848,10 +848,10 @@ class TestMonitorClientEnterprise:
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
         m = messages[1]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -884,10 +884,10 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) > 0
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -920,10 +920,10 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) > 0
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]
@@ -960,10 +960,10 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) > 0
         m = messages[0]
-        assert "To" in m
+        assert "Bcc" in m
         assert "From" in m
         assert "Subject" in m
-        assert m["To"] == user_name
+        assert m["Bcc"] == user_name
         assert m["From"] == expected_from
         assert (
             m["Subject"]

@@ -2749,6 +2749,20 @@ def do_set_version_to(args):
         integration_dir(), repo, args.version, git_tag=args.version
     )
 
+    # Update extra files used in integration tests
+    set_docker_compose_version_to(
+        os.path.join(integration_dir(), "extra", "mtls"),
+        repo,
+        args.version,
+        git_tag=args.version,
+    )
+    set_docker_compose_version_to(
+        os.path.join(integration_dir(), "extra", "failover-testing"),
+        repo,
+        args.version,
+        git_tag=args.version,
+    )
+
 
 def is_marked_as_releaseable_in_integration_version(
     integration_version, repo_git, repo_git_version

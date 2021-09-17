@@ -10,7 +10,7 @@ DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME:-$(tr -d ".-" <<<${PWD
 EXTRA_FILES=""
 
 CLIENT_FILES="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
-ENTERPRISE_FILES="-f docker-compose.enterprise.yml"
+ENTERPRISE_FILES="-f docker-compose.enterprise.yml -f docker-compose.monitor.yml"
 
 CLIENT=0
 ENTERPRISE=0

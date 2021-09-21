@@ -12,28 +12,32 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import tempfile
+import uuid
 import time
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
-from ..MenderAPI import auth, devauth, deploy, image, logger, inv
+from ..MenderAPI import auth, devauth, logger, inv
 from .mendertesting import MenderTesting
-from . import artifact_lock
 
 from testutils.infra.device import MenderDevice
 
 
 class TestMultiTenancyEnterprise(MenderTesting):
     def test_token_validity(self, enterprise_no_client):
-        """ verify that only devices with valid tokens can bootstrap
-            successfully to a multitenancy setup """
+        """verify that only devices with valid tokens can bootstrap
+        successfully to a multitenancy setup"""
 
         wrong_token = "wrong-token"
 
         auth.reset_auth_token()
-        auth.new_tenant("admin", "bob@bob.com", "hunter2hunter2")
+        uuidv4 = str(uuid.uuid4())
+        auth.new_tenant(
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "hunter2hunter2",
+        )
         token = auth.current_tenant["tenant_token"]
 
         # create a new client with an incorrect token set
@@ -65,21 +69,22 @@ class TestMultiTenancyEnterprise(MenderTesting):
         self, enterprise_no_client, valid_image_with_mender_conf
     ):
         """Simply make sure we are able to run the multi tenancy setup and
-           bootstrap 2 different devices to different tenants"""
+        bootstrap 2 different devices to different tenants"""
 
         auth.reset_auth_token()
 
+        uuidv4 = str(uuid.uuid4())
         users = [
             {
-                "email": "foo2@foo2.com",
+                "email": "foo2-%s@example.com" % uuidv4,
                 "password": "hunter2hunter2",
-                "username": "foo2",
+                "username": "foo2.test.mender.io-" + uuidv4,
                 "container": "mender-client-deployment-1",
             },
             {
-                "email": "bar2@bar2.com",
+                "email": "bar2-%s@example.com" % uuidv4,
                 "password": "hunter2hunter2",
-                "username": "bar2",
+                "username": "bar2.test.mender.io-" + uuidv4,
                 "container": "mender-client-deployment-2",
             },
         ]

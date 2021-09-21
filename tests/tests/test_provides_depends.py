@@ -15,12 +15,13 @@
 
 import subprocess
 import time
+import uuid
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting
-from ..MenderAPI import auth, devauth, deploy, image, logger
+from ..MenderAPI import auth, devauth, deploy, logger
 
 from testutils.infra.device import MenderDevice
 
@@ -31,16 +32,18 @@ class TestProvidesDependsEnterprise(MenderTesting):
         Perform two consecutive updates, the first adds virtual provides
         to the artifact and the second artifact depends on these provides.
         """
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
 
         # Create tenant user
         auth.reset_auth_token()
-        auth.new_tenant("admin", "bob@builder.org", "secret-service", "enterprise")
+        auth.new_tenant(tname, email, "secret-service", "enterprise")
         token = auth.current_tenant["tenant_token"]
 
         # Create client setup with tenant token
         enterprise_no_client.new_tenant_docker_client("mender-client", token)
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
-        host_ip = enterprise_no_client.get_virtual_network_host_ip()
 
         # Wait for ssh to be open
         mender_device.ssh_is_opened()

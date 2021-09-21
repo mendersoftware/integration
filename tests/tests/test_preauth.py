@@ -14,6 +14,7 @@
 
 import json
 import time
+import uuid
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
@@ -26,8 +27,8 @@ from testutils.infra.device import MenderDevice
 class TestPreauthBase(MenderTesting):
     def do_test_ok_preauth_and_bootstrap(self, container_manager):
         """
-            Test the happy path from preauthorizing a device to a successful bootstrap.
-            Verify that the device/auth set appear correctly in devauth API results.
+        Test the happy path from preauthorizing a device to a successful bootstrap.
+        Verify that the device/auth set appear correctly in devauth API results.
         """
         mender_device = container_manager.device
 
@@ -86,7 +87,7 @@ class TestPreauthBase(MenderTesting):
 
     def do_test_ok_preauth_and_remove(self):
         """
-            Test the removal of a preauthorized auth set, verify it's gone from all API results.
+        Test the removal of a preauthorized auth set, verify it's gone from all API results.
         """
         # preauthorize
         preauth_iddata = json.loads('{"mac":"preauth-mac"}')
@@ -131,7 +132,7 @@ UwIDAQAB
 
     def do_test_fail_preauth_existing(self):
         """
-           Test 'conflict' response when an identity data set already exists.
+        Test 'conflict' response when an identity data set already exists.
         """
         # wait for the device to appear
         devs = devauth.get_devices(1)
@@ -177,7 +178,12 @@ class TestPreauthEnterprise(TestPreauthBase):
         self.do_test_fail_preauth_existing()
 
     def __create_tenant_and_container(self, container_manager):
-        auth.new_tenant("admin", "admin@tenant.com", "hunter2hunter2")
+        uuidv4 = str(uuid.uuid4())
+        auth.new_tenant(
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "hunter2hunter2",
+        )
         token = auth.current_tenant["tenant_token"]
 
         container_manager.new_tenant_client("tenant-container", token)

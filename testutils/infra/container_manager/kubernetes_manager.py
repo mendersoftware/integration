@@ -11,20 +11,22 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import filelock
+import logging
 import os
 import subprocess
+import time
 
-from .base import BaseContainerManagerNamespace
+from .docker_compose_base_manager import DockerComposeBaseNamespace
+
+logger = logging.getLogger("root")
+
+# Global lock to synchronize calls to docker-compose
+docker_lock = filelock.FileLock("docker_lock")
 
 
-class KubernetesNamespace(BaseContainerManagerNamespace):
-    def __init__(self):
-        BaseContainerManagerNamespace.__init__(self)
-
+class KubernetesNamespace(DockerComposeBaseNamespace):
     def setup(self):
-        pass
-
-    def teardown(self):
         pass
 
     def execute(self, container_id, cmd):
@@ -50,6 +52,56 @@ class KubernetesNamespace(BaseContainerManagerNamespace):
         if ret == "":
             raise RuntimeError("container id for {} not found".format(str(filters)))
         return ret
+
+    def get_mender_gateway(self):
+        return os.environ.get("GATEWAY_HOSTNAME")
+
+
+class KubernetesEnterpriseSetup(KubernetesNamespace):
+    COMPOSE_FILES_PATH = DockerComposeBaseNamespace.COMPOSE_FILES_PATH
+    MT_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+    ]
+    MT_DOCKER_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+    ]
+
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            KubernetesNamespace.__init__(self, name)
+
+    def new_tenant_client(self, name, tenant):
+        if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_CLIENT_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={
+                "SERVER_URL": "https://%s" % self.get_mender_gateway(),
+                "TENANT_TOKEN": "%s" % tenant,
+            },
+        )
+        time.sleep(45)
+
+    def new_tenant_docker_client(self, name, tenant):
+        if not self.MT_DOCKER_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_DOCKER_CLIENT_FILES
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={
+                "SERVER_URL": "https://%s" % self.get_mender_gateway(),
+                "TENANT_TOKEN": "%s" % tenant,
+            },
+        )
+        time.sleep(5)
 
 
 def isK8S() -> bool:

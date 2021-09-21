@@ -12,8 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
-
 from pymongo import MongoClient as PyMongoClient
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 

@@ -2010,13 +2010,13 @@ class TestDynamicDeploymentsEnterprise:
             # without max_devices
             {
                 "name": "without max_devices",
-                "phases": [{"batch_size": 20}, {"start_ts": None,},],
+                "phases": [{"batch_size": 20}, {"start_ts": None}],
                 "max_devices": None,
             },
             # with max_devices
             {
                 "name": "with max_devices",
-                "phases": [{"batch_size": 20}, {"start_ts": None,},],
+                "phases": [{"batch_size": 20}, {"start_ts": None}],
                 "max_devices": 10,
             },
         ],

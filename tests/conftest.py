@@ -15,11 +15,9 @@
 import distutils.spawn
 import logging
 import os
-import re
 import subprocess
 import shutil
 import tempfile
-import uuid
 from distutils.version import LooseVersion
 
 import filelock
@@ -89,13 +87,13 @@ def add_mender_conf_to_image(image, d, mender_conf):
             )
         )
     subprocess.run(
-        ["debugfs", "-w", "-f", instr_file, new_image,],
+        ["debugfs", "-w", "-f", instr_file, new_image],
         check=True,
         stdout=subprocess.PIPE,
     )
 
     res = subprocess.run(
-        ["debugfs", "-R", "cat /etc/mender/mender.conf", new_image,],
+        ["debugfs", "-R", "cat /etc/mender/mender.conf", new_image],
         check=True,
         stdout=subprocess.PIPE,
     )
@@ -191,7 +189,7 @@ def pytest_exception_interact(node, call, report):
                 device = dev_candidates[0]
 
         # If we have a device (or group) try to print deployment and systemd logs
-        if device == None:
+        if device is None:
             logger.info("Could not find device in test environment, no printing logs")
         else:
             try:

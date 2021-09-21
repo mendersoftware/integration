@@ -90,8 +90,8 @@ class TestSecurity(MenderTesting):
     def test_token_token_expiration(
         self, standard_setup_with_short_lived_token, valid_image
     ):
-        """ verify that an expired token is handled correctly (client gets a new, valid one)
-            and that deployments are still recieved by the client
+        """verify that an expired token is handled correctly (client gets a new, valid one)
+        and that deployments are still recieved by the client
         """
 
         mender_device = standard_setup_with_short_lived_token.device

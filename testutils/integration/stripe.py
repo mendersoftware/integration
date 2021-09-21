@@ -14,8 +14,6 @@
 import os
 import stripe
 
-from stripe import SetupIntent
-
 
 stripe.api_key = os.environ.get("TENANTADM_STRIPE_API_KEY")
 if stripe.api_key is None:

@@ -28,6 +28,7 @@ from .docker_compose_manager import (
     DockerComposeMTLSSetup,
     DockerComposeMenderClient_2_5,
 )
+from .kubernetes_manager import KubernetesEnterpriseSetup, isK8S
 
 
 class ContainerManagerFactory:
@@ -131,10 +132,16 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
         return DockerComposeCustomSetup(name)
 
 
-def get_factory(manager_id="docker-compose"):
-    if manager_id == "docker-compose":
-        return DockerComposeManagerFactory()
-    elif manager_id == "minikube":
-        raise NotImplementedError("Kubernetes factory not implemented.")
+class KubernetesManagerFactory(ContainerManagerFactory):
+    def getEnterpriseSetup(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetup(name, num_clients)
+
+    def getMonitorCommercialSetup(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetup(name, num_clients)
+
+
+def get_factory():
+    if isK8S():
+        return KubernetesManagerFactory()
     else:
-        raise RuntimeError("Unknown manager id {}".format(manager_id))
+        return DockerComposeManagerFactory()

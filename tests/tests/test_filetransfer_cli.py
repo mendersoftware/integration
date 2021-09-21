@@ -15,7 +15,6 @@
 
 import os
 import subprocess
-import time
 
 from tempfile import NamedTemporaryFile
 

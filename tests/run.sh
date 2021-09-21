@@ -21,8 +21,8 @@ usage() {
     echo
     echo "Recognized Environment Variables:"
     echo
-    echo "XDIST_PARALLEL_ARG                 The number of parallel jobs for pytest-xdist"
-    echo "SPECIFIC_INTEGRATION_TEST          The ability to pass <testname-regexp> to pytest -k"
+    echo "TESTS_IN_PARALLEL                    The number of parallel jobs for pytest-xdist"
+    echo "SPECIFIC_INTEGRATION_TEST            The ability to pass <testname-regexp> to pytest -k"
     exit 0
 }
 
@@ -114,6 +114,17 @@ function get_requirements() {
 
     chmod +x downloaded-tools/mender-cli
 
+    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
+         -o downloaded-tools/directory-artifact-gen \
+         -z downloaded-tools/directory-artifact-gen
+
+    if [ $? -ne 0 ]; then
+        echo "failed to download directory-artifact-gen"
+        exit 1
+    fi
+
+    chmod +x downloaded-tools/directory-artifact-gen
+
     export PATH=$PWD/downloaded-tools:$PATH
 
     inject_pre_generated_ssh_keys
@@ -168,6 +179,12 @@ if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
 fi
 
 export TENANTADM_STRIPE_API_KEY=$STRIPE_API_KEY
+
+if [ -n "$K8S" ]; then
+    aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $AWS_EKS_CLUSTER_NAME
+    kubectl config set-context --current --namespace=$K8S
+    kubectl get pods -o wide
+fi
 
 python3 -m pytest \
     $EXTRA_TEST_ARGS \

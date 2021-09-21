@@ -12,10 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import pytest
-
-import tempfile
 import json
+import pytest
+import tempfile
+import uuid
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
@@ -73,9 +73,12 @@ class TestDeploymentRetryEnterprise(MenderTesting):
         env = enterprise_no_client
 
         # Create an enterprise plan tenant
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, plan="enterprise")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
         ttoken = tenant["tenant_token"]

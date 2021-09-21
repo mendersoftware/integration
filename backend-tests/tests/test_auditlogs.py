@@ -486,7 +486,7 @@ def evt_user_create(actor_user, newid, email):
     return {
         "action": "create",
         "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
-        "object": {"id": newid, "type": "user", "user": {"email": email},},
+        "object": {"id": newid, "type": "user", "user": {"email": email}},
     }
 
 

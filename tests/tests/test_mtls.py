@@ -23,6 +23,7 @@ from flaky import flaky
 
 from testutils.common import create_org
 from testutils.infra.container_manager import factory
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 
 from .. import conftest
@@ -86,6 +87,9 @@ exit 0
     return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not relevant in a staging or production environment"
+)
 class TestClientMTLSEnterprise:
     def hsm_setup(self, pin, ssl_engine_id, device):
         algorithm = "rsa"

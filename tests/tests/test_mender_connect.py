@@ -12,24 +12,22 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import io
-import logging
+import json
 import pytest
 import time
-import json
+import uuid
 
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.container_manager import factory
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
-from testutils.infra.mongo import MongoClient
 from ..common_setup import (
     class_persistent_standard_setup_one_client_bootstrapped,
     enterprise_no_client_class,
 )
 from ..MenderAPI import (
     devconnect,
-    auth,
     devauth,
     reset_mender_api,
     DeviceAuthV2,
@@ -37,7 +35,7 @@ from ..MenderAPI import (
     DeviceConnect,
     get_container_manager,
 )
-from testutils.common import create_user, Tenant, User, update_tenant
+from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
 
 container_factory = factory.get_factory()
@@ -118,7 +116,7 @@ class _TestRemoteTerminalBase:
     def test_dbus_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -141,14 +139,17 @@ class _TestRemoteTerminalBase:
             f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
         )
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
+    @pytest.mark.skipif(
+        isK8S(), reason="not testable in a staging or production environment"
+    )
     def test_websocket_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -157,7 +158,7 @@ class _TestRemoteTerminalBase:
 
         time.sleep(10)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -173,7 +174,7 @@ class _TestRemoteTerminalBase:
             ws.send(msg)
 
             msg = ws.recv()
-            body = prot.decode(msg)
+            prot.decode(msg)
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
@@ -314,7 +315,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
             ws.send(msg)
 
             msg = ws.recv()
-            body = prot.decode(msg)
+            prot.decode(msg)
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == 12345
             assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
@@ -322,9 +323,12 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
 
 class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
     def connected_device(self, env):
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
         update_tenant(
             tid, addons=["troubleshoot"], container_manager=get_container_manager(),
         )

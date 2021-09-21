@@ -95,13 +95,13 @@ class TestGrouping(MenderTesting):
         self, standard_setup_two_clients_bootstrapped, valid_image
     ):
         """
-            Perform a successful upgrade on one group of devices, and assert that:
-            * deployment status/logs are correct.
-            * only the correct group is updated, not the other one.
+        Perform a successful upgrade on one group of devices, and assert that:
+        * deployment status/logs are correct.
+        * only the correct group is updated, not the other one.
 
-            A reboot is performed, and running partitions have been swapped.
-            Deployment status will be set as successful for device.
-            Logs will not be retrieved, and result in 404.
+        A reboot is performed, and running partitions have been swapped.
+        Deployment status will be set as successful for device.
+        Logs will not be retrieved, and result in 404.
         """
 
         # Beware that there will two parallel things going on below, one for

@@ -6,3 +6,6 @@ services:
         image: mendersoftware/mender-client-docker:master
         networks:
             - mender
+
+networks:
+    mender:

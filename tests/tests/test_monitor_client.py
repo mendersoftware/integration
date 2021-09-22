@@ -809,6 +809,10 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_store: store alerts when offline scenario."
         )
 
+        t="/tmp/bp0"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+         time.sleep(0.1)
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -826,6 +830,11 @@ class TestMonitorClientEnterprise:
             "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
         )
         time.sleep(2 * wait_for_alert_interval_s)
+        t="/tmp/bp1"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+         time.sleep(0.1)
+
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
@@ -836,9 +845,19 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_store re-enabling access to docker.mender.io (restoring /etc/hosts)"
         )
+        t="/tmp/bp2"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+         time.sleep(0.1)
+
         mender_device.run("mv /etc/hosts.backup /etc/hosts")
         logger.info("test_monitorclient_alert_store waiting for alerts to come.")
         time.sleep(wait_for_alert_interval_s)
+        t="/tmp/bp3"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+         time.sleep(0.1)
+
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)
@@ -882,6 +901,11 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
+        t="/tmp/bp4"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+         time.sleep(0.1)
+
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""

@@ -838,7 +838,7 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("mv /etc/hosts.backup /etc/hosts")
         logger.info("test_monitorclient_alert_store waiting for alerts to come.")
-        time.sleep(wait_for_alert_interval_s)
+        time.sleep(8*wait_for_alert_interval_s)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)

@@ -942,9 +942,12 @@ class TestMonitorClientEnterprise:
         prepare_dbus_monitoring(
             mender_device,
             dbus_name,
-            log_pattern="mender",
+            log_pattern="member=JobNew",
             alert_expiration=alert_expiration_seconds,
         )
+        time.sleep(2 * wait_for_alert_interval_s)
+        mender_device.run("echo trigger event")
+        mender_device.run("echo trigger event")
         time.sleep(2 * wait_for_alert_interval_s)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -965,12 +968,12 @@ class TestMonitorClientEnterprise:
         assert not "${workflow.input" in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
-        t="/tmp/bp0"
-        logger.info("waiting for %s"%t)
-        while not os.path.exists(t):
-            time.sleep(0.1)
+        # t="/tmp/bp0"
+        # logger.info("waiting for %s"%t)
+        # while not os.path.exists(t):
+        #     time.sleep(0.1)
         logger.info("test_dbus_pattern_match: waiting for pattern to expire.")
-        time.sleep(2 * alert_expiration_seconds)
+        time.sleep(1.5*alert_expiration_seconds)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
 
@@ -990,10 +993,10 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_pattern_match: got OK alert email after expiration time passed."
         )
-        t="/tmp/bp1"
-        logger.info("waiting for %s"%t)
-        while not os.path.exists(t):
-            time.sleep(0.1)
+        # t="/tmp/bp1"
+        # logger.info("waiting for %s"%t)
+        # while not os.path.exists(t):
+        #     time.sleep(0.1)
 
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
@@ -1014,9 +1017,12 @@ class TestMonitorClientEnterprise:
         prepare_dbus_monitoring(
             mender_device,
             dbus_name,
-            dbus_pattern="type='signal',interface='io.mender.Authentication1'",
+            dbus_pattern="type='signal',interface='org.freedesktop.systemd1.Manager',member=JobNew",
             alert_expiration=alert_expiration_seconds,
         )
+        time.sleep(2 * wait_for_alert_interval_s)
+        mender_device.run("echo trigger event")
+        mender_device.run("echo trigger event")
         time.sleep(2 * wait_for_alert_interval_s)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -1037,12 +1043,12 @@ class TestMonitorClientEnterprise:
         assert not "${workflow.input" in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
 
-        t="/tmp/bp2"
-        logger.info("waiting for %s"%t)
-        while not os.path.exists(t):
-            time.sleep(0.1)
+        # t="/tmp/bp2"
+        # logger.info("waiting for %s"%t)
+        # while not os.path.exists(t):
+        #     time.sleep(0.1)
         logger.info("test_dbus_bus_filter: waiting for pattern to expire.")
-        time.sleep(2 * alert_expiration_seconds)
+        time.sleep(1.5 * alert_expiration_seconds)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
 
@@ -1062,10 +1068,10 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_bus_filter: got OK alert email after expiration time passed."
         )
-        t="/tmp/bp3"
-        logger.info("waiting for %s"%t)
-        while not os.path.exists(t):
-            time.sleep(0.1)
+        # t="/tmp/bp3"
+        # logger.info("waiting for %s"%t)
+        # while not os.path.exists(t):
+        #     time.sleep(0.1)
 
     def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for multiple services with extra checks"""

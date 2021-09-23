@@ -973,23 +973,30 @@ class TestMonitorClientEnterprise:
         # while not os.path.exists(t):
         #     time.sleep(0.1)
         logger.info("test_dbus_pattern_match: waiting for pattern to expire.")
-        time.sleep(1.5*alert_expiration_seconds)
+        time.sleep(1.5 * alert_expiration_seconds)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         messages = parse_email(mail)
 
-        assert len(messages) > 1
-        m = messages[1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid
-        )
-        assert not "${workflow.input" in mail
+        found = False
+        for m in messages:
+            if (
+                m["Subject"]
+                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                + devid
+            ):
+                found = True
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert (
+                m["Subject"]
+                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                + devid
+            )
+            assert not "${workflow.input" in mail
+        assert found == True
         logger.info(
             "test_dbus_pattern_match: got OK alert email after expiration time passed."
         )
@@ -1053,18 +1060,26 @@ class TestMonitorClientEnterprise:
         messages = parse_email(mail)
 
         assert len(messages) > 1
-        m = messages[1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid
-        )
-        assert not "${workflow.input" in mail
+        found = False
+        for m in messages:
+            if (
+                m["Subject"]
+                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                + devid
+            ):
+                found = True
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert (
+                m["Subject"]
+                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                + devid
+            )
+            assert not "${workflow.input" in mail
+        assert found == True
         logger.info(
             "test_dbus_bus_filter: got OK alert email after expiration time passed."
         )

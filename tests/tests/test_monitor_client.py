@@ -172,7 +172,11 @@ def prepare_log_monitoring(
 
 
 def prepare_dbus_monitoring(
-    mender_device, dbus_name, log_pattern=None, dbus_pattern=None
+    mender_device,
+    dbus_name,
+    log_pattern=None,
+    dbus_pattern=None,
+    alert_expiration=None,
 ):
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
@@ -187,6 +191,8 @@ def prepare_dbus_monitoring(
             f.write("DBUS_PATTERN=%s\n" % log_pattern)
         if dbus_pattern:
             f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
+        if dbus_pattern:
+            f.write("DBUS_ALERT_EXPIRATION=%s\n" % alert_expiration)
         f.close()
         mender_device.put(
             os.path.basename(dbus_check_file),
@@ -932,7 +938,13 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
         )
-        prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
+        alert_expiration_seconds = 16
+        prepare_dbus_monitoring(
+            mender_device,
+            dbus_name,
+            log_pattern="mender",
+            alert_expiration=alert_expiration_seconds,
+        )
         time.sleep(2 * wait_for_alert_interval_s)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -953,6 +965,28 @@ class TestMonitorClientEnterprise:
         assert not "${workflow.input" in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
+        logger.info("test_dbus_pattern_match: waiting for pattern to expire.")
+        time.sleep(2 * alert_expiration_seconds)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 1
+        m = messages[1]
+        assert "Bcc" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["Bcc"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
+        assert not "${workflow.input" in mail
+        logger.info(
+            "test_dbus_pattern_match: got OK alert email after expiration time passed."
+        )
+
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
@@ -968,10 +1002,12 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_bus_filter: email alert on single dbus filter signal scenario."
         )
+        alert_expiration_seconds = 16
         prepare_dbus_monitoring(
             mender_device,
             dbus_name,
             dbus_pattern="type='signal',interface='io.mender.Authentication1'",
+            alert_expiration=alert_expiration_seconds,
         )
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -992,6 +1028,28 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
+
+        logger.info("test_dbus_bus_filter: waiting for pattern to expire.")
+        time.sleep(2 * alert_expiration_seconds)
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        messages = parse_email(mail)
+
+        assert len(messages) > 1
+        m = messages[1]
+        assert "Bcc" in m
+        assert "From" in m
+        assert "Subject" in m
+        assert m["Bcc"] == user_name
+        assert m["From"] == expected_from
+        assert (
+            m["Subject"]
+            == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid
+        )
+        assert not "${workflow.input" in mail
+        logger.info(
+            "test_dbus_bus_filter: got OK alert email after expiration time passed."
+        )
 
     def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for multiple services with extra checks"""

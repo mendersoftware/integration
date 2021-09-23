@@ -191,7 +191,7 @@ def prepare_dbus_monitoring(
             f.write("DBUS_PATTERN=%s\n" % log_pattern)
         if dbus_pattern:
             f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
-        if dbus_pattern:
+        if alert_expiration:
             f.write("DBUS_ALERT_EXPIRATION=%s\n" % alert_expiration)
         f.close()
         mender_device.put(
@@ -965,6 +965,10 @@ class TestMonitorClientEnterprise:
         assert not "${workflow.input" in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
+        t="/tmp/bp0"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
         logger.info("test_dbus_pattern_match: waiting for pattern to expire.")
         time.sleep(2 * alert_expiration_seconds)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -986,6 +990,10 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_pattern_match: got OK alert email after expiration time passed."
         )
+        t="/tmp/bp1"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
 
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
@@ -1029,6 +1037,10 @@ class TestMonitorClientEnterprise:
         assert not "${workflow.input" in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
 
+        t="/tmp/bp2"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
         logger.info("test_dbus_bus_filter: waiting for pattern to expire.")
         time.sleep(2 * alert_expiration_seconds)
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -1050,6 +1062,10 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_bus_filter: got OK alert email after expiration time passed."
         )
+        t="/tmp/bp3"
+        logger.info("waiting for %s"%t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
 
     def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for multiple services with extra checks"""

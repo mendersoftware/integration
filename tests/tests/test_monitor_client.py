@@ -985,17 +985,17 @@ class TestMonitorClientEnterprise:
                 + devid
             ):
                 found = True
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert (
-                m["Subject"]
-                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
-                + devid
-            )
-            assert not "${workflow.input" in mail
+                assert "Bcc" in m
+                assert "From" in m
+                assert "Subject" in m
+                assert m["Bcc"] == user_name
+                assert m["From"] == expected_from
+                assert (
+                    m["Subject"]
+                    == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                    + devid
+                )
+                assert not "${workflow.input" in mail
         assert found == True
         logger.info(
             "test_dbus_pattern_match: got OK alert email after expiration time passed."
@@ -1068,17 +1068,17 @@ class TestMonitorClientEnterprise:
                 + devid
             ):
                 found = True
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert (
-                m["Subject"]
-                == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
-                + devid
-            )
-            assert not "${workflow.input" in mail
+                assert "Bcc" in m
+                assert "From" in m
+                assert "Subject" in m
+                assert m["Bcc"] == user_name
+                assert m["From"] == expected_from
+                assert (
+                    m["Subject"]
+                    == "OK: Monitor Alert for D-Bus signal arrived on bus system bus on "
+                    + devid
+                )
+                assert not "${workflow.input" in mail
         assert found == True
         logger.info(
             "test_dbus_bus_filter: got OK alert email after expiration time passed."

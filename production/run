@@ -20,7 +20,7 @@ fi
 ENTERPRISE_DOCKER_COMPOSE=
 ENTERPRISE_PROD=
 if [ -f ./config/enterprise.yml ]; then
-    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml -f ../docker-compose.monitor.yml -f ../docker-compose.auditlogs.yml -f docker-compose.auditlogs.connect.yml -f ../docker-compose.auditlogs.config.yml"
+    ENTERPRISE_DOCKER_COMPOSE="-f ../docker-compose.enterprise.yml -f ../docker-compose.monitor.yml -f ../docker-compose.auditlogs.yml -f ../docker-compose.auditlogs.connect.yml -f ../docker-compose.auditlogs.config.yml"
     ENTERPRISE_PROD="-f ./config/enterprise.yml"
 fi
 

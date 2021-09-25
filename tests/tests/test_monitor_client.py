@@ -1162,6 +1162,30 @@ class TestMonitorClientEnterprise:
                 + devid
             )
 
+        fds_count_timeout_s = 64
+        max_fds_count_diff = 2
+        logger.info("test_monitorclient_alert_email: checking open file descriptors")
+        time.sleep(fds_count_timeout_s)
+        fds_count0 = mender_device.run(
+            "ls /proc/$(cat /var/run/monitoring-client.pid)/fd | wc -l"
+        )
+        assert fds_count0.rstrip().isnumeric()
+        fds_count0 = int(fds_count0.rstrip())
+        logger.info(
+            "test_monitorclient_alert_email: currently %s fds open" % fds_count0
+        )
+        time.sleep(fds_count_timeout_s)
+        fds_count1 = mender_device.run(
+            "ls /proc/$(cat /var/run/monitoring-client.pid)/fd | wc -l"
+        )
+        assert fds_count1.rstrip().isnumeric()
+        fds_count1 = int(fds_count1.rstrip())
+        logger.info(
+            "test_monitorclient_alert_email: currently %s fds open" % fds_count0
+        )
+        assert abs(fds_count1 - fds_count0) <= max_fds_count_diff
+        logger.info("test_monitorclient_alert_email: fds count have not increased")
+
     def test_monitorclient_send_saved_alerts_on_network_issues(
         self, monitor_commercial_setup_no_client
     ):

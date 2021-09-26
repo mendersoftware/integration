@@ -19,7 +19,7 @@ import uuid
 
 from datetime import datetime
 
-from testutils.api import useradm, devicemonitor, deviceauth
+from testutils.api import useradm, devicemonitor, deviceauth, inventory
 from testutils.api.client import ApiClient
 from testutils.common import (
     clean_mongo,
@@ -75,6 +75,7 @@ def tenants_users_devices(tenants_users):
         r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
+        t.users[0].token = utoken
 
         for _ in range(5):
             dev = make_accepted_device(devauthd, devauthm, utoken, t.tenant_token)
@@ -108,6 +109,7 @@ ONE_MINUTE_SEC = 60.0
 class _TestMonitoringAlertsBase:
     useradm = ApiClient(useradm.URL_MGMT)
     devmond = ApiClient(devicemonitor.URL_DEVICES)
+    invm = ApiClient(inventory.URL_MGMT)
 
     def test_alerting_email(self, test_case, user, devices, smtp_mock):
         device = devices.pop(1)
@@ -142,6 +144,23 @@ class _TestMonitoringAlertsBase:
             for ex in regex:
                 assert re.search(ex, data), "email did not contain expected content"
 
+        rsp = self.invm.with_auth(user.token).call(
+            "GET", inventory.URL_DEVICE.format(id=device.id)
+        )
+        assert rsp.status_code == 200
+        alert_count_attrs = {
+            x["name"]: x["value"]
+            for x in filter(
+                lambda x: x["scope"] == "monitor", rsp.json()["attributes"],
+            )
+        }
+        assert len(alert_count_attrs) == 2
+        assert alert_count_attrs["alert_count"] == test_case["alert_count"]
+        if test_case["alert_count"] > 0:
+            assert alert_count_attrs["alerts"] == True
+        else:
+            assert alert_count_attrs["alerts"] == False
+
 
 class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
     useradm = ApiClient(useradm.URL_MGMT)
@@ -169,6 +188,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                         },
                     },
                 ],
+                "alert_count": 1,
                 "email_regex": "(CRITICAL|OK)",
             },
             {
@@ -208,6 +228,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
                     },
                 ],
                 "email_regex": "(CRITICAL|OK)",
+                "alert_count": 2,
             },
         ),
         ids=["CRITICAL alert", "CRITICAL and OK alerts"],

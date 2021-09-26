@@ -51,7 +51,7 @@ class Inventory:
         return ret.json()
 
     def get_device(self, device_id):
-        devurl = "%s%s/%s" % (self.get_inv_base_path(), "device", device_id)
+        devurl = "%s%s/%s" % (self.get_inv_base_path(), "devices", device_id)
         ret = requests_retry().get(
             devurl, headers=self.auth.get_auth_token(), verify=False
         )

@@ -12,10 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import time
-
-import pytest
-
 from .. import conftest
 from ..common_setup import standard_setup_one_client_bootstrapped
 from .common_update import common_update_procedure
@@ -29,12 +25,12 @@ class TestDeploymentAborting(MenderTesting):
         container_manager, install_image, abort_step=None, mender_performs_reboot=False,
     ):
         """
-            Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
+        Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
-            Args:
-                mender_performs_reboot: if set to False, a manual reboot is performed and
-                                            checks are performed.
-                                        if set to True, wait until device is rebooted.
+        Args:
+            mender_performs_reboot: if set to False, a manual reboot is performed and
+                                        checks are performed.
+                                    if set to True, wait until device is rebooted.
         """
 
         mender_device = container_manager.device

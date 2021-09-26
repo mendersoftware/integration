@@ -24,8 +24,8 @@ from .mendertesting import MenderTesting
 @MenderTesting.fast
 class TestSignedUpdates(MenderTesting):
     """
-        Signed artifacts are well tested in the client's acceptance tests, so
-        we will only test basic backend integration with signed images here.
+    Signed artifacts are well tested in the client's acceptance tests, so
+    we will only test basic backend integration with signed images here.
     """
 
     def test_signed_artifact_success(
@@ -46,9 +46,9 @@ class TestSignedUpdates(MenderTesting):
         self, standard_setup_with_signed_artifact_client, valid_image
     ):
         """
-            Make sure that an unsigned image fails, and is handled by the backend.
-            Notice that this test needs a fresh new version of the backend, since
-            we installed a signed image earlier without a verification key in mender.conf
+        Make sure that an unsigned image fails, and is handled by the backend.
+        Notice that this test needs a fresh new version of the backend, since
+        we installed a signed image earlier without a verification key in mender.conf
         """
 
         deployment_id, _ = common_update_procedure(install_image=valid_image)

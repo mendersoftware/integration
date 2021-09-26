@@ -14,7 +14,6 @@
 import time
 import json
 
-import requests
 import pytest
 
 from testutils.common import create_user, make_accepted_device, User, Tenant
@@ -32,8 +31,8 @@ container_factory = factory.get_factory()
 
 @pytest.fixture(scope="class")
 def initial_os_setup(request):
-    """ Start the minimum OS setup, create some uses and devices.
-        Return {"os_devs": [...], "os_users": [...]}
+    """Start the minimum OS setup, create some uses and devices.
+    Return {"os_devs": [...], "os_users": [...]}
     """
     os_env = container_factory.getStandardSetup(num_clients=0)
     # We will later re-create other environments, but this one (or any, really) will be
@@ -49,7 +48,7 @@ def initial_os_setup(request):
 @pytest.fixture(scope="class")
 def initial_enterprise_setup(initial_os_setup):
     """
-        Start ENT for the first time (no tenant yet).
+    Start ENT for the first time (no tenant yet).
     """
     initial_os_setup.teardown_exclude(["mender-mongo"])
 
@@ -65,9 +64,9 @@ def initial_enterprise_setup(initial_os_setup):
 @pytest.fixture(scope="class")
 def migrated_enterprise_setup(initial_enterprise_setup):
     """
-        Create an org (tenant + user), restart with default tenant token.
-        The ENT setup is ready for tests.
-        Return {"os_devs": [...], "os_users": [...], "tenant": <Tenant>}
+    Create an org (tenant + user), restart with default tenant token.
+    The ENT setup is ready for tests.
+    Return {"os_devs": [...], "os_users": [...], "tenant": <Tenant>}
     """
     ent_data = migrate_ent_setup(initial_enterprise_setup)
 
@@ -90,8 +89,8 @@ def migrated_enterprise_setup(initial_enterprise_setup):
 
 
 def initialize_os_setup(env):
-    """ Seed the OS setup with all operational data - users and devices.
-        Return {"os_devs": [...], "os_users": [...]}
+    """Seed the OS setup with all operational data - users and devices.
+    Return {"os_devs": [...], "os_users": [...]}
     """
     uadmm = ApiClient(useradm.URL_MGMT, host=env.get_mender_gateway())
     dauthd = ApiClient(deviceauth.URL_DEVICES, host=env.get_mender_gateway())
@@ -127,8 +126,8 @@ def initialize_os_setup(env):
 
 
 def migrate_ent_setup(env):
-    """ Migrate the ENT setup - create a tenant and user via create-org,
-        substitute default token env in the ent. testing layer.
+    """Migrate the ENT setup - create a tenant and user via create-org,
+    substitute default token env in the ent. testing layer.
     """
     # extra long sleep to make sure all services ran their migrations
     # maybe conductor fails because some services are still in a migration phase,

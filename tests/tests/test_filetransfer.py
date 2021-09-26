@@ -23,6 +23,7 @@ import shutil
 import tempfile
 import pytest
 import time
+import uuid
 import urllib.parse
 
 from tempfile import NamedTemporaryFile
@@ -42,7 +43,7 @@ from .common import md5sum
 from .mendertesting import MenderTesting
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
-from testutils.common import Tenant, User, update_tenant
+from testutils.common import User, update_tenant
 from testutils.infra.cli import CliTenantadm
 
 container_factory = factory.get_factory()
@@ -432,6 +433,7 @@ class _TestFileTransferBase(MenderTesting):
         not_implemented_error = False
 
         def assert_forbidden(rsp, message):
+            global not_implemented_error
             try:
                 assert rsp.status_code == 403
                 assert rsp.json().get("error") == message
@@ -638,7 +640,7 @@ class TestFileTransfer(_TestFileTransferBase):
 
     def test_filetransfer(self, standard_setup_one_client):
         """Tests the file transfer features"""
-        devid, authtoken, _, = self.prepare_env()
+        devid, authtoken, _ = self.prepare_env()
         super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
 
     @pytest.fixture(scope="function")
@@ -660,7 +662,7 @@ class TestFileTransfer(_TestFileTransferBase):
 
     def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
         """Tests the file transfer is not implemented with mender-connect 1.0"""
-        devid, authtoken, _, = self.prepare_env()
+        devid, authtoken, _ = self.prepare_env()
 
         rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
         assert rsp.status_code == 502
@@ -670,7 +672,7 @@ class TestFileTransfer(_TestFileTransferBase):
     @pytest.mark.min_mender_client_version("2.7.0")
     def test_filetransfer_limits_upload(self, standard_setup_one_client):
         """Tests the file transfer upload limits"""
-        devid, _, auth, = self.prepare_env()
+        (devid, _, auth,) = self.prepare_env()
         super().test_filetransfer_limits_upload(
             standard_setup_one_client.device, devid, auth
         )
@@ -679,7 +681,7 @@ class TestFileTransfer(_TestFileTransferBase):
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, standard_setup_one_client):
         """Tests the file transfer download limits"""
-        devid, _, auth, = self.prepare_env()
+        (devid, _, auth,) = self.prepare_env()
         super().test_filetransfer_limits_download(
             standard_setup_one_client.device, devid, auth
         )
@@ -689,9 +691,12 @@ class TestFileTransferEnterprise(_TestFileTransferBase):
     """Tests the file transfer functionality for enterprise setup"""
 
     def prepare_env(self, env):
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("os-tenant", u.name, u.pwd, plan="os")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="os")
 
         # FT requires "troubleshoot"
         update_tenant(

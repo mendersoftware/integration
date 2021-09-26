@@ -375,7 +375,7 @@ def _run(conn, cmd, **kw):
                 conn.host,
                 str(e),
             )
-            if not "Cannot assign requested address" in str(e):
+            if "Cannot assign requested address" not in str(e):
                 raise e
             continue
         except UnexpectedExit as e:

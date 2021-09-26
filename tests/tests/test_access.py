@@ -11,11 +11,13 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import pytest
 import json
+import pytest
+import uuid
 
-from testutils.common import create_user, Tenant, User, update_tenant
+from testutils.common import Tenant, User, update_tenant
 from testutils.infra.cli import CliTenantadm
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.api.client import ApiClient
 import testutils.api.deviceconnect as deviceconnect
 import testutils.api.deviceconfig as deviceconfig
@@ -32,12 +34,10 @@ from ..common_setup import (
 )
 from .common_connect import wait_for_connect
 from ..MenderAPI import (
-    devconnect,
     auth,
     devauth,
     DeviceAuthV2,
     Authentication,
-    DeviceConnect,
     get_container_manager,
 )
 
@@ -162,10 +162,10 @@ class _TestAccessBase:
 
 
 class TestAccess(_TestAccessBase):
-    """ Onprem OS.
+    """Onprem OS.
 
-        Quite a few addon features are available here (despite being
-        hidden behind paid addons in hosted).
+    Quite a few addon features are available here (despite being
+    hidden behind paid addons in hosted).
     """
 
     def test_ok(self, standard_setup_one_client):
@@ -179,7 +179,7 @@ class TestAccess(_TestAccessBase):
         wait_for_connect(auth, devices[0])
 
         devid = devices[0]
-        authtoken = auth.get_auth_token()
+        auth.get_auth_token()
 
         self.check_access_remote_term(auth, devid)
         self.check_access_file_transfer(auth, devid)
@@ -235,7 +235,7 @@ class TestAccessEnterprise(_TestAccessBase):
             self.check_access_rbac(tenant.auth)
 
     def test_upgrades(self, docker_env):
-        """ Test that plan/addon upgrades take effect on feature availability. 
+        """Test that plan/addon upgrades take effect on feature availability.
         Special case is the trial tenant upgrade to a paid plan.
         """
         tenant = docker_env.tenants["os"]
@@ -345,8 +345,9 @@ class TestAccessEnterprise(_TestAccessBase):
         self.check_access_rbac(tenant.auth)
 
     def _make_tenant(self, plan, env):
-        tname = "tenant-{}".format(plan)
-        email = "user@{}.com".format(tname)
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}-{}".format(uuidv4, plan)
+        email = "some.user+{}@example.com".format(uuidv4)
 
         cli = CliTenantadm(containers_namespace=env.name)
         tid = cli.create_org(tname, email, "correcthorse", plan)
@@ -387,8 +388,9 @@ class TestAccessEnterprise(_TestAccessBase):
         return tenant
 
     def _make_trial_tenant(self, env):
-        tname = "tenant-{}".format("trial")
-        email = "user@{}.com".format(tname)
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}-{}".format(uuidv4, "trial")
+        email = "some.user+{}@example.com".format(uuidv4)
 
         tadmm = ApiClient(
             host=get_container_manager().get_mender_gateway(),
@@ -409,11 +411,14 @@ class TestAccessEnterprise(_TestAccessBase):
         assert res.status_code == 202
 
         # get tenant id
+        tenantadm_host = (
+            tenantadm.HOST
+            if isK8S()
+            else get_container_manager().get_ip_of_service("mender-tenantadm")[0]
+            + ":8080"
+        )
         tadmi = ApiClient(
-            host=get_container_manager().get_ip_of_service("mender-tenantadm")[0]
-            + ":8080",
-            base_url=tenantadm.URL_INTERNAL,
-            schema="http://",
+            host=tenantadm_host, base_url=tenantadm.URL_INTERNAL, schema="http://",
         )
 
         res = tadmi.call(

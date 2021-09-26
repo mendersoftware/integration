@@ -171,7 +171,7 @@ def create_org(
         if user["email"] == username:
             user_id = user["id"]
             break
-    if user_id == None:
+    if user_id is None:
         raise ValueError("Error retrieving user id.")
 
     tenant = Tenant(name, tenant_id, tenant_token)
@@ -320,47 +320,6 @@ def get_mender_artifact(
         os.path.exists(artifact) and os.unlink(artifact)
 
 
-def wait_for_traefik(gateway_host, routers=[]):
-    """Wait until provided routers are installed.
-    Prevents race conditions where services are already up but traefik hasn't yet registered their routers. This causes subtle timing issues.
-    By default checks the basic routers (incl. deployments - startup so time consuming, in practice it guarantees success).
-    """
-    if isK8S():
-        return
-    if routers == []:
-        rnames = [
-            "deployments@file",
-            "deploymentsDL@file",
-            "deploymentsMgmt@file",
-            "deviceauth@file",
-            "deviceauthMgmt@file",
-            "gui@file",
-            "inventoryMgmtV1@file",
-            "inventoryMgmtV2@file",
-            "inventoryV1@file",
-            "inventoryV2@file",
-            "minio@file",
-            "useradm@file",
-            "useradmLogin@file",
-        ]
-    else:
-        rnames = routers[:]
-
-    for _ in redo.retrier(attempts=5, sleeptime=10):
-        try:
-            r = requests.get("http://{}:8080/api/http/routers".format(gateway_host))
-            assert r.status_code == 200
-
-            cur_routers = [x["name"] for x in r.json()]
-
-            if set(cur_routers).issuperset(set(rnames)):
-                break
-        except requests.exceptions.ConnectionError as ex:
-            print("connection error while waiting for routers - but that's ok")
-    else:
-        assert False, "timeout hit waiting for traefik routers {}".format(rnames)
-
-
 def wait_until_healthy(compose_project: str = "", timeout: int = 60):
     """
     wait_until_healthy polls all running containers health check
@@ -371,7 +330,6 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
     """
     client = docker.from_env()
     kwargs = {}
-    services = []
     if compose_project != "":
         kwargs["filters"] = {"label": f"com.docker.compose.project={compose_project}"}
 
@@ -426,10 +384,6 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):
     """Call internal PUT tenantadm/tenants/{tid}"""
-    host = tenantadm.HOST
-    if container_manager is not None:
-        host = container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"
-
     update = {}
     if addons is not None:
         update["addons"] = tenantadm.make_addons(addons)
@@ -437,7 +391,12 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
     if plan is not None:
         update["plan"] = plan
 
-    tadm = ApiClient(tenantadm.URL_INTERNAL, host=host, schema="http://")
+    tenantadm_host = (
+        tenantadm.HOST
+        if isK8S() or container_manager is None
+        else container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"
+    )
+    tadm = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm_host, schema="http://")
     res = tadm.call(
         "PUT", tenantadm.URL_INTERNAL_TENANT, body=update, path_params={"tid": tid},
     )

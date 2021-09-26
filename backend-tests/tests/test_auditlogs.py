@@ -207,11 +207,11 @@ class TestAuditLogsEnterprise:
 
             time.sleep(0.5)
 
-            evt["time"] = get_auditlog_time(oid)
+            evt["time"] = parse_auditlog_time(get_auditlog_time(oid))
             events.append(evt)
 
             if evt_artifact is not None:
-                evt_artifact["time"] = get_auditlog_time(a["id"])
+                evt_artifact["time"] = parse_auditlog_time(get_auditlog_time(a["id"]))
                 events.append(evt_artifact)
 
         # default sorting is desc by time
@@ -315,24 +315,13 @@ class TestAuditLogsEnterprise:
         # compute unix timestamps for event datetimes (ms to s resolution)
         # to correctly select expected results
         for e in events:
-            # If time is exactly at 0ms, the format does not include
-            # decimal point.
-            if "." in e["time"]:
-                e["test_unix_time"] = datetime.strptime(
-                    e["time"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).timestamp()
-            else:
-                e["test_unix_time"] = datetime.strptime(
-                    e["time"], "%Y-%m-%dT%H:%M:%SZ"
-                ).timestamp()
+            e["test_unix_time"] = e["time"].timestamp()
 
         for case in cases:
             time = events[case["idx"]]["time"]
 
             # round the time - must be an int on input
-            time_unix = int(
-                datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()
-            )
+            time_unix = int(time.timestamp())
 
             resp = alogs.with_auth(tenant_users.users[0].token).call(
                 "GET",
@@ -486,7 +475,7 @@ def evt_user_create(actor_user, newid, email):
     return {
         "action": "create",
         "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
-        "object": {"id": newid, "type": "user", "user": {"email": email},},
+        "object": {"id": newid, "type": "user", "user": {"email": email}},
     }
 
 
@@ -554,3 +543,10 @@ def go_dict_str(d):
     djson = json.dumps(d)
 
     return djson.replace(" ", "")
+
+
+def parse_auditlog_time(auditlog_time):
+    try:
+        return datetime.strptime(auditlog_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        return datetime.strptime(auditlog_time, "%Y-%m-%dT%H:%M:%SZ")

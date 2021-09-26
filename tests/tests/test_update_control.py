@@ -15,8 +15,8 @@
 
 import json
 import tempfile
+import uuid
 
-import pytest
 from testutils.common import User
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
@@ -38,9 +38,12 @@ class TestUpdateControlEnterprise:
         until the deployment is successfully finished.
         """
 
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
-        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
         ttoken = tenant["tenant_token"]
@@ -64,7 +67,7 @@ class TestUpdateControlEnterprise:
         mender_conf = device.run("cat /etc/mender/mender.conf")
 
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_rootfs_artifact(
+            image.make_rootfs_artifact(
                 valid_image_with_mender_conf(mender_conf),
                 conftest.machine_name,
                 "test-update-control",
@@ -81,7 +84,7 @@ class TestUpdateControlEnterprise:
             devices=devices,
             update_control_map={
                 "Priority": 1,
-                "States": {"ArtifactInstall_Enter": {"action": "pause",},},
+                "States": {"ArtifactInstall_Enter": {"action": "pause"}},
             },
         )
 
@@ -97,8 +100,8 @@ class TestUpdateControlEnterprise:
             update_control_map={
                 "Priority": 2,
                 "States": {
-                    "ArtifactInstall_Enter": {"action": "force_continue",},
-                    "ArtifactReboot_Enter": {"action": "pause",},
+                    "ArtifactInstall_Enter": {"action": "force_continue"},
+                    "ArtifactReboot_Enter": {"action": "pause"},
                 },
             },
         )
@@ -110,7 +113,7 @@ class TestUpdateControlEnterprise:
             update_control_map={
                 "Priority": 2,
                 "States": {
-                    "ArtifactReboot_Enter": {"action": "force_continue",},
+                    "ArtifactReboot_Enter": {"action": "force_continue"},
                     "ArtifactCommit_Enter": {"action": "pause"},
                 },
             },
@@ -122,7 +125,7 @@ class TestUpdateControlEnterprise:
             deployment_id,
             update_control_map={
                 "Priority": 2,
-                "States": {"ArtifactCommit_Enter": {"action": "force_continue",},},
+                "States": {"ArtifactCommit_Enter": {"action": "force_continue"}},
             },
         )
 
@@ -136,9 +139,12 @@ class TestUpdateControlEnterprise:
         Schedule an update with an invalid map, which should fail.
         """
 
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
-        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
         ttoken = tenant["tenant_token"]
@@ -149,7 +155,9 @@ class TestUpdateControlEnterprise:
         devauth = DeviceAuthV2(auth)
 
         enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
-        device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
+        enterprise_no_client.device = MenderDevice(
+            enterprise_no_client.get_mender_clients()[0]
+        )
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -160,7 +168,7 @@ class TestUpdateControlEnterprise:
         assert 1 == len(devices)
 
         with tempfile.NamedTemporaryFile() as artifact_file:
-            created_artifact = image.make_rootfs_artifact(
+            image.make_rootfs_artifact(
                 valid_image,
                 conftest.machine_name,
                 "test-update-control",
@@ -177,7 +185,7 @@ class TestUpdateControlEnterprise:
             devices=devices,
             update_control_map={
                 "Priority": 1,
-                "States": {"BogusState_Enter": {"action": "pause",},},
+                "States": {"BogusState_Enter": {"action": "pause"}},
             },
         )
 

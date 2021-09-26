@@ -15,8 +15,9 @@
 
 import json
 import pytest
-import time
 import redo
+import time
+import uuid
 
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.device import MenderDevice
@@ -85,9 +86,12 @@ class TestConfigurationEnterprise(MenderTesting):
         env = enterprise_no_client
 
         # Create an enterprise plan tenant
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, plan="enterprise")
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
 
         # what we really need is "configure"
         # but for trigger tests we're also checking device avail. in "deviceconnect"

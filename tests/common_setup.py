@@ -12,13 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
-import time
 import pytest
 from . import conftest
 
 from .MenderAPI import auth, devauth, reset_mender_api
-from .helpers import Helpers
 
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
 from testutils.infra.container_manager import factory

@@ -13,16 +13,12 @@
 #    limitations under the License.
 #
 
-import os
 import subprocess
 import time
-
-from tempfile import NamedTemporaryFile
 
 from ..common_setup import standard_setup_one_client_bootstrapped
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
-from .common import md5sum
 from .mendertesting import MenderTesting
 
 

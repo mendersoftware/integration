@@ -54,13 +54,13 @@ exit 0
         self, setup_with_legacy_client, valid_image
     ):
         """
-            Start a legacy client (1.7.0) first and update it to the new one.
+        Start a legacy client (1.7.0) first and update it to the new one.
 
-            The test starts a setup with the 1.7.0 client and then updates it to
-            the current version. The update is failing first (due to failure
-            returned inside the artifact commit enter state script).
-            After the failed first update we are updating cient (1.7.0) again,
-            and this time the update should succeed.
+        The test starts a setup with the 1.7.0 client and then updates it to
+        the current version. The update is failing first (due to failure
+        returned inside the artifact commit enter state script).
+        After the failed first update we are updating cient (1.7.0) again,
+        and this time the update should succeed.
         """
 
         mender_device = setup_with_legacy_client.device
@@ -106,12 +106,12 @@ exit 0
         self, setup_with_legacy_client, valid_image
     ):
         """
-            Start a legacy client (1.7.0) first and update it to the new one.
+        Start a legacy client (1.7.0) first and update it to the new one.
 
-            The test starts a setup with the 1.7.0 client and then updates it to
-            the current version. After the first successful update, we are updating 
-            the client for the second time, to make sure the DB migration has not left
-            any traces in the database that are causing issues.
+        The test starts a setup with the 1.7.0 client and then updates it to
+        the current version. After the first successful update, we are updating
+        the client for the second time, to make sure the DB migration has not left
+        any traces in the database that are causing issues.
         """
 
         mender_device = setup_with_legacy_client.device

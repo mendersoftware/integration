@@ -29,8 +29,8 @@ from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
     # We use "pdate" to be able to match "Update" (2.4.x) and "update" (2.3.x and earlier)
-    {"blockAfterStart": False, "logMessageToLookFor": "pdate fetch failed:",},
-    {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:",},
+    {"blockAfterStart": False, "logMessageToLookFor": "pdate fetch failed:"},
+    {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
 ]
 
 
@@ -52,8 +52,7 @@ class TestFaultTolerance(MenderTesting):
 
     @staticmethod
     def block_by_ip(device, accessible, host):
-        """ Get IP of host and block by that.
-        """
+        """Get IP of host and block by that."""
         gateway_ip = device.run(
             r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
             % (host),
@@ -70,9 +69,9 @@ class TestFaultTolerance(MenderTesting):
             device.run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True)
 
     def block_by_domain(device, accessible, host):
-        """ Some services shouldn't be blocked by ip, because they share it with other services.
-            (example: s3 is the same IP as gateway as a whole).
-            Block these by host/domain name instead (using iptables string matching).
+        """Some services shouldn't be blocked by ip, because they share it with other services.
+        (example: s3 is the same IP as gateway as a whole).
+        Block these by host/domain name instead (using iptables string matching).
         """
 
         # extra modules for iptables string matching
@@ -92,7 +91,7 @@ class TestFaultTolerance(MenderTesting):
             )
         else:
             logger.info("Disallowing network communication to %s" % host)
-            res = device.run(
+            device.run(
                 "iptables -I INPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
                 % host,
                 hide=True,
@@ -139,10 +138,10 @@ class TestFaultTolerance(MenderTesting):
         % conftest.machine_name,
     ):
         """
-            Install an image without systemd-networkd binary existing.
-            The network will not function, mender will not be able to send any logs.
+        Install an image without systemd-networkd binary existing.
+        The network will not function, mender will not be able to send any logs.
 
-            The expected status is the update will rollback, and be considered a failure
+        The expected status is the update will rollback, and be considered a failure
         """
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -158,10 +157,10 @@ class TestFaultTolerance(MenderTesting):
         self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """
-            Install a valid upgrade image while there is no network availability on the device
-            Re-establishing the network connectivity results in the upgrade to be triggered.
+        Install a valid upgrade image while there is no network availability on the device
+        Re-establishing the network connectivity results in the upgrade to be triggered.
 
-            Emulate a flaky network connection, and ensure that the deployment still succeeds.
+        Emulate a flaky network connection, and ensure that the deployment still succeeds.
         """
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -194,14 +193,14 @@ class TestFaultTolerance(MenderTesting):
         self, standard_setup_one_client_bootstrapped, test_set, valid_image,
     ):
         """
-            Install an update, and block storage connection when we detect it's
-            being copied over to the inactive partition.
+        Install an update, and block storage connection when we detect it's
+        being copied over to the inactive partition.
 
-            The test should result in a successful download retry.
-            
-            NOTE: storage and gateway share an ip, so disabling connectivity
-            is tricky - we must alternate between blocking by the whole ip and blocking
-            just by domain
+        The test should result in a successful download retry.
+
+        NOTE: storage and gateway share an ip, so disabling connectivity
+        is tricky - we must alternate between blocking by the whole ip and blocking
+        just by domain
         """
 
         mender_device = standard_setup_one_client_bootstrapped.device
@@ -274,7 +273,7 @@ class TestFaultTolerance(MenderTesting):
         self, standard_setup_one_client_bootstrapped, valid_image,
     ):
         """
-            Block storage host (minio) by modifying the hosts file.
+        Block storage host (minio) by modifying the hosts file.
         """
 
         mender_device = standard_setup_one_client_bootstrapped.device

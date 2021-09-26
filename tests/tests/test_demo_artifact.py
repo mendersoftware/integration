@@ -15,7 +15,6 @@
 import os
 import signal
 import subprocess
-import time
 
 import pytest
 from flaky import flaky
@@ -24,6 +23,7 @@ from ..common_setup import running_custom_production_setup
 from ..MenderAPI import authentication, deployments, DeviceAuthV2, logger
 from .mendertesting import MenderTesting
 from testutils.common import wait_until_healthy
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
 class TestDemoArtifact(MenderTesting):
@@ -188,6 +188,9 @@ class TestDemoArtifact(MenderTesting):
         logger.info("Finished")
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not relevant in a staging or production environment"
+)
 class TestDemoArtifactEnterprise(TestDemoArtifact):
     """A subclass of the TestDemoArtifact class for testing the demo-Artifact
     upload in Enterprise mode."""

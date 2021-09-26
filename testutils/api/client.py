@@ -13,6 +13,7 @@
 #    limitations under the License.
 import os
 import os.path
+import socket
 import subprocess
 import warnings
 
@@ -62,8 +63,7 @@ class ApiClient:
                 cmd = ["kubectl", "port-forward", "service/" + host, "8080:%s" % port]
                 p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
                 url = "http://localhost:8080/" + url.split("/", 3)[-1]
-                # wait a few seconds to let the port-forwarding fully initialize
-                time.sleep(3)
+                wait_for_port(port=8080, host="localhost", timeout=10.0)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=InsecureRequestWarning)
                 return requests.request(
@@ -94,3 +94,26 @@ class ApiClient:
 
     def __make_headers(self, headers):
         return dict(self.headers, **headers)
+
+
+def wait_for_port(port=8080, host="localhost", timeout=10.0):
+    """Wait until a port starts accepting TCP connections.
+    Args:
+        port (int): Port number.
+        host (str): Host address on which the port should exist.
+        timeout (float): In seconds. How long to wait before raising errors.
+    Raises:
+        TimeoutError: The port isn't accepting connection after time specified in `timeout`.
+    """
+    start_time = time.perf_counter()
+    while True:
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                break
+        except OSError as ex:
+            time.sleep(0.50)
+            if time.perf_counter() - start_time >= timeout:
+                raise TimeoutError(
+                    "Waited too long for the port {} on host {} to start accepting "
+                    "connections.".format(port, host)
+                ) from ex

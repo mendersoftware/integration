@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 from testutils.util.artifact import Artifact
 from testutils.infra.container_manager import factory
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 from testutils.common import create_org, create_user
 from testutils.api.client import ApiClient
@@ -355,6 +356,9 @@ class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
         self.compatibility_test_impl(setup_os_compat)
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not relevant in a staging or production environment"
+)
 class TestClientCompatibilityEnterprise(TestClientCompatibilityBase):
     def test_enterprise_compatibility(self, setup_ent_compat):
         self.compatibility_test_impl(setup_ent_compat)

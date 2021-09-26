@@ -97,7 +97,7 @@ class TestBasicIntegration(MenderTesting):
             shutil.copy(valid_image, tmp_image)
             conf = image.get_mender_conf(tmp_image)
 
-            if conf == None:
+            if conf is None:
                 raise SystemExit("Could not retrieve mender.conf")
 
             conf["Servers"] = [

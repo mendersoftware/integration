@@ -12,14 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import time
 import subprocess
 import logging
-import random
-import tempfile
 import pytest
-import os
-import socket
 import json
 from . import conftest
 

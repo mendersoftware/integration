@@ -1,4 +1,4 @@
-apipkg==1.5
+apipkg==2.0.0
 appdirs==1.4.4
 attrs==21.2.0
 bcrypt==3.2.0

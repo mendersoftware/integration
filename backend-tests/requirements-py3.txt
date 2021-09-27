@@ -25,4 +25,4 @@ requests==2.26.0
 six==1.16.0
 stripe==2.60.0
 toml==0.10.2
-urllib3==1.26.6
+urllib3==1.26.7

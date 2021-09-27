@@ -19,7 +19,7 @@ RUN_UP=0
 UPLOAD_ARTIFACT=1
 PRINT_LOGIN_INFO=0
 PRINT_USER_EXISTS=0
-RETRY_LIMIT=5
+RETRY_LIMIT=30
 
 declare -a ARGS
 
@@ -228,26 +228,45 @@ start_server() {
         exit $retval
     fi
 
-    # Block until the useradm service returns an HTTP 4xx response
+    # Probe healthcheck endpoints until all services are ready
     local RETRIES=0
-    while :
-    do
-        curl --silent -k -X POST -u ${USER}:${PASSWORD} \
-                --fail \
-                --connect-timeout 5 \
-                $MENDER_SERVER_URI/api/management/v1/useradm/auth/login
-        retval=$?
-        case $retval in
-            0)  break ;; # User exists - continue.
-            22) break ;; # Server 400 error, ie, server is up - continue.
-            *) echo "It does not seem the useradm service is up and running yet. Retrying..." ;;
-        esac
-        if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
-            echo "Retried $RETRIES times without success. Giving up."
+    echo "Waiting for services to become ready..."
+    # For each container in docker-compose project with a healthcheck docker label
+    IFS= docker ps -a \
+        --filter "label=com.docker.compose.project=${DOCKER_COMPOSE_PROJECT_NAME}" \
+        --filter "label=mender.healthcheck.path" \
+        --format '{{.ID}} {{.Names}} {{.Label "mender.healthcheck.path"}}' | \
+    while read -r container_id container_name health_path; do
+        local container_ip
+        # Get container ip and status
+        container_ip=$(docker container inspect $container_id \
+            --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}")
+        # At this point all containers should be running, if ip is empty
+        # that means the container exited.
+        if [ $? != 0 ] || [ -z "$container_ip" ]; then
+            echo "Failed to obtain address of container ${container_name}."
             exit 1
+        elif [ -n "$container_ip" ]; then
+            break
         fi
-        RETRIES=$((RETRIES+1))
-        sleep 5
+
+        while :
+        do
+            curl --silent -k -X GET \
+                    --fail \
+                    --connect-timeout 5 \
+                    "http://$container_ip:8080/${health_path#/}"
+            case $retval in
+                0)  break ;;
+                *) ;;
+            esac
+            if [[ $RETRIES -ge $RETRY_LIMIT ]]; then
+                echo "Retried $RETRIES times without success. Giving up."
+                exit 1
+            fi
+            RETRIES=$((RETRIES+1))
+            sleep 1
+        done
     done
 }
 

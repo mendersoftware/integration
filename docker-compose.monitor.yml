@@ -14,6 +14,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/devicemonitor/health"
 
     mender-api-gateway:
       volumes:

@@ -33,6 +33,7 @@ http:
         forceSTSHeader: true
         stsPreload: true
         stsIncludeSubdomains: true
+        contentTypeNosniff: true
         browserXssFilter: true
         customRequestHeaders:
           "X-Forwarded-Proto": "https"

@@ -13,6 +13,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/deployments/health"
 
     #
     # mender-gui
@@ -82,6 +84,8 @@ services:
         depends_on:
             - mender-mongo
             - mender-workflows-server
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/devauth/health"
 
     #
     # mender-inventory
@@ -95,6 +99,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/inventory/health"
 
     #
     # mender-useradm
@@ -108,6 +114,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/useradm/health"
 
     #
     # mender-workflows-server
@@ -123,6 +131,8 @@ services:
             - mender
         depends_on:
             - mender-mongo
+        labels:
+            mender.healthcheck.path: "/health"
 
     #
     # mender-workflows-worker

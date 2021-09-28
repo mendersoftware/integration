@@ -1009,7 +1009,7 @@ class TestMonitorClientEnterprise:
             monitor_commercial_setup_no_client, user_name
         )
         inventory = Inventory(auth)
-        logger.info("test_monitorclient_alert_email: env ready.")
+        logger.info("test_monitorclient_logs_and_services: env ready.")
 
         logger.info(
             "test_monitorclient_logs_and_services: email alert on systemd service not running scenario."
@@ -1170,7 +1170,9 @@ class TestMonitorClientEnterprise:
 
         fds_count_timeout_s = 64
         max_fds_count_diff = 2
-        logger.info("test_monitorclient_alert_email: checking open file descriptors")
+        logger.info(
+            "test_monitorclient_logs_and_services: checking open file descriptors"
+        )
         time.sleep(fds_count_timeout_s)
         fds_count0 = mender_device.run(
             "ls /proc/$(cat /var/run/monitoring-client.pid)/fd | wc -l"
@@ -1178,7 +1180,7 @@ class TestMonitorClientEnterprise:
         assert fds_count0.rstrip().isnumeric()
         fds_count0 = int(fds_count0.rstrip())
         logger.info(
-            "test_monitorclient_alert_email: currently %s fds open" % fds_count0
+            "test_monitorclient_logs_and_services: currently %s fds open" % fds_count0
         )
         time.sleep(fds_count_timeout_s)
         fds_count1 = mender_device.run(
@@ -1187,10 +1189,84 @@ class TestMonitorClientEnterprise:
         assert fds_count1.rstrip().isnumeric()
         fds_count1 = int(fds_count1.rstrip())
         logger.info(
-            "test_monitorclient_alert_email: currently %s fds open" % fds_count0
+            "test_monitorclient_logs_and_services: currently %s fds open" % fds_count0
         )
         assert abs(fds_count1 - fds_count0) <= max_fds_count_diff
-        logger.info("test_monitorclient_alert_email: fds count have not increased")
+        logger.info(
+            "test_monitorclient_logs_and_services: fds count have not increased"
+        )
+
+    def test_monitorclient_logs_and_patterns(self, monitor_commercial_setup_no_client):
+        """Tests the monitor client email alerting for a Perl compatible regex"""
+        mailbox_path = "/var/spool/mail/local"
+        wait_for_alert_interval_s = 8
+        expected_from = "noreply@mender.io"
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        inventory = Inventory(auth)
+        logger.info("test_monitorclient_logs_and_patterns: env ready.")
+
+        logger.info(
+            "test_monitorclient_logs_and_patterns: email alert on log file containing a pattern scenario."
+        )
+        log_file = "/tmp/mylog.log"
+        log_pattern = "session opened for user \\w+"
+        service_name = "mylog"
+
+        mender_device.run("echo 'some line 1' >> " + log_file)
+        mender_device.run("echo 'some line 2' >> " + log_file)
+        prepare_log_monitoring(
+            mender_device,
+            service_name + "-pcre",
+            "@tail -f " + log_file,
+            log_pattern,
+            use_ctl=True,
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mender_device.run(
+            "echo -ne 'a new session opened for user root now\nsome line 3\n' >> "
+            + log_file
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        mender_device.run("echo 'some line 4' >> " + log_file)
+        mender_device.run("echo 'some line 5' >> " + log_file)
+
+        mender_device.run(
+            "echo -ne 'a new session opened for user root now\nsome line 5\n' >> "
+            + log_file
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        for m in [messages[0]]:
+            logger.debug("got message:")
+            logger.debug("             body: %s", m.get_body().get_content())
+            logger.debug("             To: %s", m["Bcc"])
+            logger.debug("             From: %s", m["From"])
+            logger.debug("             Subject: %s", m["Subject"])
+            assert "Bcc" in m
+            assert "From" in m
+            assert "Subject" in m
+            assert m["Bcc"] == user_name
+            assert m["From"] == expected_from
+            assert m["Subject"].startswith(
+                "CRITICAL: Monitor Alert for Log file contains "
+                + log_pattern
+                + " on "
+                + devid
+            )
 
     def test_monitorclient_send_saved_alerts_on_network_issues(
         self, monitor_commercial_setup_no_client

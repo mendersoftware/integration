@@ -18,6 +18,8 @@ services:
         environment:
             DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
             DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
 
     mender-nats:
         image: nats:2.1.9-alpine3.12

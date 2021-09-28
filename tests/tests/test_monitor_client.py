@@ -19,6 +19,7 @@ import os.path
 import shutil
 import tempfile
 import time
+import uuid
 
 from email.parser import Parser
 from email.policy import default

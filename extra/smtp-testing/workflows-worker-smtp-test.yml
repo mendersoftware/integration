@@ -3,6 +3,7 @@ services:
 
     mender-workflows-worker:
         environment:
+            - WORKFLOWS_EMAIL_SENDER=no-reply@hosted.mender.io
             - WORKFLOWS_SMTP_HOST=mender-backend-tests-runner:4444
 
 networks:

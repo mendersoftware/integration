@@ -15,6 +15,17 @@ services:
   #     TENANT_TOKEN: ""
   # </TEMPLATE>
   #
+
+  mender-client-3-1:
+    image: mendersoftware/mender-client-qemu:3.1
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+
   mender-client-3-0:
     image: mendersoftware/mender-client-qemu:3.0
     networks:

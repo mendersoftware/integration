@@ -1721,6 +1721,9 @@ DR = Disable automatic publishing of the release
                 if action == "true":
                     set_param("BUILD_CLIENT", action)
                     set_param("BUILD_SERVERS", action)
+                    if reply[1] == "T":
+                        set_param("BUILD_MENDER_DIST_PACKAGES", action)
+                        set_param("BUILD_MENDER_CONVERT", action)
                 set_param("RUN_INTEGRATION_TESTS", action)
 
             if reply[1] == "T" or reply[1] == "C":
@@ -1738,6 +1741,8 @@ DR = Disable automatic publishing of the release
                 action = "false"
             set_param("BUILD_CLIENT", action)
             set_param("BUILD_SERVERS", action)
+            set_param("BUILD_MENDER_DIST_PACKAGES", action)
+            set_param("BUILD_MENDER_CONVERT", action)
             for param in params.keys():
                 if param.startswith("BUILD_"):
                     set_param(param, action)
@@ -1747,6 +1752,8 @@ DR = Disable automatic publishing of the release
                 action = "true"
                 set_param("BUILD_CLIENT", action)
                 set_param("BUILD_SERVERS", action)
+                set_param("BUILD_MENDER_DIST_PACKAGES", action)
+                set_param("BUILD_MENDER_CONVERT", action)
             else:
                 action = "false"
             set_param("PUBLISH_RELEASE_AUTOMATIC", action)

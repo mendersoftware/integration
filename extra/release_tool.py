@@ -495,9 +495,11 @@ def get_docker_compose_data_from_json_list(json_list):
                 raise Exception(
                     (
                         "More than one container is using the image name '%s'. "
-                        + "The tool currently does not support this."
+                        + "The tool currently does not support this. "
+                        + "Previous occurrence: %s. "
+                        + "While processing: %s %s."
                     )
-                    % image
+                    % (image, data.get(image), container, cont_info)
                 )
             data[image] = {
                 "container": container,
@@ -522,19 +524,22 @@ def get_docker_compose_data(dir, version="git"):
 def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
     """Return docker-compose data from all the YML files in the given revision.
     See get_docker_compose_data_from_json_list."""
-    yamls = []
-    files = (
-        execute_git(None, git_dir, ["ls-tree", "--name-only", rev], capture=True)
-        .strip()
-        .split("\n")
-    )
-    for filename in filter_docker_compose_files_list(files, version):
-        output = execute_git(
-            None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
+    try:
+        yamls = []
+        files = (
+            execute_git(None, git_dir, ["ls-tree", "--name-only", rev], capture=True)
+            .strip()
+            .split("\n")
         )
-        yamls.append(output)
+        for filename in filter_docker_compose_files_list(files, version):
+            output = execute_git(
+                None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
+            )
+            yamls.append(output)
 
-    return get_docker_compose_data_from_json_list(yamls)
+        return get_docker_compose_data_from_json_list(yamls)
+    except Exception as ex:
+        raise Exception("Cannot get docker-compose data for %s" % rev) from ex
 
 
 def version_of(

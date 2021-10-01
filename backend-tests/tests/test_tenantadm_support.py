@@ -90,7 +90,7 @@ class TestContactSupportEnterprise:
         match = re.search(r"Subject: ([a-z0-9\-]+)", data,)
         subject = match.group(1)
         assert re.search(r"Subject: foo", data) is not None
-        assert re.search(r"From: support@mender.io", data) is not None
+        assert re.search(r"From: no-reply@hosted.mender.io", data) is not None
         assert re.search(r"To: support@mender.io", data) is not None
         assert re.search(r"Organization ID: " + org.id, data) is not None
         assert re.search(r"Organization name: " + tenant, data) is not None

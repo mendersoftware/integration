@@ -274,7 +274,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         service_name = "crond"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
@@ -644,7 +644,7 @@ class TestMonitorClientEnterprise:
         # first let's get the OK and CRITICAL email alerts {{{
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         service_name = "crond"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
@@ -803,7 +803,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client alert local store"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         service_name = "rpcbind"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -893,7 +893,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -927,7 +927,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -963,7 +963,7 @@ class TestMonitorClientEnterprise:
         """Test the dbus subsystem"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -1003,7 +1003,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting for multiple services with extra checks"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
@@ -1200,7 +1200,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting for a Perl compatible regex"""
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
@@ -1276,7 +1276,7 @@ class TestMonitorClientEnterprise:
 
         mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 8
-        expected_from = "noreply@mender.io"
+        expected_from = "no-reply@hosted.mender.io"
         user_name = "bugs.bunny@acme.org"
 
         devid, _, auth, mender_device = self.prepare_env(

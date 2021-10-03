@@ -495,9 +495,11 @@ def get_docker_compose_data_from_json_list(json_list):
                 raise Exception(
                     (
                         "More than one container is using the image name '%s'. "
-                        + "The tool currently does not support this."
+                        + "The tool currently does not support this. "
+                        + "Previous occurrence: %s. "
+                        + "While processing: %s %s."
                     )
-                    % image
+                    % (image, data.get(image), container, cont_info)
                 )
             data[image] = {
                 "container": container,
@@ -522,19 +524,22 @@ def get_docker_compose_data(dir, version="git"):
 def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
     """Return docker-compose data from all the YML files in the given revision.
     See get_docker_compose_data_from_json_list."""
-    yamls = []
-    files = (
-        execute_git(None, git_dir, ["ls-tree", "--name-only", rev], capture=True)
-        .strip()
-        .split("\n")
-    )
-    for filename in filter_docker_compose_files_list(files, version):
-        output = execute_git(
-            None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
+    try:
+        yamls = []
+        files = (
+            execute_git(None, git_dir, ["ls-tree", "--name-only", rev], capture=True)
+            .strip()
+            .split("\n")
         )
-        yamls.append(output)
+        for filename in filter_docker_compose_files_list(files, version):
+            output = execute_git(
+                None, git_dir, ["show", "%s:%s" % (rev, filename)], capture=True
+            )
+            yamls.append(output)
 
-    return get_docker_compose_data_from_json_list(yamls)
+        return get_docker_compose_data_from_json_list(yamls)
+    except Exception as ex:
+        raise Exception("Cannot get docker-compose data for %s" % rev) from ex
 
 
 def version_of(
@@ -1716,6 +1721,9 @@ DR = Disable automatic publishing of the release
                 if action == "true":
                     set_param("BUILD_CLIENT", action)
                     set_param("BUILD_SERVERS", action)
+                    if reply[1] == "T":
+                        set_param("BUILD_MENDER_DIST_PACKAGES", action)
+                        set_param("BUILD_MENDER_CONVERT", action)
                 set_param("RUN_INTEGRATION_TESTS", action)
 
             if reply[1] == "T" or reply[1] == "C":
@@ -1733,6 +1741,8 @@ DR = Disable automatic publishing of the release
                 action = "false"
             set_param("BUILD_CLIENT", action)
             set_param("BUILD_SERVERS", action)
+            set_param("BUILD_MENDER_DIST_PACKAGES", action)
+            set_param("BUILD_MENDER_CONVERT", action)
             for param in params.keys():
                 if param.startswith("BUILD_"):
                     set_param(param, action)
@@ -1742,6 +1752,8 @@ DR = Disable automatic publishing of the release
                 action = "true"
                 set_param("BUILD_CLIENT", action)
                 set_param("BUILD_SERVERS", action)
+                set_param("BUILD_MENDER_DIST_PACKAGES", action)
+                set_param("BUILD_MENDER_CONVERT", action)
             else:
                 action = "false"
             set_param("PUBLISH_RELEASE_AUTOMATIC", action)

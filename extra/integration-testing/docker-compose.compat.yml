@@ -13,6 +13,8 @@ services:
   #   privileged: true
   #   environment:
   #     TENANT_TOKEN: ""
+  #   volumes:
+  #     - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
   # </TEMPLATE>
   #
 
@@ -25,6 +27,8 @@ services:
     privileged: true
     environment:
       TENANT_TOKEN: ""
+    volumes:
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
 
   mender-client-3-0:
     image: mendersoftware/mender-client-qemu:3.0

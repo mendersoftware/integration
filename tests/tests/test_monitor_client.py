@@ -821,11 +821,15 @@ class TestMonitorClientEnterprise:
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
         )
+        expected_alerts_count = 1  # one for CRITICAL, because we stopped the service
         time.sleep(wait_for_alert_interval_s)
         mender_device.run("systemctl start %s" % service_name)
         logger.info(
             "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
         )
+        expected_alerts_count = (
+            expected_alerts_count + 1
+        )  # one for OK, because we started the service
         time.sleep(2 * wait_for_alert_interval_s)
 
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
@@ -844,6 +848,7 @@ class TestMonitorClientEnterprise:
         mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
         logger.debug("got mail: '%s'", mail)
         messages = parse_email(mail)
+        logger.info("got %d alert messages", len(messages))
         for m in messages:
             logger.debug("got message:")
             logger.debug("             body: %s", m.get_body().get_content())
@@ -883,6 +888,50 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
+
+        logger.info("test_monitorclient_alert_store: large alert store (MEN-5133).")
+        log_file = "/tmp/mylog.log"
+        log_pattern = "session opened for user [a-z]*"
+
+        service_name = "mylog"
+        prepare_log_monitoring(
+            mender_device, service_name, log_file, log_pattern,
+        )
+        mender_device.run("touch '" + log_file + "'")
+        logger.info(
+            "test_monitorclient_alert_store large store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+
+        patterns_count = 30
+        expected_alerts_count = (
+            expected_alerts_count + patterns_count
+        )  # onefor each pattern detected in log
+        for i in range(patterns_count):
+            mender_device.run(
+                "for i in {1..4}; do echo 'some line '$i >> " + log_file + "; done"
+            )
+            mender_device.run(
+                "echo 'the session session opened for user tests' >> " + log_file
+            )
+            mender_device.run(
+                "for i in {6..9}; do echo 'some line '$i >> " + log_file + "; done"
+            )
+            time.sleep(wait_for_alert_interval_s)
+
+        logger.info(
+            "test_monitorclient_alert_store re-enabling access to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        time.sleep(
+            9 * wait_for_alert_interval_s
+        )  # at the moment we send stored alerts every minute
+
+        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        messages = parse_email(mail)
+        assert len(messages) == expected_alerts_count
+        logger.info("got %d alert messages." % len(messages))
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""

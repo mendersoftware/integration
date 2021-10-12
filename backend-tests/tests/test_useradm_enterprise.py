@@ -112,9 +112,9 @@ class Test2FAEnterprise:
 
         return secret_b32
 
-    def _get_user(self, utoken):
+    def _get_user(self, utoken, expected_code=200):
         r = uadm.with_auth(utoken).call("GET", useradm.URL_USERS_ID.format(id="me"))
-        assert r.status_code == 200
+        assert r.status_code == expected_code
         return r.json()
 
     def _make_2fa_settings(self, user_statuses):
@@ -179,8 +179,11 @@ class Test2FAEnterprise:
         r = self._toggle_tfa(user_2fa_tok, user_2fa.id, on=True)
         assert r.status_code == 200
 
+        self._get_user(user_2fa_tok, expected_code=401)
+
         r = self._login(user_2fa)
         assert r.status_code == 200
+        user_2fa_tok = r.text
 
         # get the user info and verify 2fa status
         user = self._get_user(user_2fa_tok)

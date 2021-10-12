@@ -5,6 +5,20 @@ http:
   #
   routers:
     #
+    # hostname-checker
+    # {{ with (env "ALLOWED_HOSTS") }}
+    hostname-checker:
+      entrypoints: https
+      middlewares:
+        - check-hostname
+      rule: >-
+        ! Host(`{{join "`,`" (splitList "," (trim .))}}`)
+      service: noop@internal
+      priority: 999
+      tls: true
+    # {{end}}
+
+    #
     # deployments
     #
     deployments:

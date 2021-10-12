@@ -30,6 +30,13 @@ git:
     - mender-device-auth
     release_component: true
 
+  deviceauth-enterprise:
+    docker_image:
+    - deviceauth-enterprise
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
   gui:
     docker_image:
     - gui
@@ -226,6 +233,13 @@ docker_image:
   deviceauth:
     git:
     - deviceauth
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
+  deviceauth-enterprise:
+    git:
+    - deviceauth-enterprise
     docker_container:
     - mender-device-auth
     release_component: true
@@ -432,8 +446,10 @@ docker_container:
   mender-device-auth:
     git:
     - deviceauth
+    - deviceauth-enterprise
     docker_image:
     - deviceauth
+    - deviceauth-enterprise
     release_component: true
 
   mender-gui:

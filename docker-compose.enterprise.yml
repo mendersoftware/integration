@@ -38,6 +38,7 @@ services:
 
     # configure the rest
     mender-device-auth:
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-master
         environment:
             DEVICEAUTH_REDIS_ADDR: "mender-redis:6379"
             DEVICEAUTH_REDIS_USERNAME: ""

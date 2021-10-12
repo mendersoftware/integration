@@ -37,6 +37,7 @@ REPO_TO_ENV_VARIABLE = {
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
+    "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
     "deviceconfig": "DEVICECONFIG_REV",
     "deviceconnect": "DEVICECONNECT_REV",
     "inventory": "INVENTORY_REV",
@@ -190,7 +191,7 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
     REPOS = (
         "auditlogs",
         "deployments-enterprise",
-        "deviceauth",
+        "deviceauth-enterprise",
         "deviceconfig",
         "deviceconnect",
         "devicemonitor",

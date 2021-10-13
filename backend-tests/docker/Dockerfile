@@ -1,4 +1,4 @@
-FROM python:3.9.7
+FROM python:3.10.0
 
 RUN apt-get -y -qq update && apt-get -qq -y install docker.io libzbar0 && rm -rf /var/lib/apt/lists/*
 

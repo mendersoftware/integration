@@ -20,7 +20,7 @@ execnet==1.9.0
 fabric==2.6.0
 filelock==3.3.0
 html5lib==1.1
-idna==2.10
+idna==3.3
 iniconfig==1.1.1
 invoke==1.6.0
 jsonschema==3.2.0

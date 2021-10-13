@@ -28,10 +28,10 @@ class BaseCli:
             base_filter = microservice
         elif container_manager is None:
             self.container_manager = DockerNamespace(containers_namespace)
-            base_filter = microservice + "_1"
+            base_filter = microservice + "[_-]1"
         else:
             self.container_manager = container_manager
-            base_filter = microservice + "_1"
+            base_filter = microservice + "[_-]1"
 
         self.cid = self.container_manager.getid([base_filter])
 

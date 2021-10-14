@@ -83,7 +83,7 @@ test:docs:
     - ./run-tests.sh
 
 test:staging:backend-tests:
-  image: debian:buster
+  image: debian:bullseye
   stage: test
   timeout: 4h
   only:

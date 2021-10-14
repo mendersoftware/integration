@@ -4,7 +4,7 @@ attrs==21.2.0
 bcrypt==3.2.0
 CacheControl==0.12.6
 cached-property==1.5.2
-certifi==2021.5.30
+certifi==2021.10.8
 cffi==1.14.6
 chardet==4.0.0
 colorama==0.4.4
@@ -12,7 +12,7 @@ contextlib2==21.6.0
 cryptography==35.0.0
 distlib==0.3.1
 distro==1.6.0
-docker==5.0.2
+docker==5.0.3
 docker-compose==1.29.2
 dockerpty==0.4.1
 docopt==0.6.2
@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==10.0
 flaky==3.7.0
-stripe==2.60.0
+stripe==2.61.0

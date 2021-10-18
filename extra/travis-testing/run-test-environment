@@ -56,7 +56,7 @@ shift
 
 
 [ "$TEST_TYPE" == "acceptance" ] && {
-    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
+    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml -f $INTEGRATION_PATH/docker-compose.demo.yml -f $INTEGRATION_PATH/docker-compose.azure.yml"
     TEST_SERVICE=${TEST_SERVICE:-"acceptance"}
     # technically we could use 'docker-compose run' here, but it doesn't preserve the acceptance service name,
     # which is needed e.g. for predictably running the tenantadm mock

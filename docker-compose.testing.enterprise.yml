@@ -2,8 +2,16 @@ version: '2.1'
 services:
 
     mender-device-auth:
+        command: server --automigrate
+        volumes:
+            - ./keys/deviceauth/private.key:/etc/deviceauth-enterprise/rsa/private.pem
         environment:
             DEVICEAUTH_DEFAULT_TENANT_TOKEN: $DEFAULT_TENANT_TOKEN
+
+    mender-useradm:
+        command: server --automigrate
+        volumes:
+            - ./keys/useradm/private.key:/etc/useradm-enterprise/rsa/private.pem
 
     mender-tenantadm:
         environment:

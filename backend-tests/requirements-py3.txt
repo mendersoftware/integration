@@ -5,7 +5,7 @@ chardet==4.0.0
 cryptography==35.0.0
 docker==5.0.3
 filelock==3.3.0
-idna==2.10
+idna==3.3
 iniconfig==1.1.1
 packaging==21.0
 Pillow==8.3.2

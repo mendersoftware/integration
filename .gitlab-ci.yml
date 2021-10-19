@@ -138,7 +138,7 @@ test:staging:backend-tests:
 test:staging:integration-tests:
   # Integration tests depends on running ssh to containers, we're forced to
   # run dockerd on the same host.
-  image: docker:19.03.5-dind
+  image: docker:19.03.15-dind-alpine3.13
   stage: test
   timeout: 4h
   only:

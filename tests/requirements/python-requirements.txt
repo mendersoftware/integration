@@ -5,7 +5,7 @@ bcrypt==3.2.0
 CacheControl==0.12.6
 cached-property==1.5.2
 certifi==2021.10.8
-cffi==1.14.6
+cffi==1.15.0
 chardet==4.0.0
 colorama==0.4.4
 contextlib2==21.6.0
@@ -18,7 +18,7 @@ dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.9.0
 fabric==2.6.0
-filelock==3.3.0
+filelock==3.3.1
 html5lib==1.1
 idna==3.3
 iniconfig==1.1.1

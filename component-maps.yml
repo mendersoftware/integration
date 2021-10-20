@@ -4,6 +4,13 @@
 # and "docker_container". Binary tools that don't have Docker components, will
 # only have the "git" part.
 git:
+  azure-iot-manager:
+    docker_image:
+    - azure-iot-manager
+    docker_container:
+    - mender-azure-iot-manager
+    release_component: true
+
   deployments:
     docker_image:
     - deployments
@@ -209,6 +216,13 @@ git:
     release_component: true
 
 docker_image:
+  azure-iot-manager:
+    git:
+    - azure-iot-manager
+    docker_container:
+    - mender-azure-iot-manager
+    release_component: true
+
   deployments:
     git:
     - deployments
@@ -420,6 +434,13 @@ docker_image:
     release_component: true
 
 docker_container:
+  mender-azure-iot-manager:
+    git:
+    - azure-iot-manager
+    docker_image:
+    - azure-iot-manager
+    release_component: true
+
   mender-deployments:
     git:
     - deployments

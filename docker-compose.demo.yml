@@ -1,6 +1,9 @@
 version: '2.1'
 services:
 
+    mender-azure-iot-manager:
+        command: server --automigrate
+
     mender-useradm:
         command: server --automigrate
         volumes:

@@ -7,6 +7,9 @@ services:
     #
     # backend open source services
     #
+    mender-azure-iot-manager:
+        image: mendersoftware/azure-iot-manager:master
+
     mender-deployments:
         image: mendersoftware/deployments:master
 

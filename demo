@@ -216,6 +216,7 @@ start_server() {
             -f docker-compose.yml \
             -f docker-compose.storage.minio.yml \
             -f docker-compose.demo.yml \
+            -f docker-compose.azure.yml \
             -f docker-compose.config.yml \
             -f docker-compose.connect.yml \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \

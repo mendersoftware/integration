@@ -13,6 +13,8 @@ services:
         command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+        environment:
+            DEVICEAUTH_SERVER_PRIV_KEY_PATH: /etc/deviceauth/rsa/private.pem
 
     mender-inventory:
         command: server --automigrate

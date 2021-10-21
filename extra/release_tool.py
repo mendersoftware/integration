@@ -220,6 +220,7 @@ class Component:
 # A map from git repo name to build parameter name in CI scripts.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
+    "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -252,6 +253,8 @@ GIT_TO_BUILDPARAM_MAP = {
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
 BACKEND_SERVICES_OPEN = {
+    "azure-iot-manager",
+    "deviceauth",
     "deviceconnect",
     "create-artifact-worker",
     "deviceconfig",
@@ -433,6 +436,7 @@ def filter_docker_compose_files_list(list, version):
     _DOCKER_ONLY_YML = [
         "docker-compose.yml",
         "docker-compose.enterprise.yml",
+        "docker-compose.azure.yml",
         "docker-compose.auditlogs.yml",
         "docker-compose.connect.yml",
         "docker-compose.config.yml",

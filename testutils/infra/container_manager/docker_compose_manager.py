@@ -27,6 +27,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.azure.yml",
         COMPOSE_FILES_PATH + "/docker-compose.config.yml",
         COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
@@ -101,8 +102,8 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 13
-    NUM_SERVICES_ENTERPRISE = 18
+    NUM_SERVICES_OPENSOURCE = 14
+    NUM_SERVICES_ENTERPRISE = 19
 
     def setup(self):
         self._docker_compose_cmd("up -d")

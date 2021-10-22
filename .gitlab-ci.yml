@@ -226,3 +226,15 @@ trigger:saas:sync-staging-component:
 publish:image:saas:
   rules:
     - when: never
+
+publish:image-count-updates:
+  image: denoland/deno:1.15.2
+  before_script:
+    - apt update && apt install -qy git hub
+  script:
+    - deno run --allow-read --allow-run --allow-write --allow-net containerCountUpdater.ts
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - changes:
+      - docker-compose.*
+      - demo

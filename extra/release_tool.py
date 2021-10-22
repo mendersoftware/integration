@@ -436,7 +436,6 @@ def filter_docker_compose_files_list(list, version):
     _DOCKER_ONLY_YML = [
         "docker-compose.yml",
         "docker-compose.enterprise.yml",
-        "docker-compose.azure.yml",
         "docker-compose.auditlogs.yml",
         "docker-compose.connect.yml",
         "docker-compose.config.yml",

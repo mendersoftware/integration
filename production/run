@@ -28,7 +28,6 @@ exec docker-compose \
      -p menderproduction \
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \
-     -f ../docker-compose.azure.yml \
      -f ../docker-compose.connect.yml \
      -f ../docker-compose.config.yml \
      $ENTERPRISE_DOCKER_COMPOSE \

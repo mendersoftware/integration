@@ -12,7 +12,6 @@ COMPOSE_CMD_BASE="docker-compose -p backend-tests \
 COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
-        -f $INTEGRATION_PATH/docker-compose.azure.yml \
         -f $INTEGRATION_PATH/docker-compose.connect.yml \
         -f $INTEGRATION_PATH/docker-compose.config.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml

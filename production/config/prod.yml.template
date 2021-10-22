@@ -89,7 +89,8 @@ services:
                 max-file: "10"
                 max-size: "50m"
         environment:
-            ALLOWED_HOSTS: my-gateway-dns-name
+            # ALLOWED_HOSTS is a comma-separated list of allowed hostnames
+            ALLOWED_HOSTS: "my-gateway-dns-name"
 
     mender-deployments:
         command: server --automigrate

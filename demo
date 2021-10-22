@@ -9,6 +9,7 @@ DOCKER_COMPOSE_PROJECT_NAME=${DOCKER_COMPOSE_PROJECT_NAME:-$(tr -d ".-" <<<${PWD
 
 EXTRA_FILES=""
 
+DEMO_FILES="-f docker-compose.yml -f docker-compose.config.yml -f docker-compose.connect.yml -f docker-compose.storage.minio.yml -f docker-compose.demo.yml"
 CLIENT_FILES="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
 ENTERPRISE_FILES="-f docker-compose.enterprise.yml -f docker-compose.monitor.yml -f docker-compose.auditlogs.yml -f docker-compose.auditlogs.connect.yml -f docker-compose.auditlogs.config.yml"
 ENTERPRISE_CLIENT_FILES="-f docker-compose.monitor-client.commercial.yml -f docker-compose.client.demo.yml"
@@ -183,12 +184,7 @@ run_non_up_commands() {
         # exec steals the shell, so unless docker-compose is not found,
         # exit 1 will never happen.
         exec docker-compose \
-                -f docker-compose.yml \
-                -f docker-compose.azure.yml \
-                -f docker-compose.config.yml \
-                -f docker-compose.connect.yml \
-                -f docker-compose.storage.minio.yml \
-                -f docker-compose.demo.yml \
+                $DEMO_FILES \
                 -p ${DOCKER_COMPOSE_PROJECT_NAME} \
                 $EXTRA_FILES \
                 "${ARGS[@]}"
@@ -199,12 +195,7 @@ run_non_up_commands() {
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
     retval=$(docker-compose \
-            -f docker-compose.yml \
-            -f docker-compose.azure.yml \
-            -f docker-compose.config.yml \
-            -f docker-compose.connect.yml \
-            -f docker-compose.storage.minio.yml \
-            -f docker-compose.demo.yml \
+            $DEMO_FILES \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
             $EXTRA_FILES \
             stop)
@@ -215,12 +206,7 @@ start_server() {
     echo "Starting the Mender demo environment..."
 
     docker-compose \
-            -f docker-compose.yml \
-            -f docker-compose.storage.minio.yml \
-            -f docker-compose.demo.yml \
-            -f docker-compose.azure.yml \
-            -f docker-compose.config.yml \
-            -f docker-compose.connect.yml \
+            $DEMO_FILES \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
             $EXTRA_FILES \
             "${ARGS[@]}" -d
@@ -326,12 +312,7 @@ maybe_launch_enterprise_client() {
             # Now that we have the tenant token we can enable the client.
             EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_CLIENT_FILES"
             TENANT_TOKEN=$TENANT_TOKEN docker-compose \
-                    -f docker-compose.yml \
-                    -f docker-compose.azure.yml \
-                    -f docker-compose.config.yml \
-                    -f docker-compose.connect.yml \
-                    -f docker-compose.storage.minio.yml \
-                    -f docker-compose.demo.yml \
+                    $DEMO_FILES \
                     -p ${DOCKER_COMPOSE_PROJECT_NAME} \
                     $EXTRA_FILES \
                     "${ARGS[@]}" -d mender-client
@@ -444,12 +425,7 @@ wait_for_user() {
 
 follow_logs() {
     docker-compose \
-            -f docker-compose.yml \
-            -f docker-compose.azure.yml \
-            -f docker-compose.config.yml \
-            -f docker-compose.connect.yml \
-            -f docker-compose.storage.minio.yml \
-            -f docker-compose.demo.yml \
+            $DEMO_FILES \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
             $EXTRA_FILES \
             logs --follow

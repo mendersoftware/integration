@@ -224,6 +224,7 @@ GIT_TO_BUILDPARAM_MAP = {
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
+    "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
@@ -262,6 +263,7 @@ BACKEND_SERVICES_OPEN = {
 BACKEND_SERVICES_ENT = {
     "tenantadm",
     "deployments-enterprise",
+    "deviceauth-enterprise",
     "inventory-enterprise",
     "useradm-enterprise",
     "workflows-enterprise",
@@ -269,7 +271,13 @@ BACKEND_SERVICES_ENT = {
     "mtls-ambassador",
     "devicemonitor",
 }
-BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
+BACKEND_SERVICES_OPEN_ENT = {
+    "deployments",
+    "inventory",
+    "useradm",
+    "workflows",
+    "deviceauth",
+}
 BACKEND_SERVICES = (
     BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 )

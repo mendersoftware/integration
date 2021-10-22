@@ -102,7 +102,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 14
+    NUM_SERVICES_OPENSOURCE = 15
     NUM_SERVICES_ENTERPRISE = 19
 
     def setup(self):

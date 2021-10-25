@@ -37,7 +37,7 @@ psutil==5.8.0
 py==1.10.0
 py3dns==3.2.1
 pycparser==2.20
-pymongo==3.12.0
+pymongo==3.12.1
 PyNaCl==1.4.0
 pyparsing==2.4.7
 pyrsistent==0.18.0

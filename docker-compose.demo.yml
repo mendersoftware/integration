@@ -8,6 +8,8 @@ services:
         command: server --automigrate
         volumes:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
+        environment:
+            USERADM_SERVER_PRIV_KEY_PATH: /etc/useradm/rsa/private.pem
 
     mender-device-auth:
         command: server --automigrate

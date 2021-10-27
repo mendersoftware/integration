@@ -10,22 +10,9 @@ services:
         networks:
             - mender
 
-    # subsitute services with 'enterprise' versions
-    mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-master
-
-    mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
-
-    mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-master
-
-    mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-master
-
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:mender-master
+        image: registry.mender.io/mendersoftware/tenantadm:staging
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -50,7 +37,6 @@ services:
             DEVICEAUTH_HAVE_ADDONS: 1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-master
         environment:
             USERADM_REDIS_ADDR: "mender-redis:6379"
             USERADM_REDIS_USERNAME: ""

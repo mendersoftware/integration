@@ -12,11 +12,15 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from collections import namedtuple
+
 from testutils.infra.container_manager.docker_manager import DockerNamespace
 from testutils.infra.container_manager.kubernetes_manager import (
     KubernetesNamespace,
     isK8S,
 )
+
+Microservice = namedtuple("Service", "bin_path data_path")
 
 
 class BaseCli:
@@ -28,10 +32,10 @@ class BaseCli:
             base_filter = microservice
         elif container_manager is None:
             self.container_manager = DockerNamespace(containers_namespace)
-            base_filter = microservice + "_1"
+            base_filter = microservice + "[_-]1"
         else:
             self.container_manager = container_manager
-            base_filter = microservice + "_1"
+            base_filter = microservice + "[_-]1"
 
         self.cid = self.container_manager.getid([base_filter])
 
@@ -121,15 +125,31 @@ class CliTenantadm(BaseCli):
 
 class CliDeviceauth(BaseCli):
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        """ Instantiate deviceauth microservice CLI class. Both open source and enterprise versions are supported. """
         BaseCli.__init__(
             self, "mender-device-auth", containers_namespace, container_manager
         )
+
+        open_source = Microservice("/usr/bin/deviceauth", "/etc/deviceauth")
+        enterprise = Microservice(
+            "/usr/bin/deviceauth-enterprise", "/etc/deviceauth-enterprise"
+        )
+
+        for service in [open_source, enterprise]:
+            try:
+                self.container_manager.execute(self.cid, [service.bin_path, "--help"])
+                self.service = service
+                break
+            except:
+                continue
+        else:
+            raise RuntimeError("no runnable binary found in mender-deviceauth")
 
     def migrate(self, tenant_id=None):
         if isK8S():
             return
 
-        cmd = ["usr/bin/deviceauth", "migrate"]
+        cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
             cmd.extend(["--tenant", tenant_id])
@@ -144,12 +164,12 @@ class CliDeviceauth(BaseCli):
         :param tenant_token - 'the default tenant token to set'
         """
 
-        # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml')
+        # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml' or '/etc/deviceauth-enterprise/config.yaml')
         cmd = [
             "/bin/sed",
             "-i",
             "$adefault_tenant_token: {}".format(tenant_token),
-            "/etc/deviceauth/config.yaml",
+            f"{self.service.data_path}/config.yaml",
         ]
         self.container_manager.execute(self.cid, cmd)
 
@@ -161,7 +181,7 @@ class CliDeviceauth(BaseCli):
         if isK8S():
             return
 
-        cmd = ["usr/bin/deviceauth", "propagate-inventory-statuses"]
+        cmd = [self.service.bin_path, "propagate-inventory-statuses"]
 
         if tenant_id is not None:
             cmd.extend(["--tenant_id", tenant_id])

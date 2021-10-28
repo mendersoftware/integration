@@ -5,6 +5,37 @@ http:
   #
   routers:
     #
+    # hostname-checker
+    # {{ with (env "ALLOWED_HOSTS") }}
+    hostname-checker:
+      entrypoints: https
+      middlewares:
+        - check-hostname
+      rule: >-
+        ! Host(`{{join "`,`" (splitList "," (trim .))}}`)
+      service: noop@internal
+      priority: 999
+      tls: true
+    # {{end}}
+
+    #
+    # azure-iot-manager
+    #
+    azureiotmanagerMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+      - userauth
+      - sec-headers
+      - compression
+      - json-error-responder1
+      - json-error-responder2
+      - json-error-responder3
+      - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/azure-iot-manager`)"
+      service: azureiotmanager
+      tls: true
+
+    #
     # deployments
     #
     deployments:
@@ -176,6 +207,11 @@ http:
   # Services
   #
   services:
+
+    azureiotmanager:
+      loadBalancer:
+        servers:
+        - url: "http://mender-azure-iot-manager:8080"
 
     deviceauth:
       loadBalancer:

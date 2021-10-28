@@ -1,15 +1,22 @@
 version: '2.1'
 services:
 
+    mender-azure-iot-manager:
+        command: server --automigrate
+
     mender-useradm:
         command: server --automigrate
         volumes:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
+        environment:
+            USERADM_SERVER_PRIV_KEY_PATH: /etc/useradm/rsa/private.pem
 
     mender-device-auth:
         command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+        environment:
+            DEVICEAUTH_SERVER_PRIV_KEY_PATH: /etc/deviceauth/rsa/private.pem
 
     mender-inventory:
         command: server --automigrate

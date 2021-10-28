@@ -4,6 +4,13 @@
 # and "docker_container". Binary tools that don't have Docker components, will
 # only have the "git" part.
 git:
+  azure-iot-manager:
+    docker_image:
+    - azure-iot-manager
+    docker_container:
+    - mender-azure-iot-manager
+    release_component: true
+
   deployments:
     docker_image:
     - deployments
@@ -26,6 +33,13 @@ git:
   deviceauth:
     docker_image:
     - deviceauth
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
+  deviceauth-enterprise:
+    docker_image:
+    - deviceauth-enterprise
     docker_container:
     - mender-device-auth
     release_component: true
@@ -209,6 +223,13 @@ git:
     release_component: true
 
 docker_image:
+  azure-iot-manager:
+    git:
+    - azure-iot-manager
+    docker_container:
+    - mender-azure-iot-manager
+    release_component: true
+
   deployments:
     git:
     - deployments
@@ -226,6 +247,13 @@ docker_image:
   deviceauth:
     git:
     - deviceauth
+    docker_container:
+    - mender-device-auth
+    release_component: true
+
+  deviceauth-enterprise:
+    git:
+    - deviceauth-enterprise
     docker_container:
     - mender-device-auth
     release_component: true
@@ -420,6 +448,13 @@ docker_image:
     release_component: true
 
 docker_container:
+  mender-azure-iot-manager:
+    git:
+    - azure-iot-manager
+    docker_image:
+    - azure-iot-manager
+    release_component: true
+
   mender-deployments:
     git:
     - deployments-enterprise
@@ -430,8 +465,10 @@ docker_container:
   mender-device-auth:
     git:
     - deviceauth
+    - deviceauth-enterprise
     docker_image:
     - deviceauth
+    - deviceauth-enterprise
     release_component: true
 
   mender-gui:

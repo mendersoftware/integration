@@ -1,6 +1,15 @@
 http:
   middlewares:
 
+    # {{ with (env "ALLOWED_HOSTS") }}
+    check-hostname:
+      headers:
+        customResponseHeaders:
+          X-Allowed-Hosts: "{{replace " " "" .}}"
+        allowedHosts: # {{ range ( splitList "," (replace " " "" .)) }}
+          - "{{.}}" # {{end}}
+    # {{end}}
+
     circuit-breaker:
       circuitBreaker:
         expression: >-

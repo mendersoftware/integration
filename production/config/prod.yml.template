@@ -19,6 +19,9 @@
 version: '2.1'
 services:
 
+    mender-azure-iot-manager:
+        command: server --automigrate
+
     mender-workflows-server:
         command: server --automigrate
 
@@ -41,6 +44,8 @@ services:
         command: server --automigrate
         volumes:
             - ./production/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
+        environment:
+            DEVICEAUTH_SERVER_PRIV_KEY_PATH: /etc/deviceauth/rsa/private.pem
         logging:
             options:
                 max-file: "10"
@@ -89,7 +94,8 @@ services:
                 max-file: "10"
                 max-size: "50m"
         environment:
-            ALLOWED_HOSTS: my-gateway-dns-name
+            # ALLOWED_HOSTS is a comma-separated list of allowed hostnames
+            ALLOWED_HOSTS: "my-gateway-dns-name"
 
     mender-deployments:
         command: server --automigrate

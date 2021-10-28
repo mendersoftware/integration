@@ -101,33 +101,11 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
 
-    NUM_SERVICES_OPENSOURCE = 13
-    NUM_SERVICES_ENTERPRISE = 18
-
     def setup(self):
         self._docker_compose_cmd("up -d")
 
-    def _wait_for_containers(self, expected_containers):
-        files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
-        running_countainers_count = 0
-        for _ in range(60 * 5):
-            out = subprocess.check_output(
-                "docker-compose -p %s %s ps -q" % (self.name, files_args), shell=True
-            )
-            running_countainers_count = len(out.split())
-            if running_countainers_count == expected_containers:
-                wait_until_healthy(self.name)
-                return
-            else:
-                time.sleep(1)
-        logger.info(
-            "%s: running countainers mismatch, list of currently running: %s"
-            % (self.name, out)
-        )
-        raise Exception(
-            "timeout: running containers count: %d, expected: %d for docker-compose project: %s"
-            % (running_countainers_count, expected_containers, self.name)
-        )
+    def _wait_for_containers(self):
+        wait_until_healthy(self.name, timeout=60 * 5)
 
     def teardown_exclude(self, exclude=[]):
         """
@@ -190,7 +168,7 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+        self._wait_for_containers()
 
     def new_tenant_client(self, name, tenant):
         if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
@@ -276,7 +254,7 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
+        self._wait_for_containers()
 
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
@@ -368,7 +346,7 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
             "up -d --scale mtls-ambassador=0 --scale mender-client=0",
             env={"HOST_IP": host_ip},
         )
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
+        self._wait_for_containers()
 
     def start_api_gateway(self):
         self._docker_compose_cmd("scale mender-api-gateway=1")
@@ -380,7 +358,7 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         self._docker_compose_cmd(
             "up -d --scale mtls-ambassador=1 --scale mender-client=0"
         )
-        self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE + 1)
+        self._wait_for_containers()
 
     def new_mtls_client(self, name, tenant):
         self._docker_compose_cmd(

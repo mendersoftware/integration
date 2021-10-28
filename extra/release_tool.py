@@ -220,9 +220,11 @@ class Component:
 # A map from git repo name to build parameter name in CI scripts.
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
+    "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
+    "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
     "gui": "GUI_REV",
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
@@ -251,6 +253,7 @@ GIT_TO_BUILDPARAM_MAP = {
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
 BACKEND_SERVICES_OPEN = {
+    "azure-iot-manager",
     "deviceauth",
     "deviceconnect",
     "create-artifact-worker",
@@ -260,6 +263,7 @@ BACKEND_SERVICES_OPEN = {
 BACKEND_SERVICES_ENT = {
     "tenantadm",
     "deployments-enterprise",
+    "deviceauth-enterprise",
     "inventory-enterprise",
     "useradm-enterprise",
     "workflows-enterprise",
@@ -267,7 +271,13 @@ BACKEND_SERVICES_ENT = {
     "mtls-ambassador",
     "devicemonitor",
 }
-BACKEND_SERVICES_OPEN_ENT = {"deployments", "inventory", "useradm", "workflows"}
+BACKEND_SERVICES_OPEN_ENT = {
+    "deployments",
+    "inventory",
+    "useradm",
+    "workflows",
+    "deviceauth",
+}
 BACKEND_SERVICES = (
     BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 )

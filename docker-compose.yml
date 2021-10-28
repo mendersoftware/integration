@@ -20,7 +20,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:mender-master
+        image: registry.mender.io/mendersoftware/deployments-enterprise:staging
         extends:
             file: common.yml
             service: mender-base
@@ -35,7 +35,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:mender-master
+        image: mendersoftware/gui:staging
         extends:
             file: common.yml
             service: mender-base
@@ -88,7 +88,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:mender-master
+        image: mendersoftware/deviceauth:staging
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -106,7 +106,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:mender-master
+        image: registry.mender.io/mendersoftware/inventory-enterprise:staging
         extends:
             file: common.yml
             service: mender-base
@@ -121,7 +121,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:mender-master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:staging
         extends:
             file: common.yml
             service: mender-base
@@ -136,7 +136,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server:
-        image: mendersoftware/workflows:mender-master
+        image: registry.mender.io/mendersoftware/workflows-enterprise:staging
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -153,7 +153,7 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:mender-master
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:staging
         command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
@@ -169,7 +169,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:mender-master
+        image: mendersoftware/create-artifact-worker:staging
         extends:
             file: common.yml
             service: mender-base

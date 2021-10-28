@@ -10,35 +10,32 @@ services:
     mender-azure-iot-manager:
         image: mendersoftware/azure-iot-manager:master
 
-    mender-deployments:
-        image: mendersoftware/deployments:master
-
     mender-gui:
-        image: mendersoftware/gui:master
+        image: mendersoftware/gui:staging
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:master
+        image: mendersoftware/deviceauth:staging
 
-    mender-inventory:
-        image: mendersoftware/inventory:master
+    #mender-inventory:
+        #image: mendersoftware/inventory:master
 
-    mender-useradm:
-        image: mendersoftware/useradm:master
+    #mender-useradm:
+        #image: mendersoftware/useradm:master
 
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:master
+        image: mendersoftware/deviceconnect:staging
 
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:master
+        image: mendersoftware/deviceconfig:staging
 
     mender-reporting:
-        image: mendersoftware/reporting:master
+        image: mendersoftware/reporting:staging
 
-    mender-workflows-server:
-        image: mendersoftware/workflows:master
+    #mender-workflows-server:
+        #image: mendersoftware/workflows:master
 
-    mender-workflows-worker:
-        image: mendersoftware/workflows-worker:master
+    #mender-workflows-worker:
+        #image: mendersoftware/workflows-worker:master
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:master
+        image: mendersoftware/create-artifact-worker:staging

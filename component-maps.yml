@@ -3,7 +3,17 @@
 # this list, make sure to add it to all three sections: "git", "docker_image"
 # and "docker_container". Binary tools that don't have Docker components, will
 # only have the "git" part.
+
 git:
+
+  mender-auth-azure-iot:
+    docker_image:
+    - mender-client-qemu
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: true
+
   azure-iot-manager:
     docker_image:
     - azure-iot-manager
@@ -223,6 +233,7 @@ git:
     release_component: true
 
 docker_image:
+
   azure-iot-manager:
     git:
     - azure-iot-manager
@@ -448,6 +459,7 @@ docker_image:
     release_component: true
 
 docker_container:
+
   mender-azure-iot-manager:
     git:
     - azure-iot-manager
@@ -493,6 +505,7 @@ docker_container:
     git:
     - mender
     - monitor-client
+    - mender-auth-azure-iot
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons

@@ -221,6 +221,7 @@ class Component:
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
+    "mender-auth-azure-iot": "MENDER_AUTH_AZURE_IOT_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",

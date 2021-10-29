@@ -402,7 +402,7 @@ print_info() {
     if [[ $PRINT_LOGIN_INFO -eq 1 ]]; then
         echo "****************************************"
         echo
-        echo "Username: mender-demo@example.com"
+        echo "Username: ${USER}"
         echo "Login password: ${PASSWORD}"
         echo
         echo "****************************************"

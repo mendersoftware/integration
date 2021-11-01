@@ -27,7 +27,7 @@ jsonschema==3.2.0
 lockfile==0.12.2
 msgpack==1.0.2
 ordered-set==4.0.2
-packaging==20.9
+packaging==21.2
 paramiko==2.8.0
 pathlib2==2.3.6
 pep517==0.9.1

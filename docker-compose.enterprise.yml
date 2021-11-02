@@ -12,7 +12,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:staging
+        image: registry.mender.io/mendersoftware/tenantadm:saas-v2021.11.02
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -25,7 +25,7 @@ services:
 
     # configure the rest
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-master
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:saas-v2021.11.02
         environment:
             DEVICEAUTH_REDIS_ADDR: "mender-redis:6379"
             DEVICEAUTH_REDIS_USERNAME: ""

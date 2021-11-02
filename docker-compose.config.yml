@@ -5,7 +5,7 @@ services:
     # mender-deviceconfig
     #
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:staging
+        image: mendersoftware/deviceconfig:saas-v2021.11.02
         extends:
             file: common.yml
             service: mender-base

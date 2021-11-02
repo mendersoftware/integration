@@ -21,12 +21,6 @@ services:
         labels:
             mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
 
-    mender-nats:
-        image: nats:2.6.2-alpine3.14
-        command: -js
-        networks:
-            - mender
-
     mender-workflows-worker:
         environment:
             DEVICECONNECT_ADDR: "mender-deviceconnect:8080"

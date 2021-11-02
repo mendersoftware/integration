@@ -2,7 +2,7 @@ apipkg==2.1.0
 appdirs==1.4.4
 attrs==21.2.0
 bcrypt==3.2.0
-CacheControl==0.12.6
+CacheControl==0.12.8
 cached-property==1.5.2
 certifi==2021.10.8
 cffi==1.15.0
@@ -18,7 +18,7 @@ dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.9.0
 fabric==2.6.0
-filelock==3.3.1
+filelock==3.3.2
 html5lib==1.1
 idna==3.3
 iniconfig==1.1.1

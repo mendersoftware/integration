@@ -2764,13 +2764,21 @@ def do_integration_versions_including(args):
         try:
             version = data[repo.yml_components()[0].yml()]["version"]
         except KeyError:
-            # If key doesn't exist it's because the version is from before
-            # that component existed. So definitely not a match.
+            # Key repo.yml_components()[0] doesn't exist because the version is
+            # from before that component existed.
+            # Not a match.
             continue
 
-        if not is_marked_as_releaseable_in_integration_version(
-            candidate, repo.git(), args.version
-        ):
+        try:
+            if not is_marked_as_releaseable_in_integration_version(
+                candidate, repo.git(), args.version
+            ):
+                continue
+        except KeyError:
+            # Key repo.git() doesn't exist (but Docker component existed). This
+            # can happen when several git repos contribute to one Docker image
+            # (i.e. mender + mender-auth-azure-iot repos for mender-client-qemu)
+            # Not a match.
             continue
 
         if version == args.version:

@@ -3,6 +3,6 @@ services:
 
     mender-client:
         # Needs to be built in extra/mender-client-docker-addons
-        image: mendersoftware/mender-client-docker-addons:2.7.x
+        image: mendersoftware/mender-client-docker-addons:2.7.2
         networks:
             - mender

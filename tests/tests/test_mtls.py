@@ -34,44 +34,6 @@ from .mendertesting import MenderTesting
 container_factory = factory.get_factory()
 
 
-@pytest.fixture(scope="function")
-def setup_ent_mtls(request):
-    env = container_factory.getMTLSSetup()
-    request.addfinalizer(env.teardown)
-    env.setup()
-
-    mtls_username = "mtls@mender.io"
-    mtls_password = "correcthorsebatterystaple"
-
-    env.tenant = create_org(
-        "Mender",
-        mtls_username,
-        mtls_password,
-        containers_namespace=env.name,
-        container_manager=env,
-    )
-    env.user = env.tenant.users[0]
-    env.start_mtls_ambassador()
-
-    reset_mender_api(env)
-
-    auth.username = mtls_username
-    auth.password = mtls_password
-    auth.multitenancy = True
-    auth.current_tenant = env.tenant
-
-    env.stop_api_gateway()
-
-    # start a new mender client
-    env.new_mtls_client("mender-client", env.tenant.tenant_token)
-    env.device = MenderDevice(env.get_mender_clients()[0])
-    env.device.ssh_is_opened()
-
-    env.start_api_gateway()
-
-    return env
-
-
 def make_script_artifact(artifact_name, device_type, output_path):
     script = b"""\
 #! /bin/bash
@@ -264,10 +226,48 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     @flaky(max_runs=3)  # https://tracker.mender.io/browse/QA-243
-    def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
+    def test_mtls_enterprise_hsm(self, algorithm):
 
+        env = container_factory.getMTLSSetup()
+        request.addfinalizer(env.teardown)
+        env.setup()
+
+        mtls_username = "mtls@mender.io"
+        mtls_password = "correcthorsebatterystaple"
+
+        env.tenant = create_org(
+            "Mender",
+            mtls_username,
+            mtls_password,
+            containers_namespace=env.name,
+            container_manager=env,
+        )
+        env.user = env.tenant.users[0]
+        env.start_mtls_ambassador()
+
+        reset_mender_api(env)
+
+        auth.username = mtls_username
+        auth.password = mtls_password
+        auth.multitenancy = True
+        auth.current_tenant = env.tenant
+
+        env.stop_api_gateway()
+
+        # # start a new mender client
+        # env.new_mtls_client("mender-client", env.tenant.tenant_token)
+        # env.device = MenderDevice(env.get_mender_clients()[0])
+        # env.device.ssh_is_opened()
+
+        env.start_api_gateway()
+
+        # start a new mender client
+        time.sleep(32)
+        env.new_mtls_client("mender-client", env.tenant.tenant_token)
+        env.device = MenderDevice(env.get_mender_clients()[0])
+        env.device.ssh_is_opened()
         # Check if the client has has SoftHSM (from yocto dunfell forward)
-        output = setup_ent_mtls.device.run(
+        output = env.device.run(
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True
         )
         if output.rstrip() != "true":
@@ -278,11 +278,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             logger.info('waiting on %s' % t)
             while not os.path.exists(t):
                 time.sleep(0.4)
-            self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
+            self.common_test_mtls_enterprise(env, algorithm, use_hsm=True)
 
-            output = setup_ent_mtls.device.run(
+            output = env.device.run(
                 "journalctl -u %s | cat"
-                % setup_ent_mtls.device.get_client_service_name()
+                % env.device.get_client_service_name()
             )
             assert "loaded private key: '" in output
 
@@ -315,9 +315,9 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             deploy.check_expected_status("finished", deployment_id)
 
             # verify the update was actually installed on the device
-            out = setup_ent_mtls.device.run(
+            out = env.device.run(
                 "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
             ).strip()
             assert out == "mtls-artifact"
         finally:
-            self.hsm_cleanup(setup_ent_mtls.device)
+            self.hsm_cleanup(env.device)

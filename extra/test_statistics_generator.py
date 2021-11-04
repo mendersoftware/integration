@@ -23,8 +23,8 @@ def test_post_process():
     generator stays consistent through updates to the gitdm module
     """
     # ./statistics-generator --repo 2.5.0..2.6.0
-    prerendered_output = """Processed 102 csets from 8 developers
-2 employers found
+    prerendered_output = """### Statistics
+
 A total of 2864 lines added, 1149 removed (delta 1715)
 
 | Developers with the most changesets | |

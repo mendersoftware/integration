@@ -2586,6 +2586,92 @@ double check this.
     return True
 
 
+def run_and_combine_statistics_and_changelog(
+    workdir, single_repo, from_version, to_version, output_file
+):
+    """Generate statistics and changelogs and combine them in a single file"""
+
+    release_date = execute_git(
+        None,
+        workdir if single_repo else integration_dir(),
+        [
+            "for-each-ref",
+            r"--format=%(taggerdate:format:%m.%d.%Y)",
+            "refs/tags/" + to_version,
+        ],
+        capture=True,
+    )
+    release_name = "%s %s" % (
+        "Mender" if not single_repo else os.path.basename(workdir),
+        to_version,
+    )
+    release_header = "## %s\n\n_Released %s_\n\n" % (release_name, release_date)
+
+    command_args = []
+    if single_repo:
+        command_args.append("--repo")
+    else:
+        command_args.append("--base-dir")
+        command_args.append(workdir)
+    if from_version:
+        command_args.append("%s..%s" % (from_version, to_version))
+    else:
+        command_args.append(to_version)
+
+    changelog_tool = os.path.join(
+        integration_dir(), "extra/changelog-generator/changelog-generator"
+    )
+    statistics_tool = os.path.join(integration_dir(), "extra/statistics-generator")
+
+    def log_and_run_cmd(cmd, workdir):
+        print("Running in workdir %s command: %s" % (workdir, " ".join(cmd)))
+        return subprocess.check_output(cmd, cwd=workdir)
+
+    changelog_out = log_and_run_cmd([changelog_tool] + command_args, workdir)
+    statistics_out = log_and_run_cmd([statistics_tool] + command_args, workdir)
+
+    print("Writing Release Notes for %s in %s" % (release_name, output_file))
+    with open(output_file, "w") as fd:
+        fd.write(release_header)
+        fd.write(statistics_out.decode())
+        fd.write("\n")
+        fd.write(changelog_out.decode())
+
+
+def do_generate_release_notes(state):
+    """Generate Release Notes for the released tags"""
+
+    # Release notes for Mender (server)
+    tag_list = sorted_final_version_list(integration_dir())
+    prev_of_integration = find_prev_version(tag_list, state["version"])
+    run_and_combine_statistics_and_changelog(
+        state["repo_dir"],
+        False,
+        prev_of_integration,
+        state["version"],
+        "release_notes_server.txt",
+    )
+
+    # Release notes for independent components
+    repos = Component.get_components_of_type(
+        "git",
+        only_release=True,
+        only_non_independent_component=False,
+        only_independent_component=True,
+    )
+    for repo in repos:
+        if repo.git() == "integration":
+            continue
+        version = state_value(state, [repo.git(), "version"])
+        workdir = os.path.join(state["repo_dir"], repo.git())
+        tag_list = sorted_final_version_list(workdir)
+        prev_version = find_prev_version(tag_list, version)
+        output_file = "release_notes_%s.txt" % repo.git()
+        run_and_combine_statistics_and_changelog(
+            workdir, True, prev_version, version, output_file
+        )
+
+
 def do_release(release_state_file):
     """Handles the interactive menu for doing a release."""
 
@@ -2679,6 +2765,7 @@ def do_release(release_state_file):
         print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
+        print("  N) Generate release notes from final tags")
         print(
             '  D) Update ":%s" and/or ":latest" Docker tags to current release'
             % minor_version
@@ -2743,6 +2830,8 @@ def do_release(release_state_file):
             trigger_build(state, tag_avail)
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
+        elif reply.lower() == "n":
+            do_generate_release_notes(state)
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":

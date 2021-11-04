@@ -138,11 +138,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             "cat /etc/mender/server.crt /etc/mender/cert.crt > /tmp/server.crt && mv /tmp/server.crt /etc/mender/server.crt && rm /etc/mender/cert.crt"
         )
         if algorithm is not None:
-            if algorithm == "rsa":
-                t="/tmp/bp01"
-                logger.info('waiting on %s' % t)
-                while not os.path.exists(t):
-                    time.sleep(0.4)
+            # if algorithm == "rsa":
+            #     t="/tmp/bp01"
+            #     logger.info('waiting on %s' % t)
+            #     while not os.path.exists(t):
+            #         time.sleep(0.4)
 
             env.device.put(
                 f"client.1.{algorithm}.crt",
@@ -165,11 +165,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             self.hsm_setup(pin, ssl_engine_id, env.device)
             key_uri = self.hsm_get_key_uri(pin, ssl_engine_id, env.device)
 
-        if algorithm == "rsa":
-            t="/tmp/bp02"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+        # if algorithm == "rsa":
+        #     t="/tmp/bp02"
+        #     logger.info('waiting on %s' % t)
+        #     while not os.path.exists(t):
+        #         time.sleep(0.4)
 
         try:
             # retrieve the original configuration file
@@ -211,17 +211,17 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
         logger.info("starting the client.")
         # start the Mender client
-        if algorithm == "rsa":
-            t="/tmp/bp03"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+        # if algorithm == "rsa":
+        #     t="/tmp/bp03"
+        #     logger.info('waiting on %s' % t)
+        #     while not os.path.exists(t):
+        #         time.sleep(0.4)
         env.device.run("systemctl start %s" % client_service_name)
-        if algorithm == "rsa":
-            t="/tmp/bp04"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+        # if algorithm == "rsa":
+        #     t="/tmp/bp04"
+        #     logger.info('waiting on %s' % t)
+        #     while not os.path.exists(t):
+        #         time.sleep(0.4)
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
@@ -274,10 +274,10 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             pytest.skip("Needs SoftHSM to run this test")
 
         try:
-            t="/tmp/bp0"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+            # t="/tmp/bp0"
+            # logger.info('waiting on %s' % t)
+            # while not os.path.exists(t):
+            #     time.sleep(0.4)
             self.common_test_mtls_enterprise(env, algorithm, use_hsm=True)
 
             output = env.device.run(
@@ -293,18 +293,18 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 )
                 deploy.upload_image(artifact)
 
-            t="/tmp/bp1"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+            # t="/tmp/bp1"
+            # logger.info('waiting on %s' % t)
+            # while not os.path.exists(t):
+            #     time.sleep(0.4)
             # deploy the update to the device
             devices = list(
                 set([device["id"] for device in devauth.get_devices_status("accepted")])
             )
-            t="/tmp/bp2"
-            logger.info('waiting on %s' % t)
-            while not os.path.exists(t):
-                time.sleep(0.4)
+            # t="/tmp/bp2"
+            # logger.info('waiting on %s' % t)
+            # while not os.path.exists(t):
+            #     time.sleep(0.4)
             assert len(devices) == 1
             deployment_id = deploy.trigger_deployment(
                 "mtls-test", artifact_name="mtls-artifact", devices=devices,

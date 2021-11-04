@@ -229,7 +229,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
     def test_mtls_enterprise_hsm(self, algorithm):
 
         env = container_factory.getMTLSSetup()
-        request.addfinalizer(env.teardown)
         env.setup()
 
         mtls_username = "mtls@mender.io"

@@ -7,7 +7,8 @@
 git:
 
   mender-auth-azure-iot:
-    docker_image: []
+    docker_image:
+    - mender-client-qemu
     docker_container:
     - mender-client
     release_component: true
@@ -62,9 +63,6 @@ git:
 
   integration:
     docker_image:
-    - mender-client-qemu
-    - mender-client-qemu-rofs
-    - mender-monitor-qemu-commercial
     - mender-client-docker-addons
     docker_container:
     - mender-client
@@ -88,6 +86,8 @@ git:
   mender:
     docker_image:
     - mender-client-docker
+    - mender-client-qemu
+    - mender-client-qemu-rofs
     docker_container:
     - mender-client
     release_component: true
@@ -206,8 +206,7 @@ git:
 
   mender-connect:
     docker_image: []
-    docker_container:
-    - mender-client
+    docker_container: []
     release_component: true
     independent_component: true
 
@@ -219,7 +218,8 @@ git:
     release_component: true
 
   monitor-client:
-    docker_image: []
+    docker_image:
+    - mender-monitor-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
@@ -306,14 +306,14 @@ docker_image:
 
   mender-client-qemu:
     git:
-    - integration
+    - mender
     docker_container:
     - mender-client
     release_component: true
 
   mender-client-qemu-rofs:
     git:
-    - integration
+    - mender
     docker_container:
     - mender-client
     release_component: true
@@ -446,7 +446,7 @@ docker_image:
 
   mender-monitor-qemu-commercial:
     git:
-    - integration
+    - monitor-client
     docker_container:
     - mender-client
     release_component: true
@@ -503,9 +503,7 @@ docker_container:
 
   mender-client:
     git:
-    - integration
     - mender
-    - mender-connect
     - monitor-client
     - mender-auth-azure-iot
     docker_image:

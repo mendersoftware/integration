@@ -21,6 +21,10 @@ services:
       volumes:
         - ./config/traefik/traefik.auditlogs.yaml:/etc/traefik/config/traefik.auditlogs.yaml:ro
 
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_ENABLE_AUDIT: 1
+
     mender-deployments:
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1

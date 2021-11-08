@@ -44,6 +44,7 @@ class TestProvidesDependsEnterprise(MenderTesting):
         # Create client setup with tenant token
         enterprise_no_client.new_tenant_docker_client("mender-client", token)
         mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
+        enterprise_no_client.device = mender_device
 
         # Wait for ssh to be open
         mender_device.ssh_is_opened()

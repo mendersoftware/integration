@@ -2,7 +2,7 @@ apipkg==2.1.0
 appdirs==1.4.4
 attrs==21.2.0
 bcrypt==3.2.0
-CacheControl==0.12.8
+CacheControl==0.12.10
 cached-property==1.5.2
 certifi==2021.10.8
 cffi==1.15.0

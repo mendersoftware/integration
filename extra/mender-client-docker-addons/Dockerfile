@@ -58,6 +58,7 @@ COPY --from=build /mender-install/lib/systemd/system/mender-client.service /lib/
 COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib/systemd/system/mender-connect.service
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
+COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.Proxy.conf /usr/share/dbus-1/system.d/io.mender.Proxy.conf
 COPY --from=build /mender-install/var/lib/mender /var/lib/mender
 
 COPY entrypoint.sh /

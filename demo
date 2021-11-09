@@ -183,33 +183,21 @@ run_non_up_commands() {
     if [[ $RUN_UP -eq 0 ]]; then
         # exec steals the shell, so unless docker-compose is not found,
         # exit 1 will never happen.
-        exec docker-compose \
-                $DEMO_FILES \
-                -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-                $EXTRA_FILES \
-                "${ARGS[@]}"
+        run_compose_command "${ARGS[@]}"
         exit 1
     fi
 }
 
 # Make sure that the demo environment is brought down on SIGINT
 exitfunc() {
-    retval=$(docker-compose \
-            $DEMO_FILES \
-            -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-            $EXTRA_FILES \
-            stop)
+    retval=$(run_compose_command stop)
     exit $retval
 }
 
 start_server() {
     echo "Starting the Mender demo environment..."
 
-    docker-compose \
-            $DEMO_FILES \
-            -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-            $EXTRA_FILES \
-            "${ARGS[@]}" -d
+    run_compose_command "${ARGS[@]}" -d
 
     local retval=$?
     if [[ $retval -ne 0 ]]; then
@@ -264,7 +252,7 @@ create_user() {
 
     if [[ $ENTERPRISE -eq 1 ]]; then
         TENANT_ID=$(docker exec \
-                ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+                $(run_compose_command ps -q mender-tenantadm) \
                 /usr/bin/tenantadm create-org \
                 --name=DemoOrganization \
                 --username=${USER} \
@@ -278,7 +266,7 @@ create_user() {
         fi
     else
         docker exec \
-                ${DOCKER_COMPOSE_PROJECT_NAME}_mender-useradm_1 \
+                $(run_compose_command ps -q mender-useradm) \
                 /usr/bin/useradm create-user \
                 --username=${USER} \
                 --password=${PASSWORD} \
@@ -300,22 +288,18 @@ create_user() {
 
 maybe_launch_enterprise_client() {
     if [[ $ENTERPRISE -eq 1 ]] && [[ $CLIENT -eq 1 ]]; then
-        if [[ $(docker ps -q -f name=${DOCKER_COMPOSE_PROJECT_NAME}_mender-client_1 | wc -l) -gt 0 ]]; then
+        if [[ $(run_compose_command ps -q mender-client | wc -l) -gt 0 ]]; then
             # If already launched, we don't need to do anything.
             :
         elif [[ -n "$TENANT_ID" ]]; then
             TENANT_TOKEN=$(docker exec \
-                    ${DOCKER_COMPOSE_PROJECT_NAME}_mender-tenantadm_1 \
+                    $(run_compose_command ps -q mender-tenantadm) \
                     /usr/bin/tenantadm get-tenant \
                     --id $TENANT_ID \
                     | jq -r .tenant_token)
             # Now that we have the tenant token we can enable the client.
             EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_CLIENT_FILES"
-            TENANT_TOKEN=$TENANT_TOKEN docker-compose \
-                    $DEMO_FILES \
-                    -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-                    $EXTRA_FILES \
-                    "${ARGS[@]}" -d mender-client
+            TENANT_TOKEN=$TENANT_TOKEN run_compose_command "${ARGS[@]}" -d mender-client
         else
             echo "WARNING: Ignoring request to launch the Mender client."
             echo "In Enterprise mode, the client can only be launched the first time the server"
@@ -424,11 +408,14 @@ wait_for_user() {
 }
 
 follow_logs() {
+    run_compose_command logs --follow
+}
+
+run_compose_command() {
     docker-compose \
             $DEMO_FILES \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
-            $EXTRA_FILES \
-            logs --follow
+            $EXTRA_FILES $@
 }
 
 #-------------------------------------------------------------------------------

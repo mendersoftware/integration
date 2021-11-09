@@ -89,16 +89,7 @@ test:docs:
 
   script:
     - cd mender-docs
-    - env TEST_OPEN_SOURCE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md
-    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
-        docker login -u ntadm_menderci -p "$REGISTRY_MENDER_IO_PASSWORD" registry.mender.io;
-      fi
-    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
-        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/docs.md;
-      fi
-    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
-        env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Production-installation/01.Upgrading-from-OS-to-Enterprise/docs.md;
-      fi
+    - ./run-tests.sh
 
 test:staging:backend-tests:
   image: debian:buster

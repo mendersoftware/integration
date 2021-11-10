@@ -7,10 +7,8 @@
 git:
 
   mender-auth-azure-iot:
-    docker_image:
-    - mender-client-qemu
-    docker_container:
-    - mender-client
+    docker_image: []
+    docker_container: []
     release_component: true
     independent_component: true
 
@@ -505,7 +503,6 @@ docker_container:
     git:
     - mender
     - monitor-client
-    - mender-auth-azure-iot
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons

@@ -696,6 +696,7 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         "%s is not a valid name list format!" % args.list_format
     )
 
+    Component.set_integration_version(args.in_integration_version)
     repos = Component.get_components_of_type(
         type,
         only_release=(not optional_too),

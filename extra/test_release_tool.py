@@ -121,6 +121,9 @@ def run_main_assert_result(capsys, args, expect=None):
     with patch.object(sys, "argv", testargs):
         main()
 
+    # Reset to avoid cache for further calls
+    Component.COMPONENT_MAPS = None
+
     captured = capsys.readouterr().out.strip()
     if expect is not None:
         assert captured == expect
@@ -462,3 +465,15 @@ def test_list_repos(capsys, is_staging):
         assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
     else:
         assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+
+
+def test_list_repos_old_releases(capsys):
+
+    # release_tool.py --list --in-integration-version 3.0.0
+    captured = run_main_assert_result(capsys, ["--list", "-i", "3.0.0"], None)
+    repos_list = captured.split("\n")
+    assert "monitor-client" not in repos_list
+    assert "deviceauth-enterprise" not in repos_list
+    assert "azure-iot-manager" not in repos_list
+    assert "mender" in repos_list
+    assert "deviceauth" in repos_list

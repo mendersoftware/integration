@@ -445,9 +445,7 @@ Signed-off-by: dependabot[bot] <support@github.com>'
     exit 1
 }
 cat > expected.txt <<EOF
-## test-changelog-generator.$$ HEAD
-
-_Released xx.xx.xxxx_
+### Changelogs
 
 #### test-changelog-generator.$$ (HEAD)
 

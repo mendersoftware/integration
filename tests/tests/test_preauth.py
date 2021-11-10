@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives import serialization
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, devauth, inv, logger
+from ..helpers import Helpers
 from testutils.infra.device import MenderDevice
 
 
@@ -83,7 +84,7 @@ class TestPreauthBase(MenderTesting):
         assert dev_accepted["auth_sets"][0]["pubkey"] == preauth_key
 
         # verify device was issued a token
-        Client.have_authtoken(mender_device)
+        Helpers.check_log_have_authtoken(mender_device)
 
     def do_test_ok_preauth_and_remove(self):
         """
@@ -201,7 +202,6 @@ class Client:
 
     KEYGEN_TIMEOUT = 300
     DEVICE_ACCEPTED_TIMEOUT = 600
-    MENDER_STORE_TIMEOUT = 600
 
     @staticmethod
     def get_logs(device):
@@ -242,32 +242,6 @@ class Client:
         """Restart the mender service."""
 
         device.run("systemctl restart %s.service" % device.get_client_service_name())
-
-    @staticmethod
-    def have_authtoken(device):
-        """Verify that the device was authenticated by checking its data store for the authtoken."""
-        sleepsec = 0
-        while sleepsec < Client.MENDER_STORE_TIMEOUT:
-            try:
-                out = device.run(
-                    "strings {} | grep authtoken".format(Client.MENDER_STORE)
-                )
-                return out != ""
-            except:
-                output_from_journalctl = device.run(
-                    "journalctl -u %s -l" % device.get_client_service_name()
-                )
-                logger.info("Logs from client: " + output_from_journalctl)
-
-                time.sleep(10)
-                sleepsec += 10
-                logger.info(
-                    "waiting for mender-store file, sleepsec: {}".format(sleepsec)
-                )
-
-        assert (
-            sleepsec <= Client.MENDER_STORE_TIMEOUT
-        ), "timeout for mender-store file exceeded"
 
     @staticmethod
     def __wait_for_keygen(device):

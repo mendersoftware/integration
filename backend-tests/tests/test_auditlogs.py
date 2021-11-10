@@ -18,22 +18,27 @@ import os
 import json
 import time
 import urllib.parse
-
-
 from datetime import datetime
+from typing import Dict
 
 import redo
 
 from testutils.infra.cli import CliUseradm, CliTenantadm, CliDeployments
 from testutils.common import (
+    Device,
+    Tenant,
+    User,
     create_org,
     create_user,
     mongo,
     clean_mongo,
     get_mender_artifact,
     update_tenant,
+    make_pending_device,
+    change_authset_status,
 )
 from testutils.api.client import ApiClient
+import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.deployments as deployments_v1
 import testutils.api.auditlogs as auditlogs
@@ -52,6 +57,7 @@ def clean_migrated_mongo(clean_mongo):
 
 @pytest.fixture(scope="function")
 def tenant_users(clean_migrated_mongo):
+    """Create test tenant with sample organization and user, log user in."""
     uuidv4 = str(uuid.uuid4())
     tenant, username, password = (
         "test.mender.io-" + uuidv4,
@@ -81,6 +87,46 @@ def tenant_users(clean_migrated_mongo):
 
 
 class TestAuditLogsEnterprise:
+    def setup(self):
+        self.useradmm = ApiClient(useradm.URL_MGMT)
+        self.devauthd = ApiClient(deviceauth.URL_DEVICES)
+        self.devauthm = ApiClient(deviceauth.URL_MGMT)
+        self.alogs = ApiClient(auditlogs.URL_MGMT)
+
+    @pytest.mark.parametrize("event_type", ["decommission", "reject"])
+    def test_device_audit_log_events(self, event_type: str, tenant_users: Tenant):
+        """Test if device events are loggged with correct fields."""
+        user = tenant_users.users[0]
+        device = make_pending_device(
+            self.devauthd,
+            self.devauthm,
+            user.token,
+            tenant_token=tenant_users.tenant_token,
+        )
+
+        if event_type == "decommission":
+            response = self.devauthm.with_auth(user.token).call(
+                "DELETE", deviceauth.URL_DEVICE, path_params={"id": device.id}
+            )
+            assert response.status_code == 204
+        elif event_type == "reject":
+            for auth_set in device.authsets:
+                change_authset_status(
+                    self.devauthm, device.id, auth_set.id, "rejected", user.token
+                )
+        for _ in redo.retrier(attempts=3, sleeptime=1):
+            res = self.alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=device"
+            )
+            assert res.status_code == 200
+            if len(res.json()) == 1:
+                break
+        else:
+            assert False, "max GET /logs retries hit"
+
+        expected = event_device(user, device, event_type=event_type)
+        check_log(res.json()[0], expected)
+
     def test_deployment_create(self, tenant_users):
         """ Baseline test - deployment create event is logged with correct fields."""
         user = tenant_users.users[0]
@@ -90,8 +136,7 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            alogs = ApiClient(auditlogs.URL_MGMT)
-            res = alogs.with_auth(user.token).call(
+            res = self.alogs.with_auth(user.token).call(
                 "GET", auditlogs.URL_LOGS + "?object_type=deployment"
             )
             assert res.status_code == 200
@@ -106,15 +151,13 @@ class TestAuditLogsEnterprise:
     def test_user_create(self, tenant_users):
         user = tenant_users.users[0]
 
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         uuidv4 = str(uuid.uuid4())
         uid = make_user(user.token, "foo+" + uuidv4 + "@acme.com", "secretsecret")
         expected = evt_user_create(user, uid, "foo+" + uuidv4 + "@acme.com")
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -128,14 +171,12 @@ class TestAuditLogsEnterprise:
         user = tenant_users.users[0]
         user_del = tenant_users.users[1]
 
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         delete_user(user, user_del.id)
         expected = evt_user_delete(user, user_del)
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -149,15 +190,13 @@ class TestAuditLogsEnterprise:
         user = tenant_users.users[0]
         user_change = tenant_users.users[1]
 
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         roles = ["RBAC_ROLE_CI"]
         change_role(user.token, user_change.id, roles)
         expected = evt_change_role(user, user_change, roles)
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -174,8 +213,7 @@ class TestAuditLogsEnterprise:
             # get exact time for filter testing
             found = None
             for _ in redo.retrier(attempts=3, sleeptime=1):
-                alogs = ApiClient(auditlogs.URL_MGMT)
-                resp = alogs.with_auth(tenant_users.users[0].token).call(
+                resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                     "GET", auditlogs.URL_LOGS
                 )
                 resp = resp.json()
@@ -224,8 +262,6 @@ class TestAuditLogsEnterprise:
         self._test_args_sort(tenant_users, events)
 
     def _test_args_paging(self, tenant_users, events):
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         cases = [
             # default
             {"expected": events[:10]},
@@ -244,7 +280,7 @@ class TestAuditLogsEnterprise:
             if "per_page" in case:
                 arg += "&per_page=" + case["per_page"]
 
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET", auditlogs.URL_LOGS + arg
             )
 
@@ -257,15 +293,13 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], case["expected"][i])
 
     def _test_args_actor(self, tenant_users, events):
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         ids = [user.id for user in tenant_users.users]
         emails = [user.name for user in tenant_users.users]
 
         for id in ids:
             expected = [e for e in events if e["actor"]["id"] == id]
 
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET", auditlogs.URL_LOGS + "?per_page=20&actor_id=" + id
             )
 
@@ -279,7 +313,7 @@ class TestAuditLogsEnterprise:
         for email in emails:
             expected = [e for e in events if e["actor"]["email"] == email]
 
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET",
                 auditlogs.URL_LOGS
                 + "?per_page=20&actor_email="
@@ -294,8 +328,6 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], expected[i])
 
     def _test_args_before_after(self, tenant_users, events):
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         # note events are newest first - highest idx is oldest
         cases = [
             # after first
@@ -323,7 +355,7 @@ class TestAuditLogsEnterprise:
             # round the time - must be an int on input
             time_unix = int(time.timestamp())
 
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET",
                 "{}?per_page=20&{}={}".format(
                     auditlogs.URL_LOGS, case["arg"], time_unix
@@ -345,12 +377,10 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], expected[i])
 
     def _test_args_object(self, tenant_users, events):
-        alogs = ApiClient(auditlogs.URL_MGMT)
-
         expected = events[0]
 
         # id filter
-        resp = alogs.with_auth(tenant_users.users[0].token).call(
+        resp = self.alogs.with_auth(tenant_users.users[0].token).call(
             "GET",
             auditlogs.URL_LOGS + "?per_page=20&object_id=" + expected["object"]["id"],
         )
@@ -364,7 +394,7 @@ class TestAuditLogsEnterprise:
         # type filter
         for obj_type in ["deployment"]:
             expected = [e for e in events if e["object"]["type"] == obj_type]
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET", auditlogs.URL_LOGS + "?object_type=" + obj_type
             )
 
@@ -375,14 +405,13 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], expected[i])
 
     def _test_args_sort(self, tenant_users, events):
-        alogs = ApiClient(auditlogs.URL_MGMT)
         cases = [
             {"arg": "desc", "expected": events},
             {"arg": "asc", "expected": events[::-1]},
         ]
 
         for case in cases:
-            resp = alogs.with_auth(tenant_users.users[0].token).call(
+            resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                 "GET", auditlogs.URL_LOGS + "?per_page=20&sort=" + case["arg"]
             )
 
@@ -394,6 +423,7 @@ class TestAuditLogsEnterprise:
 
 
 def make_deployment(token):
+    """Create sample deployment for test purposes."""
     depl_v1 = ApiClient(deployments_v1.URL_MGMT)
 
     uuidv4 = str(uuid.uuid4())
@@ -447,6 +477,7 @@ def evt_artifact_upload(user, artifact):
 
 
 def evt_deployment_create(user, deployment):
+    """Prepare test deployment creation event dictionary using with and deployment data."""
     return {
         "action": "create",
         "actor": {"id": user.id, "type": "user", "email": user.name},
@@ -456,6 +487,21 @@ def evt_deployment_create(user, deployment):
             "deployment": {
                 "name": deployment["name"],
                 "artifact_name": deployment["artifact_name"],
+            },
+        },
+    }
+
+
+def event_device(user: User, device: Device, event_type: str = "decommission") -> Dict:
+    """Prepare test device decommission event dictionary with user and device data."""
+    return {
+        "action": event_type,
+        "actor": {"id": user.id, "type": "user", "email": user.name},
+        "object": {
+            "id": device.id,
+            "type": "device",
+            "device": {
+                "identity_data": str(device.id_data).replace("'", '"').replace(" ", "")
             },
         },
     }

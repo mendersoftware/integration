@@ -131,6 +131,11 @@ p
 '
 }
 
+cleanup() {
+    sed  -e '/^Processed [0-9]\+ csets from [0-9]\+ developers$/d' | \
+    sed  -e '/^[0-9]\+ employers found$/d'
+}
+
 ACTUAL_MAILMAP_MD5=$(md5sum "$(git config --get mailmap.file)" 2>/dev/null | sed -e 's/  .*//')
 DESIRED_MAILMAP_MD5=$(md5sum "$(dirname "$0")/gitdm/mailmap" | sed -e 's/  .*//')
 
@@ -144,5 +149,6 @@ if [ "$DRY_RUN" = 1 ]; then
     collect_changes "$@"
 else
     set -o pipefail
-    collect_changes "$@" | python3 "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process
+    echo -e "### Statistics\n"
+    collect_changes "$@" | python3 "$(dirname "$0")"/gitdm/gitdm/gitdm -s -b "$(dirname "$0")"/gitdm -l 10 | post_process | cleanup
 fi

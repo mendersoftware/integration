@@ -13,8 +13,8 @@ services:
     mender-gui:
         image: mendersoftware/gui:staging
 
-    mender-device-auth:
-        image: mendersoftware/deviceauth:staging
+    # mender-device-auth:
+    #     image: mendersoftware/deviceauth:master
 
     #mender-inventory:
         #image: mendersoftware/inventory:master

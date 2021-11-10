@@ -77,9 +77,14 @@ class Component:
     name = None
     type = None
 
+    _integration_version = None
+
     def __init__(self, name, type):
         self.name = name
         self.type = type
+
+    def set_integration_version(version):
+        Component._integration_version = version
 
     def git(self):
         if self.type != "git":
@@ -112,8 +117,18 @@ class Component:
     @staticmethod
     def _initialize_component_maps():
         if Component.COMPONENT_MAPS is None:
-            with open(os.path.join(integration_dir(), "component-maps.yml")) as fd:
-                Component.COMPONENT_MAPS = yaml.safe_load(fd)
+            if Component._integration_version:
+                component_maps = execute_git(
+                    None,
+                    integration_dir(),
+                    ["show", f"{Component._integration_version}:component-maps.yml"],
+                    capture=True,
+                    capture_stderr=False,
+                )
+                Component.COMPONENT_MAPS = yaml.safe_load(component_maps)
+            else:
+                with open(os.path.join(integration_dir(), "component-maps.yml")) as fd:
+                    Component.COMPONENT_MAPS = yaml.safe_load(fd)
 
     @staticmethod
     def get_component_of_type(type, name):
@@ -644,6 +659,7 @@ def do_version_of(args):
     """Process --version-of argument."""
 
     try:
+        Component.set_integration_version(args.in_integration_version)
         comp = Component.get_component_of_any_type(args.version_of)
     except KeyError:
         print("Unrecognized repository: %s" % args.version_of)

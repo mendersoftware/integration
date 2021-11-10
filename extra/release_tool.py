@@ -77,9 +77,14 @@ class Component:
     name = None
     type = None
 
+    _integration_version = None
+
     def __init__(self, name, type):
         self.name = name
         self.type = type
+
+    def set_integration_version(version):
+        Component._integration_version = version
 
     def git(self):
         if self.type != "git":
@@ -112,8 +117,18 @@ class Component:
     @staticmethod
     def _initialize_component_maps():
         if Component.COMPONENT_MAPS is None:
-            with open(os.path.join(integration_dir(), "component-maps.yml")) as fd:
-                Component.COMPONENT_MAPS = yaml.safe_load(fd)
+            if Component._integration_version:
+                component_maps = execute_git(
+                    None,
+                    integration_dir(),
+                    ["show", f"{Component._integration_version}:component-maps.yml"],
+                    capture=True,
+                    capture_stderr=False,
+                )
+                Component.COMPONENT_MAPS = yaml.safe_load(component_maps)
+            else:
+                with open(os.path.join(integration_dir(), "component-maps.yml")) as fd:
+                    Component.COMPONENT_MAPS = yaml.safe_load(fd)
 
     @staticmethod
     def get_component_of_type(type, name):
@@ -221,6 +236,7 @@ class Component:
 GIT_TO_BUILDPARAM_MAP = {
     "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
     "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
+    "mender-auth-azure-iot": "MENDER_AUTH_AZURE_IOT_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -496,11 +512,11 @@ def get_docker_compose_data_from_json_list(json_list):
                 "mendersoftware" not in full_image and "mender.io" not in full_image
             ):
                 continue
-            split = full_image.rsplit("/", 1)
-            prefix = split[0]
-            split = split[1].split(":", 1)
-            image = split[0]
+            split = full_image.rsplit(":", 1)
             ver = split[1]
+            split = split[0].rsplit("/", 1)
+            prefix = split[0]
+            image = split[1]
             if data.get(image) is not None:
                 raise Exception(
                     (
@@ -643,6 +659,7 @@ def do_version_of(args):
     """Process --version-of argument."""
 
     try:
+        Component.set_integration_version(args.in_integration_version)
         comp = Component.get_component_of_any_type(args.version_of)
     except KeyError:
         print("Unrecognized repository: %s" % args.version_of)
@@ -2585,6 +2602,92 @@ double check this.
     return True
 
 
+def run_and_combine_statistics_and_changelog(
+    workdir, single_repo, from_version, to_version, output_file
+):
+    """Generate statistics and changelogs and combine them in a single file"""
+
+    release_date = execute_git(
+        None,
+        workdir if single_repo else integration_dir(),
+        [
+            "for-each-ref",
+            r"--format=%(taggerdate:format:%m.%d.%Y)",
+            "refs/tags/" + to_version,
+        ],
+        capture=True,
+    )
+    release_name = "%s %s" % (
+        "Mender" if not single_repo else os.path.basename(workdir),
+        to_version,
+    )
+    release_header = "## %s\n\n_Released %s_\n\n" % (release_name, release_date)
+
+    command_args = []
+    if single_repo:
+        command_args.append("--repo")
+    else:
+        command_args.append("--base-dir")
+        command_args.append(workdir)
+    if from_version:
+        command_args.append("%s..%s" % (from_version, to_version))
+    else:
+        command_args.append(to_version)
+
+    changelog_tool = os.path.join(
+        integration_dir(), "extra/changelog-generator/changelog-generator"
+    )
+    statistics_tool = os.path.join(integration_dir(), "extra/statistics-generator")
+
+    def log_and_run_cmd(cmd, workdir):
+        print("Running in workdir %s command: %s" % (workdir, " ".join(cmd)))
+        return subprocess.check_output(cmd, cwd=workdir)
+
+    changelog_out = log_and_run_cmd([changelog_tool] + command_args, workdir)
+    statistics_out = log_and_run_cmd([statistics_tool] + command_args, workdir)
+
+    print("Writing Release Notes for %s in %s" % (release_name, output_file))
+    with open(output_file, "w") as fd:
+        fd.write(release_header)
+        fd.write(statistics_out.decode())
+        fd.write("\n")
+        fd.write(changelog_out.decode())
+
+
+def do_generate_release_notes(state):
+    """Generate Release Notes for the released tags"""
+
+    # Release notes for Mender (server)
+    tag_list = sorted_final_version_list(integration_dir())
+    prev_of_integration = find_prev_version(tag_list, state["version"])
+    run_and_combine_statistics_and_changelog(
+        state["repo_dir"],
+        False,
+        prev_of_integration,
+        state["version"],
+        "release_notes_server.txt",
+    )
+
+    # Release notes for independent components
+    repos = Component.get_components_of_type(
+        "git",
+        only_release=True,
+        only_non_independent_component=False,
+        only_independent_component=True,
+    )
+    for repo in repos:
+        if repo.git() == "integration":
+            continue
+        version = state_value(state, [repo.git(), "version"])
+        workdir = os.path.join(state["repo_dir"], repo.git())
+        tag_list = sorted_final_version_list(workdir)
+        prev_version = find_prev_version(tag_list, version)
+        output_file = "release_notes_%s.txt" % repo.git()
+        run_and_combine_statistics_and_changelog(
+            workdir, True, prev_version, version, output_file
+        )
+
+
 def do_release(release_state_file):
     """Handles the interactive menu for doing a release."""
 
@@ -2678,6 +2781,7 @@ def do_release(release_state_file):
         print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
+        print("  N) Generate release notes from final tags")
         print(
             '  D) Update ":%s" and/or ":latest" Docker tags to current release'
             % minor_version
@@ -2742,6 +2846,8 @@ def do_release(release_state_file):
             trigger_build(state, tag_avail)
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
+        elif reply.lower() == "n":
+            do_generate_release_notes(state)
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":
@@ -2877,13 +2983,21 @@ def do_integration_versions_including(args):
         try:
             version = data[repo.yml_components()[0].yml()]["version"]
         except KeyError:
-            # If key doesn't exist it's because the version is from before
-            # that component existed. So definitely not a match.
+            # Key repo.yml_components()[0] doesn't exist because the version is
+            # from before that component existed.
+            # Not a match.
             continue
 
-        if not is_marked_as_releaseable_in_integration_version(
-            candidate, repo.git(), args.version
-        ):
+        try:
+            if not is_marked_as_releaseable_in_integration_version(
+                candidate, repo.git(), args.version
+            ):
+                continue
+        except KeyError:
+            # Key repo.git() doesn't exist (but Docker component existed). This
+            # can happen when several git repos contribute to one Docker image
+            # (i.e. mender + mender-auth-azure-iot repos for mender-client-qemu)
+            # Not a match.
             continue
 
         if version == args.version:
@@ -2894,8 +3008,8 @@ def do_integration_versions_including(args):
 
 
 def find_repo_path(name, paths):
-    """ Try to find the git repo 'name' under some known paths.
-        Return abspath or None if not found.
+    """Try to find the git repo 'name' under some known paths.
+    Return abspath or None if not found.
     """
     for p in paths:
         path = os.path.normpath(os.path.join(integration_dir(), p, name))
@@ -3085,15 +3199,15 @@ def is_repo_on_known_branch(path):
 
 
 def select_test_suite():
-    """ Check what backend components are checked out in custom revisions and decide
-        which integration test suite should be ran - 'open', 'enterprise' or both.
-        To be used when running integration tests to see which components 'triggered' the build
-        (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
-        in case of manually parametrized builds).
-        Rules:
-        - open services, without closed versions, should trigger both setup test runs
-        - open services with closed versions should trigger the 'open' test suite
-        - enterprise services can run just the 'enterprise' setup
+    """Check what backend components are checked out in custom revisions and decide
+    which integration test suite should be ran - 'open', 'enterprise' or both.
+    To be used when running integration tests to see which components 'triggered' the build
+    (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
+    in case of manually parametrized builds).
+    Rules:
+    - open services, without closed versions, should trigger both setup test runs
+    - open services with closed versions should trigger the 'open' test suite
+    - enterprise services can run just the 'enterprise' setup
     """
     # check all known git components for custom revisions
     # answers the question what we're actually building

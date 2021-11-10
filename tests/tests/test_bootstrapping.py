@@ -23,6 +23,7 @@ from ..common_setup import (
 )
 from .common_update import common_update_procedure
 from ..MenderAPI import devauth, logger
+from ..helpers import Helpers
 from .mendertesting import MenderTesting
 
 
@@ -47,21 +48,7 @@ class TestBootstrapping(MenderTesting):
         # make sure all devices are accepted
         devauth.check_expected_status("accepted", 1)
 
-        # make sure mender-store contains authtoken after sometime, else fail test
-        HAVE_TOKEN_TIMEOUT = 60 * 5
-        sleepsec = 0
-        while sleepsec < HAVE_TOKEN_TIMEOUT:
-            try:
-                mender_device.run(
-                    "strings {} | grep authtoken".format(self.MENDER_STORE)
-                )
-                return
-            except Exception:
-                sleepsec += 5
-                time.sleep(5)
-                logger.info("waiting for mender-store file, sleepsec: %d" % sleepsec)
-
-        assert sleepsec <= HAVE_TOKEN_TIMEOUT, "timeout for mender-store file exceeded"
+        Helpers.check_log_have_authtoken(mender_device)
 
         # print all device ids
         for device in devauth.get_devices_status("accepted"):
@@ -108,16 +95,11 @@ class TestBootstrapping(MenderTesting):
             )
         )
 
-        accept_time = time.time()
+        # Restart client to force log reset.
+        mender_device.run("systemctl restart mender-client")
 
         # Check that we can accept again the device from the server
         devauth.accept_devices(1)
 
         # Check from client side that it can be authorized
-        mender_device.run(
-            "journalctl -u %s -l -S '%s' | grep -q 'Server authorization successful'"
-            % (
-                mender_device.get_client_service_name(),
-                time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(accept_time)),
-            )
-        )
+        Helpers.check_log_have_authtoken(mender_device)

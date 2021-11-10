@@ -146,6 +146,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - mender-nats
         labels:
             mender.healthcheck.path: "/health"
 
@@ -164,6 +165,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - mender-nats
 
     #
     # mender-create-artifact-worker
@@ -181,6 +183,7 @@ services:
             - mender
         depends_on:
             - mender-mongo
+            - mender-nats
 
     mender-mongo:
         image: mongo:4.4
@@ -196,6 +199,12 @@ services:
                     - mongo-inventory
                     - mongo-useradm
                     - mongo-workflows
+
+    mender-nats:
+        image: nats:2.6-alpine
+        command: -js
+        networks:
+            - mender
 
 networks:
     mender:

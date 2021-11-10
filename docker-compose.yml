@@ -88,7 +88,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:staging
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:

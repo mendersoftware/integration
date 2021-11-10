@@ -35,4 +35,4 @@ services:
         image: registry.mender.io/mendersoftware/devicemonitor:master
 
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:master
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging

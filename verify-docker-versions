@@ -8,11 +8,21 @@ VERSION_MINOR_MIN_DOCKER_ENGINE="11"
 VERSION_MINOR_MIN_DOCKER_COMPOSE="6"
 
 compare_versions() {
-  VERSION_ACTUAL=$1
-  VERSION_MINIMUM=$2
+  VERSION_MAJOR=$1
+  VERSION_ACTUAL=$2
+  VERSION_MINIMUM=$3
 
   if [[ -z $VERSION_ACTUAL ]]; then
     echo "ERROR: Actual version is empty (hint: is it installed, or version format change?)."
+    return 1
+  fi
+
+  if [ "$VERSION_MAJOR" == "2" ]; then
+    return 0
+  fi
+
+  if [ "$VERSION_MAJOR" != "1" ]; then
+    echo "ERROR: Unsupported major version: $VERSION_MAJOR"
     return 1
   fi
 
@@ -64,14 +74,15 @@ fi
 
 # test Docker Compose version
 
-DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF="1\.([0-9]+)\.[0-9]+"
-DOCKER_COMPOSE_VERSION_STRING=$(docker-compose version --short)
-DOCKER_COMPOSE_VERSION_MINOR=$(echo "$DOCKER_COMPOSE_VERSION_STRING" | sed -En "s/$DOCKER_COMPOSE_VERSION_REGEX_MINOR_BACKREF/\1/p")
+DOCKER_COMPOSE_VERSION_REGEX_BACKREF="v?([0-9]+)\.([0-9]+)\.[0-9]+"
+DOCKER_COMPOSE_VERSION_STRING=$(docker-compose --version --short)
+DOCKER_COMPOSE_VERSION_MAJOR=$(echo "$DOCKER_COMPOSE_VERSION_STRING" | sed -En "s/$DOCKER_COMPOSE_VERSION_REGEX_BACKREF/\1/p")
+DOCKER_COMPOSE_VERSION_MINOR=$(echo "$DOCKER_COMPOSE_VERSION_STRING" | sed -En "s/$DOCKER_COMPOSE_VERSION_REGEX_BACKREF/\2/p")
 
-compare_versions "$DOCKER_COMPOSE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_COMPOSE"
+compare_versions "$DOCKER_COMPOSE_VERSION_MAJOR" "$DOCKER_COMPOSE_VERSION_MINOR" "$VERSION_MINOR_MIN_DOCKER_COMPOSE"
 
 if [ $? -ne 0 ]; then
-  echo "ERROR: Docker Compose must be on version 1.$VERSION_MINOR_MIN_DOCKER_COMPOSE or larger, but found version 1.$DOCKER_COMPOSE_VERSION_MINOR installed."
+  echo "ERROR: Docker Compose must be on version 1.$VERSION_MINOR_MIN_DOCKER_COMPOSE or larger, but found version ${DOCKER_COMPOSE_VERSION_STRING} installed."
   echo "DOCKER_COMPOSE_VERSION_STRING=$DOCKER_COMPOSE_VERSION_STRING"
   exit 1
 fi

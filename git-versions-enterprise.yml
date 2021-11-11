@@ -32,7 +32,7 @@ services:
         image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.0
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:master
+        image: registry.mender.io/mendersoftware/devicemonitor:staging
 
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:master
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging

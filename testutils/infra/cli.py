@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 from collections import namedtuple
+from typing import List
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
 from testutils.infra.container_manager.kubernetes_manager import (
@@ -39,27 +40,40 @@ class BaseCli:
 
         self.cid = self.container_manager.getid([base_filter])
 
-
-class CliUseradm(BaseCli):
-    def __init__(self, containers_namespace="backend-tests", container_manager=None):
-        BaseCli.__init__(
-            self, "mender-useradm", containers_namespace, container_manager
-        )
-
-        # is it an open useradm, or useradm-enterprise?
-        for path in ["/usr/bin/useradm", "/usr/bin/useradm-enterprise"]:
+    def choose_binary_and_config_paths(
+        self, service_flavours: List[str], service_name: str
+    ):
+        """Choose binary and configuration paths depending on service flavour. """
+        for service in service_flavours:
             try:
-                self.container_manager.execute(self.cid, [path, "--help"])
-                self.path = path
+                self.container_manager.execute(self.cid, [service.bin_path, "--help"])
+                self.service = service
+                break
             except:
                 continue
+        else:
+            raise RuntimeError(f"no runnable binary found in {service_name}")
 
-        if self.path is None:
-            raise RuntimeError("no runnable binary found in mender-useradm")
+
+class CliUseradm(BaseCli):
+    service_name = "mender-useradm"
+
+    def __init__(self, containers_namespace="backend-tests", container_manager=None):
+        BaseCli.__init__(
+            self, self.service_name, containers_namespace, container_manager
+        )
+
+        open_source = Microservice("/usr/bin/useradm", "/etc/useradm")
+        enterprise = Microservice(
+            "/usr/bin/useradm-enterprise", "/etc/useradm-enterprise"
+        )
+        self.choose_binary_and_config_paths(
+            [open_source, enterprise], self.service_name
+        )
 
     def create_user(self, username, password, tenant_id=""):
         cmd = [
-            self.path,
+            self.service.bin_path,
             "create-user",
             "--username",
             username,
@@ -77,7 +91,7 @@ class CliUseradm(BaseCli):
         if isK8S():
             return
 
-        cmd = [self.path, "migrate"]
+        cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
             cmd.extend(["--tenant", tenant_id])
@@ -124,26 +138,21 @@ class CliTenantadm(BaseCli):
 
 
 class CliDeviceauth(BaseCli):
+    service_name = "mender-device-auth"
+
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
         """ Instantiate deviceauth microservice CLI class. Both open source and enterprise versions are supported. """
         BaseCli.__init__(
-            self, "mender-device-auth", containers_namespace, container_manager
+            self, self.service_name, containers_namespace, container_manager
         )
 
         open_source = Microservice("/usr/bin/deviceauth", "/etc/deviceauth")
         enterprise = Microservice(
             "/usr/bin/deviceauth-enterprise", "/etc/deviceauth-enterprise"
         )
-
-        for service in [open_source, enterprise]:
-            try:
-                self.container_manager.execute(self.cid, [service.bin_path, "--help"])
-                self.service = service
-                break
-            except:
-                continue
-        else:
-            raise RuntimeError("no runnable binary found in mender-deviceauth")
+        self.choose_binary_and_config_paths(
+            [open_source, enterprise], self.service_name
+        )
 
     def migrate(self, tenant_id=None):
         if isK8S():
@@ -190,27 +199,26 @@ class CliDeviceauth(BaseCli):
 
 
 class CliDeployments(BaseCli):
+    service_name = "mender-deployments"
+
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
         BaseCli.__init__(
-            self, "mender-deployments", containers_namespace, container_manager
+            self, self.service_name, containers_namespace, container_manager
         )
 
-        # is it an open version, or enterprise?
-        for path in ["/usr/bin/deployments", "/usr/bin/deployments-enterprise"]:
-            try:
-                self.container_manager.execute(self.cid, [path, "--help"])
-                self.path = path
-            except:
-                continue
-
-        if self.path is None:
-            raise RuntimeError("no runnable binary found for 'deployments'")
+        open_source = Microservice("/usr/bin/deployments", "/etc/deployments")
+        enterprise = Microservice(
+            "/usr/bin/deployments-enterprise", "/etc/deployments-enterprise"
+        )
+        self.choose_binary_and_config_paths(
+            [open_source, enterprise], self.service_name
+        )
 
     def migrate(self, tenant_id=None):
         if isK8S():
             return
 
-        cmd = [self.path, "migrate"]
+        cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
             cmd.extend(["--tenant", tenant_id])

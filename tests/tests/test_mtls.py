@@ -91,6 +91,8 @@ exit 0
     isK8S(), reason="not relevant in a staging or production environment"
 )
 class TestClientMTLSEnterprise:
+    wait_for_device_timeout_seconds = 64
+
     def hsm_setup(self, pin, ssl_engine_id, device):
         algorithm = "rsa"
         key = f"/var/lib/mender/client.1.{algorithm}.key"
@@ -241,7 +243,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
-    @flaky(max_runs=3)  # https://tracker.mender.io/browse/QA-243
     def test_mtls_enterprise(self, setup_ent_mtls, algorithm):
         self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=False)
 
@@ -251,6 +252,19 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 "mtls-artifact", conftest.machine_name, tf.name
             )
             deploy.upload_image(artifact)
+
+        for device in devauth.get_devices_status("pending"):
+            devauth.decommission(device["id"])
+
+        i = self.wait_for_device_timeout_seconds
+        while i > 0:
+            i = i - 1
+            time.sleep(1)
+            devices = list(
+                set([device["id"] for device in devauth.get_devices_status("accepted")])
+            )
+            if len(devices) > 0:
+                break
 
         # deploy the update to the device
         devices = list(
@@ -273,7 +287,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
-    @flaky(max_runs=3)  # https://tracker.mender.io/browse/QA-243
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
 
         # Check if the client has has SoftHSM (from yocto dunfell forward)
@@ -298,6 +311,24 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                     "mtls-artifact", conftest.machine_name, tf.name
                 )
                 deploy.upload_image(artifact)
+
+            for device in devauth.get_devices_status("pending"):
+                devauth.decommission(device["id"])
+
+            i = self.wait_for_device_timeout_seconds
+            while i > 0:
+                i = i - 1
+                time.sleep(1)
+                devices = list(
+                    set(
+                        [
+                            device["id"]
+                            for device in devauth.get_devices_status("accepted")
+                        ]
+                    )
+                )
+                if len(devices) > 0:
+                    break
 
             # deploy the update to the device
             devices = list(

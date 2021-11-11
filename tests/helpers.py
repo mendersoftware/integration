@@ -16,6 +16,7 @@ import subprocess
 import logging
 import pytest
 import json
+import time
 from . import conftest
 
 from .MenderAPI import devauth
@@ -83,3 +84,31 @@ class Helpers:
             ] = device["id"]
 
         return ip_to_device_id
+
+    @staticmethod
+    def check_log_have_authtoken(device):
+        """Verify that the device was authenticated since its last service start."""
+        sleepsec = 0
+        MENDER_STORE_TIMEOUT = 600
+        while sleepsec < MENDER_STORE_TIMEOUT:
+            out = device.run(
+                # Use systemctl instead of journalctl in order to get only
+                # entries since the last service restart.
+                "systemctl status --no-pager -l -n 100000 mender-client "
+                + "| grep 'successfully received new authorization data'",
+                warn=True,
+            )
+            if out != "":
+                return
+
+            time.sleep(10)
+            sleepsec += 10
+            logger.info(
+                "waiting for authorization message in mender client log, sleepsec: {}".format(
+                    sleepsec
+                )
+            )
+
+        assert (
+            sleepsec <= MENDER_STORE_TIMEOUT
+        ), "timeout for mender-store file exceeded"

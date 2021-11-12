@@ -76,7 +76,7 @@ test:docs:
     - apk add bash git openssl pwgen python3 jq
     - git config --global user.name "user"
     - git config --global user.email "user@example.com"
-    - git clone --depth=1 https://github.com/mendersoftware/mender-docs.git mender-docs
+    - git clone https://github.com/mendersoftware/mender-docs.git mender-docs
 
     - MENDER_DOCS_BRANCH=$(
         for i in $(

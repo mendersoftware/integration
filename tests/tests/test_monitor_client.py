@@ -1439,3 +1439,60 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_send_saved_alerts_on_network_issues: got OK alert email."
         )
+
+    def test_monitorclient_send_configuration_data(
+        self, monitor_commercial_setup_no_client
+    ):
+        """Tests the monitor client configuration push"""
+        wait_for_alert_interval_s = 8
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        logger.info("test_monitorclient_send_configuration_data: env ready.")
+
+        logger.info(
+            "test_monitorclient_send_configuration_data: push configuration scenario."
+        )
+        mender_device.run(
+            "sed -i.backup -e 's/CONFPUSH_INTERVAL=.*/CONFPUSH_INTERVAL=8/' /usr/share/mender-monitor/config/config.sh"
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        prepare_service_monitoring(mender_device, "crond", use_ctl=True)
+        prepare_service_monitoring(mender_device, "dbus", use_ctl=True)
+        prepare_log_monitoring(
+            mender_device, "syslog", "/var/log/syslog", "root.*access", use_ctl=True
+        )
+        prepare_log_monitoring(
+            mender_device,
+            "clientlogs",
+            "@journalctl -u mender-client -f",
+            "[Ee]rror.*",
+            use_ctl=True,
+        )
+        device_monitor = DeviceMonitor(auth)
+        wait_iterations = wait_for_alert_interval_s
+        while wait_iterations > 0:
+            time.sleep(1)
+            configuration = device_monitor.get_configuration(devid)
+            if len(configuration) == 4:
+                break
+            wait_iterations = wait_iterations - 1
+
+        assert len(configuration) == 4
+        for entity in [
+            {"name": "crond.sh", "type": "service"},
+            {"name": "dbus.sh", "type": "service"},
+            {"name": "syslog.sh", "type": "log"},
+            {"name": "clientlogs.sh", "type": "log"},
+        ]:
+            found = False
+            for c in configuration:
+                assert "name" in c
+                assert "type" in c
+                assert "status" in c
+                assert c["status"] == "enabled"
+                if entity["name"] == c["name"] and entity["type"] == c["type"]:
+                    found = True
+                    break
+            assert found

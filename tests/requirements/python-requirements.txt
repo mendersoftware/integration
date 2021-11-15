@@ -59,6 +59,6 @@ toml==0.10.2
 urllib3==1.26.7
 webencodings==0.5.1
 websocket-client==0.59.0
-websockets==10.0
+websockets==10.1
 flaky==3.7.0
 stripe==2.61.0

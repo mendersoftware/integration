@@ -47,7 +47,7 @@ pytest-html==3.1.1
 pytest-metadata==1.11.0
 pytest-timeout==2.0.1
 pytest-xdist==2.4.0
-python-dotenv==0.19.1
+python-dotenv==0.19.2
 pytoml==0.1.21
 PyYAML==5.4.1
 redo==2.0.4

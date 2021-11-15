@@ -483,11 +483,11 @@ def get_docker_compose_data_from_json_list(json_list):
                 "mendersoftware" not in full_image and "mender.io" not in full_image
             ):
                 continue
-            split = full_image.rsplit("/", 1)
-            prefix = split[0]
-            split = split[1].split(":", 1)
-            image = split[0]
+            split = full_image.rsplit(":", 1)
             ver = split[1]
+            split = split[0].rsplit("/", 1)
+            prefix = split[0]
+            image = split[1]
             if data.get(image) is not None:
                 raise Exception(
                     (
@@ -2893,8 +2893,8 @@ def figure_out_checked_out_revision(state, repo_git):
 
 
 def find_repo_path(name, paths):
-    """ Try to find the git repo 'name' under some known paths.
-        Return abspath or None if not found.
+    """Try to find the git repo 'name' under some known paths.
+    Return abspath or None if not found.
     """
     for p in paths:
         path = os.path.normpath(os.path.join(integration_dir(), p, name))
@@ -3150,15 +3150,15 @@ def is_repo_on_known_branch(path):
 
 
 def select_test_suite():
-    """ Check what backend components are checked out in custom revisions and decide
-        which integration test suite should be ran - 'open', 'enterprise' or both.
-        To be used when running integration tests to see which components 'triggered' the build
-        (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
-        in case of manually parametrized builds).
-        Rules:
-        - open services, without closed versions, should trigger both setup test runs
-        - open services with closed versions should trigger the 'open' test suite
-        - enterprise services can run just the 'enterprise' setup
+    """Check what backend components are checked out in custom revisions and decide
+    which integration test suite should be ran - 'open', 'enterprise' or both.
+    To be used when running integration tests to see which components 'triggered' the build
+    (i.e. changed, for lack of a better word - could be just 1 service with a checked out PR, or multiple -
+    in case of manually parametrized builds).
+    Rules:
+    - open services, without closed versions, should trigger both setup test runs
+    - open services with closed versions should trigger the 'open' test suite
+    - enterprise services can run just the 'enterprise' setup
     """
     # check all known git components for custom revisions
     # answers the question what we're actually building

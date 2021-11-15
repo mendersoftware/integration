@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==10.0
 flaky==3.7.0
-stripe==2.61.0
+stripe==2.62.0

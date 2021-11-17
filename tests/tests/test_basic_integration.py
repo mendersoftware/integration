@@ -26,8 +26,18 @@ from ..common_setup import (
     standard_setup_one_client_bootstrapped,
 )
 from .common_update import update_image, update_image_failed
-from ..MenderAPI import image, inv, logger
+from ..MenderAPI import image, inv, logger, devauth, DeviceAuthV2, get_container_manager
 from .mendertesting import MenderTesting
+
+
+class DeviceAuthFailover(DeviceAuthV2):
+    def __init__(self, devauth):
+        self.auth = devauth.auth
+
+    def get_devauth_base_path(self):
+        return "https://%s/api/management/v2/devauth/" % (
+            get_container_manager().get_ip_of_service("mender-api-gateway-2")[0]
+        )
 
 
 class TestBasicIntegration(MenderTesting):
@@ -109,6 +119,34 @@ class TestBasicIntegration(MenderTesting):
 
             host_ip = setup_failover.get_virtual_network_host_ip()
             update_image(mender_device, host_ip, install_image=tmp_image)
+
+            # Now try to decommission the device from server A and have it
+            # accepted in server B.
+            devices = devauth.get_devices_status()
+            assert len(devices) == 1
+            devauth.decommission(devices[0]["id"])
+
+            # Journalctl has resolution of one second, so wait one second to
+            # avoid race conditions when detecting below.
+            time.sleep(1)
+            date = mender_device.run('date "+%Y-%m-%d %H:%M:%S"').strip()
+
+            devauth_failover = DeviceAuthFailover(devauth)
+
+            devices = devauth_failover.get_devices_status(status="pending")
+            assert len(devices) == 1
+
+            devauth_failover.accept_devices(1)
+
+            output = mender_device.run(
+                f'journalctl -S"{date}"'
+                + ' | grep -l "successfully received new authorization data"'
+            ).strip()
+
+            # Old server should have no devices now.
+            devices = devauth.get_devices_status(status="accepted")
+            assert len(devices) == 0
+
         finally:
             os.remove(tmp_image)
 

@@ -101,7 +101,7 @@ class TestBasicIntegration(MenderTesting):
                 raise SystemExit("Could not retrieve mender.conf")
 
             conf["Servers"] = [
-                {"ServerURL": "https://docker.mender-failover.io"},
+                {"ServerURL": "https://failover.docker.mender.io"},
                 {"ServerURL": conf["ServerURL"]},
             ]
             conf.pop("ServerURL")

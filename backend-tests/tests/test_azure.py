@@ -92,8 +92,12 @@ class TestAzureSettingsEnterprise(_TestAzureBase):
         )
 
         for expected_settings in [
-            {"connection_string": "my://connection.string"},
-            {"connection_string": "my://new.connection.string"},
+            {
+                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey"
+            },
+            {
+                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey"
+            },
         ]:
             r = super().save_settings(t.users[0], expected_settings)
             assert r.status_code == 204
@@ -103,7 +107,16 @@ class TestAzureSettingsEnterprise(_TestAzureBase):
             r = super().get_settings(t.users[0])
             assert r.status_code == 200
             self.logger.info("got settings: %s" % r.text)
-            assert expected_settings == r.json()
+            r_json = r.json()
+            assert "connection_string" in r_json.keys()
+            actual = r_json["connection_string"]
+            # Check for equality by parts:
+            # Check that actual properties are a subset of expected settings
+            for part in actual.split(";"):
+                assert part in expected_settings["connection_string"]
+            # Check that expected properties are a subset of actual settings
+            for part in expected_settings["connection_string"].split(";"):
+                assert part in actual
 
 
 class TestAzureSettings(_TestAzureBase):
@@ -119,8 +132,12 @@ class TestAzureSettings(_TestAzureBase):
         u = create_user_test_setup("azureuser0@mender.io", "somepassword10101010")
 
         for expected_settings in [
-            {"connection_string": "my://connection.string"},
-            {"connection_string": "my://new.connection.string"},
+            {
+                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey"
+            },
+            {
+                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey"
+            },
         ]:
             r = super().save_settings(u, expected_settings)
             assert r.status_code == 204
@@ -130,4 +147,13 @@ class TestAzureSettings(_TestAzureBase):
             r = super().get_settings(u)
             assert r.status_code == 200
             self.logger.info("got settings: %s" % r.text)
-            assert expected_settings == r.json()
+            r_json = r.json()
+            assert "connection_string" in r_json.keys()
+            actual = r_json["connection_string"]
+            # Check for equality by parts:
+            # Check that actual properties are a subset of expected settings
+            for part in actual.split(";"):
+                assert part in expected_settings["connection_string"]
+            # Check that expected properties are a subset of actual settings
+            for part in expected_settings["connection_string"].split(";"):
+                assert part in actual

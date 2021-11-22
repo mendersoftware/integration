@@ -17,6 +17,7 @@ import logging
 import os
 import time
 import uuid
+from base64 import b64decode
 from datetime import datetime, timedelta
 
 import docker
@@ -178,8 +179,13 @@ class TestAzureSettings(_TestAzureBase):
 def azure_user(clean_mongo):
     connection_string = os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING")
     if connection_string is None:
-        pytest.skip("Test requires setting AZURE_IOTHUB_CONNECTIONSTRING")
-
+        cs_b64 = os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING_B64")
+        if cs_b64 is None:
+            pytest.skip(
+                "Test requires setting AZURE_IOTHUB_CONNECTIONSTRING "
+                + "or AZURE_IOTHUB_CONNECTIONSTRING_B64"
+            )
+        connection_string = b64decode(cs_b64)
     api_azure = ApiClient(base_url=azure.URL_MGMT)
     try:
         tenant = create_org(

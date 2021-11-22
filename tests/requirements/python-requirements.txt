@@ -9,7 +9,7 @@ cffi==1.15.0
 chardet==4.0.0
 colorama==0.4.4
 contextlib2==21.6.0
-cryptography==35.0.0
+cryptography==36.0.0
 distlib==0.3.1
 distro==1.6.0
 docker==5.0.3

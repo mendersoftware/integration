@@ -134,10 +134,14 @@ get_runner_requirements() {
 }
 
 run_tests() {
+    local RUN_ARGS="--use-aliases"
     # Need to start the backend first
     $COMPOSE_CMD up --scale mender-backend-tests-runner=0 -d --remove-orphans
+    if [ -n "$AZURE_IOTHUB_CONNECTIONSTRING" ]; then
+        RUN_ARGS="${RUN_ARGS} -e AZURE_IOTHUB_CONNECTIONSTRING=${AZURE_IOTHUB_CONNECTIONSTRING}"
+    fi
     # ... then the runner
-    $COMPOSE_CMD run --use-aliases mender-backend-tests-runner
+    $COMPOSE_CMD run $RUN_ARGS mender-backend-tests-runner
     return $?
 }
 

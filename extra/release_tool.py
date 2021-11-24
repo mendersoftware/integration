@@ -2954,8 +2954,7 @@ def do_integration_versions_including(args):
                 continue
         except KeyError:
             # Key repo.git() doesn't exist (but Docker component existed). This
-            # can happen when several git repos contribute to one Docker image
-            # (i.e. mender + mender-auth-azure-iot repos for mender-client-qemu)
+            # can happen when several git repos contribute to one Docker image.
             # Not a match.
             continue
 

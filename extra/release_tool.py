@@ -232,40 +232,6 @@ class Component:
         return False
 
 
-# A map from git repo name to build parameter name in CI scripts.
-GIT_TO_BUILDPARAM_MAP = {
-    "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
-    "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
-    "mender-auth-azure-iot": "MENDER_AUTH_AZURE_IOT_REV",
-    "deployments": "DEPLOYMENTS_REV",
-    "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
-    "deviceauth": "DEVICEAUTH_REV",
-    "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
-    "gui": "GUI_REV",
-    "inventory": "INVENTORY_REV",
-    "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
-    "tenantadm": "TENANTADM_REV",
-    "useradm": "USERADM_REV",
-    "useradm-enterprise": "USERADM_ENTERPRISE_REV",
-    "workflows": "WORKFLOWS_REV",
-    "workflows-enterprise": "WORKFLOWS_ENTERPRISE_REV",
-    "create-artifact-worker": "CREATE_ARTIFACT_WORKER_REV",
-    "mender": "MENDER_REV",
-    "mender-artifact": "MENDER_ARTIFACT_REV",
-    "mender-cli": "MENDER_CLI_REV",
-    "meta-mender": "META_MENDER_REV",
-    "integration": "INTEGRATION_REV",
-    "mender-qa": "MENDER_QA_REV",
-    "auditlogs": "AUDITLOGS_REV",
-    "mtls-ambassador": "MTLS_AMBASSADOR_REV",
-    "deviceconnect": "DEVICECONNECT_REV",
-    "mender-connect": "MENDER_CONNECT_REV",
-    "deviceconfig": "DEVICECONFIG_REV",
-    "devicemonitor": "DEVICEMONITOR_REV",
-    "monitor-client": "MONITOR_CLIENT_REV",
-    "reporting": "REPORTING_REV",
-}
-
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
 BACKEND_SERVICES_OPEN = {
@@ -312,6 +278,11 @@ class BuildParam:
 
 
 EXTRA_BUILDPARAMS_CACHE = None
+
+
+# Helper to translate repo-something to REPO_SOMETHING_REV
+def git_to_buildparam(git_name):
+    return git_name.replace("-", "_").upper() + "_REV"
 
 
 def print_line():
@@ -1578,12 +1549,8 @@ def get_extra_buildparams_from_jenkins():
     # as extra build parameters.
     extra_buildparams = {}
     in_versioned_repos = {}
-    for key in GIT_TO_BUILDPARAM_MAP.keys():
-        for repo in Component.get_components_of_type("git"):
-            if repo.git() == key:
-                in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
-                # Break out of innermost loop.
-                break
+    for repo in Component.get_components_of_type("git"):
+        in_versioned_repos[git_to_buildparam(repo.git())] = True
 
     for key, type, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
         # Skip keys that are in versioned repos.
@@ -1615,12 +1582,8 @@ def get_extra_buildparams_from_yaml():
     # as extra build parameters.
     extra_buildparams = {}
     in_versioned_repos = {}
-    for key in GIT_TO_BUILDPARAM_MAP.keys():
-        for repo in Component.get_components_of_type("git"):
-            if repo.git() == key:
-                in_versioned_repos[GIT_TO_BUILDPARAM_MAP[key]] = True
-                # Break out of innermost loop.
-                break
+    for repo in Component.get_components_of_type("git"):
+        in_versioned_repos[git_to_buildparam(repo.git())] = True
 
     for key, value in build_variables.items():
         if not in_versioned_repos.get(key):
@@ -1666,7 +1629,7 @@ def trigger_build(state, tag_avail):
                 if tag_avail[repo.git()].get("build_tag") is None:
                     print("%s doesn't have a build tag yet!" % repo.git())
                     return
-                params[GIT_TO_BUILDPARAM_MAP[repo.git()]] = tag_avail[repo.git()][
+                params[git_to_buildparam(repo.git())] = tag_avail[repo.git()][
                     "build_tag"
                 ]
 
@@ -2459,14 +2422,9 @@ def do_build(args):
             else:
                 raise Exception("%s is not a valid repo/pr or repo/branch pair!" % pr)
         repo = match.group(1)
-        assert repo in GIT_TO_BUILDPARAM_MAP.keys(), (
-            "%s needs to be in GIT_TO_BUILDPARAM_MAP" % repo
-        )
-        if GIT_TO_BUILDPARAM_MAP[repo] in extra_buildparams:
+        if git_to_buildparam(repo) in extra_buildparams:
             # For non-version repos
-            update_state(
-                state, ["extra_buildparams", GIT_TO_BUILDPARAM_MAP[repo]], pr_str
-            )
+            update_state(state, ["extra_buildparams", git_to_buildparam(repo)], pr_str)
         else:
             # For versioned Mender repos.
             tag_avail[repo]["build_tag"] = pr_str

@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 import yaml
 from release_tool import Component, docker_compose_files_list, main
+from release_tool import git_to_buildparam
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
@@ -477,3 +478,41 @@ def test_list_repos_old_releases(capsys):
     assert "azure-iot-manager" not in repos_list
     assert "mender" in repos_list
     assert "deviceauth" in repos_list
+
+
+def test_git_to_buildparam():
+    GIT_TO_BUILDPARAM_MAP = {
+        "mender-api-gateway-docker": "MENDER_API_GATEWAY_DOCKER_REV",
+        "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
+        "mender-auth-azure-iot": "MENDER_AUTH_AZURE_IOT_REV",
+        "deployments": "DEPLOYMENTS_REV",
+        "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
+        "deviceauth": "DEVICEAUTH_REV",
+        "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
+        "gui": "GUI_REV",
+        "inventory": "INVENTORY_REV",
+        "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
+        "tenantadm": "TENANTADM_REV",
+        "useradm": "USERADM_REV",
+        "useradm-enterprise": "USERADM_ENTERPRISE_REV",
+        "workflows": "WORKFLOWS_REV",
+        "workflows-enterprise": "WORKFLOWS_ENTERPRISE_REV",
+        "create-artifact-worker": "CREATE_ARTIFACT_WORKER_REV",
+        "mender": "MENDER_REV",
+        "mender-artifact": "MENDER_ARTIFACT_REV",
+        "mender-cli": "MENDER_CLI_REV",
+        "meta-mender": "META_MENDER_REV",
+        "integration": "INTEGRATION_REV",
+        "mender-qa": "MENDER_QA_REV",
+        "auditlogs": "AUDITLOGS_REV",
+        "mtls-ambassador": "MTLS_AMBASSADOR_REV",
+        "deviceconnect": "DEVICECONNECT_REV",
+        "mender-connect": "MENDER_CONNECT_REV",
+        "deviceconfig": "DEVICECONFIG_REV",
+        "devicemonitor": "DEVICEMONITOR_REV",
+        "monitor-client": "MONITOR_CLIENT_REV",
+        "reporting": "REPORTING_REV",
+    }
+
+    for k, v in GIT_TO_BUILDPARAM_MAP.items():
+        assert git_to_buildparam(k) == v

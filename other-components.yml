@@ -12,6 +12,3 @@ services:
 
     mender-connect:
         image: mendersoftware/mender-connect:master
-
-    mender-auth-azure-iot:
-        image: mendersoftware/mender-auth-azure-iot:master

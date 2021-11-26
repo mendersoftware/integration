@@ -131,7 +131,12 @@ class TestAuditLogsEnterprise:
         """Baseline test - deployment create event is logged with correct fields."""
         user = tenant_users.users[0]
 
-        d, _ = make_deployment(user.token)
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        device = make_pending_device(
+            devauthd, devauthm, user.token, tenant_users.tenant_token
+        )
+        d, _ = make_deployment(user.token, device.id)
         expected = evt_deployment_create(user, d)
 
         res = None
@@ -226,6 +231,11 @@ class TestAuditLogsEnterprise:
             else:
                 assert False, "max GET /logs retries hit"
 
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        device = make_pending_device(
+            devauthd, devauthm, tenant_users.users[0].token, tenant_users.tenant_token
+        )
         # N various events from both users
         events = []
         for i in range(10):
@@ -241,7 +251,7 @@ class TestAuditLogsEnterprise:
                 evt = evt_user_create(user, uid, uuidv4 + "@acme.com")
                 oid = uid
             else:
-                d, a = make_deployment(user.token)
+                d, a = make_deployment(user.token, device.id)
                 evt_artifact = evt_artifact_upload(user, a)
                 evt = evt_deployment_create(user, d)
                 oid = d["id"]
@@ -425,7 +435,7 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], case["expected"][i])
 
 
-def make_deployment(token: str) -> Tuple[Dict, Dict]:
+def make_deployment(token: str, device: str = "arm1") -> Tuple[Dict, Dict]:
     """Create sample deployment for test purposes."""
     depl_v1 = ApiClient(deployments_v1.URL_MGMT)
 
@@ -434,7 +444,7 @@ def make_deployment(token: str) -> Tuple[Dict, Dict]:
     name = "dep-" + uuidv4
 
     with get_mender_artifact(
-        artifact_name=artifact_name, device_types=["arm1"],
+        artifact_name=artifact_name, device_types=["arm1"]
     ) as artifact:
         r = depl_v1.with_auth(token).call(
             "POST",
@@ -451,11 +461,7 @@ def make_deployment(token: str) -> Tuple[Dict, Dict]:
     assert r.status_code == 201
     artifact = {"id": r.headers["Location"].rsplit("/", 1)[1]}
 
-    request_body = {
-        "name": name,
-        "artifact_name": artifact_name,
-        "devices": ["arm1"],
-    }
+    request_body = {"name": name, "artifact_name": artifact_name, "devices": [device]}
     resp = depl_v1.with_auth(token).call("POST", "/deployments", body=request_body)
     assert resp.status_code == 201
 
@@ -516,7 +522,7 @@ def make_user(token: str, email: str, pwd: str) -> Optional[str]:
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(token)
-        .call("POST", useradm.URL_USERS, {"email": email, "password": pwd},)
+        .call("POST", useradm.URL_USERS, {"email": email, "password": pwd})
     )
     assert res.status_code == 201
     return res.headers["Location"].split("/")[1]
@@ -546,11 +552,7 @@ def evt_user_delete(actor_user: User, del_user: User) -> Dict:
     return {
         "action": "delete",
         "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
-        "object": {
-            "id": del_user.id,
-            "type": "user",
-            "user": {"email": del_user.name},
-        },
+        "object": {"id": del_user.id, "type": "user", "user": {"email": del_user.name}},
     }
 
 

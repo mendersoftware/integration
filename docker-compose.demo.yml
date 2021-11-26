@@ -41,8 +41,8 @@ services:
             - --ping=true
             - --providers.file.directory=/etc/traefik/config
         environment:
-          MENDER_DEMO: "true"
-          TRAEFIK_API: "true"
+            MENDER_DEMO: "true"
+            TRAEFIK_API: "true"
         networks:
             mender:
                 aliases:

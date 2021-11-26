@@ -27,8 +27,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.config.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.connect.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.yml",
     ]
@@ -71,8 +69,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
     ENTERPRISE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.auditlogs.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.monitor.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml",
     ]
     MT_CLIENT_FILES = [

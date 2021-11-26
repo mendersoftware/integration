@@ -47,6 +47,8 @@ services:
             - MENDER_ARTIFACT_VERSION
             - MENDER_VERSION
             - MENDER_DEB_PACKAGE_VERSION
+            - HAVE_DEVICECONNECT
+            - HAVE_DEVICECONFIG
 
     #
     # mender-api-gateway
@@ -57,7 +59,7 @@ services:
             file: common.yml
             service: mender-base
         # Enables the web UI and tells Traefik to listen to docker
-        command: 
+        command:
             - --accesslog=true
             - --entrypoints.http.address=:80
             - --entrypoints.http.http.redirections.entryPoint.scheme=https
@@ -158,6 +160,10 @@ services:
         command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
+            DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
+            HAVE_DEVICECONNECT: 1
+            HAVE_DEVICECONFIG: 1
+            DEVICECONFIG_ADDR: "mender-deviceconfig:8080"
         extends:
             file: common.yml
             service: mender-base
@@ -185,6 +191,42 @@ services:
             - mender-mongo
             - mender-nats
 
+    #
+    # mender-deviceconnect
+    #
+    mender-deviceconnect:
+        image: mendersoftware/deviceconnect:mender-master
+        command: server --automigrate
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+            - mender-nats
+        environment:
+            DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
+            DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
+
+    #
+    # mender-deviceconfig
+    #
+    mender-deviceconfig:
+        image: mendersoftware/deviceconfig:mender-master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        command: server --automigrate
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
+
     mender-mongo:
         image: mongo:4.4
         extends:
@@ -207,4 +249,4 @@ services:
             - mender
 
 networks:
-    mender:
+    mender: null

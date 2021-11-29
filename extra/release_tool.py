@@ -542,8 +542,8 @@ def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
 def version_of(
     integration_dir, yml_component, in_integration_version=None, git_version=True
 ):
-    if yml_component.yml() == "mender-client-docker-addons":
-        # Also known as "integration"
+    if yml_component.yml() in ["mender-client-docker-addons", "integration"]:
+        # "mender-client-docker-addons" is the Docker image from "integration".
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -708,12 +708,7 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         )
     elif args.list_format == "json":
         json_object = {
-            "release": version_of(
-                integration_dir(),
-                Component.get_component_of_any_type("integration").yml_components()[0],
-                args.in_integration_version,
-                git_version=True,
-            ),
+            "release": repos_versions_dict["integration"],
             "repos": list(
                 map(
                     lambda item: {"name": item[0], "version": item[1]},

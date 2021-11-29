@@ -12,8 +12,6 @@ COMPOSE_CMD_BASE="docker-compose -p backend-tests \
 COMPOSE_CMD_OPEN="docker-compose -p backend-tests \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
-        -f $INTEGRATION_PATH/docker-compose.connect.yml \
-        -f $INTEGRATION_PATH/docker-compose.config.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml
         -f $INTEGRATION_PATH/extra/integration-testing/docker-compose.yml
         -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml
@@ -23,9 +21,6 @@ COMPOSE_CMD_ENTERPRISE="${COMPOSE_CMD_OPEN} \
         -f $INTEGRATION_PATH/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml \
         -f $INTEGRATION_PATH/extra/smtp-testing/workflows-worker-smtp-test.yml \
         -f $INTEGRATION_PATH/extra/stripe-testing/stripe-test.docker-compose.yml
-        -f $INTEGRATION_PATH/docker-compose.monitor.yml \
-        -f $INTEGRATION_PATH/docker-compose.auditlogs.yml
-        -f $INTEGRATION_PATH/docker-compose.auditlogs.connect.yml
         "
 COMPOSE_CMD=""
 

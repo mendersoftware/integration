@@ -13,6 +13,8 @@ services:
     # subsitute services with 'enterprise' versions
     mender-deployments:
         image: registry.mender.io/mendersoftware/deployments-enterprise:mender-master
+        environment:
+            DEPLOYMENTS_ENABLE_AUDIT: 1
 
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
@@ -22,6 +24,10 @@ services:
 
     mender-workflows-worker:
         image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-master
+        environment:
+            HAVE_AUDITLOGS: 1
+            HAVE_DEVICECONFIG: 1
+            DEVICECONFIG_ADDR: "mender-deviceconfig:8080"
 
     # add services
     mender-tenantadm:
@@ -48,6 +54,7 @@ services:
             DEVICEAUTH_REDIS_LIMITS_EXPIRE_SEC: "3600"
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             DEVICEAUTH_HAVE_ADDONS: 1
+            DEVICEAUTH_ENABLE_AUDIT: 1
 
     mender-useradm:
         image: registry.mender.io/mendersoftware/useradm-enterprise:mender-master
@@ -60,15 +67,53 @@ services:
             USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             USERADM_HAVE_ADDONS: 1
+            USERADM_ENABLE_AUDIT: 1
+
+    mender-auditlogs:
+        image: registry.mender.io/mendersoftware/auditlogs:mender-master
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        command: server --automigrate
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/auditlogs/health"
 
     mender-api-gateway:
-      volumes:
-        - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml:ro
+        volumes:
+            - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml:ro
 
     mender-gui:
         environment:
             HAVE_MULTITENANT: 1
             HAVE_ENTERPRISE: 1
+            HAVE_AUDITLOGS: 1
+            HAVE_DEVICECONFIG: 1
+            HAVE_MONITOR: 1
+
+    mender-deviceconfig:
+        environment:
+            DEVICECONFIG_ENABLE_AUDIT: 1
+
+    mender-deviceconnect:
+        environment:
+            DEVICECONNECT_ENABLE_AUDIT: 1
+
+    mender-devicemonitor:
+        image: registry.mender.io/mendersoftware/devicemonitor:mender-master
+        command: server --automigrate
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-mongo
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/devicemonitor/health"
 
 networks:
-    mender:
+    mender: null

@@ -34,9 +34,8 @@ The integration environment brings together the following services:
 - [Mender Deployment Service](https://github.com/mendersoftware/deployments)
 - [Mender Device Inventory Service](https://github.com/mendersoftware/inventory)
 - [Mender User Administration Service](https://github.com/mendersoftware/useradm)
-- [Mender API Gateway](https://github.com/mendersoftware/mender-api-gateway-docker)
+- [Træfik](https://traefik.io/traefik/)
 - [Minio](https://www.minio.io/) object storage
-- Storage service proxy based on [OpenResty](https://openresty.org/en/)
 
 ## How to use in production
 
@@ -111,8 +110,7 @@ Guidelines and things to consider:
 * assign the service a name that is unique within `docker-compose.yml`
 * add the service to the `mender` network
 * setup the correct routing and authentication for the new service in the
-[Mender API Gateway](https://github.com/mendersoftware/mender-api-gateway-docker)
-* extend the common service `mender-common/common.yml`
+[API gateway config](https://github.com/mendersoftware/integration/tree/master/config/traefik)
 
 ## How to use in development
 
@@ -162,23 +160,15 @@ When you run the setup, your new service will be a part of it; also, it will be
 running binaries from your local machine, which means you can quickly recompile
 them and restart `integration` for changes to take effect.
 
-Note that the correct routing and auth still have to be set up in the Mender API Gateway for the service
-to be accessible from the outside. To experiment with new configuration:
+Note that the correct routing and auth still have to be set up in the Mender API Gateway for the service to be accessible
+from the outside. To experiment with the new configuration:
 
-* copy the [Gateway's main config file](https://github.com/mendersoftware/mender-api-gateway-docker/blob/master/nginx.conf)
-locally
+* modify `config/traefik/traefik.yaml` to achieve the configuration you desire
 
-* in `docker-compose.yml`, again mount your local version inside the Gateway container:
+or
 
-```
-    #
-    # mender-api-gateway
-    #
-    mender-api-gateway:
-        ...
-        /some/localhost/folder/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
-```
-Your changes will take effect when you restart the whole setup.
+* mount an additional config to the `mender-api-gateway` service under `/etc/traefik/config/traefik.<new-service-name>.yaml`
+your changes will take effect when you restart the whole setup
 
 ### Troubleshooting/developing an existing service
 

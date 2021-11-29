@@ -16,3 +16,4 @@ HOST = "mender-azure-iot-manager:8080"
 
 URL_MGMT = "/api/management/v1/azure-iot-manager"
 URL_SETTINGS = "/settings"
+URL_DEVICE = lambda id: f"/devices/{id}"

@@ -60,5 +60,24 @@ COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.Authentica
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
 COPY --from=build /mender-install/var/lib/mender /var/lib/mender
 
+# Install the demo server certificate(s). See:
+# https://github.com/mendersoftware/meta-mender/blob/master/meta-mender-core/recipes-mender/mender-server-certificate/mender-server-certificate.bb
+COPY --from=build /src/mender/support/demo.crt /server.crt
+RUN \
+    mkdir /usr/local/share/ca-certificates/mender                              ;\
+    certnum=1                                                                  ;\
+    while read LINE; do                                                         \
+        if [ -z "$cert" ] || echo "$LINE" | fgrep -q 'BEGIN CERTIFICATE'; then  \
+            cert=/usr/local/share/ca-certificates/mender/server-$certnum.crt   ;\
+            rm -f $cert                                                        ;\
+            touch $cert                                                        ;\
+            chmod 0444 $cert                                                   ;\
+            certnum=$(expr $certnum + 1)                                       ;\
+        fi                                                                     ;\
+        echo "$LINE" >> $cert                                                  ;\
+    done < /server.crt                                                         ;\
+    rm /server.crt
+RUN update-ca-certificates
+
 COPY entrypoint.sh /
 CMD /entrypoint.sh

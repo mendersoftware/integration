@@ -19,7 +19,7 @@ import json
 import time
 import urllib.parse
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 
 import redo
 
@@ -128,7 +128,7 @@ class TestAuditLogsEnterprise:
         check_log(res.json()[0], expected)
 
     def test_deployment_create(self, tenant_users):
-        """ Baseline test - deployment create event is logged with correct fields."""
+        """Baseline test - deployment create event is logged with correct fields."""
         user = tenant_users.users[0]
 
         d, _ = make_deployment(user.token)
@@ -192,7 +192,7 @@ class TestAuditLogsEnterprise:
 
         roles = ["RBAC_ROLE_CI"]
         change_role(user.token, user_change.id, roles)
-        expected = evt_change_role(user, user_change, roles)
+        expected = evt_change_role(user, user_change)
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
@@ -207,17 +207,20 @@ class TestAuditLogsEnterprise:
         check_log(res[0], expected)
 
     def test_get_params(self, tenant_users):
-        """ Mix up some audiltog events, check GET with various params """
+        """Mix up some audiltog events, check GET with various params"""
 
-        def get_auditlog_time(oid):
+        def get_auditlog_time(oid: str):
             # get exact time for filter testing
             found = None
             for _ in redo.retrier(attempts=3, sleeptime=1):
                 resp = self.alogs.with_auth(tenant_users.users[0].token).call(
                     "GET", auditlogs.URL_LOGS
                 )
-                resp = resp.json()
-                found = [e for e in resp if e["object"]["id"] == oid]
+                found = [
+                    audit_log
+                    for audit_log in resp.json()
+                    if audit_log["object"]["id"] == oid
+                ]
                 if len(found) == 1:
                     return found[0]["time"]
             else:
@@ -422,7 +425,7 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], case["expected"][i])
 
 
-def make_deployment(token):
+def make_deployment(token: str) -> Tuple[Dict, Dict]:
     """Create sample deployment for test purposes."""
     depl_v1 = ApiClient(deployments_v1.URL_MGMT)
 
@@ -468,7 +471,8 @@ def make_deployment(token):
     return deployment, artifact
 
 
-def evt_artifact_upload(user, artifact):
+def evt_artifact_upload(user: User, artifact: Dict) -> Dict:
+    """Prepare artifact upload event dictionary using sample artifact data."""
     return {
         "action": "upload",
         "actor": {"id": user.id, "type": "user", "email": user.name},
@@ -476,8 +480,8 @@ def evt_artifact_upload(user, artifact):
     }
 
 
-def evt_deployment_create(user, deployment):
-    """Prepare test deployment creation event dictionary using with and deployment data."""
+def evt_deployment_create(user: User, deployment: Dict) -> Dict:
+    """Prepare test deployment creation event dictionary using deployment data."""
     return {
         "action": "create",
         "actor": {"id": user.id, "type": "user", "email": user.name},
@@ -507,7 +511,8 @@ def event_device(user: User, device: Device, event_type: str = "decommission") -
     }
 
 
-def make_user(token, email, pwd):
+def make_user(token: str, email: str, pwd: str) -> Optional[str]:
+    """Create user in useradm service with given data."""
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(token)
@@ -517,7 +522,8 @@ def make_user(token, email, pwd):
     return res.headers["Location"].split("/")[1]
 
 
-def evt_user_create(actor_user, newid, email):
+def evt_user_create(actor_user: User, newid: str, email: str) -> Dict:
+    """Prepare test user creation event dictionary."""
     return {
         "action": "create",
         "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
@@ -525,7 +531,8 @@ def evt_user_create(actor_user, newid, email):
     }
 
 
-def delete_user(actor_user, uid):
+def delete_user(actor_user: User, uid: str):
+    """Send request to useradm service to delete given user. """
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(actor_user.token)
@@ -534,7 +541,8 @@ def delete_user(actor_user, uid):
     assert res.status_code == 204
 
 
-def evt_user_delete(actor_user, del_user):
+def evt_user_delete(actor_user: User, del_user: User) -> Dict:
+    """Prepare test user delete event dictionary."""
     return {
         "action": "delete",
         "actor": {"id": actor_user.id, "type": "user", "email": actor_user.name},
@@ -546,7 +554,8 @@ def evt_user_delete(actor_user, del_user):
     }
 
 
-def change_role(token, uid, roles):
+def change_role(token: str, uid: str, roles: List[str]):
+    """Send request to useradm service to change test user roles."""
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(token)
@@ -557,7 +566,8 @@ def change_role(token, uid, roles):
     assert res.status_code == 204
 
 
-def evt_change_role(user, user_change, roles):
+def evt_change_role(user: User, user_change: User) -> Dict:
+    """Prepare test user role change event dictionary."""
     return {
         "action": "update",
         "actor": {"id": user.id, "type": "user", "email": user.name},
@@ -570,7 +580,7 @@ def evt_change_role(user, user_change, roles):
     }
 
 
-def check_log(log, expected):
+def check_log(log: Dict, expected: Dict):
     assert log["action"] == expected["action"]
     if "change" in expected:
         assert log["change"].startswith(expected["change"])
@@ -584,14 +594,7 @@ def check_log(log, expected):
     assert log["time"] is not None
 
 
-def go_dict_str(d):
-    """Account for dict encoding diffs between go/py"""
-    djson = json.dumps(d)
-
-    return djson.replace(" ", "")
-
-
-def parse_auditlog_time(auditlog_time):
+def parse_auditlog_time(auditlog_time: str) -> datetime:
     try:
         return datetime.strptime(auditlog_time, "%Y-%m-%dT%H:%M:%S.%fZ")
     except ValueError:

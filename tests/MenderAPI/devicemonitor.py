@@ -47,3 +47,13 @@ class DeviceMonitor:
         )
         assert ret.status_code == requests.status_codes.codes.ok
         return ret.json()
+
+    def get_configuration(self, device_id):
+        """get_configuration for given device management API."""
+        ret = requests_retry().get(
+            self.get_inv_base_path() + "devices/" + device_id + "/config",
+            headers=self.auth.get_auth_token(),
+            verify=False,
+        )
+        assert ret.status_code == requests.status_codes.codes.ok
+        return ret.json()

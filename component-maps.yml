@@ -6,12 +6,6 @@
 
 git:
 
-  mender-auth-azure-iot:
-    docker_image: []
-    docker_container: []
-    release_component: true
-    independent_component: true
-
   azure-iot-manager:
     docker_image:
     - azure-iot-manager

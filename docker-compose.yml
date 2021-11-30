@@ -47,8 +47,8 @@ services:
             - MENDER_ARTIFACT_VERSION
             - MENDER_VERSION
             - MENDER_DEB_PACKAGE_VERSION
-            - HAVE_DEVICECONNECT
-            - HAVE_DEVICECONFIG
+            - HAVE_DEVICECONNECT=1
+            - HAVE_DEVICECONFIG=1
 
     #
     # mender-api-gateway

@@ -822,6 +822,7 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -907,6 +908,7 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_store large store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
 
         patterns_count = 30
         expected_alerts_count = (
@@ -1337,13 +1339,14 @@ class TestMonitorClientEnterprise:
         )
 
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues: email alert on systemd service not running scenario."
+            "test_monitorclient_send_saved_alerts_on_network_issues: email alert on log file containing a pattern scenario with flaky network."
         )
 
         logger.info(
             "test_monitorclient_send_saved_alerts_on_network_issues disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
 
         log_file_name = "/tmp/mylog.log"
         log_file = "@tail -f " + log_file_name

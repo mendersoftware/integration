@@ -19,7 +19,6 @@ import shutil
 import tempfile
 import time
 import re
-from flaky import flaky
 
 from testutils.common import create_org
 from testutils.infra.container_manager import factory
@@ -356,8 +355,23 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         # set up the mTLS test environment, without providing client certs
         self.common_test_mtls_enterprise(setup_ent_mtls, algorithm=None, use_hsm=False)
 
-        # wait 30 seconds
-        time.sleep(30)
+        # in here it also may happen, that the client is started earlier, and device registers
+        # as pending. in that case get_devices_status which is called from get_devices will
+        # loop until it runs out of iterations, due to the fact that we expect to have 0 devices.
+        # to prevent this from happening, lets wait a bit, if the device shows as pending,
+        # if it does, decommission it, and then restart the client, and wait to be sure the
+        # device will not re-appear, which is the main idea of the test.
+        device_not_present_timeout_seconds = 30
+        for device in devauth.get_devices_status(
+            "pending", max_wait=device_not_present_timeout_seconds * 0.5, no_assert=True
+        ):
+            devauth.decommission(device["id"])
+        setup_ent_mtls.device.run(
+            "systemctl start %s" % setup_ent_mtls.device.get_client_service_name()
+        )
+
+        # wait device_not_present_timeout_seconds
+        time.sleep(device_not_present_timeout_seconds)
 
         # no device shows up, because mTLS doesn't forward requests to the backend
         devauth.get_devices(expected_devices=0)

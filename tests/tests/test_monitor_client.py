@@ -1279,3 +1279,150 @@ class TestMonitorClientEnterprise:
                     found = True
                     break
             assert found
+
+    def test_monitorclient_alert_store_discard_http_400(
+        self, monitor_commercial_setup_no_client
+    ):
+        """Tests that malformed alerts in the store (HTTP 400) are discarded"""
+        service_name = "crond"
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+
+        prepare_service_monitoring(mender_device, service_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, device is offline."
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: manipulating local store."
+        )
+        num_alerts_valid = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_valid) == 2
+        num_alerts_corrupted = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            'fixlenstore_put "invalid json break here";'
+            'fixlenstore_put "something else there";'
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_corrupted) == 4
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: re-enabling access to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: waiting for alerts (not) to come."
+        )
+        time.sleep(8 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, were they discarded?"
+        )
+
+        num_alerts_after_discard = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_after_discard) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: store is empty, they were discarded!"
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: disabling again access to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        expected_alerts_count = 1  # one for CRITICAL, because we stopped the service
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        expected_alerts_count = (
+            expected_alerts_count + 1
+        )  # one for OK, because we started the service
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, device is offline."
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: re-enabling again access to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: waiting for alerts to come."
+        )
+        time.sleep(8 * wait_for_alert_interval_s)
+
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == expected_alerts_count
+        assert "${workflow.input" not in mail
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid,
+        )
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got CRITICAL alert email."
+        )
+
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid,
+        )
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got OK alert email."
+        )

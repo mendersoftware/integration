@@ -35,11 +35,13 @@ from testutils.common import (
     get_mender_artifact,
     update_tenant,
     make_pending_device,
+    make_device_with_inventory,
     change_authset_status,
 )
 from testutils.api.client import ApiClient
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
+import testutils.api.inventory as inventory
 import testutils.api.deployments as deployments_v1
 import testutils.api.auditlogs as auditlogs
 
@@ -131,7 +133,7 @@ class TestAuditLogsEnterprise:
         """Baseline test - deployment create event is logged with correct fields."""
         user = tenant_users.users[0]
 
-        d, _ = make_deployment(user.token)
+        d, _ = make_deployment(user.token, tenant_users.tenant_token)
         expected = evt_deployment_create(user, d)
 
         res = None
@@ -241,7 +243,7 @@ class TestAuditLogsEnterprise:
                 evt = evt_user_create(user, uid, uuidv4 + "@acme.com")
                 oid = uid
             else:
-                d, a = make_deployment(user.token)
+                d, a = make_deployment(user.token, tenant_users.tenant_token)
                 evt_artifact = evt_artifact_upload(user, a)
                 evt = evt_deployment_create(user, d)
                 oid = d["id"]
@@ -425,7 +427,7 @@ class TestAuditLogsEnterprise:
                 check_log(resp[i], case["expected"][i])
 
 
-def make_deployment(token: str) -> Tuple[Dict, Dict]:
+def make_deployment(token: str, tenant_token: str) -> Tuple[Dict, Dict]:
     """Create sample deployment for test purposes."""
     depl_v1 = ApiClient(deployments_v1.URL_MGMT)
 
@@ -451,10 +453,18 @@ def make_deployment(token: str) -> Tuple[Dict, Dict]:
     assert r.status_code == 201
     artifact = {"id": r.headers["Location"].rsplit("/", 1)[1]}
 
+    # single device deployments will query the inventory service to
+    # obtain the name of the groups the device belongs to; for this
+    # reason, we need the device to be provisioned correctly both
+    # in deviceauth and inventory
+    dev = make_device_with_inventory(
+        [{"name": "foo", "value": "foo"}], token, tenant_token,
+    )
+
     request_body = {
         "name": name,
         "artifact_name": artifact_name,
-        "devices": ["arm1"],
+        "devices": [dev.id],
     }
     resp = depl_v1.with_auth(token).call("POST", "/deployments", body=request_body)
     assert resp.status_code == 201

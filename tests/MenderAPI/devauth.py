@@ -46,10 +46,11 @@ class DeviceAuthV2:
         return self.get_devices_status(expected_devices=expected_devices)
 
     # return devices with the specified status
-    def get_devices_status(self, status=None, expected_devices=1):
+    def get_devices_status(
+        self, status=None, expected_devices=1, max_wait=10 * 60, no_assert=False
+    ):
         device_status_path = self.get_devauth_base_path() + "devices"
         devices = None
-        max_wait = 10 * 60
         starttime = time.time()
         sleeptime = 5
 
@@ -80,7 +81,8 @@ class DeviceAuthV2:
                         % (starttime + max_wait - time.time())
                     )
 
-        assert got_devices, "Not able to get devices"
+        if not no_assert:
+            assert got_devices, "Not able to get devices"
 
         devices_json = devices.json()
 

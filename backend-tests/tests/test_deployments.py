@@ -37,6 +37,8 @@ from testutils.common import (
     get_mender_artifact,
     make_accepted_device,
     make_accepted_devices,
+    make_device_with_inventory,
+    submit_inventory,
 )
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
@@ -1581,47 +1583,6 @@ def get_deployment(depid, utoken):
     )
     assert res.status_code == 200
     return res.json()
-
-
-def make_device_with_inventory(attributes, utoken, tenant_token):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-    devauthd = ApiClient(deviceauth.URL_DEVICES)
-    invm = ApiClient(inventory.URL_MGMT)
-
-    d = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
-    """
-    verify that the status of the device in inventory is "accepted"
-    """
-    accepted = False
-    timeout = 10
-    for i in range(timeout):
-        r = invm.with_auth(utoken).call("GET", inventory.URL_DEVICE.format(id=d.id))
-        if r.status_code == 200:
-            dj = r.json()
-            for attr in dj["attributes"]:
-                if attr["name"] == "status" and attr["value"] == "accepted":
-                    accepted = True
-                    break
-        if accepted:
-            break
-        time.sleep(1)
-    if not accepted:
-        raise ValueError(
-            "status for device %s has not been propagated within %d seconds"
-            % (d.id, timeout)
-        )
-
-    submit_inventory(attributes, d.token)
-
-    d.attributes = attributes
-
-    return d
-
-
-def submit_inventory(attrs, token):
-    invd = ApiClient(inventory.URL_DEV)
-    r = invd.with_auth(token).call("PATCH", inventory.URL_DEVICE_ATTRIBUTES, attrs)
-    assert r.status_code == 200
 
 
 def update_deployment_status(deployment_id, status, token):

@@ -15,4 +15,5 @@ dbus-daemon --nofork --nopidfile --system &
 sleep 8
 mender --no-syslog daemon &
 sleep 8
-mender-connect daemon
+mender-connect daemon &
+while true; do sleep 10; done

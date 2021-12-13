@@ -21,6 +21,7 @@ import shutil
 import tempfile
 import time
 import uuid
+import inspect
 
 from email.parser import Parser
 from email.policy import default
@@ -63,14 +64,23 @@ message_start = "---------- MESSAGE FOLLOWS ----------"
 message_end = "------------ END MESSAGE ------------"
 message_mail_options_prefix = "mail options:"
 
+# tests constants
+mailbox_path = "/var/spool/mail/local"
+wait_for_alert_interval_s = 8
+expected_from = "no-reply@hosted.mender.io"
 
-def parse_email(spool):
+
+def get_and_parse_email(env):
+    # get the email from the SMTP server
+    mail = env.get_file("local-smtp", mailbox_path)
+    logger.debug("got mail: '%s'", mail)
+
     # read spool line by line, eval(line).decode('utf-8') for each line in lines
     # between start and end of message
     # concat and create header object for each
     headers = []
     message_string = ""
-    for line in spool.splitlines():
+    for line in mail.splitlines():
         if line.startswith(message_mail_options_prefix):
             continue
         if message_start == line:
@@ -83,7 +93,25 @@ def parse_email(spool):
         if not line.startswith("b'"):
             continue
         message_string = message_string + eval(line).decode("utf-8") + "\n"
-    return headers
+
+    # log all messages for debug
+    for m in headers:
+        logger.debug("got message:")
+        logger.debug("             body: %s", m.get_body().get_content())
+        logger.debug("             Bcc: %s", m["Bcc"])
+        logger.debug("             From: %s", m["From"])
+        logger.debug("             Subject: %s", m["Subject"])
+
+    return mail, headers
+
+
+def assert_valid_alert(message, bcc, subject):
+    assert "Bcc" in message
+    assert "From" in message
+    assert "Subject" in message
+    assert message["Bcc"] == bcc
+    assert message["From"] == expected_from
+    assert message["Subject"].startswith(subject)
 
 
 def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
@@ -250,6 +278,8 @@ class TestMonitorClientEnterprise:
         devid = devices[0]
         authtoken = auth.get_auth_token()
 
+        logger.info("%s: env ready.", inspect.stack()[1].function)
+
         return devid, authtoken, auth, mender_device
 
     def get_alerts_and_alert_count_for_device(self, inventory, devid):
@@ -272,16 +302,12 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_alert_email(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         service_name = "crond"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         inventory = Inventory(auth)
-        logger.info("test_monitorclient_alert_email: env ready.")
 
         logger.info(
             "test_monitorclient_alert_email: email alert on systemd service not running scenario."
@@ -300,22 +326,15 @@ class TestMonitorClientEnterprise:
         )
         assert (True, 1) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 0
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input." not in mail
         logger.info("test_monitorclient_alert_email: got CRITICAL alert email.")
@@ -331,30 +350,16 @@ class TestMonitorClientEnterprise:
         )
         assert (False, 0) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             Bcc: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         messages_count = len(messages)
         assert messages_count > 1
-        m = messages[1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_email: got OK alert email.")
@@ -374,8 +379,7 @@ class TestMonitorClientEnterprise:
         mender_device.run("echo 'some line 1' >> " + log_file)
         mender_device.run("echo 'some line 2' >> " + log_file)
         time.sleep(wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert messages_count == len(messages)
 
         mender_device.run(
@@ -388,25 +392,14 @@ class TestMonitorClientEnterprise:
         mender_device.run("echo 'some line 5' >> " + log_file)
 
         time.sleep(2 * wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        m = messages[-1]
-        logger.debug("got message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert m["Subject"].startswith(
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[-1],
+            user_name,
             "CRITICAL: Monitor Alert for Log file contains "
             + log_pattern
             + " on "
-            + devid
+            + devid,
         )
 
         pattern_expiration_seconds = 32
@@ -423,22 +416,11 @@ class TestMonitorClientEnterprise:
             update_check_file_only=True,
         )
         time.sleep(2 * wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        m = messages[-1]
-        logger.debug("got message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert m["Subject"] == (
-            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[-1],
+            user_name,
+            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid,
         )
         logger.info(
             "test_monitorclient_alert_email: got OK alert email after log pattern expiration."
@@ -499,22 +481,11 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("systemctl restart mender-monitor")
         time.sleep(wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        m = messages[-1]
-        logger.debug("got message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert m["Subject"].startswith(
-            "CRITICAL: Monitor Alert for Log file contains State transition:"
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[-1],
+            user_name,
+            "CRITICAL: Monitor Alert for Log file contains State transition:",
         )
         assert "${workflow.input" not in mail
 
@@ -540,22 +511,11 @@ class TestMonitorClientEnterprise:
             % (2 * pattern_expiration_seconds)
         )
         time.sleep(2 * pattern_expiration_seconds)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        m = messages[-1]
-        logger.debug("got message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert m["Subject"] == (
-            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[-1],
+            user_name,
+            "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid,
         )
         logger.info(
             "test_monitorclient_alert_email: got OK alert email after log pattern expiration in case of streaming log file."
@@ -563,14 +523,12 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
-        mailbox_path = "/var/spool/mail/local"
         wait_for_alert_interval_s = 120
         service_name = "crond"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_monitorclient_flapping: env ready.")
 
         prepare_service_monitoring(mender_device, service_name)
 
@@ -587,29 +545,16 @@ class TestMonitorClientEnterprise:
             mender_device.run("systemctl start %s" % service_name)
             time.sleep(not_running_time)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 1
         messages_count_flapping = len(messages)
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             Bcc: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
-        m = messages[-1]
-        logger.debug("(1) last message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[-1],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
             + service_name
             + " going up and down on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
@@ -619,22 +564,15 @@ class TestMonitorClientEnterprise:
             % wait_for_alert_interval_s
         )
         time.sleep(wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        m = messages[-1]
-        logger.debug("(2) last message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert messages_count_flapping + 1 == len(messages)
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[-1],
+            user_name,
+            "OK: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_flapping: got OK alert email.")
@@ -642,16 +580,12 @@ class TestMonitorClientEnterprise:
     def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting respecting RBAC"""
         # first let's get the OK and CRITICAL email alerts {{{
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         service_name = "crond"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         inventory = Inventory(auth)
-        logger.info("test_monitorclient_alert_email_rbac: env ready.")
 
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
@@ -667,22 +601,16 @@ class TestMonitorClientEnterprise:
         )
         assert (True, 1) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 0
 
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_email_rbac: got CRITICAL alert email.")
@@ -698,30 +626,16 @@ class TestMonitorClientEnterprise:
         )
         assert (False, 0) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             Bcc: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         messages_count = len(messages)
         assert messages_count > 1
-        m = messages[1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_email_rbac: got OK alert email.")
@@ -777,8 +691,7 @@ class TestMonitorClientEnterprise:
         )
         time.sleep(wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) == messages_count
         # we did not receive any email -- user has no access to the device
         logger.info(
@@ -791,8 +704,7 @@ class TestMonitorClientEnterprise:
         )
         time.sleep(wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) == messages_count
         # we did not receive any email -- user has no access to the device
         logger.info(
@@ -801,15 +713,11 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
         """Tests the monitor client alert local store"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         service_name = "rpcbind"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_monitorclient_alert_store: env ready.")
 
         logger.info(
             "test_monitorclient_alert_store: store alerts when offline scenario."
@@ -819,9 +727,10 @@ class TestMonitorClientEnterprise:
         time.sleep(2 * wait_for_alert_interval_s)
 
         logger.info(
-            "test_monitorclient_alert_store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+            "test_monitorclient_alert_store: disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -837,59 +746,39 @@ class TestMonitorClientEnterprise:
         )  # one for OK, because we started the service
         time.sleep(2 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) == 0
         logger.info("test_monitorclient_alert_store: got no alerts, device is offline.")
 
         logger.info(
-            "test_monitorclient_alert_store re-enabling access to docker.mender.io (restoring /etc/hosts)"
+            "test_monitorclient_alert_store: re-enabling access to docker.mender.io (restoring /etc/hosts)"
         )
         mender_device.run("mv /etc/hosts.backup /etc/hosts")
-        logger.info("test_monitorclient_alert_store waiting for alerts to come.")
+        logger.info("test_monitorclient_alert_store: waiting for alerts to come.")
         time.sleep(8 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         logger.info("got %d alert messages", len(messages))
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             Bcc: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
 
         assert len(messages) > 1
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_store: got CRITICAL alert email.")
 
-        m = messages[1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "OK: Monitor Alert for Service "
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
             + service_name
             + " not running on "
-            + devid
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_store: got OK alert email.")
@@ -904,9 +793,10 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("touch '" + log_file + "'")
         logger.info(
-            "test_monitorclient_alert_store large store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+            "test_monitorclient_alert_store: large store disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
 
         patterns_count = 30
         expected_alerts_count = (
@@ -925,64 +815,47 @@ class TestMonitorClientEnterprise:
             time.sleep(wait_for_alert_interval_s)
 
         logger.info(
-            "test_monitorclient_alert_store re-enabling access to docker.mender.io (restoring /etc/hosts)"
+            "test_monitorclient_alert_store: re-enabling access to docker.mender.io (restoring /etc/hosts)"
         )
         mender_device.run("mv /etc/hosts.backup /etc/hosts")
         time.sleep(
             9 * wait_for_alert_interval_s
         )  # at the moment we send stored alerts every minute
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) == expected_alerts_count
         logger.info("got %d alert messages." % len(messages))
 
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_dbus_subsystem: env ready.")
 
         logger.info("test_dbus_subsystem: email alert on dbus signal scenario.")
         prepare_dbus_monitoring(mender_device, dbus_name)
         time.sleep(2 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 0
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")
 
     def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_dbus_pattern_match: env ready.")
 
         logger.info(
             "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
@@ -990,35 +863,24 @@ class TestMonitorClientEnterprise:
         prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
         time.sleep(2 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 0
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         dbus_name = "test"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_dbus_bus_filter: env ready.")
 
         logger.info(
             "test_dbus_bus_filter: email alert on single dbus filter signal scenario."
@@ -1030,35 +892,24 @@ class TestMonitorClientEnterprise:
         )
         time.sleep(2 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) > 0
-        m = messages[0]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert (
-            m["Subject"]
-            == "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            + devid,
         )
         assert "${workflow.input" not in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
 
     def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for multiple services with extra checks"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         inventory = Inventory(auth)
-        logger.info("test_monitorclient_logs_and_services: env ready.")
 
         logger.info(
             "test_monitorclient_logs_and_services: email alert on systemd service not running scenario."
@@ -1092,66 +943,49 @@ class TestMonitorClientEnterprise:
         )
         assert (False, 0) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert "Content-Type: multipart/alternative;" in mail
         assert "Content-Type: text/html" in mail
         assert "Content-Type: text/plain" in mail
         assert devid in mail
         assert service_name in mail
         assert "${workflow.input." not in mail
-        messages = parse_email(mail)
         messages_count = len(messages)
         assert messages_count == 4
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
 
         assert len(messages) > 0
         i = 0
         for service_name in ["crond", "mender-connect"]:
-            m = messages[i]
-            i = i + 1
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert (
-                m["Subject"]
-                == "CRITICAL: Monitor Alert for Service "
+            assert_valid_alert(
+                messages[i],
+                user_name,
+                "CRITICAL: Monitor Alert for Service "
                 + service_name
                 + " not running on "
-                + devid
+                + devid,
             )
             logger.info(
                 "test_monitorclient_logs_and_services: got CRITICAL alert email for %s."
                 % service_name
             )
+            i = i + 1
 
         for service_name in ["crond", "mender-connect"]:
-            m = messages[i]
-            i = i + 1
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert (
-                m["Subject"]
-                == "OK: Monitor Alert for Service "
+            assert_valid_alert(
+                messages[i],
+                user_name,
+                "OK: Monitor Alert for Service "
                 + service_name
                 + " not running on "
-                + devid
+                + devid,
             )
-            assert "${workflow.input" not in mail
             logger.info(
                 "test_monitorclient_logs_and_services: got OK alert email for %s."
                 % service_name
             )
+            i = i + 1
 
+        assert "${workflow.input" not in mail
         logger.info(
             "test_monitorclient_logs_and_services: email alert on log file containing a pattern scenario."
         )
@@ -1175,8 +1009,7 @@ class TestMonitorClientEnterprise:
         mender_device.run("echo 'some line 1' >> " + log_file)
         mender_device.run("echo 'some line 2' >> " + log_file)
         time.sleep(wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert messages_count == len(messages)
 
         mender_device.run(
@@ -1195,26 +1028,16 @@ class TestMonitorClientEnterprise:
         time.sleep(wait_for_alert_interval_s)
 
         time.sleep(2 * wait_for_alert_interval_s)
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert messages_count > 3
         for m in [messages[-1], messages[-2]]:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert m["Subject"].startswith(
+            assert_valid_alert(
+                m,
+                user_name,
                 "CRITICAL: Monitor Alert for Log file contains "
                 + log_pattern
                 + " on "
-                + devid
+                + devid,
             )
 
         fds_count_timeout_s = 64
@@ -1247,15 +1070,11 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_logs_and_patterns(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for a Perl compatible regex"""
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
         inventory = Inventory(auth)
-        logger.info("test_monitorclient_logs_and_patterns: env ready.")
 
         logger.info(
             "test_monitorclient_logs_and_patterns: email alert on log file containing a pattern scenario."
@@ -1296,26 +1115,15 @@ class TestMonitorClientEnterprise:
         )
         assert (True, 1) == (alerts, alert_count)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        for m in [messages[0]]:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["Bcc"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert m["Subject"].startswith(
-                "CRITICAL: Monitor Alert for Log file contains "
-                + log_pattern
-                + " on "
-                + devid
-            )
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Log file contains "
+            + log_pattern
+            + " on "
+            + devid,
+        )
 
     def test_monitorclient_send_saved_alerts_on_network_issues(
         self, monitor_commercial_setup_no_client
@@ -1323,27 +1131,21 @@ class TestMonitorClientEnterprise:
         """Tests that the client does indeed cache alerts and resend them in the face
         of issues, like network connectivity"""
 
-        mailbox_path = "/var/spool/mail/local"
-        wait_for_alert_interval_s = 8
-        expected_from = "no-reply@hosted.mender.io"
         user_name = "bugs.bunny@acme.org"
 
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        inventory = Inventory(auth)
+
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues: env ready."
+            "test_monitorclient_send_saved_alerts_on_network_issues: email alert on log file containing a pattern scenario with flaky network."
         )
 
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues: email alert on systemd service not running scenario."
-        )
-
-        logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+            "test_monitorclient_send_saved_alerts_on_network_issues: disabling access to docker.mender.io (point to localhost in /etc/hosts)"
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
 
         log_file_name = "/tmp/mylog.log"
         log_file = "@tail -f " + log_file_name
@@ -1374,32 +1176,22 @@ class TestMonitorClientEnterprise:
         mender_device.run("echo -ne 'some line 7\nsomeline 8\n' >> " + log_file_name)
         time.sleep(4 * wait_for_alert_interval_s)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        messages = parse_email(mail)
-
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
         assert len(messages) == 0
         logger.info(
             "test_monitorclient_send_saved_alerts_on_network_issues: got no alerts, device is offline."
         )
 
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues re-enabling access to docker.mender.io (restoring /etc/hosts)"
+            "test_monitorclient_send_saved_alerts_on_network_issues: re-enabling access to docker.mender.io (restoring /etc/hosts)"
         )
         mender_device.run("cp /etc/hosts.backup /etc/hosts")
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues waiting for alerts to come."
+            "test_monitorclient_send_saved_alerts_on_network_issues: waiting for alerts to come."
         )
         time.sleep(wait_for_alert_interval_s * 10)
 
-        mail = monitor_commercial_setup_no_client.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        messages = parse_email(mail)
-        for m in messages:
-            logger.debug("got message:")
-            logger.debug("             body: %s", m.get_body().get_content())
-            logger.debug("             To: %s", m["To"])
-            logger.debug("             From: %s", m["From"])
-            logger.debug("             Subject: %s", m["Subject"])
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
 
         output = mender_device.run(
             "journalctl -u mender-monitor --output=cat --no-pager --reverse"
@@ -1407,33 +1199,25 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) == 2, output
         for m in [messages[0], messages[1]]:
-            assert "Bcc" in m
-            assert "From" in m
-            assert "Subject" in m
-            assert m["Bcc"] == user_name
-            assert m["From"] == expected_from
-            assert m["Subject"].startswith(
+            assert_valid_alert(
+                m,
+                user_name,
                 "CRITICAL: Monitor Alert for Log file contains "
                 + log_pattern
                 + " on "
-                + devid
+                + devid,
             )
-            assert not "${workflow.input" in mail
             logger.info(
                 "test_monitorclient_send_saved_alerts_on_network_issues: got CRITICAL alert email."
             )
 
-        m = messages[-1]
-        assert "Bcc" in m
-        assert "From" in m
-        assert "Subject" in m
-        assert m["Bcc"] == user_name
-        assert m["From"] == expected_from
-        assert m["Subject"].startswith(
+        assert_valid_alert(
+            messages[-1],
+            user_name,
             "CRITICAL: Monitor Alert for Log file contains "
             + log_pattern
             + " on "
-            + devid
+            + devid,
         )
         assert not "${workflow.input" in mail
         logger.info(
@@ -1449,7 +1233,6 @@ class TestMonitorClientEnterprise:
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
-        logger.info("test_monitorclient_send_configuration_data: env ready.")
 
         logger.info(
             "test_monitorclient_send_configuration_data: push configuration scenario."
@@ -1496,3 +1279,150 @@ class TestMonitorClientEnterprise:
                     found = True
                     break
             assert found
+
+    def test_monitorclient_alert_store_discard_http_400(
+        self, monitor_commercial_setup_no_client
+    ):
+        """Tests that malformed alerts in the store (HTTP 400) are discarded"""
+        service_name = "crond"
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, _, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+
+        prepare_service_monitoring(mender_device, service_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: disabling access to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, device is offline."
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: manipulating local store."
+        )
+        num_alerts_valid = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_valid) == 2
+        num_alerts_corrupted = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            'fixlenstore_put "invalid json break here";'
+            'fixlenstore_put "something else there";'
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_corrupted) == 4
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: re-enabling access to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: waiting for alerts (not) to come."
+        )
+        time.sleep(8 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, were they discarded?"
+        )
+
+        num_alerts_after_discard = mender_device.run(
+            "bash -c '"
+            "cd /usr/share/mender-monitor;"
+            ". lib/fixlenstore-lib.sh;"
+            "fixlenstore_count;"
+            "'"
+        ).strip()
+        assert int(num_alerts_after_discard) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: store is empty, they were discarded!"
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: disabling again access to docker.mender.io (point to localhost in /etc/hosts)"
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        expected_alerts_count = 1  # one for CRITICAL, because we stopped the service
+        time.sleep(wait_for_alert_interval_s)
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        expected_alerts_count = (
+            expected_alerts_count + 1
+        )  # one for OK, because we started the service
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == 0
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got no alerts, device is offline."
+        )
+
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: re-enabling again access to docker.mender.io (restoring /etc/hosts)"
+        )
+        mender_device.run("mv /etc/hosts.backup /etc/hosts")
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: waiting for alerts to come."
+        )
+        time.sleep(8 * wait_for_alert_interval_s)
+
+        mail, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert len(messages) == expected_alerts_count
+        assert "${workflow.input" not in mail
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid,
+        )
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got CRITICAL alert email."
+        )
+
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid,
+        )
+        logger.info(
+            "test_monitorclient_alert_store_discard_http_400: got OK alert email."
+        )

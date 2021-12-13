@@ -23,14 +23,15 @@ http:
     #
     azureiotmanagerMgmt:
       entrypoints: https
-      middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+        - circuit-breaker #{{- end}}{{end}}
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/{version:v[0-9]+}/azure-iot-manager`)"
       service: azureiotmanager
       tls: true
@@ -40,15 +41,14 @@ http:
     #
     deployments:
       entrypoints: https
-      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
-      - circuit-breaker #{{- end}}{{end}}
-      - devauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments`)"
       service: deployments
       tls: true
@@ -56,11 +56,11 @@ http:
     deploymentsDL:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - sec-headers
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+        - sec-headers
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments/download`)"
       service: deployments
       tls: true
@@ -68,11 +68,11 @@ http:
     deploymentsMgmt:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder4
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deployments`)"
       service: deployments
       tls: true
@@ -83,8 +83,8 @@ http:
     deviceauth:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - sec-headers
-      - compression
+        - sec-headers
+        - compression
       rule: "PathPrefix(`/api/devices/{(v[0-9]+)}/authentication`)"
       service: deviceauth
       tls: true
@@ -92,15 +92,14 @@ http:
     deviceauthMgmt:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder4
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devauth`)"
       service: deviceauth
       tls: true
-
 
     #
     # gui
@@ -108,15 +107,15 @@ http:
     gui:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - ensure-ui-path
-      - signup-redirect
-      - ui-stripprefix
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+        - ensure-ui-path
+        - signup-redirect
+        - ui-stripprefix
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/`)"
       service: gui
       tls: true
@@ -127,14 +126,14 @@ http:
     inventoryV1:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - devauth
-      - inventoryV1-replacepathregex
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+        - devauth
+        - inventoryV1-replacepathregex
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/api/devices/v1/inventory`)"
       service: inventory
       tls: true
@@ -142,13 +141,13 @@ http:
     inventoryV2:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - devauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder2
-      - json-error-responder3
-      - json-error-responder4
+        - devauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
       rule: "PathPrefix(`/api/devices/v2/inventory`)"
       service: inventory
       tls: true
@@ -156,12 +155,12 @@ http:
     inventoryMgmtV1:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - inventoryMgmtV1-replacepathregex
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder4
+        - userauth
+        - inventoryMgmtV1-replacepathregex
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/v1/inventory`)"
       service: inventory
       tls: true
@@ -169,11 +168,11 @@ http:
     inventoryMgmtV2:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder4
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/v2/inventory`)"
       service: inventory
       tls: true
@@ -184,11 +183,11 @@ http:
     useradm:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - userauth
-      - sec-headers
-      - compression
-      - json-error-responder1
-      - json-error-responder4
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
       rule: "PathPrefix(`/api/management/{version:v[0-9]+}/useradm`)"
       service: useradm
       tls: true
@@ -196,49 +195,118 @@ http:
     useradmNoAuth:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-      - sec-headers
-      - compression
-      - json-error-responder4
+        - sec-headers
+        - compression
+        - json-error-responder4
       rule: "Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(oauth2|auth/password-reset|auth/verify-email|auth/plan-verify)}`)"
       service: useradm
+      tls: true
+
+    #
+    # deviceconnect
+    #
+    deviceconnect:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+    deviceconnectMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+    #
+    # deviceconfig
+    #
+    deviceconfig:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder2
+        - json-error-responder3
+        - json-error-responder4
+      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deviceconfig`)"
+      service: deviceconfig
+      tls: true
+
+    deviceconfigMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+        - json-error-responder1
+        - json-error-responder4
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deviceconfig`)"
+      service: deviceconfig
       tls: true
 
   #
   # Services
   #
   services:
-
     azureiotmanager:
       loadBalancer:
         servers:
-        - url: "http://mender-azure-iot-manager:8080"
+          - url: "http://mender-azure-iot-manager:8080"
 
     deviceauth:
       loadBalancer:
         servers:
-        - url: "http://mender-device-auth:8080"
+          - url: "http://mender-device-auth:8080"
 
     deployments:
       loadBalancer:
         servers:
-        - url: "http://mender-deployments:8080"
+          - url: "http://mender-deployments:8080"
 
     error-responder:
       loadBalancer:
         servers:
-        - url: "http://mender-gui:8080"
+          - url: "http://mender-gui:8080"
 
     gui:
       loadBalancer:
         servers:
-        - url: "http://mender-gui"
+          - url: "http://mender-gui"
 
     inventory:
       loadBalancer:
         servers:
-        - url: "http://mender-inventory:8080"
+          - url: "http://mender-inventory:8080"
 
     useradm:
       loadBalancer:
         servers:
-        - url: "http://mender-useradm:8080"
+          - url: "http://mender-useradm:8080"
+
+    deviceconnect:
+      loadBalancer:
+        servers:
+          - url: "http://mender-deviceconnect:8080"
+
+    deviceconfig:
+      loadBalancer:
+        servers:
+          - url: "http://mender-deviceconfig:8080"

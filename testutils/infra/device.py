@@ -18,6 +18,7 @@ import traceback
 import os
 import socket
 import subprocess
+from typing import Dict
 
 from fabric import Connection
 from paramiko import SSHException
@@ -72,7 +73,7 @@ class MenderDevice:
     def host_string(self):
         return "%s:%s" % (self.host, self.port)
 
-    def run(self, cmd, **kw):
+    def run(self, cmd, **kw) -> str:
         """Run given cmd in remote SSH host
 
         Argument:
@@ -265,7 +266,12 @@ class MenderDeviceGroup:
     def __getitem__(self, idx):
         return self._devices[idx]
 
-    def run(self, cmd, **kw):
+    def append(self, new_device: MenderDevice):
+        """Append new_device to the group."""
+        assert isinstance(new_device, MenderDevice)
+        self._devices.append(new_device)
+
+    def run(self, cmd, **kw) -> Dict:
         """Run command for all devices in group sequentially
 
         see MenderDevice.run

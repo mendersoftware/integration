@@ -10,7 +10,7 @@ chardet==4.0.0
 colorama==0.4.4
 contextlib2==21.6.0
 cryptography==36.0.0
-distlib==0.3.1
+distlib==0.3.4
 distro==1.6.0
 docker==5.0.3
 docker-compose==1.29.2

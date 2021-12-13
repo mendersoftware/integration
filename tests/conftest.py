@@ -36,6 +36,7 @@ logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("filelock").setLevel(logging.INFO)
+logging.getLogger("redo").setLevel(logging.INFO)
 logger = logging.getLogger()
 
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")

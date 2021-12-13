@@ -25,10 +25,10 @@ iniconfig==1.1.1
 invoke==1.6.0
 jsonschema==3.2.0
 lockfile==0.12.2
-msgpack==1.0.2
+msgpack==1.0.3
 ordered-set==4.0.2
 packaging==20.9
-paramiko==2.8.0
+paramiko==2.8.1
 pathlib2==2.3.6
 pep517==0.9.1
 pluggy==1.0.0
@@ -37,7 +37,7 @@ psutil==5.8.0
 py==1.11.0
 py3dns==3.2.1
 pycparser==2.21
-pymongo==3.12.1
+pymongo==4.0
 PyNaCl==1.4.0
 pyparsing==3.0.6
 pyrsistent==0.18.0

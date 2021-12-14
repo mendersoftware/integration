@@ -20,8 +20,7 @@ import time
 import uuid
 
 from testutils.infra.cli import CliTenantadm
-from testutils.infra.device import MenderDevice
-from testutils.common import Tenant, User, update_tenant
+from testutils.common import Tenant, User, update_tenant, new_tenant_client
 
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 from ..MenderAPI import (
@@ -116,13 +115,10 @@ class TestConfigurationEnterprise(MenderTesting):
         devauth_tenant = DeviceAuthV2(auth)
 
         # Add a client to the tenant
-        enterprise_no_client.new_tenant_client(
-            "configuration-test-container", tenant.tenant_token
+        mender_device = new_tenant_client(
+            enterprise_no_client, "configuration-test-container", tenant.tenant_token
         )
-        mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
         mender_device.ssh_is_opened()
-
-        enterprise_no_client.device = mender_device
 
         devauth_tenant.accept_devices(1)
 

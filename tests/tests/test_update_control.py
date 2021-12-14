@@ -17,14 +17,12 @@ import json
 import tempfile
 import uuid
 
-from testutils.common import User
+from testutils.common import User, new_tenant_client
 from testutils.infra.cli import CliTenantadm
-from testutils.infra.device import MenderDevice
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from ..MenderAPI import Authentication, Deployments, DeviceAuthV2, image
-from .common_connect import wait_for_connect
 
 
 class TestUpdateControlEnterprise:
@@ -53,8 +51,9 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
-        device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
+        device = new_tenant_client(
+            enterprise_no_client, "control-map-test-container", ttoken
+        )
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -154,10 +153,7 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
-        enterprise_no_client.device = MenderDevice(
-            enterprise_no_client.get_mender_clients()[0]
-        )
+        new_tenant_client(enterprise_no_client, "control-map-test-container", ttoken)
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)

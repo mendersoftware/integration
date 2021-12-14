@@ -20,9 +20,8 @@ import uuid
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from ..MenderAPI import logger, Authentication, DeviceAuthV2, Deployments
-from testutils.infra.device import MenderDevice
 from testutils.infra.cli import CliTenantadm
-from testutils.common import Tenant, User
+from testutils.common import Tenant, User, new_tenant_client
 from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 
@@ -94,11 +93,10 @@ class TestDeploymentRetryEnterprise(MenderTesting):
         deploy = Deployments(auth, devauth)
 
         # Add a client to the tenant
-        enterprise_no_client.new_tenant_client(
-            "retry-test-container", tenant.tenant_token
+        device = new_tenant_client(
+            enterprise_no_client, "retry-test-container", tenant.tenant_token
         )
         devauth.accept_devices(1)
-        device = MenderDevice(env.get_mender_clients()[0])
 
         with tempfile.NamedTemporaryFile() as tf:
 

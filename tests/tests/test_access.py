@@ -15,7 +15,7 @@ import json
 import pytest
 import uuid
 
-from testutils.common import Tenant, User, update_tenant
+from testutils.common import Tenant, User, update_tenant, new_tenant_client
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.api.client import ApiClient
@@ -25,7 +25,6 @@ import testutils.api.auditlogs as auditlogs
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.tenantadm_v2 as tenantadm_v2
-from testutils.infra.device import MenderDevice
 import testutils.integration.stripe as stripeutils
 
 from ..common_setup import (
@@ -367,8 +366,7 @@ class TestAccessEnterprise(_TestAccessBase):
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        env.new_tenant_client("test-container-{}".format(plan), ttoken)
-        device = MenderDevice(env.get_mender_clients()[0])
+        new_tenant_client(env, "test-container-{}".format(plan), ttoken)
         devauth.accept_devices(1)
 
         devices = list(
@@ -380,7 +378,6 @@ class TestAccessEnterprise(_TestAccessBase):
         u = User("", email, "correcthorse")
 
         tenant.users.append(u)
-        tenant.device = device
         tenant.device_id = devices[0]
         tenant.auth = auth
         tenant.devauth = devauth
@@ -440,8 +437,7 @@ class TestAccessEnterprise(_TestAccessBase):
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        env.new_tenant_client("test-container-trial", ttoken)
-        device = MenderDevice(env.get_mender_clients()[0])
+        new_tenant_client(env, "test-container-trial", ttoken)
         devauth.accept_devices(1)
 
         devices = list(
@@ -453,7 +449,6 @@ class TestAccessEnterprise(_TestAccessBase):
         u = User("", email, "correcthorse")
 
         tenant.users.append(u)
-        tenant.device = device
         tenant.device_id = devices[0]
         tenant.auth = auth
         tenant.devauth = devauth

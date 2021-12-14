@@ -193,10 +193,21 @@ def pytest_exception_interact(node, call, report):
         if device is None:
             logger.info("Could not find device in test environment, no printing logs")
         else:
+
+            def print_device_output(instance, output):
+                """Log command output of either a MenderDevice or a MenderDeviceGroup."""
+                if isinstance(instance, MenderDevice):
+                    logger.info(output)
+                else:
+                    for dev, log in output.items():
+                        logger.info("Printing log of device %s", dev)
+                        logger.info(log)
+
             try:
                 logger.info("Printing client deployment log, if possible:")
                 output = device.run("cat /data/mender/deployment*.log || true", wait=60)
-                logger.info(output)
+                print_device_output(device, output)
+
             except:
                 logger.info("Not able to print client deployment log")
 
@@ -208,7 +219,7 @@ def pytest_exception_interact(node, call, report):
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)
                     output = device.run("journalctl -u %s || true" % service, wait=60,)
-                    logger.info(output)
+                    print_device_output(device, output)
                 except:
                     logger.info("Not able to print %s systemd log" % service)
 

@@ -14,6 +14,7 @@
 import json
 import pytest
 import uuid
+import os
 
 from testutils.common import Tenant, User, update_tenant, new_tenant_client
 from testutils.infra.cli import CliTenantadm
@@ -233,6 +234,10 @@ class TestAccessEnterprise(_TestAccessBase):
             self.check_access_deviceconfig(tenant.auth, tenant.device_id)
             self.check_access_rbac(tenant.auth)
 
+    @pytest.mark.skipif(
+        not bool(os.environ.get("STRIPE_API_KEY")),
+        reason="STRIPE_API_KEY not provided",
+    )
     def test_upgrades(self, docker_env):
         """Test that plan/addon upgrades take effect on feature availability.
         Special case is the trial tenant upgrade to a paid plan.

@@ -17,6 +17,7 @@ import random
 import time
 import string
 import tempfile
+import uuid
 import os
 import subprocess
 from contextlib import contextmanager
@@ -467,3 +468,42 @@ def new_tenant_client(test_env, name: str, tenant: str,) -> MenderDevice:
     else:
         test_env.device_group = MenderDeviceGroup(test_env.get_mender_clients())
     return device
+
+
+def create_tenant_test_setup() -> Tenant:
+    """ Creates a tenant and a user belonging to the tenant (both tenant and user are created with random names). """
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+    tenant = create_org(tenant, username, password, "enterprise")
+    user = create_user(
+        "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
+    )
+
+    response = ApiClient(useradm.URL_MGMT).call(
+        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
+    )
+    assert response.status_code == 200
+    user.utoken = response.text
+    tenant.users = [user]
+    return tenant
+
+
+def create_user_test_setup() -> User:
+    """Create a user with random name, log user in. """
+    uuidv4 = str(uuid.uuid4())
+    user_name, password = (
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+
+    user = create_user(user_name, password)
+    useradmm = ApiClient(useradm.URL_MGMT)
+    # log in user
+    response = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+    assert response.status_code == 200
+    user.utoken = response.text
+    return user

@@ -124,7 +124,7 @@ class TestAuditLogsEnterprise:
             if len(res.json()) == 1:
                 break
         else:
-            assert False, "max GET /logs retries hit"
+            assert False, f"max GET /logs retries hit, logs returned: {res.json()}"
 
         expected = event_device(user, device, event_type=event_type)
         check_log(res.json()[0], expected)

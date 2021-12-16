@@ -16,6 +16,7 @@ import logging
 import os
 import subprocess
 import time
+from typing import List
 
 from .docker_compose_base_manager import DockerComposeBaseNamespace
 
@@ -29,7 +30,7 @@ class KubernetesNamespace(DockerComposeBaseNamespace):
     def setup(self):
         pass
 
-    def execute(self, container_id, cmd):
+    def execute(self, container_id: str, cmd: List[str]) -> str:
         cmd = ["kubectl", "exec", "{}".format(container_id), "--"] + cmd
         ret = subprocess.check_output(cmd).decode("utf-8").strip()
         return ret

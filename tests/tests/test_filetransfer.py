@@ -43,7 +43,7 @@ from .common import md5sum
 from .mendertesting import MenderTesting
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
-from testutils.common import User, update_tenant
+from testutils.common import User, update_tenant, new_tenant_client
 from testutils.infra.cli import CliTenantadm
 
 container_factory = factory.get_factory()
@@ -713,8 +713,9 @@ class TestFileTransferEnterprise(_TestFileTransferBase):
         auth.reset_auth_token()
         devauth_tenant = DeviceAuthV2(auth)
 
-        env.new_tenant_client("configuration-test-container", tenant["tenant_token"])
-        mender_device = MenderDevice(env.get_mender_clients()[0])
+        mender_device = new_tenant_client(
+            env, "configuration-test-container", tenant["tenant_token"]
+        )
         mender_device.ssh_is_opened()
 
         devauth_tenant.accept_devices(1)

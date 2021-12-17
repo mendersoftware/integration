@@ -20,8 +20,7 @@ from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth, devauth, logger, inv
 from .mendertesting import MenderTesting
-
-from testutils.infra.device import MenderDevice
+from testutils.common import new_tenant_client
 
 
 class TestMultiTenancyEnterprise(MenderTesting):
@@ -41,10 +40,9 @@ class TestMultiTenancyEnterprise(MenderTesting):
         token = auth.current_tenant["tenant_token"]
 
         # create a new client with an incorrect token set
-        enterprise_no_client.new_tenant_client("mender-client", wrong_token)
-
-        mender_device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
-
+        mender_device = new_tenant_client(
+            enterprise_no_client, "mender-client", wrong_token
+        )
         mender_device.ssh_is_opened()
         client_service_name = mender_device.get_client_service_name()
         mender_device.run(
@@ -92,19 +90,11 @@ class TestMultiTenancyEnterprise(MenderTesting):
         for user in users:
             auth.new_tenant(user["username"], user["email"], user["password"])
             t = auth.current_tenant["tenant_token"]
-            enterprise_no_client.new_tenant_client(user["container"], t)
-            devauth.accept_devices(1)
-
-        for user in users:
-            auth.new_tenant(user["username"], user["email"], user["password"])
-
-            assert len(inv.get_devices()) == 1
-
-            mender_device = MenderDevice(
-                enterprise_no_client.get_mender_client_by_container_name(
-                    user["container"]
-                )
+            mender_device = new_tenant_client(
+                enterprise_no_client, user["container"], t
             )
+            devauth.accept_devices(1)
+            assert len(inv.get_devices()) == 1
 
             # By default the valid_image has a tenant_token=dummy in the mender.conf
             # Therefore, replace the 'mender.conf' in the image with the one from the

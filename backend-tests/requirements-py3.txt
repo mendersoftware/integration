@@ -4,6 +4,7 @@ cffi==1.15.0
 chardet==4.0.0
 cryptography==36.0.0
 docker==5.0.3
+fabric==2.6.0
 filelock==3.4.0
 idna==3.3
 iniconfig==1.1.1
@@ -12,7 +13,7 @@ Pillow==8.4.0
 pluggy==1.0.0
 py==1.11.0
 pycparser==2.21
-pymongo==4.0
+pymongo==4.0.1
 pyotp==2.6.0
 pyparsing==3.0.6
 pytest==6.2.5

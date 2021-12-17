@@ -19,7 +19,7 @@ http:
     # {{end}}
 
     #
-    # azure-iot-manager
+    # iot-manager
     #
     azureiotmanagerMgmt:
       entrypoints: https
@@ -31,7 +31,7 @@ http:
       - json-error-responder2
       - json-error-responder3
       - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/azure-iot-manager`)"
+      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/iot-manager`)"
       service: azureiotmanager
       tls: true
 
@@ -211,7 +211,7 @@ http:
     azureiotmanager:
       loadBalancer:
         servers:
-        - url: "http://mender-azure-iot-manager-2:8080"
+        - url: "http://mender-iot-manager-2:8080"
 
     deviceauth:
       loadBalancer:

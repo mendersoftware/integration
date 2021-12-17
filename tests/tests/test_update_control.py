@@ -14,6 +14,7 @@
 
 
 import json
+import os
 import tempfile
 
 import pytest
@@ -191,3 +192,95 @@ class TestUpdateControlEnterprise:
         # Wait for the device to reject it and fail.
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "failure", 1)
+
+    def test_update_control_with_expiring_control_map(
+        self, enterprise_no_client, valid_image_with_mender_conf,
+    ):
+        """Run an update, in which the download stage takes longer than the
+        expiry time of the control map.
+
+        In other words, test MEN-5096.
+
+        This is done by having an Artifact script pause in Download for a time
+        longer than the UpdateControlMapExpiration time. This will only pass if
+        the client renewes the control map.
+        """
+
+        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
+        tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
+        tenant = cli.get_tenant(tid)
+        tenant = json.loads(tenant)
+        ttoken = tenant["tenant_token"]
+
+        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+        auth.create_org = False
+        auth.reset_auth_token()
+        devauth = DeviceAuthV2(auth)
+
+        device = new_tenant_client(
+            enterprise_no_client, "control-map-test-container", ttoken
+        )
+        devauth.accept_devices(1)
+
+        deploy = Deployments(auth, devauth)
+
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+
+        mender_conf = device.run("cat /etc/mender/mender.conf")
+        with tempfile.NamedTemporaryFile(
+            prefix="Download_Leave_01_", mode="w"
+        ) as sleep_script:
+            expiration = int(json.loads(mender_conf)["UpdateControlMapExpirationTimeSeconds"])
+            sleep_script.writelines(
+                ["#! /bin/bash\n", "sleep {}".format(expiration + 60)]
+            )
+            sleep_script.flush()
+            os.fchmod(sleep_script.fileno(), 0o0755)
+            device.put(
+                os.path.basename(sleep_script.name),
+                local_path=os.path.dirname(sleep_script.name),
+                remote_path="/etc/mender/scripts/",
+            )
+
+        with tempfile.NamedTemporaryFile() as artifact_file:
+            created_artifact = image.make_rootfs_artifact(
+                valid_image_with_mender_conf(mender_conf),
+                conftest.machine_name,
+                "test-update-control",
+                artifact_file.name,
+            )
+
+            deploy.upload_image(
+                artifact_file.name, description="control map update test"
+            )
+
+        deployment_id = deploy.trigger_deployment(
+            name="New valid update",
+            artifact_name="test-update-control",
+            devices=devices,
+            update_control_map={
+                "Priority": 1,
+                "States": {"ArtifactInstall_Enter": {"action": "pause",},},
+            },
+        )
+
+        # Query the deployment, and verify that the map returned contains the
+        # deployment ID
+        res_json = deploy.get_deployment(deployment_id)
+        assert deployment_id == res_json.get("update_control_map").get("id"), res_json
+
+        deploy.check_expected_statistics(deployment_id, "pause_before_installing", 1)
+        deploy.patch_deployment(
+            deployment_id,
+            update_control_map={
+                "Priority": 2,
+                "States": {"ArtifactInstall_Enter": {"action": "force_continue",},},
+            },
+        )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)

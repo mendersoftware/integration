@@ -11,7 +11,6 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import urllib3
 import pytest
 import subprocess
 import time
@@ -24,6 +23,7 @@ pytest.register_assert_rewrite("testutils")
 from requests.packages import urllib3
 from testutils.common import wait_until_healthy
 from testutils.infra.container_manager.kubernetes_manager import isK8S
+
 
 urllib3.disable_warnings()
 

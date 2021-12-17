@@ -33,6 +33,8 @@ from testutils.common import (
     Authset,
     create_org,
     create_user,
+    create_user_test_setup,
+    create_tenant_test_setup,
     clean_mongo,
     make_accepted_device,
     mongo_cleanup,
@@ -43,34 +45,6 @@ from testutils.infra.container_manager.kubernetes_manager import (
     KubernetesNamespace,
     isK8S,
 )
-
-
-def create_tenant_test_setup(user_name, tenant_name, password, plan="enterprise"):
-    """
-    Creates a tenant, and a user belonging to the tenant
-    """
-    tenant = create_org(tenant_name, user_name, password, plan=plan)
-    user = tenant.users[0]
-    r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert r.status_code == 200
-    user.utoken = r.text
-    tenant.users = [user]
-    return tenant
-
-
-def create_user_test_setup(user_name, password):
-    """
-    Creates a a user
-    """
-    user = create_user(user_name, password)
-    useradmm = ApiClient(useradm.URL_MGMT)
-    # log in user
-    r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
-    assert r.status_code == 200
-    user.utoken = r.text
-    return user
 
 
 class _TestAzureBase:
@@ -103,9 +77,7 @@ class TestAzureSettingsEnterprise(_TestAzureBase):
         Check that we can set and get settings
         """
         self.logger.info("creating tenant and user")
-        t = create_tenant_test_setup(
-            "azureuser0@mender.io", "t0", "somepassword10101010"
-        )
+        t = create_tenant_test_setup()
 
         for expected_settings in [
             {
@@ -145,7 +117,7 @@ class TestAzureSettings(_TestAzureBase):
         Check that we can set and get settings
         """
         self.logger.info("creating tenant and user")
-        u = create_user_test_setup("azureuser0@mender.io", "somepassword10101010")
+        u = create_user_test_setup()
 
         for expected_settings in [
             {

@@ -2,10 +2,10 @@ version: '2.1'
 services:
 
     #
-    # mender-azure-iot-manager
+    # mender-iot-manager
     #
-    mender-azure-iot-manager:
-        image: mendersoftware/azure-iot-manager:mender-master
+    mender-iot-manager:
+        image: mendersoftware/iot-manager:mender-master
         extends:
             file: common.yml
             service: mender-base
@@ -14,7 +14,7 @@ services:
         depends_on:
             - mender-mongo
         labels:
-            mender.healthcheck.path: "/api/internal/v1/azure-iot-manager/health"
+            mender.healthcheck.path: "/api/internal/v1/iot-manager/health"
 
     #
     # mender-deployments

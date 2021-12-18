@@ -235,7 +235,7 @@ class Component:
 # categorize backend services wrt open/enterprise versions
 # important for test suite selection
 BACKEND_SERVICES_OPEN = {
-    "azure-iot-manager",
+    "iot-manager",
     "deviceauth",
     "deviceconnect",
     "create-artifact-worker",

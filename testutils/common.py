@@ -100,7 +100,9 @@ def create_random_authset(dauthd1, dauthm, utoken, tenant_token=""):
     return create_authset(dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token)
 
 
-def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=""):
+def create_authset(
+    dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=""
+) -> Authset:
     body, sighdr = deviceauth.auth_req(id_data, pubkey, privkey, tenant_token)
 
     # submit auth req
@@ -126,22 +128,23 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     return Authset(aset["id"], api_dev["id"], id_data, pubkey, privkey, "pending")
 
 
-def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
+def create_user(
+    name: str, pwd: str, tid: str = "", containers_namespace: str = "backend-tests"
+) -> User:
     cli = CliUseradm(containers_namespace)
-
     uid = cli.create_user(name, pwd, tid)
 
     return User(uid, name, pwd)
 
 
 def create_org(
-    name,
-    username,
-    password,
-    plan="os",
-    containers_namespace="backend-tests",
+    name: str,
+    username: str,
+    password: str,
+    plan: str = "os",
+    containers_namespace: str = "backend-tests",
     container_manager=None,
-):
+) -> Tenant:
     cli = CliTenantadm(
         containers_namespace=containers_namespace, container_manager=container_manager
     )
@@ -227,7 +230,10 @@ def rand_id_data():
     return {"mac": mac, "sn": sn}
 
 
-def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
+def make_pending_device(
+    dauthd1: ApiClient, dauthm: ApiClient, utoken: str, tenant_token: str = ""
+) -> Device:
+    """Create one device with "pending" status."""
     id_data = rand_id_data()
 
     priv, pub = testutils.util.crypto.get_keypair_rsa()
@@ -244,23 +250,33 @@ def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
     return dev
 
 
-def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
+def make_accepted_device(
+    dauthd1: ApiClient,
+    dauthm: ApiClient,
+    utoken: str,
+    tenant_token: str = "",
+    test_type: str = "regular",
+) -> Device:
+    """Create one device with "accepted" status."""
+    test_types = ["regular", "azure"]
+    if test_type not in test_types:
+        raise RuntimeError("Given test type is not allowed")
     dev = make_pending_device(dauthd1, dauthm, utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
     change_authset_status(dauthm, dev.id, aset_id, "accepted", utoken)
-
     aset = dev.authsets[0]
     aset.status = "accepted"
 
-    # obtain auth token
-    body, sighdr = deviceauth.auth_req(
-        aset.id_data, aset.pubkey, aset.privkey, tenant_token
-    )
-
-    r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
-
-    assert r.status_code == 200
-    dev.token = r.text
+    # TODO: very bad workaround for Azure IoT Hub backend test; following part is responsible for creating
+    # TODO: additonal, unnecessary auth set which causes Azure test to fail
+    if test_type == "regular":
+        # obtain auth token
+        body, sighdr = deviceauth.auth_req(
+            aset.id_data, aset.pubkey, aset.privkey, tenant_token
+        )
+        r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+        assert r.status_code == 200
+        dev.token = r.text
 
     dev.status = "accepted"
 

@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import json
+from typing import Dict, Tuple
 
 import testutils.util.crypto
 
@@ -43,7 +44,7 @@ def req_status(status):
     return {"status": status}
 
 
-def auth_req(id_data, pubkey, privkey, tenant_token=""):
+def auth_req(id_data, pubkey, privkey, tenant_token="") -> Tuple[Dict, Dict]:
     payload = {
         "id_data": json.dumps(id_data),
         "tenant_token": tenant_token,

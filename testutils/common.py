@@ -30,6 +30,7 @@ import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
+import testutils.api.deployments as deployments
 import testutils.util.crypto
 from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
 from testutils.infra.container_manager.kubernetes_manager import isK8S
@@ -60,6 +61,7 @@ class User:
         self.name = name
         self.pwd = pwd
         self.id = id
+        self.token = None
 
 
 class Authset:
@@ -182,8 +184,109 @@ def create_org(
 
     tenant = Tenant(name, tenant_id, tenant_token)
     user = User(user_id, username, password)
+    user.token = user_token
     tenant.users.append(user)
+    create_random_data(tenant)
     return tenant
+
+
+def create_random_data(tenant):
+    # setup
+    useradmm = ApiClient(useradm.URL_MGMT)
+    devauthd = ApiClient(deviceauth.URL_DEVICES)
+    devauthm = ApiClient(deviceauth.URL_MGMT)
+    deploym = ApiClient(deployments.URL_MGMT)
+
+    user = tenant.users[0]
+
+    # some users, devices and auth sets
+    for i in range(3):
+        uuidv4 = str(uuid.uuid4())
+        create_user(
+            "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
+        )
+        make_pending_device(devauthd, devauthm, user.token, tenant.tenant_token)
+        make_accepted_device(devauthd, devauthm, user.token, tenant.tenant_token)
+        make_rejected_device(devauthd, devauthm, user.token, tenant.tenant_token)
+        make_preauthorized_device(devauthm, user.token)
+
+    # generate artifact
+    artifact_name = "artifact-" + uuidv4
+    generate_artifact(deploym, user.token, artifact_name)
+
+    # create deployment with generated artifact
+    request_body = {
+        "name": uuidv4 + "st-dummy-deployment",
+        "artifact_name": artifact_name,
+        "devices": [uuidv4],
+    }
+    resp = deploym.with_auth(user.token).call("POST", "/deployments", body=request_body)
+    assert resp.status_code == 201
+
+
+def generate_artifact(deploym, utoken, name):
+    f = tempfile.NamedTemporaryFile(delete=False)
+    try:
+        f.write(b"#!/bin/bash\ntrue\n")
+        f.close()
+
+        filename = f.name
+
+        r = deploym.with_auth(utoken).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GENERATE,
+            files={
+                "name": (None, name),
+                "description": (None, "description"),
+                "device_types_compatible": (None, "beaglebone"),
+                "type": (None, "single_file"),
+                "args": (
+                    None,
+                    json.dumps({"filename": "run.sh", "dest_dir": "/tests"}),
+                ),
+                "file": (
+                    filename,
+                    open(filename, "rb"),
+                    "application/octet-stream",
+                    {},
+                ),
+            },
+            qs_params=None,
+        )
+    finally:
+        os.unlink(f.name)
+
+    assert r.status_code == 201
+
+    artifact_id = r.headers.get("Location", "").rsplit("/", 1)[-1]
+    assert artifact_id != ""
+
+    artifact_url = deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace(
+        "{id}", artifact_id
+    )
+
+    artifact = None
+    for i in range(15):
+        time.sleep(1)
+        r = deploym.with_auth(utoken).call("GET", artifact_url,)
+        if r.status_code == 200:
+            artifact = r.json()
+            break
+
+
+def upload_image(filename, auth_token, description="abc"):
+    api_client = ApiClient(deployments.URL_MGMT)
+    api_client.headers = {}
+    r = api_client.with_auth(auth_token).call(
+        "POST",
+        deployments.URL_DEPLOYMENTS_ARTIFACTS,
+        files=(
+            ("description", (None, description)),
+            ("size", (None, str(os.path.getsize(filename)))),
+            ("artifact", (filename, open(filename, "rb"), "application/octet-stream")),
+        ),
+    )
+    assert r.status_code == 201
 
 
 def get_device_by_id_data(dauthm, id_data, utoken):
@@ -294,6 +397,49 @@ def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devic
         devices.append(dev)
 
     return devices
+
+
+def make_preauthorized_device(devauthm, utoken):
+    priv, pub = testutils.util.crypto.get_keypair_rsa()
+    id_data = rand_id_data()
+
+    body = deviceauth.preauth_req(id_data, pub)
+    r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
+    assert r.status_code == 201
+
+    api_dev = get_device_by_id_data(devauthm, id_data, utoken)
+    aset = api_dev["auth_sets"][0]
+
+    dev = Device(api_dev["id"], id_data, pub)
+    dev.authsets.append(
+        Authset(aset["id"], dev.id, id_data, pub, priv, "preauthorized")
+    )
+
+    dev.status = "preauthorized"
+
+    return dev
+
+
+def make_rejected_device(
+    dauthd: ApiClient,
+    dauthm: ApiClient,
+    utoken: str,
+    tenant_token: str = "",
+    test_type: str = "regular",
+) -> Device:
+    """Create one device with "rejected" status."""
+    test_types = ["regular", "azure"]
+    if test_type not in test_types:
+        raise RuntimeError("Given test type is not allowed")
+    dev = make_pending_device(dauthd, dauthm, utoken, tenant_token=tenant_token)
+    aset_id = dev.authsets[0].id
+    change_authset_status(dauthm, dev.id, aset_id, "rejected", utoken)
+    aset = dev.authsets[0]
+    aset.status = "rejected"
+
+    dev.status = "rejected"
+
+    return dev
 
 
 def make_device_with_inventory(attributes, utoken, tenant_token):

@@ -236,7 +236,9 @@ class TestUpdateControlEnterprise:
         with tempfile.NamedTemporaryFile(
             prefix="Download_Leave_01_", mode="w"
         ) as sleep_script:
-            expiration = int(json.loads(mender_conf)["UpdateControlMapExpirationTimeSeconds"])
+            expiration = int(
+                json.loads(mender_conf)["UpdateControlMapExpirationTimeSeconds"]
+            )
             sleep_script.writelines(
                 ["#! /bin/bash\n", "sleep {}".format(expiration + 60)]
             )

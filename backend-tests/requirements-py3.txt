@@ -26,7 +26,7 @@ pyzbar==0.1.8
 redo==2.0.4
 requests==2.26.0
 six==1.16.0
-stripe==2.63.0
+stripe==2.64.0
 toml==0.10.2
 trustme==0.9.0
 urllib3==1.26.7

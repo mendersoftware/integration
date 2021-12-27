@@ -6,7 +6,7 @@ chardet==4.0.0
 cryptography==36.0.1
 docker==5.0.3
 fabric==2.6.0
-filelock==3.4.0
+filelock==3.4.2
 idna==3.3
 iniconfig==1.1.1
 packaging==21.3

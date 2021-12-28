@@ -19,7 +19,7 @@
 version: '2.1'
 services:
 
-    mender-azure-iot-manager:
+    mender-iot-manager:
         command: server --automigrate
 
     mender-workflows-server:

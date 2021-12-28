@@ -17,6 +17,7 @@ import random
 import time
 import string
 import tempfile
+import uuid
 import os
 import subprocess
 from contextlib import contextmanager
@@ -99,7 +100,9 @@ def create_random_authset(dauthd1, dauthm, utoken, tenant_token=""):
     return create_authset(dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token)
 
 
-def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=""):
+def create_authset(
+    dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_token=""
+) -> Authset:
     body, sighdr = deviceauth.auth_req(id_data, pubkey, privkey, tenant_token)
 
     # submit auth req
@@ -125,22 +128,23 @@ def create_authset(dauthd1, dauthm, id_data, pubkey, privkey, utoken, tenant_tok
     return Authset(aset["id"], api_dev["id"], id_data, pubkey, privkey, "pending")
 
 
-def create_user(name, pwd, tid="", containers_namespace="backend-tests"):
+def create_user(
+    name: str, pwd: str, tid: str = "", containers_namespace: str = "backend-tests"
+) -> User:
     cli = CliUseradm(containers_namespace)
-
     uid = cli.create_user(name, pwd, tid)
 
     return User(uid, name, pwd)
 
 
 def create_org(
-    name,
-    username,
-    password,
-    plan="os",
-    containers_namespace="backend-tests",
+    name: str,
+    username: str,
+    password: str,
+    plan: str = "os",
+    containers_namespace: str = "backend-tests",
     container_manager=None,
-):
+) -> Tenant:
     cli = CliTenantadm(
         containers_namespace=containers_namespace, container_manager=container_manager
     )
@@ -226,7 +230,10 @@ def rand_id_data():
     return {"mac": mac, "sn": sn}
 
 
-def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
+def make_pending_device(
+    dauthd1: ApiClient, dauthm: ApiClient, utoken: str, tenant_token: str = ""
+) -> Device:
+    """Create one device with "pending" status."""
     id_data = rand_id_data()
 
     priv, pub = testutils.util.crypto.get_keypair_rsa()
@@ -243,23 +250,33 @@ def make_pending_device(dauthd1, dauthm, utoken, tenant_token=""):
     return dev
 
 
-def make_accepted_device(dauthd1, dauthm, utoken, tenant_token=""):
+def make_accepted_device(
+    dauthd1: ApiClient,
+    dauthm: ApiClient,
+    utoken: str,
+    tenant_token: str = "",
+    test_type: str = "regular",
+) -> Device:
+    """Create one device with "accepted" status."""
+    test_types = ["regular", "azure"]
+    if test_type not in test_types:
+        raise RuntimeError("Given test type is not allowed")
     dev = make_pending_device(dauthd1, dauthm, utoken, tenant_token=tenant_token)
     aset_id = dev.authsets[0].id
     change_authset_status(dauthm, dev.id, aset_id, "accepted", utoken)
-
     aset = dev.authsets[0]
     aset.status = "accepted"
 
-    # obtain auth token
-    body, sighdr = deviceauth.auth_req(
-        aset.id_data, aset.pubkey, aset.privkey, tenant_token
-    )
-
-    r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
-
-    assert r.status_code == 200
-    dev.token = r.text
+    # TODO: very bad workaround for Azure IoT Hub backend test; following part is responsible for creating
+    # TODO: additonal, unnecessary auth set which causes Azure test to fail
+    if test_type == "regular":
+        # obtain auth token
+        body, sighdr = deviceauth.auth_req(
+            aset.id_data, aset.pubkey, aset.privkey, tenant_token
+        )
+        r = dauthd1.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+        assert r.status_code == 200
+        dev.token = r.text
 
     dev.status = "accepted"
 
@@ -467,3 +484,42 @@ def new_tenant_client(test_env, name: str, tenant: str,) -> MenderDevice:
     else:
         test_env.device_group = MenderDeviceGroup(test_env.get_mender_clients())
     return device
+
+
+def create_tenant_test_setup() -> Tenant:
+    """ Creates a tenant and a user belonging to the tenant (both tenant and user are created with random names). """
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+    tenant = create_org(tenant, username, password, "enterprise")
+    user = create_user(
+        "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
+    )
+
+    response = ApiClient(useradm.URL_MGMT).call(
+        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
+    )
+    assert response.status_code == 200
+    user.utoken = response.text
+    tenant.users = [user]
+    return tenant
+
+
+def create_user_test_setup() -> User:
+    """Create a user with random name, log user in. """
+    uuidv4 = str(uuid.uuid4())
+    user_name, password = (
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+
+    user = create_user(user_name, password)
+    useradmm = ApiClient(useradm.URL_MGMT)
+    # log in user
+    response = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+    assert response.status_code == 200
+    user.utoken = response.text
+    return user

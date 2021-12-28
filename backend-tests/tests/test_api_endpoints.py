@@ -34,7 +34,6 @@ logger.setLevel(logging.INFO)
 
 REPO_TO_ENV_VARIABLE = {
     "auditlogs": "AUDITLOGS_REV",
-    "azure-iot-manager": "AZURE_IOT_MANAGER_REV",
     "deployments": "DEPLOYMENTS_REV",
     "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
     "deviceauth": "DEVICEAUTH_REV",
@@ -43,6 +42,7 @@ REPO_TO_ENV_VARIABLE = {
     "deviceconnect": "DEVICECONNECT_REV",
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
+    "iot-manager": "IOT_MANAGER_REV",
     "tenantadm": "TENANTADM_REV",
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",
@@ -164,12 +164,12 @@ class BaseTestAPIEndpoints:
 
 class TestAPIEndpoints(BaseTestAPIEndpoints):
     REPOS = (
-        "azure-iot-manager",
         "deployments",
         "deviceauth",
         "deviceconfig",
         "deviceconnect",
         "inventory",
+        "iot-manager",
         "useradm",
         "workflows",
     )

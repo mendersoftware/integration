@@ -274,7 +274,7 @@ maybe_launch_enterprise_client() {
                     --id $TENANT_ID \
                     | jq -r .tenant_token)
             # Now that we have the tenant token we can enable the client.
-            EXTRA_FILES="$EXTRA_FILES $ENTERPRISE_CLIENT_FILES"
+            EXTRA_FILES="$EXTRA_FILES $CLIENT_FILES"
             TENANT_TOKEN=$TENANT_TOKEN run_compose_command "${ARGS[@]}" -d mender-client
         else
             echo "WARNING: Ignoring request to launch the Mender client."

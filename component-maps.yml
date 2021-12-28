@@ -6,11 +6,11 @@
 
 git:
 
-  azure-iot-manager:
+  iot-manager:
     docker_image:
-    - azure-iot-manager
+    - iot-manager
     docker_container:
-    - mender-azure-iot-manager
+    - mender-iot-manager
     release_component: true
 
   deployments:
@@ -226,11 +226,11 @@ git:
 
 docker_image:
 
-  azure-iot-manager:
+  iot-manager:
     git:
-    - azure-iot-manager
+    - iot-manager
     docker_container:
-    - mender-azure-iot-manager
+    - mender-iot-manager
     release_component: true
 
   deployments:
@@ -452,11 +452,11 @@ docker_image:
 
 docker_container:
 
-  mender-azure-iot-manager:
+  mender-iot-manager:
     git:
-    - azure-iot-manager
+    - iot-manager
     docker_image:
-    - azure-iot-manager
+    - iot-manager
     release_component: true
 
   mender-deployments:

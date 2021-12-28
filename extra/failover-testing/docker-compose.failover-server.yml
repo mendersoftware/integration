@@ -6,21 +6,21 @@ version: '2.1'
 services:
 
     #
-    # mender-azure-iot-manager
+    # mender-iot-manager
     #
-    mender-azure-iot-manager-2:
-        image: mendersoftware/azure-iot-manager:staging
+    mender-iot-manager-2:
+        image: mendersoftware/iot-manager:staging
         extends:
             file: common.yml
             service: mender-base
         networks:
             mender-failover:
                 aliases:
-                    - mender-azure-iot-manager
+                    - mender-iot-manager
         depends_on:
             - mender-mongo-2
         labels:
-            mender.healthcheck.path: "/api/internal/v1/azure-iot-manager/health"
+            mender.healthcheck.path: "/api/internal/v1/iot-manager/health"
         command: server --automigrate
 
     #

@@ -9,7 +9,7 @@ cffi==1.15.0
 chardet==4.0.0
 colorama==0.4.4
 contextlib2==21.6.0
-cryptography==36.0.0
+cryptography==36.0.1
 distlib==0.3.1
 distro==1.6.0
 docker==5.0.3
@@ -45,7 +45,7 @@ pytest==6.2.5
 pytest-forked==1.4.0
 pytest-html==3.1.1
 pytest-metadata==1.11.0
-pytest-timeout==2.0.1
+pytest-timeout==2.0.2
 pytest-xdist==2.5.0
 python-dotenv==0.19.2
 pytoml==0.1.21

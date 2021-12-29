@@ -194,7 +194,7 @@ class TestUpdateControlEnterprise:
         deploy.check_expected_statistics(deployment_id, "failure", 1)
 
     def test_update_control_with_expiring_control_map(
-        self, enterprise_no_client, valid_image_with_mender_conf,
+        self, enterprise_no_client, valid_image,
     ):
         """Run an update, in which the download stage takes longer than the
         expiry time of the control map.
@@ -218,9 +218,8 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        device = new_tenant_client(
-            enterprise_no_client, "control-map-test-container", ttoken
-        )
+        enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
+        device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -250,7 +249,7 @@ class TestUpdateControlEnterprise:
 
         with tempfile.NamedTemporaryFile() as artifact_file:
             created_artifact = image.make_rootfs_artifact(
-                valid_image_with_mender_conf(mender_conf),
+                valid_image,
                 conftest.machine_name,
                 "test-update-control",
                 artifact_file.name,

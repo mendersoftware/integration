@@ -216,9 +216,8 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        device = new_tenant_client(
-            enterprise_no_client, "control-map-test-container", ttoken
-        )
+        enterprise_no_client.new_tenant_client("control-map-test-container", ttoken)
+        device = MenderDevice(enterprise_no_client.get_mender_clients()[0])
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)

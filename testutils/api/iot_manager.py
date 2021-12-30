@@ -15,5 +15,6 @@
 HOST = "mender-iot-manager:8080"
 
 URL_MGMT = "/api/management/v1/iot-manager"
-URL_SETTINGS = "/settings"
+URL_INTEGRATIONS = "/integrations"
 URL_DEVICE = lambda id: f"/devices/{id}"
+URL_DEVICE_STATE = lambda id: f"/devices/{id}/state"

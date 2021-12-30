@@ -35,6 +35,10 @@ from testutils.common import (
 )
 
 
+def isK8Smock():
+    return True
+
+
 class TestUploadArtifactEnterprise:
     def get_auth_token(self, username, password):
         r = ApiClient(useradm.URL_MGMT).call(
@@ -578,10 +582,17 @@ class TestUploadArtifactEnterprise:
             api_client.with_auth(auth_token)
             r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
             assert r.status_code == 200
-            artifacts = [
-                artifact
-                for artifact in r.json()
-                if not artifact["name"].startswith("mender-demo-artifact")
-            ]
-            assert len(artifacts) == 1
-            assert artifacts[0]["name"] == user.name
+            if isK8Smock():
+                found = False
+                for artifact in r.json():
+                    if artifact["name"] == user.name:
+                        found = True
+                assert found
+            else:
+                artifacts = [
+                    artifact
+                    for artifact in r.json()
+                    if not artifact["name"].startswith("mender-demo-artifact")
+                ]
+                assert len(artifacts) == 1
+                assert artifacts[0]["name"] == user.name

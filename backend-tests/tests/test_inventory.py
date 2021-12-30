@@ -35,6 +35,10 @@ from testutils.common import (
 )
 
 
+def isK8Smock():
+    return True
+
+
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     deviceauth_cli = CliDeviceauth()
@@ -89,18 +93,20 @@ class TestGetDevicesBase:
         assert r.status_code == 200
         utoken = r.text
 
-        # prepare accepted devices
-        make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
+        if not isK8Smock():
+            # prepare accepted devices
+            make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
-        # wait for devices to be provisioned
-        time.sleep(3)
+            # wait for devices to be provisioned
+            time.sleep(3)
 
         r = invm.with_auth(utoken).call(
             "GET", inventory.URL_DEVICES, qs_params={"per_page": 100}
         )
         assert r.status_code == 200
         api_devs = r.json()
-        assert len(api_devs) == 40
+        if not isK8Smock():
+            assert len(api_devs) == 40
 
     def do_test_filter_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -160,6 +166,10 @@ class TestGetDevicesEnterprise(TestGetDevicesBase):
         for t in tenants_users:
             self.do_test_get_devices_ok(t.users[0], tenant_token=t.tenant_token)
 
+    @pytest.mark.skipif(
+        isK8Smock(),
+        reason="not possible to test in a staging or production environment",
+    )
     def test_filter_devices_ok(self, tenants_users):
         for t in tenants_users:
             self.do_test_filter_devices_ok(t.users[0], tenant_token=t.tenant_token)
@@ -302,6 +312,9 @@ def add_devices_to_tenant(tenant, dev_inventories):
     return tenant
 
 
+@pytest.mark.skipif(
+    isK8Smock(), reason="not possible to test in a staging or production environment",
+)
 class TestDeviceFilteringEnterprise:
     @property
     def logger(self):

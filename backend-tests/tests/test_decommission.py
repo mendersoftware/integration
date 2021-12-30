@@ -38,6 +38,10 @@ logger = logging.getLogger("test_decomission")
 logger.setLevel(logging.INFO)
 
 
+def isK8Smock():
+    return True
+
+
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
     deviceauth_cli = CliDeviceauth()
@@ -218,6 +222,9 @@ class TestDeviceDecomissioning(TestDeviceDecomissioningBase):
         self.do_test_ok(user, devices[0])
 
 
+@pytest.mark.skipif(
+    isK8Smock(), reason="not possible to test in a staging or production environment",
+)
 class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
     def test_ok(self, tenants_users_devices):
         t = tenants_users_devices[0]

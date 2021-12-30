@@ -46,6 +46,10 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 WAITING_MULTIPLIER = 8 if isK8S() else 1
 
 
+def isK8Smock():
+    return True
+
+
 def upload_image(filename, auth_token, description="abc"):
     api_client = ApiClient(deployments.URL_MGMT)
     api_client.headers = {}
@@ -89,10 +93,13 @@ def create_tenant_test_setup(
             "POST", "/deployments", body=request_body
         )
         assert resp.status_code == 201
-    # Verify that the 'nr_deployments' expected deployments have been created
-    resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
-    assert resp.status_code == 200
-    assert len(resp.json()) == nr_deployments
+
+    if not isK8Smock:
+        # Verify that the 'nr_deployments' expected deployments have been created
+        resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
+        assert resp.status_code == 200
+        assert len(resp.json()) == nr_deployments
+
     return tenant
 
 
@@ -512,7 +519,8 @@ class TestDeploymentsEndpointEnterprise(object):
             "GET", "/deployments"
         )
         assert resp.status_code == 200
-        assert len(resp.json()) == 4
+        if not isK8Smock:
+            assert len(resp.json()) == 4
         # Get the test deployment from the list
         reg_response_body_dict = None
         for deployment in resp.json():
@@ -582,13 +590,14 @@ def setup_devices_and_management_st(nr_devices=100, deploy_to_group=None):
             )
             assert r.status_code == 204
 
-    # Check that the number of devices were created
-    r = invm.with_auth(utoken).call(
-        "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
-    )
-    assert r.status_code == 200
-    api_devs = r.json()
-    assert len(api_devs) == nr_devices
+    if not isK8Smock:
+        # Check that the number of devices were created
+        r = invm.with_auth(utoken).call(
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
+        )
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == nr_devices
 
     return user, utoken, devs
 
@@ -630,13 +639,14 @@ def setup_devices_and_management_mt(nr_devices=100, deploy_to_group=None):
             )
             assert r.status_code == 204
 
-    # Check that the number of devices were created
-    r = invm.with_auth(utoken).call(
-        "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
-    )
-    assert r.status_code == 200
-    api_devs = r.json()
-    assert len(api_devs) == nr_devices
+    if not isK8Smock:
+        # Check that the number of devices were created
+        r = invm.with_auth(utoken).call(
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
+        )
+        assert r.status_code == 200
+        api_devs = r.json()
+        assert len(api_devs) == nr_devices
 
     return user, tenant, utoken, devs
 
@@ -1785,7 +1795,8 @@ class TestDynamicDeploymentsEnterprise:
         ]
 
         dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
-        assert dep["initial_device_count"] == len(matching_devs)
+        if not isK8Smock():
+            assert dep["initial_device_count"] == len(matching_devs)
 
         for d in matching_devs:
             assert_get_next(200, d.token, "foo")
@@ -1937,7 +1948,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8Smock and time.sleep(5.0)
 
         # after finishing 'bar' - no other deployments qualify
         set_status(depbar["id"], "success", dev.token)
@@ -1945,7 +1956,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8Smock and time.sleep(5.0)
 
         # after updating inventory, the device would qualify for both 'foo' deployments, but
         # the ordering mechanism will prevent it
@@ -1954,7 +1965,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8Smock and time.sleep(5.0)
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
         create_dynamic_deployment(

@@ -118,7 +118,7 @@ class TestAuditLogsEnterprise:
                 )
         for _ in redo.retrier(attempts=3, sleeptime=1):
             res = self.alogs.with_auth(user.token).call(
-                "GET", auditlogs.URL_LOGS + "?object_type=device"
+                "GET", auditlogs.URL_LOGS + "?object_type=device&object_id=" + device.id
             )
             assert res.status_code == 200
             if len(res.json()) == 1:
@@ -139,7 +139,8 @@ class TestAuditLogsEnterprise:
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
             res = self.alogs.with_auth(user.token).call(
-                "GET", auditlogs.URL_LOGS + "?object_type=deployment"
+                "GET",
+                auditlogs.URL_LOGS + "?object_type=deployment&object_id=" + d["id"],
             )
             assert res.status_code == 200
             res = res.json()
@@ -159,7 +160,9 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=user&object_id=" + uid
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -178,7 +181,9 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=user&object_id=" + user_del.id
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -198,7 +203,10 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET",
+                auditlogs.URL_LOGS + "?object_type=user&object_id=" + user_change.id,
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:

@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from typing import Dict
 from typing import Optional
 import pytest
 import logging
@@ -20,13 +21,10 @@ import re
 import ssl
 import uuid
 from base64 import b64decode
-from typing import Dict
-from unittest.mock import Mock, MagicMock, PropertyMock
-
 
 import trustme
 from azure.iot.hub import IoTHubRegistryManager
-from pytest_httpserver import HTTPServer, httpserver
+from pytest_httpserver import HTTPServer
 from redo import retrier, retriable
 from requests.models import Response
 
@@ -85,70 +83,103 @@ class _TestAzureBase:
     def logger(self):
         return logging.getLogger(self.__class__.__name__)
 
-    def save_settings(self, user: User, settings: Dict) -> Response:
+    def save_integration(self, user: User, integration: Dict) -> Response:
         response = (
             self.azure_api.with_auth(user.utoken)
             .with_header("Content-Type", "application/json")
-            .call("PUT", iot.URL_SETTINGS, settings)
+            .call("POST", iot.URL_INTEGRATIONS, integration)
         )
         return response
 
-    def get_settings(self, user: User) -> Response:
+    def get_integrations(self, user: User) -> Response:
         response = (
             self.azure_api.with_auth(user.utoken)
             .with_header("Content-Type", "application/json")
-            .call("GET", iot.URL_SETTINGS)
+            .call("GET", iot.URL_INTEGRATIONS)
         )
         return response
 
-    def check_settings(self, user: User):
+    def check_integrations(self, user: User, expected_integration: Dict):
         """Make sure iot-manager properly saves connection strings in its database."""
-        for expected_settings in [
+        response = self.save_integration(user, expected_integration)
+        assert response.status_code == 201
+        self.logger.info("saved integrations")
+
+        self.logger.info("getting integrations")
+        response = self.get_integrations(user)
+        assert response.status_code == 200
+        self.logger.info(f"got integrations: {response.text}")
+        integrations = response.json()
+        assert len(integrations) > 0
+        assert "credentials" in integrations[0].keys()
+        assert "connection_string" in integrations[0]["credentials"].keys()
+        actual = integrations[0]["credentials"]["connection_string"]
+        # Check for equality by parts:
+        # Check that actual properties are a subset of expected integrations
+        for part in actual.split(";"):
+            assert part in expected_integration["credentials"]["connection_string"]
+        # Check that expected properties are a subset of actual integrations
+        for part in expected_integration["credentials"]["connection_string"].split(";"):
+            assert part in actual
+
+
+class TestAzureIntegrations(_TestAzureBase):
+    @pytest.mark.parametrize(
+        "expected_integration",
+        [
             {
-                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey"
+                "provider": "iot-hub",
+                "credentials": {
+                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
+                    "type": "sas",
+                },
             },
             {
-                "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey"
+                "provider": "iot-hub",
+                "credentials": {
+                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
+                    "type": "sas",
+                },
             },
-        ]:
-            response = self.save_settings(user, expected_settings)
-            assert response.status_code == 204
-            self.logger.info("saved settings")
-
-            self.logger.info("getting settings")
-            response = self.get_settings(user)
-            assert response.status_code == 200
-            self.logger.info(f"got settings: {response.text}")
-            assert "connection_string" in response.json().keys()
-            actual = response.json()["connection_string"]
-            # Check for equality by parts:
-            # Check that actual properties are a subset of expected settings
-            for part in actual.split(";"):
-                assert part in expected_settings["connection_string"]
-            # Check that expected properties are a subset of actual settings
-            for part in expected_settings["connection_string"].split(";"):
-                assert part in actual
-
-
-class TestAzureSettings(_TestAzureBase):
-    def test_get_and_set(self, clean_mongo):
+        ],
+    )
+    def test_get_and_set(self, clean_mongo, expected_integration):
         """
-        Check that we can set and get settings
+        Check that we can set and get integrations
         """
         self.logger.info("creating user in OS mode")
         user = create_user_test_setup()
-        self.check_settings(user)
+        self.check_integrations(user, expected_integration)
 
 
-class TestAzureSettingsEnterprise(_TestAzureBase):
-    def test_get_and_set(self, clean_mongo):
+class TestAzureIntegrationsEnterprise(_TestAzureBase):
+    @pytest.mark.parametrize(
+        "expected_integration",
+        [
+            {
+                "provider": "iot-hub",
+                "credentials": {
+                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
+                    "type": "sas",
+                },
+            },
+            {
+                "provider": "iot-hub",
+                "credentials": {
+                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
+                    "type": "sas",
+                },
+            },
+        ],
+    )
+    def test_get_and_set(self, clean_mongo, expected_integration):
         """
-        Check that we can set and get settings
+        Check that we can set and get integrations
         """
         self.logger.info("creating tenant and user in enterprise mode")
         tenant = create_tenant_test_setup()
         user = tenant.users[0]
-        self.check_settings(user)
+        self.check_integrations(user, expected_integration)
 
 
 def get_connection_string():
@@ -169,7 +200,7 @@ def get_connection_string():
 
 @pytest.fixture(scope="function")
 def azure_user(clean_mongo) -> Optional[User]:
-    """Create Mender user and save Azure IoT Hub connection string in azure-iot-manager database."""
+    """Create Mender user and create an Azure IoT Hub integration in iot-manager using the connection string."""
     connection_string = get_connection_string()
     api_azure = ApiClient(base_url=iot.URL_MGMT)
     try:
@@ -190,11 +221,33 @@ def azure_user(clean_mongo) -> Optional[User]:
     assert rsp.status_code == 200
     user.token = rsp.text
 
-    settings = {"connection_string": connection_string}
-    # put connection_string in azure-iot-manager database
-    rsp = api_azure.with_auth(user.token).call("PUT", iot.URL_SETTINGS, body=settings)
-    assert rsp.status_code == 204
+    integration = {
+        "provider": "iot-hub",
+        "credentials": {"connection_string": connection_string, "type": "sas"},
+    }
+    # create the integration in iot-manager
+    rsp = api_azure.with_auth(user.token).call(
+        "POST", iot.URL_INTEGRATIONS, body=integration
+    )
+    assert rsp.status_code == 201
     yield user
+
+
+def get_azure_client():
+    mock_azure_iot_hub = os.environ.get("MOCK_AZURE_IOT_HUB")
+    if mock_azure_iot_hub:
+        mock_sas_key = "QXp1cmUgSW90IEh1YiBjb25uZWN0aW9uIHN0cmluZw=="
+        mock_sas_policy = "mender-test-policy"
+        os.environ[
+            "AZURE_IOTHUB_CONNECTIONSTRING"
+        ] = f"HostName={HTTPServer.DEFAULT_LISTEN_HOST}:{HTTPServer.DEFAULT_LISTEN_PORT};SharedAccessKeyName={mock_sas_policy};SharedAccessKey={mock_sas_key}"
+        return IoTHubRegistryManager(
+            connection_string=os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING"),
+            host="mock_host",
+            token_credential="test_token",
+        )
+    connection_string = get_connection_string()
+    return IoTHubRegistryManager.from_connection_string(connection_string)
 
 
 class _TestAzureDeviceLifecycleBase:
@@ -211,21 +264,9 @@ class _TestAzureDeviceLifecycleBase:
 
     @classmethod
     def setup_class(cls):
+        global MOCK_AZURE_IOT_HUB, AZURE_CLIENT
         cls.mock_azure_iot_hub = os.environ.get("MOCK_AZURE_IOT_HUB")
-
-        if cls.mock_azure_iot_hub:
-            mock_sas_key = "QXp1cmUgSW90IEh1YiBjb25uZWN0aW9uIHN0cmluZw=="
-            mock_sas_policy = "mender-test-policy"
-            os.environ[
-                "AZURE_IOTHUB_CONNECTIONSTRING"
-            ] = f"HostName={HTTPServer.DEFAULT_LISTEN_HOST}:{HTTPServer.DEFAULT_LISTEN_PORT};SharedAccessKeyName={mock_sas_policy};SharedAccessKey={mock_sas_key}"
-
-            cls.azure_client = MagicMock()
-            IoTHubRegistryManager.return_value = IoTHubRegistryManager(
-                connection_string=os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING"),
-                host="mock_host",
-                token_credential="test_token",
-            )
+        cls.azure_client = get_azure_client()
 
         cls.api_devauth_devices = ApiClient(base_url=deviceauth.URL_DEVICES)
         cls.api_devauth_mgmt = ApiClient(base_url=deviceauth.URL_MGMT)
@@ -234,11 +275,6 @@ class _TestAzureDeviceLifecycleBase:
 
         cls.devices = list()
         cls.logger = logging.getLogger(cls.__class__.__name__)
-
-        cls.connection_string = get_connection_string()
-        cls.azure_client = IoTHubRegistryManager.from_connection_string(
-            cls.connection_string
-        )
 
     @classmethod
     def teardown_class(cls):
@@ -256,13 +292,18 @@ class _TestAzureDeviceLifecycleBase:
         return {
             "status": status,
             "authentication": {
-                "type": "sas",
+                "provider": "sas",
                 "symmetricKey": {
                     "primaryKey": "Tm9ydGhlcm4udGVjaCBpcyB0aGUgYmVzdCBjb21wYW55IGluIHRoZSB3b3JsZA==",
                     "secondaryKey": "Tm9ydGhlcm4udGVjaCAtIHNlY3VyaW5nIHdvcmxkJ3MgY29ubmVjdGVkIGRldmljZXM=",
                 },
                 "x509Thumbprint": {"primaryThumbprint": "", "secondaryThumbprint": ""},
             },
+            "properties": {
+                "desired": {"key": "value"},
+                "reported": {"another-key": "another-value"},
+            },
+            "tags": {"tag-key": "tag-value"},
             "capabilities": {"iotEdge": False},
             "connectionState": "Disconnected",
         }
@@ -312,28 +353,7 @@ class _TestAzureDeviceLifecycleBase:
         assert rsp.status_code == 200
         conf = rsp.json().get("configured")
         assert len(conf) > 0
-        assert "$azure.primaryKey" in conf
-        assert "$azure.secondaryKey" in conf
-
-    @retriable(sleeptime=1, attempts=5)
-    def _check_deviceauth(self, azure_user: User, device_id: str):
-        """Check if Azure IoT Hub device ID has been added to deviceauth database (devices collection)."""
-        response = self.api_devauth_mgmt.with_auth(azure_user.token).call(
-            "GET", deviceauth.URL_DEVICE.format(id=device_id)
-        )
-        assert response.status_code == 200
-        external_config = response.json().get("external")
-        assert len(external_config) > 0
-        assert external_config["provider"] == "Azure"
-
-        if self.mock_azure_iot_hub:
-            self.azure_client.get_device = Mock()
-            type(self.azure_client.get_device.return_value).device_id = PropertyMock(
-                return_value=device_id
-            )
-
-        device_info = self.azure_client.get_device(device_id)
-        assert external_config["id"] == device_info.device_id
+        assert "$azure.connectionString" in conf
 
     @pytest.mark.parametrize("status", ["rejected", "noauth"])
     def test_device_accept_and_reject_or_dismiss(
@@ -390,15 +410,16 @@ class _TestAzureDeviceLifecycleBase:
                 ).respond_with_json(
                     self._prepare_iot_hub_upsert_device_response(status="disabled")
                 )
-
+            # device exists in iot-manager
             rsp = self.api_azure.with_auth(azure_user.token).call(
-                "GET", iot.URL_DEVICE(dev.id)
+                "GET", iot.URL_DEVICE_STATE(dev.id)
             )
             assert rsp.status_code == 200
-            assert rsp.json()["status"] == "disabled"
+            # check the status of the device in IoT Hub
+            device = get_azure_client().get_device(dev.id)
+            assert device.status == "disabled"
 
         self._check_deviceconfig(azure_user, dev.id)
-        self._check_deviceauth(azure_user, dev.id)
         set_device_status_in_mender(status)
         check_if_device_status_is_set_to_disabled()
 
@@ -442,15 +463,68 @@ class _TestAzureDeviceLifecycleBase:
                 ).respond_with_data(status=404)
 
             rsp = self.api_azure.with_auth(azure_user.token).call(
-                "GET", iot.URL_DEVICE(dev.id)
+                "GET", iot.URL_DEVICE_STATE(dev.id)
             )
             assert rsp.status_code == 404
             self.devices.remove(dev.id)
 
         self._check_deviceconfig(azure_user, dev.id)
-        self._check_deviceauth(azure_user, dev.id)
         decommission_device()
         check_if_device_was_removed_from_azure()
+
+    def test_device_twin(
+        self,
+        azure_user: User,
+        httpserver: HTTPServer,
+        httpserver_ssl_context: ssl.SSLContext,
+    ):
+        """Test device state synchronization with IoT Hub Device Twin"""
+        dev = self._prepare_device(azure_user, httpserver, httpserver_ssl_context)
+
+        if self.mock_azure_iot_hub:
+            httpserver.expect_oneshot_request(
+                re.compile("^/devices"),
+                method="GET",
+                query_string="api-version=2021-04-12",
+            ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
+        else:
+            get_azure_client().get_device(dev.id)
+
+        #  get the all device states (device twins)
+        rsp = self.api_azure.with_auth(azure_user.token).call(
+            "GET", iot.URL_DEVICE_STATE(dev.id)
+        )
+        assert rsp.status_code == 200
+        states = rsp.json()
+        assert len(states.keys()) == 1
+        integration_id = list(states.keys())[0]
+        assert "desired" in states[integration_id]
+        assert "reported" in states[integration_id]
+
+        # set the device state (device twin)
+        twin = {
+            "desired": {"key": "value"},
+        }
+        rsp = (
+            self.api_azure.with_auth(azure_user.token)
+            .with_header("Content-Type", "application/json")
+            .call("PUT", iot.URL_DEVICE_STATE(dev.id) + "/" + integration_id, twin)
+        )
+        assert rsp.status_code == 200
+        state = rsp.json()
+        assert "desired" in state
+        assert "reported" in states[integration_id]
+        assert state["desired"]["key"] == "value"
+
+        #  get the device state (device twin)
+        rsp = self.api_azure.with_auth(azure_user.token).call(
+            "GET", iot.URL_DEVICE_STATE(dev.id) + "/" + integration_id
+        )
+        assert rsp.status_code == 200
+        state = rsp.json()
+        assert "desired" in state
+        assert "reported" in states[integration_id]
+        assert state["desired"]["key"] == "value"
 
 
 class TestAzureDeviceLifecycle(_TestAzureDeviceLifecycleBase):

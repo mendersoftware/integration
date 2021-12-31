@@ -526,3 +526,7 @@ def create_user_test_setup() -> User:
     assert response.status_code == 200
     user.utoken = response.text
     return user
+
+
+def useExistingTenant() -> bool:
+    return bool(os.environ.get("USE_EXISTING_TENANT"))

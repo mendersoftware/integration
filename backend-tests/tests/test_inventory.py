@@ -32,6 +32,7 @@ from testutils.common import (
     create_org,
     make_accepted_device,
     make_accepted_devices,
+    useExistingTenant,
 )
 
 
@@ -89,6 +90,13 @@ class TestGetDevicesBase:
         assert r.status_code == 200
         utoken = r.text
 
+        # count existing devices
+        r = invm.with_auth(utoken).call(
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
+        )
+        assert r.status_code == 200
+        count = int(r.headers["X-Total-Count"])
+
         # prepare accepted devices
         make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
@@ -96,11 +104,11 @@ class TestGetDevicesBase:
         time.sleep(3)
 
         r = invm.with_auth(utoken).call(
-            "GET", inventory.URL_DEVICES, qs_params={"per_page": 100}
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
         )
         assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 40
+        new_count = int(r.headers["X-Total-Count"])
+        assert new_count == count + 40
 
     def do_test_filter_devices_ok(self, user, tenant_token=""):
         useradmm = ApiClient(useradm.URL_MGMT)
@@ -114,6 +122,12 @@ class TestGetDevicesBase:
         assert r.status_code == 200
         utoken = r.text
 
+        r = invm.with_auth(utoken).call(
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
+        )
+        assert r.status_code == 200
+        count = int(r.headers["X-Total-Count"])
+
         # prepare accepted devices
         devs = make_accepted_devices(devauthd, devauthm, utoken, tenant_token, 40)
 
@@ -121,11 +135,11 @@ class TestGetDevicesBase:
         time.sleep(3)
 
         r = invm.with_auth(utoken).call(
-            "GET", inventory.URL_DEVICES, qs_params={"per_page": 100}
+            "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
         )
         assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 40
+        new_count = int(r.headers["X-Total-Count"])
+        assert new_count == count + 40
 
         # upload inventory attributes
         for i, d in enumerate(devs):
@@ -302,6 +316,9 @@ def add_devices_to_tenant(tenant, dev_inventories):
     return tenant
 
 
+@pytest.mark.skipif(
+    useExistingTenant(), reason="not feasible to test with existing tenant",
+)
 class TestDeviceFilteringEnterprise:
     @property
     def logger(self):

@@ -21,7 +21,6 @@ import requests
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
@@ -41,6 +40,7 @@ from testutils.common import (
     get_device_by_id_data,
     change_authset_status,
     wait_until_healthy,
+    useExistingTenant,
 )
 
 
@@ -139,6 +139,13 @@ class TestPreauthBase:
 
         utoken = r.text
 
+        # count existing devices
+        r = devauthm.with_auth(utoken).call(
+            "GET", deviceauth.URL_DEVICES_COUNT, qs_params={"status": "preauthorized"}
+        )
+        assert r.status_code == 200
+        count = r.json()["count"]
+
         # preauth device
         devs = [
             {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()},
@@ -172,12 +179,11 @@ class TestPreauthBase:
 
         # all devices appear in device list as 'preauthorized'
         r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES + "?status=preauthorized"
+            "GET", deviceauth.URL_DEVICES_COUNT, qs_params={"status": "preauthorized"},
         )
         assert r.status_code == 200
-        api_devs = r.json()
-
-        assert len(api_devs) == len(devs)
+        new_count = r.json()["count"]
+        assert new_count == count + len(devs)
 
         for d in devs:
             r = devauthm.with_auth(utoken).call(
@@ -222,6 +228,11 @@ class TestPreauthBase:
 
         utoken = r.text
 
+        # count existing devices
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_DEVICES_COUNT)
+        assert r.status_code == 200
+        count = r.json()["count"]
+
         # preauth duplicate device
         priv, pub = crypto.get_keypair_rsa()
         id_data = devices[0].id_data
@@ -229,22 +240,23 @@ class TestPreauthBase:
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 409
 
-        # device list is unmodified
-        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
-        assert r.status_code == 200
-        api_devs = r.json()
+        if not useExistingTenant():
+            # device list is unmodified
+            r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+            assert r.status_code == 200
+            api_devs = r.json()
 
-        assert len(api_devs) == len(devices)
+            assert len(api_devs) == count
 
-        # existing device has no new auth sets
-        existing = [d for d in api_devs if d["identity_data"] == id_data]
-        assert len(existing) == 1
-        existing = existing[0]
+            # existing device has no new auth sets
+            existing = [d for d in api_devs if d["identity_data"] == id_data]
+            assert len(existing) == 1
+            existing = existing[0]
 
-        assert len(existing["auth_sets"]) == 1
-        aset = existing["auth_sets"][0]
-        assert crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
-        assert aset["status"] == "pending"
+            assert len(existing["auth_sets"]) == 1
+            aset = existing["auth_sets"][0]
+            assert crypto.compare_keys(aset["pubkey"], devices[0].pubkey)
+            assert aset["status"] == "pending"
 
 
 class TestPreauth(TestPreauthBase):
@@ -312,8 +324,6 @@ class TestPreauthEnterprise(TestPreauthBase):
         r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
         assert r.status_code == 200
         api_devs = r.json()
-
-        assert len(api_devs) == len(in_devices)
 
         for dev in in_devices:
             api_dev = [d for d in api_devs if dev.id_data == d["identity_data"]]
@@ -725,17 +735,18 @@ class TestDeviceMgmtBase:
         )
         assert r.status_code == 404
 
-        # check device list unmodified
-        r = da.with_auth(utoken).call(
-            "GET",
-            deviceauth.URL_MGMT_DEVICES,
-            qs_params={"per_page": len(devs_authsets)},
-        )
+        if not useExistingTenant():
+            # check device list unmodified
+            r = da.with_auth(utoken).call(
+                "GET",
+                deviceauth.URL_MGMT_DEVICES,
+                qs_params={"per_page": len(devs_authsets)},
+            )
 
-        assert r.status_code == 200
-        api_devs = r.json()
+            assert r.status_code == 200
+            api_devs = r.json()
 
-        self._compare_devs(devs_authsets, api_devs)
+            self._compare_devs(devs_authsets, api_devs)
 
     def do_test_device_count(self, devs_authsets, user):
         ua = ApiClient(useradm.URL_MGMT)
@@ -833,6 +844,9 @@ class TestDeviceMgmt(TestDeviceMgmtBase):
 
 
 class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
+    @pytest.mark.skipif(
+        useExistingTenant(), reason="not feasible to test with existing tenant",
+    )
     def test_ok_get_devices(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
             self.do_test_ok_get_devices(t.devices, t.users[0])
@@ -851,6 +865,9 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
         for t in tenants_devs_authsets:
             self.do_test_delete_device_not_found(t.devices, t.users[0])
 
+    @pytest.mark.skipif(
+        useExistingTenant(), reason="not feasible to test with existing tenant",
+    )
     def test_device_count(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
             self.do_test_device_count(t.devices, t.users[0])
@@ -1389,9 +1406,6 @@ def compare_aset(authset, api_authset):
     assert authset.status == api_authset["status"]
 
 
-@pytest.mark.skipif(
-    isK8S(), reason="not relevant in a staging or production environment"
-)
 class TestDefaultTenantTokenEnterprise(object):
 
     uc = ApiClient(useradm.URL_MGMT)
@@ -1542,6 +1556,18 @@ class TestDefaultTenantTokenEnterprise(object):
         assert r.status_code == 200
         tenant1_utoken = r.text
 
+        r = self.devauthm.with_auth(tenant1_utoken).call(
+            "GET", deviceauth.URL_DEVICES_COUNT
+        )
+        assert r.status_code == 200
+        tenant1.dev_count = r.json()["count"]
+
+        r = self.devauthm.with_auth(default_utoken).call(
+            "GET", deviceauth.URL_DEVICES_COUNT
+        )
+        assert r.status_code == 200
+        default_tenant.dev_count = r.json()["count"]
+
         # Device must not show up in the 'tenant1's account, so the authset will not be pending
         with pytest.raises(AssertionError) as e:
             aset = create_random_authset(
@@ -1550,19 +1576,17 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Double check that it is not added to tenant1
         r = self.devauthm.with_auth(tenant1_utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES
+            "GET", deviceauth.URL_DEVICES_COUNT
         )
         assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 0
+        r.json()["count"] == tenant1.dev_count
 
         # Device must show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES
+            "GET", deviceauth.URL_DEVICES_COUNT
         )
         assert r.status_code == 200
-        api_devs = r.json()
-        assert len(api_devs) == 1
+        assert r.json()["count"] == default_tenant.dev_count + 1
 
 
 @pytest.fixture(scope="function")
@@ -1697,6 +1721,9 @@ class TestAuthReq(TestAuthReqBase):
 
 
 class TestAuthReqEnterprise(TestAuthReqBase):
+    @pytest.mark.skipif(
+        useExistingTenant(), reason="not feasible to test with existing tenant",
+    )
     def test_submit_accept(self, tenants_with_plans):
         for tenant in tenants_with_plans:
             user = tenant.users[0]
@@ -1713,12 +1740,16 @@ class TestDevAuthCliBase:
         if tenant is not None:
             tenant_token = tenant.tenant_token
 
+        r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        assert r.status_code == 200
+        utoken = r.text
+
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_DEVICES_COUNT)
+        assert r.status_code == 200
+        count = r.json()["count"]
+
         for _ in range(4):
             dev = {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()}
-
-            r = uadm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
-            assert r.status_code == 200
-            utoken = r.text
 
             body, sighdr = deviceauth.auth_req(
                 dev["id_data"], dev["keypair"][1], dev["keypair"][0], tenant_token,
@@ -1727,11 +1758,10 @@ class TestDevAuthCliBase:
             r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
             assert r.status_code == 401
 
-        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_DEVICES_COUNT)
         assert r.status_code == 200
-
-        api_devs = r.json()
-        assert len(api_devs) == 4
+        new_count = r.json()["count"]
+        assert new_count == count + 4
 
         deviceauth_cli = CliDeviceauth()
         deviceauth_cli.propagate_inventory_statuses()
@@ -1743,7 +1773,7 @@ class TestDevAuthCli(TestDevAuthCliBase):
 
 
 class TestDevAuthCliEnterprise(TestDevAuthCliBase):
-    def do_test_propagate_statuses(self, tenants_with_plans):
+    def test_propagate_statuses(self, tenants_with_plans):
         for tenant in tenants_with_plans:
             user = tenant.users[0]
             self.do_test_propagate_statuses(user, tenant)

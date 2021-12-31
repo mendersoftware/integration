@@ -31,6 +31,7 @@ from testutils.common import (
     create_random_authset,
     change_authset_status,
     create_user,
+    useExistingTenant,
 )
 
 logging.basicConfig(format="%(asctime)s %(message)s")
@@ -218,6 +219,9 @@ class TestDeviceDecomissioning(TestDeviceDecomissioningBase):
         self.do_test_ok(user, devices[0])
 
 
+@pytest.mark.skipif(
+    useExistingTenant(), reason="not feasible to test with existing tenant",
+)
 class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
     def test_ok(self, tenants_users_devices):
         t = tenants_users_devices[0]
@@ -225,8 +229,9 @@ class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
             user=t.users[0], device=t.devices[0], tenant_token=t.tenant_token
         )
 
-        t1 = tenants_users_devices[1]
-        self.verify_devices_unmodified(t1.users[0], t1.devices)
+        if not useExistingTenant():
+            t1 = tenants_users_devices[1]
+            self.verify_devices_unmodified(t1.users[0], t1.devices)
 
     def verify_devices_unmodified(self, user, in_devices):
         devauthm = ApiClient(deviceauth.URL_MGMT)

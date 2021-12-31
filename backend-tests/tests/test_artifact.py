@@ -548,8 +548,11 @@ class TestUploadArtifactEnterprise:
             auth_token = self.get_auth_token(user.name, user.pwd)
 
             # create and upload the mender artifact
+            tenant.test_artifact_name = user.name.translate(
+                {ord(c): None for c in ".@+"}
+            )
             with get_mender_artifact(
-                artifact_name=user.name,
+                artifact_name=tenant.test_artifact_name,
                 device_types=["arm1"],
                 depends=("key1:value1", "key2:value2"),
                 provides=("key3:value3", "key4:value4", "key5:value5"),
@@ -576,12 +579,13 @@ class TestUploadArtifactEnterprise:
             user = tenant.users[0]
             auth_token = self.get_auth_token(user.name, user.pwd)
             api_client.with_auth(auth_token)
-            r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+            r = api_client.call(
+                "GET",
+                deployments.URL_DEPLOYMENTS_ARTIFACTS
+                + "?name="
+                + tenant.test_artifact_name,
+            )
             assert r.status_code == 200
-            artifacts = [
-                artifact
-                for artifact in r.json()
-                if not artifact["name"].startswith("mender-demo-artifact")
-            ]
+            artifacts = r.json()
             assert len(artifacts) == 1
-            assert artifacts[0]["name"] == user.name
+            assert artifacts[0]["name"] == tenant.test_artifact_name

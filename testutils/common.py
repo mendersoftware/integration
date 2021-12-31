@@ -60,6 +60,7 @@ class User:
         self.name = name
         self.pwd = pwd
         self.id = id
+        self.token = None
 
 
 class Authset:
@@ -183,6 +184,7 @@ def create_org(
 
     tenant = Tenant(name, tenant_id, tenant_token)
     user = User(user_id, username, password)
+    user.token = user_token
     tenant.users.append(user)
     return tenant
 

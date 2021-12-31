@@ -73,13 +73,14 @@ class Authset:
 
 
 class Device:
-    def __init__(self, id, id_data, pubkey, tenant_token=""):
+    def __init__(self, id, id_data, pubkey, tenant_token="", status=""):
         self.id = id
         self.id_data = id_data
         self.pubkey = pubkey
         self.tenant_token = tenant_token
         self.authsets = []
         self.token = None
+        self.status = status
 
 
 class Tenant:

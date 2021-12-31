@@ -121,6 +121,7 @@ def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
         for _ in range(5):
             aset = create_random_authset(devauthd, devauthm, utoken, t.tenant_token)
             dev = Device(aset.did, aset.id_data, aset.pubkey, t.tenant_token)
+            dev.status = aset.status
             t.devices.append(dev)
 
     yield tenants_users
@@ -166,23 +167,23 @@ class TestPreauthBase:
                 "POST", deviceauth.URL_MGMT_DEVICES, body
             )
             assert r.status_code == 201
+            devId = r.headers["Location"].rsplit("/", 1)[1]
+            d["id"] = devId
 
         # all devices appear in device list as 'preauthorized'
-        r = devauthm.with_auth(utoken).call("GET", deviceauth.URL_MGMT_DEVICES)
+        r = devauthm.with_auth(utoken).call(
+            "GET", deviceauth.URL_MGMT_DEVICES + "?status=preauthorized"
+        )
         assert r.status_code == 200
         api_devs = r.json()
 
         assert len(api_devs) == len(devs)
 
         for d in devs:
-            adev = [
-                ad
-                for ad in api_devs
-                if crypto.compare_keys(ad["auth_sets"][0]["pubkey"], d["keypair"][1])
-            ]
-            assert len(adev) == 1
-            adev = adev[0]
-
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": d["id"]}
+            )
+            adev = r.json()
             assert adev["status"] == "preauthorized"
             assert len(adev["auth_sets"]) == 1
             aset = adev["auth_sets"][0]
@@ -201,7 +202,7 @@ class TestPreauthBase:
 
             # device and authset changed status to 'accepted'
             r = devauthm.with_auth(utoken).call(
-                "GET", deviceauth.URL_DEVICE, path_params={"id": adev["id"]}
+                "GET", deviceauth.URL_DEVICE, path_params={"id": d["id"]}
             )
 
             outdev = r.json()
@@ -278,14 +279,14 @@ class TestPreauth(TestPreauthBase):
 
 
 class TestPreauthEnterprise(TestPreauthBase):
-    def test_ok(self, tenants_users):
-        user = tenants_users[0].users[0]
+    def test_ok(self, tenants_users_devices):
+        user = tenants_users_devices[0].users[0]
 
-        self.do_test_ok(user, tenants_users[0].tenant_token)
+        self.do_test_ok(user, tenants_users_devices[0].tenant_token)
 
         # check other tenant's devices unmodified
-        user1 = tenants_users[1].users[0]
-        devs1 = tenants_users[1].devices
+        user1 = tenants_users_devices[1].users[0]
+        devs1 = tenants_users_devices[1].devices
         self.verify_devices_unmodified(user1, devs1)
 
     def test_fail_duplicate(self, tenants_users_devices):
@@ -313,16 +314,15 @@ class TestPreauthEnterprise(TestPreauthBase):
         api_devs = r.json()
 
         assert len(api_devs) == len(in_devices)
-        for ad in api_devs:
-            assert ad["status"] == "pending"
 
-            orig_device = [d for d in in_devices if d.id_data == ad["identity_data"]]
-            assert len(orig_device) == 1
-            orig_device = orig_device[0]
-
-            assert len(ad["auth_sets"]) == 1
-            aset = ad["auth_sets"][0]
-            assert crypto.compare_keys(aset["pubkey"], orig_device.pubkey)
+        for dev in in_devices:
+            api_dev = [d for d in api_devs if dev.id_data == d["identity_data"]]
+            assert len(api_dev) == 1
+            api_dev = api_dev[0]
+            assert dev.status == api_dev["status"]
+            assert len(api_dev["auth_sets"]) == 1
+            aset = api_dev["auth_sets"][0]
+            assert crypto.compare_keys(aset["pubkey"], dev.pubkey)
 
 
 def make_devs_with_authsets(user, tenant_token=""):
@@ -1426,13 +1426,13 @@ class TestDefaultTenantTokenEnterprise(object):
         default_utoken = r.text
 
         # Create a device with an empty tenant token, and try to authorize
-        create_random_authset(
+        aset = create_random_authset(
             self.devauthd, self.devauthm, default_utoken, ""
         )  # Emty tenant token
 
         # Device must show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES + "?id=" + aset.did
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1478,13 +1478,13 @@ class TestDefaultTenantTokenEnterprise(object):
         tenant1_utoken = r.text
 
         # Create a device, and try to authorize
-        create_random_authset(
+        aset = create_random_authset(
             self.devauthd, self.devauthm, tenant1_utoken, tenant1.tenant_token
         )
 
         # Device should show up in the 'tenant1's account
         r = self.devauthm.with_auth(tenant1_utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES + "?id=" + aset.did
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1494,7 +1494,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device must not show up in the default tenant's account
         r = self.devauthm.with_auth(default_utoken).call(
-            "GET", deviceauth.URL_MGMT_DEVICES
+            "GET", deviceauth.URL_MGMT_DEVICES + "?id=" + aset.did
         )
         assert r.status_code == 200
         api_devs = r.json()
@@ -1544,7 +1544,7 @@ class TestDefaultTenantTokenEnterprise(object):
 
         # Device must not show up in the 'tenant1's account, so the authset will not be pending
         with pytest.raises(AssertionError) as e:
-            create_random_authset(
+            aset = create_random_authset(
                 self.devauthd, self.devauthm, tenant1_utoken, "mumbojumbotoken"
             )
 

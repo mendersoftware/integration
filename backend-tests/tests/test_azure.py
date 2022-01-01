@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -234,8 +234,8 @@ def azure_user(clean_mongo) -> Optional[User]:
 
 
 def get_azure_client():
-    mock_azure_iot_hub = os.environ.get("MOCK_AZURE_IOT_HUB")
-    if mock_azure_iot_hub:
+    azure_iot_hub_mock = os.environ.get("AZURE_IOTHUB_MOCK")
+    if azure_iot_hub_mock:
         mock_sas_key = "QXp1cmUgSW90IEh1YiBjb25uZWN0aW9uIHN0cmluZw=="
         mock_sas_policy = "mender-test-policy"
         os.environ[
@@ -264,8 +264,7 @@ class _TestAzureDeviceLifecycleBase:
 
     @classmethod
     def setup_class(cls):
-        global MOCK_AZURE_IOT_HUB, AZURE_CLIENT
-        cls.mock_azure_iot_hub = os.environ.get("MOCK_AZURE_IOT_HUB")
+        cls.azure_iot_hub_mock = os.environ.get("AZURE_IOTHUB_MOCK")
         cls.azure_client = get_azure_client()
 
         cls.api_devauth_devices = ApiClient(base_url=deviceauth.URL_DEVICES)
@@ -279,7 +278,7 @@ class _TestAzureDeviceLifecycleBase:
     @classmethod
     def teardown_class(cls):
         """Remove all devices created during test from Azure IoT Hub."""
-        if not cls.mock_azure_iot_hub:
+        if not cls.azure_iot_hub_mock:
             cls.logger.info(
                 f"Azure IoT Hub test teardown - removing devices: {cls.devices}"
             )
@@ -315,7 +314,7 @@ class _TestAzureDeviceLifecycleBase:
         httpserver_ssl_context: ssl.SSLContext,
     ) -> Device:
         """Create accepted device in Mender and make sure it has been successfully added in Azure IoT Hub."""
-        if self.mock_azure_iot_hub:
+        if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/devices"),
                 method="PUT",
@@ -355,6 +354,28 @@ class _TestAzureDeviceLifecycleBase:
         assert len(conf) > 0
         assert "$azure.connectionString" in conf
 
+    @retriable(sleeptime=2, attempts=5)
+    def _check_if_device_status_is_set_to_value(
+        self, azure_user: User, httpserver: HTTPServer, device_id: str, status: str
+    ):
+        """Check if device status in IoT Hub is set to the desired value."""
+        if self.azure_iot_hub_mock:
+            httpserver.expect_oneshot_request(
+                re.compile("^/devices"),
+                method="GET",
+                query_string="api-version=2021-04-12",
+            ).respond_with_json(
+                self._prepare_iot_hub_upsert_device_response(status=status)
+            )
+        # device exists in iot-manager
+        rsp = self.api_azure.with_auth(azure_user.token).call(
+            "GET", iot.URL_DEVICE_STATE(device_id)
+        )
+        assert rsp.status_code == 200
+        # check the status of the device in IoT Hub
+        device = get_azure_client().get_device(device_id)
+        assert device.status == status
+
     @pytest.mark.parametrize("status", ["rejected", "noauth"])
     def test_device_accept_and_reject_or_dismiss(
         self,
@@ -369,7 +390,7 @@ class _TestAzureDeviceLifecycleBase:
         @retriable(sleeptime=1, attempts=5)
         def set_device_status_in_mender(desired_status: str):
             """Set device status in Mender."""
-            if self.mock_azure_iot_hub:
+            if self.azure_iot_hub_mock:
                 httpserver.expect_oneshot_request(
                     re.compile("^/devices"),
                     method="GET",
@@ -399,29 +420,15 @@ class _TestAzureDeviceLifecycleBase:
                 )
             assert rsp.status_code == 204
 
-        @retriable(sleeptime=2, attempts=5)
-        def check_if_device_status_is_set_to_disabled():
-            """Check if device status in IoT Hub was changed to "disabled"."""
-            if self.mock_azure_iot_hub:
-                httpserver.expect_oneshot_request(
-                    re.compile("^/devices"),
-                    method="GET",
-                    query_string="api-version=2021-04-12",
-                ).respond_with_json(
-                    self._prepare_iot_hub_upsert_device_response(status="disabled")
-                )
-            # device exists in iot-manager
-            rsp = self.api_azure.with_auth(azure_user.token).call(
-                "GET", iot.URL_DEVICE_STATE(dev.id)
-            )
-            assert rsp.status_code == 200
-            # check the status of the device in IoT Hub
-            device = get_azure_client().get_device(dev.id)
-            assert device.status == "disabled"
-
         self._check_deviceconfig(azure_user, dev.id)
+        self._check_if_device_status_is_set_to_value(
+            azure_user, httpserver, dev.id, "enabled"
+        )
+        #
         set_device_status_in_mender(status)
-        check_if_device_status_is_set_to_disabled()
+        self._check_if_device_status_is_set_to_value(
+            azure_user, httpserver, dev.id, "disabled"
+        )
 
     def test_device_provision_and_decomission(
         self,
@@ -435,7 +442,7 @@ class _TestAzureDeviceLifecycleBase:
         @retriable(sleeptime=2, attempts=5)
         def decommission_device():
             """Decommission the device in Mender, which in turn removes the device from IoT Hub."""
-            if self.mock_azure_iot_hub:
+            if self.azure_iot_hub_mock:
                 httpserver.expect_oneshot_request(
                     re.compile("^/devices"),
                     method="DELETE",
@@ -455,7 +462,7 @@ class _TestAzureDeviceLifecycleBase:
         @retriable(sleeptime=2, attempts=5)
         def check_if_device_was_removed_from_azure():
             """Check if device was remove from Azure IoT HUb using azure-iot-manager service proxy."""
-            if self.mock_azure_iot_hub:
+            if self.azure_iot_hub_mock:
                 httpserver.expect_oneshot_request(
                     re.compile("^/devices"),
                     method="GET",
@@ -469,6 +476,10 @@ class _TestAzureDeviceLifecycleBase:
             self.devices.remove(dev.id)
 
         self._check_deviceconfig(azure_user, dev.id)
+        self._check_if_device_status_is_set_to_value(
+            azure_user, httpserver, dev.id, "enabled"
+        )
+        #
         decommission_device()
         check_if_device_was_removed_from_azure()
 
@@ -480,15 +491,16 @@ class _TestAzureDeviceLifecycleBase:
     ):
         """Test device state synchronization with IoT Hub Device Twin"""
         dev = self._prepare_device(azure_user, httpserver, httpserver_ssl_context)
+        self._check_if_device_status_is_set_to_value(
+            azure_user, httpserver, dev.id, "enabled"
+        )
 
-        if self.mock_azure_iot_hub:
+        if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/devices"),
                 method="GET",
                 query_string="api-version=2021-04-12",
             ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
-        else:
-            get_azure_client().get_device(dev.id)
 
         #  get the all device states (device twins)
         rsp = self.api_azure.with_auth(azure_user.token).call(

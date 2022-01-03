@@ -186,6 +186,11 @@ def get_connection_string():
     """Determine whether AZURE_IOTHUB_CONNECTIONSTRING or AZURE_IOTHUB_CONNECTIONSTRING_B64
     environment variable is set.
     """
+    azure_iot_hub_mock = os.environ.get("AZURE_IOTHUB_MOCK")
+    if azure_iot_hub_mock:
+        mock_sas_key = "QXp1cmUgSW90IEh1YiBjb25uZWN0aW9uIHN0cmluZw=="
+        mock_sas_policy = "mender-test-policy"
+        return f"HostName={HTTPServer.DEFAULT_LISTEN_HOST}:{HTTPServer.DEFAULT_LISTEN_PORT};SharedAccessKeyName={mock_sas_policy};SharedAccessKey={mock_sas_key}"
     connection_string = os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING")
     if connection_string is None:
         cs_b64 = os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING_B64")
@@ -201,7 +206,6 @@ def get_connection_string():
 @pytest.fixture(scope="function")
 def azure_user(clean_mongo) -> Optional[User]:
     """Create Mender user and create an Azure IoT Hub integration in iot-manager using the connection string."""
-    connection_string = get_connection_string()
     api_azure = ApiClient(base_url=iot.URL_MGMT)
     try:
         tenant = create_org(
@@ -221,6 +225,7 @@ def azure_user(clean_mongo) -> Optional[User]:
     assert rsp.status_code == 200
     user.token = rsp.text
 
+    connection_string = get_connection_string()
     integration = {
         "provider": "iot-hub",
         "credentials": {"connection_string": connection_string, "type": "sas"},
@@ -234,19 +239,16 @@ def azure_user(clean_mongo) -> Optional[User]:
 
 
 def get_azure_client():
+    connection_string = get_connection_string()
     azure_iot_hub_mock = os.environ.get("AZURE_IOTHUB_MOCK")
     if azure_iot_hub_mock:
-        mock_sas_key = "QXp1cmUgSW90IEh1YiBjb25uZWN0aW9uIHN0cmluZw=="
-        mock_sas_policy = "mender-test-policy"
-        os.environ[
-            "AZURE_IOTHUB_CONNECTIONSTRING"
-        ] = f"HostName={HTTPServer.DEFAULT_LISTEN_HOST}:{HTTPServer.DEFAULT_LISTEN_PORT};SharedAccessKeyName={mock_sas_policy};SharedAccessKey={mock_sas_key}"
-        return IoTHubRegistryManager(
-            connection_string=os.environ.get("AZURE_IOTHUB_CONNECTIONSTRING"),
+        client = IoTHubRegistryManager(
+            connection_string=connection_string,
             host="mock_host",
             token_credential="test_token",
         )
-    connection_string = get_connection_string()
+        client.protocol.config.connection.verify = False
+        return client
     return IoTHubRegistryManager.from_connection_string(connection_string)
 
 
@@ -325,6 +327,16 @@ class _TestAzureDeviceLifecycleBase:
                 method="GET",
                 query_string="api-version=2021-04-12",
             ).respond_with_data(status=200)
+            httpserver.expect_oneshot_request(
+                re.compile("^/devices"),
+                method="PUT",
+                query_string="api-version=2021-04-12",
+            ).respond_with_data(status=200)
+            httpserver.expect_oneshot_request(
+                re.compile("^/twins"),
+                method="PATCH",
+                query_string="api-version=2021-04-12",
+            ).respond_with_data(status=200)
 
         tenant_token = getattr(getattr(azure_user, "tenant", {}), "tenant_token", "")
         dev = make_accepted_device(
@@ -336,6 +348,12 @@ class _TestAzureDeviceLifecycleBase:
         )
         self.devices.append(dev.id)
         for _ in retrier(attempts=5, sleeptime=1):
+            if self.azure_iot_hub_mock:
+                httpserver.expect_oneshot_request(
+                    re.compile("^/twins"),
+                    method="GET",
+                    query_string="api-version=2021-04-12",
+                ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
             rsp = self.api_azure.with_auth(azure_user.token).call(
                 "GET", iot.URL_DEVICE(dev.id)
             )
@@ -495,14 +513,13 @@ class _TestAzureDeviceLifecycleBase:
             azure_user, httpserver, dev.id, "enabled"
         )
 
+        #  get the all device states (device twins)
         if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/devices"),
                 method="GET",
                 query_string="api-version=2021-04-12",
             ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
-
-        #  get the all device states (device twins)
         rsp = self.api_azure.with_auth(azure_user.token).call(
             "GET", iot.URL_DEVICE_STATE(dev.id)
         )
@@ -514,6 +531,17 @@ class _TestAzureDeviceLifecycleBase:
         assert "reported" in states[integration_id]
 
         # set the device state (device twin)
+        if self.azure_iot_hub_mock:
+            httpserver.expect_oneshot_request(
+                re.compile("^/twins"),
+                method="GET",
+                query_string="api-version=2021-04-12",
+            ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
+            httpserver.expect_oneshot_request(
+                re.compile("^/twins"),
+                method="PUT",
+                query_string="api-version=2021-04-12",
+            ).respond_with_data(status=200)
         twin = {
             "desired": {"key": "value"},
         }
@@ -529,6 +557,12 @@ class _TestAzureDeviceLifecycleBase:
         assert state["desired"]["key"] == "value"
 
         #  get the device state (device twin)
+        if self.azure_iot_hub_mock:
+            httpserver.expect_oneshot_request(
+                re.compile("^/twins"),
+                method="GET",
+                query_string="api-version=2021-04-12",
+            ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
         rsp = self.api_azure.with_auth(azure_user.token).call(
             "GET", iot.URL_DEVICE_STATE(dev.id) + "/" + integration_id
         )

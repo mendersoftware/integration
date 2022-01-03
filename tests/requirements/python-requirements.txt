@@ -1,6 +1,6 @@
 apipkg==2.1.0
 appdirs==1.4.4
-attrs==21.2.0
+attrs==21.4.0
 bcrypt==3.2.0
 CacheControl==0.12.10
 cached-property==1.5.2

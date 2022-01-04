@@ -60,6 +60,7 @@ class User:
         self.name = name
         self.pwd = pwd
         self.id = id
+        self.token = None
 
 
 class Authset:
@@ -183,6 +184,7 @@ def create_org(
 
     tenant = Tenant(name, tenant_id, tenant_token)
     user = User(user_id, username, password)
+    user.token = user_token
     tenant.users.append(user)
     return tenant
 
@@ -524,3 +526,7 @@ def create_user_test_setup() -> User:
     assert response.status_code == 200
     user.utoken = response.text
     return user
+
+
+def useExistingTenant() -> bool:
+    return bool(os.environ.get("USE_EXISTING_TENANT"))

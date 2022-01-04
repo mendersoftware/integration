@@ -74,7 +74,14 @@ class Component:
         self.type = type
 
     def set_integration_version(version):
-        Component._integration_version = version
+        # If version is a range, use the later version.
+        if version is not None:
+            version = version.split("..")[-1]
+
+        if Component._integration_version != version:
+            Component._integration_version = version
+            # Invalidate cache.
+            Component.COMPONENT_MAPS = None
 
     def git(self):
         if self.type != "git":

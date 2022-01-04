@@ -259,6 +259,13 @@ def test_version_of_with_in_integration_version(capsys):
         "1.7.0",
     )
 
+    # Ranges
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--in-integration-version", "3.0.1..3.1.0",],
+        "3.0.0..4.0.0",
+    )
+
 
 def test_set_version_of(capsys, is_staging):
     # Using --set-version-of modifies both versions, regardless of using the repo name

@@ -3205,7 +3205,7 @@ def main():
         metavar="simple|table|json",
         default="simple",
         nargs="?",
-        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions"
+        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions "
         + "of each component in a table format, and 'json' composes a json object",
     )
     parser.add_argument(

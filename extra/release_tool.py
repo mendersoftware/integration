@@ -41,14 +41,6 @@ os.environ["GIT_PAGER"] = "cat"
 # The repositories are indexed by their Git repository names.
 RELEASE_TOOL_STATE = None
 
-JENKINS_SERVER = "https://mender-jenkins.mender.io"
-JENKINS_JOB = "job/mender-builder"
-JENKINS_USER = None
-JENKINS_PASSWORD = None
-JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations:
-- JENKINS_USER / JENKINS_PASSWORD environment variables
-- 'pass' password management storage."""
-
 GITLAB_SERVER = "https://gitlab.com/api/v4"
 GITLAB_JOB = "projects/Northern.tech%2FMender%2Fmender-qa"
 GITLAB_TOKEN = None
@@ -63,8 +55,6 @@ VERSION_BUMP_STRING = "Bump versions for Mender"
 PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
-# Whether we are using GitLab
-USE_GITLAB = True
 
 
 class NotAVersionException(Exception):
@@ -374,21 +364,6 @@ def get_value_from_password_storage(server, key):
 
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
-
-
-def init_jenkins_creds():
-    global JENKINS_USER
-    global JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
-
-    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
-        return
-
-    JENKINS_USER = get_value_from_password_storage(
-        JENKINS_SERVER, ["login", "user", "username"]
-    )
-    JENKINS_PASSWORD = get_value_from_password_storage(JENKINS_SERVER, None)
 
 
 def init_gitlab_creds():
@@ -1500,74 +1475,9 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
 
 def get_extra_buildparams():
     global EXTRA_BUILDPARAMS_CACHE
-    if EXTRA_BUILDPARAMS_CACHE is not None:
-        pass
-    elif USE_GITLAB:
+    if EXTRA_BUILDPARAMS_CACHE is None:
         EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_yaml()
-    else:
-        EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_jenkins()
     return EXTRA_BUILDPARAMS_CACHE
-
-
-def get_extra_buildparams_from_jenkins():
-    try:
-        import requests
-    except ImportError:
-        print("requests module missing, try running 'sudo pip3 install requests'.")
-        sys.exit(2)
-
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        logging.warn(JENKINS_CREDS_MISSING_ERR)
-
-    # Fetch list of parameters from Jenkins.
-    reply = requests.get(
-        "%s/%s/api/json" % (JENKINS_SERVER, JENKINS_JOB),
-        auth=(JENKINS_USER, JENKINS_PASSWORD),
-        verify=False,
-    )
-    jobInfo = json.loads(reply.content.decode())
-    parameters = [
-        prop["parameterDefinitions"]
-        for prop in jobInfo["property"]
-        if prop["_class"] == "hudson.model.ParametersDefinitionProperty"
-    ]
-    assert len(parameters) == 1, (
-        "Was expecting one hudson.model.ParametersDefinitionProperty, got %d"
-        % len(parameters)
-    )
-    parameters = parameters[0]
-
-    def jenkinsParamToDefaultMap(param):
-        if param["type"] == "BooleanParameterDefinition":
-            type = "bool"
-            value = "on" if param["defaultParameterValue"]["value"] else ""
-        elif param["type"] == "StringParameterDefinition":
-            type = "string"
-            if param.get("defaultParameterValue") is None:
-                value = ""
-            else:
-                value = param["defaultParameterValue"]["value"]
-        else:
-            raise Exception(
-                "Parameter has unknown type %s. Don't know how to handle that!"
-                % param["type"]
-            )
-        return (param["name"], type, value)
-
-    # Add all fetched parameters that are not part of our versioned repositories
-    # as extra build parameters.
-    extra_buildparams = {}
-    in_versioned_repos = {}
-    for repo in Component.get_components_of_type("git", only_core_compoments=False):
-        in_versioned_repos[git_to_buildparam(repo.git())] = True
-
-    for key, type, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
-        # Skip keys that are in versioned repos.
-        if not in_versioned_repos.get(key):
-            extra_buildparams[key] = BuildParam(type, value)
-
-    return extra_buildparams
 
 
 def get_extra_buildparams_from_yaml():
@@ -1652,10 +1562,7 @@ def trigger_build(state, tag_avail):
 
         reply = ask("Will trigger a build with these values, ok? (no) ")
         if reply.startswith("Y") or reply.startswith("y"):
-            if USE_GITLAB:
-                trigger_gitlab_build(params, extra_buildparams)
-            else:
-                trigger_jenkins_build(params, extra_buildparams)
+            trigger_gitlab_build(params, extra_buildparams)
             return
 
         reply = ask(
@@ -1762,68 +1669,6 @@ DR = Disable automatic publishing of the release
 
         else:
             return
-
-
-def trigger_jenkins_build(params, extra_buildparams):
-    try:
-        import requests
-    except ImportError:
-        print("requests module missing, try running 'sudo pip3 install requests'.")
-        sys.exit(2)
-
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
-
-    # Order is important here, because Jenkins passes in the same parameters
-    # multiple times, as pairs that complete each other.
-    # Jenkins additionally needs the input as json as well, so create that from
-    # above parameters.
-    postdata = []
-    jdata = {"parameter": []}
-    for param in params.items():
-        postdata.append(("name", param[0]))
-        if param[1] != "":
-            postdata.append(("value", param[1]))
-
-        if (
-            extra_buildparams.get(param[0]) is not None
-            and extra_buildparams[param[0]].type == "bool"
-        ):
-            if param[1] == "on":
-                jdata["parameter"].append({"name": param[0], "value": True})
-            elif param[1] == "":
-                jdata["parameter"].append({"name": param[0], "value": False})
-        else:
-            jdata["parameter"].append({"name": param[0], "value": param[1]})
-
-    try:
-        postdata.append(("statusCode", "303"))
-        jdata["statusCode"] = "303"
-        postdata.append(("redirectTo", "."))
-        jdata["redirectTo"] = "."
-        postdata.append(("json", json.dumps(jdata)))
-
-        reply = requests.post(
-            "%s/%s/build?delay=0sec" % (JENKINS_SERVER, JENKINS_JOB),
-            data=postdata,
-            auth=(JENKINS_USER, JENKINS_PASSWORD),
-            verify=False,
-        )
-        if reply.status_code < 200 or reply.status_code >= 300:
-            print("Request returned: %d: %s" % (reply.status_code, reply.reason))
-        else:
-            print("Build started.")
-            # Crude way to find build number, pick first number starting with a
-            # hash between two html tags.
-            match = re.search(">#([0-9]+)<", reply.content.decode())
-            if match is not None:
-                print("Link: %s/%s/%s/" % (JENKINS_SERVER, JENKINS_JOB, match.group(1)))
-            else:
-                print("Unable to determine build number.")
-    except Exception:
-        print("Failed to start build:")
-        traceback.print_exc()
 
 
 def trigger_gitlab_build(params, extra_buildparams):
@@ -3315,15 +3160,6 @@ def main():
         help="Build the given version of Mender",
     )
     parser.add_argument(
-        "-c",
-        "--ci-server",
-        metavar="jenkins|gitlab",
-        dest="ci_server",
-        default="gitlab",
-        nargs="?",
-        help="Select server CI where to trigger the builds. Default is GitLab.",
-    )
-    parser.add_argument(
         "--pr",
         dest="pr",
         metavar="REPO/PR-NUMBER",
@@ -3432,12 +3268,6 @@ def main():
     if args.dry_run:
         global DRY_RUN
         DRY_RUN = True
-    assert args.ci_server in ["jenkins", "gitlab"], (
-        "%s is not a valid CI server!" % args.ci_server
-    )
-    if args.ci_server == "jenkins":
-        global USE_GITLAB
-        USE_GITLAB = False
 
     if args.version_of is not None:
         do_version_of(args)

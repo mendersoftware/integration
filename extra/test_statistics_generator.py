@@ -49,27 +49,6 @@ A total of 2864 lines added, 1149 removed (delta 1715)
 | Alf-Rune Siqveland | 78 (2.6%) |
 | Peter Grzybowski | 59 (2.0%) |
 
-| Developers with the most lines removed | |
-|---|---|
-
-| Developers with the most signoffs (total 0) | |
-|---|---|
-
-| Developers with the most reviews (total 0) | |
-|---|---|
-
-| Developers with the most test credits (total 0) | |
-|---|---|
-
-| Developers who gave the most tested-by credits (total 0) | |
-|---|---|
-
-| Developers with the most report credits (total 0) | |
-|---|---|
-
-| Developers who gave the most report credits (total 0) | |
-|---|---|
-
 | Top changeset contributors by employer | |
 |---|---|
 | Northern.tech | 91 (89.2%) |
@@ -79,9 +58,6 @@ A total of 2864 lines added, 1149 removed (delta 1715)
 |---|---|
 | Northern.tech | 2302 (76.2%) |
 | RnDity | 719 (23.8%) |
-
-| Employers with the most signoffs (total 0) | |
-|---|---|
 
 | Employers with the most hackers (total 8) | |
 |---|---|

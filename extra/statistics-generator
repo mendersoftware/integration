@@ -112,14 +112,34 @@ collect_changes() {
 
 post_process() {
     sed -nre '
+:start
+# If empty line.
 /^$/{
-  p
+  # Read next line.
+  s/$/\n/
+  N
+
+  # This is a new table, add table header.
+  s/\n([^\n]*)$/| \1 | |/
+
+  # Add table separator.
+  s/$/\n|---|---|/
+
+  # Store result for now (do not print yet).
+  x
+
+  # Read next line.
   n
-  s/^(.*)$/| \1 | |/
+
+  # If empty, omit the whole section and start over (empty category).
+  /^$/{
+    b start
+  }
+
+  # Else recover stored result, print it, and then continue.
+  x
   p
-  c |---|---|
-  p
-  n
+  x
 }
 /%/{
   s/^(.+)/| \1/

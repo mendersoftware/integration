@@ -16,6 +16,7 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 from unittest.mock import patch
 
@@ -538,3 +539,41 @@ def test_git_to_buildparam():
 
     for k, v in GIT_TO_BUILDPARAM_MAP.items():
         assert git_to_buildparam(k) == v
+
+
+def test_generate_release_notes(request, capsys):
+    try:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+
+        os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"] = "1"
+
+        run_main_assert_result(
+            capsys, ["--generate-release-notes", "-i", "3.0.1..3.1.0"], None
+        )
+
+        files = []
+        for entry in os.listdir():
+            if re.match(r"^release_notes.*\.txt$", entry) is not None:
+                files.append(entry)
+        files = sorted(files)
+
+        expected_files = [
+            "release_notes_mender-artifact.txt",
+            "release_notes_mender-cli.txt",
+            "release_notes_mender-connect.txt",
+            "release_notes_mender.txt",
+            "release_notes_server.txt",
+        ]
+        assert expected_files == files
+
+        for f in expected_files:
+            with open(
+                os.path.join(request.fspath.dirname, "test", f)
+            ) as expected_fd, open(f) as actual_fd:
+                expected = expected_fd.read()
+                actual = actual_fd.read()
+                assert expected == actual
+
+    finally:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+        del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]

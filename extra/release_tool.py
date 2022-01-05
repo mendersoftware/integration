@@ -186,6 +186,18 @@ class Component:
             if is_non_core_component and only_core_components:
                 continue
             components.append(Component(comp, type))
+
+        # For testing, not used in production. This prevents listing of
+        # Enterprise repositories, to ease running in Gitlab when no Enterprise
+        # credentials are present.
+        if os.environ.get("TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"):
+            components = [
+                comp
+                for comp in components
+                if comp.git() not in BACKEND_SERVICES_ENT
+                and comp.git() not in CLIENT_SERVICES_ENT
+            ]
+
         return components
 
     def associated_components_of_type(self, type):
@@ -268,6 +280,10 @@ BACKEND_SERVICES_OPEN_ENT = {
 BACKEND_SERVICES = (
     BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 )
+CLIENT_SERVICES_ENT = {
+    "mender-binary-delta",
+    "monitor-client",
+}
 
 
 class BuildParam:

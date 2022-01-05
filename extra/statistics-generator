@@ -63,7 +63,7 @@ collect_changes() {
     else
         # Sorting is important because we need "*-enterprise" repositories to
         # come after their Open Source counterparts (see below).
-        REPO_LIST="$("$RELEASE_TOOL" --list git --only-backend | sort)"
+        REPO_LIST="$("$RELEASE_TOOL" --list git --in-integration-version $1 --only-backend | sort)"
         REPO_LIST="$REPO_LIST integration"
     fi
 

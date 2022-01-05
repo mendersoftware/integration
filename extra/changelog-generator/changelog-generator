@@ -117,6 +117,8 @@ if args.all:
             [
                 os.path.join(base_dir, "integration/extra/release_tool.py"),
                 "--list",
+                "--in-integration-version",
+                args.range,
                 "--only-backend",
             ]
         )

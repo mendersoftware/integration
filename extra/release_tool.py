@@ -2450,8 +2450,9 @@ def run_and_combine_statistics_and_changelog(
         workdir if single_repo else integration_dir(),
         [
             "for-each-ref",
-            r"--format=%(taggerdate:format:%m.%d.%Y)",
+            r"--format=%(creatordate:format:%m.%d.%Y)",
             "refs/tags/" + to_version,
+            "refs/heads/" + to_version,
         ],
         capture=True,
     )

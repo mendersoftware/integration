@@ -406,6 +406,10 @@ for repo in repos:
         print()
 
     for problem in POSSIBLE_PROBLEMS:
-        sys.stderr.write("%s\n" % (problem))
+        if sys.stderr.isatty():
+            # Use red color.
+            sys.stderr.write("\033[31;1m%s\033[0m\n\n" % (problem))
+        else:
+            sys.stderr.write("%s\n\n" % (problem))
 
 sys.exit(0)

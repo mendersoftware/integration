@@ -2492,17 +2492,32 @@ def run_and_combine_statistics_and_changelog(
         fd.write(changelog_out.decode())
 
 
-def do_generate_release_notes(state):
-    """Generate Release Notes for the released tags"""
+def do_generate_release_notes(
+    base_dir, version_of_integration, prev_of_integration=None
+):
+    """Generate Release Notes for given version range. If no previous version is
+    given, it is auto-detected."""
+
+    split = version_of_integration.split("..")
+    if len(split) > 1:
+        if prev_of_integration is not None:
+            raise Exception(
+                "version_of_integration is a range, and prev_of_integration is non-empty. This should not happen!"
+            )
+        prev_of_integration, version_of_integration = split[0], split[1]
+
+    Component.set_integration_version(version_of_integration)
+
+    if prev_of_integration is None:
+        tag_list = sorted_final_version_list(integration_dir())
+        prev_of_integration = find_prev_version(tag_list, version_of_integration)
 
     # Release notes for Mender (server)
-    tag_list = sorted_final_version_list(integration_dir())
-    prev_of_integration = find_prev_version(tag_list, state["version"])
     run_and_combine_statistics_and_changelog(
-        state["repo_dir"],
+        base_dir,
         False,
         prev_of_integration,
-        state["version"],
+        version_of_integration,
         "release_notes_server.txt",
     )
 
@@ -2517,10 +2532,17 @@ def do_generate_release_notes(state):
     for repo in repos:
         if repo.git() == "integration":
             continue
-        version = state_value(state, [repo.git(), "version"])
-        workdir = os.path.join(state["repo_dir"], repo.git())
-        tag_list = sorted_final_version_list(workdir)
-        prev_version = find_prev_version(tag_list, version)
+        version = version_of(
+            integration_dir(),
+            repo.yml_components()[0],
+            in_integration_version=version_of_integration,
+        )
+        prev_version = version_of(
+            integration_dir(),
+            repo.yml_components()[0],
+            in_integration_version=prev_of_integration,
+        )
+        workdir = os.path.join(base_dir, repo.git())
         output_file = "release_notes_%s.txt" % repo.git()
         run_and_combine_statistics_and_changelog(
             workdir, True, prev_version, version, output_file
@@ -2691,7 +2713,7 @@ def do_release(release_state_file):
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "n":
-            do_generate_release_notes(state)
+            do_generate_release_notes(state["repo_dir"], state["version"])
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":
@@ -3125,10 +3147,10 @@ def main():
         "--in-integration-version",
         dest="in_integration_version",
         metavar="VERSION",
-        help="Used together with the above argument to query for a version of a "
+        help="Used together with the `-g` argument to query for a version of a "
         + "service which is in the given version of integration, instead of the "
         + "currently checked out version of integration. If a range is given here "
-        + "it will return the range of the corresponding service.",
+        + "it will return the range of the corresponding service. It is also used together with the --generate-release-notes argument.",
     )
     parser.add_argument(
         "-s",
@@ -3249,6 +3271,11 @@ def main():
     parser.add_argument(
         "-n", "--dry-run", action="store_true", help="Don't take any action at all"
     )
+    parser.add_argument(
+        "--generate-release-notes",
+        action="store_true",
+        help="Generate changelogs and statistics and put them in `release_notes_*.txt` files. Use -i argument to choose which integration range to generate notes for.",
+    )
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -3302,6 +3329,14 @@ def main():
         do_hosted_release(args.version)
     elif args.select_test_suite:
         do_select_test_suite()
+    elif args.generate_release_notes:
+        if not args.in_integration_version:
+            raise Exception(
+                "--generate-release-notes requires --in-integration-version argument."
+            )
+        do_generate_release_notes(
+            os.path.dirname(integration_dir()), args.in_integration_version
+        )
     else:
         parser.print_help()
         sys.exit(1)

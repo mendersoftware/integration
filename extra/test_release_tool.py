@@ -467,6 +467,21 @@ def test_list_repos(capsys, is_staging):
     else:
         assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
 
+    # release_tool.py --list --all
+    captured = run_main_assert_result(capsys, ["--list", "--all"], None)
+    repos_list = captured.split("\n")
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    assert "mender-binary-delta" in repos_list
+    assert "mender-convert" in repos_list
+    assert "mender-configure-module" in repos_list
+
 
 def test_list_repos_old_releases(capsys):
 

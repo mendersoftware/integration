@@ -245,7 +245,14 @@ for repo in repos:
                         POSSIBLE_PROBLEMS.append(
                             "*** Commit %s had conflicting changelog tags. "
                             "This might be a squashed commit which will not work correctly with changelogs. "
-                            "Should be manually checked." % sha
+                            "Should be manually checked."
+                            "\n---\n%s---"
+                            % (
+                                sha,
+                                subprocess.check_output(
+                                    ["git", "show", "-s", sha]
+                                ).decode(),
+                            )
                         )
                     exclusive_tag_seen = True
 
@@ -347,7 +354,14 @@ for repo in repos:
             if match:
                 POSSIBLE_PROBLEMS.append(
                     "*** Commit %s had a number %s which may be a ticket reference we missed. Should be manually checked."
-                    % (sha_entry, match.group(0))
+                    "\n---\n%s---"
+                    % (
+                        sha_entry,
+                        match.group(0),
+                        subprocess.check_output(
+                            ["git", "show", "-s", sha_entry]
+                        ).decode(),
+                    )
                 )
             entry = entry.strip("\n")
             if tracker:

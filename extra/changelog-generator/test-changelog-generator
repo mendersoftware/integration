@@ -540,6 +540,7 @@ diff -u expected.txt result.txt
 if [ $(egrep -v '^\*\*\* Commit [0-9a-f]{40} had a number 1234 which may be a ticket reference we missed\. Should be manually checked\.$' stderr.txt \
              | egrep -v '^\*\*\* Commit [0-9a-f]{40} had conflicting changelog tags\. This might be a squashed commit which will not work correctly with changelogs\. Should be manually checked\.$' \
              | egrep -v '^Checking .: HEAD:$' \
+             | egrep -v '^commit |^Author: |^Date: |^    |^---$|^$' \
              | wc -c) -ne 0 ]
 then
     echo 'Unexpected error message in:'

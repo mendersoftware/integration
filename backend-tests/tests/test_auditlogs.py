@@ -37,6 +37,7 @@ from testutils.common import (
     make_pending_device,
     make_device_with_inventory,
     change_authset_status,
+    useExistingTenant,
 )
 from testutils.api.client import ApiClient
 import testutils.api.deviceauth as deviceauth
@@ -118,7 +119,7 @@ class TestAuditLogsEnterprise:
                 )
         for _ in redo.retrier(attempts=3, sleeptime=1):
             res = self.alogs.with_auth(user.token).call(
-                "GET", auditlogs.URL_LOGS + "?object_type=device"
+                "GET", auditlogs.URL_LOGS + "?object_type=device&object_id=" + device.id
             )
             assert res.status_code == 200
             if len(res.json()) == 1:
@@ -139,7 +140,8 @@ class TestAuditLogsEnterprise:
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
             res = self.alogs.with_auth(user.token).call(
-                "GET", auditlogs.URL_LOGS + "?object_type=deployment"
+                "GET",
+                auditlogs.URL_LOGS + "?object_type=deployment&object_id=" + d["id"],
             )
             assert res.status_code == 200
             res = res.json()
@@ -159,7 +161,9 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=user&object_id=" + uid
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -178,7 +182,9 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET", auditlogs.URL_LOGS + "?object_type=user&object_id=" + user_del.id
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -198,7 +204,10 @@ class TestAuditLogsEnterprise:
 
         res = None
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            res = self.alogs.with_auth(user.token).call("GET", auditlogs.URL_LOGS)
+            res = self.alogs.with_auth(user.token).call(
+                "GET",
+                auditlogs.URL_LOGS + "?object_type=user&object_id=" + user_change.id,
+            )
             assert res.status_code == 200
             res = res.json()
             if len(res) == 1:
@@ -292,10 +301,10 @@ class TestAuditLogsEnterprise:
             assert resp.status_code == 200
             resp = resp.json()
 
-            assert len(resp) == len(case["expected"])
-
-            for i in range(len(resp)):
-                check_log(resp[i], case["expected"][i])
+            if not useExistingTenant():
+                assert len(resp) == len(case["expected"])
+                for i in range(len(resp)):
+                    check_log(resp[i], case["expected"][i])
 
     def _test_args_actor(self, tenant_users, events):
         ids = [user.id for user in tenant_users.users]
@@ -311,9 +320,10 @@ class TestAuditLogsEnterprise:
             assert resp.status_code == 200
             resp = resp.json()
 
-            assert len(resp) == len(expected)
-            for i in range(len(resp)):
-                check_log(resp[i], expected[i])
+            if not useExistingTenant():
+                assert len(resp) == len(expected)
+                for i in range(len(resp)):
+                    check_log(resp[i], expected[i])
 
         for email in emails:
             expected = [e for e in events if e["actor"]["email"] == email]
@@ -328,9 +338,10 @@ class TestAuditLogsEnterprise:
             assert resp.status_code == 200
             resp = resp.json()
 
-            assert len(resp) == len(expected)
-            for i in range(len(resp)):
-                check_log(resp[i], expected[i])
+            if not useExistingTenant():
+                assert len(resp) == len(expected)
+                for i in range(len(resp)):
+                    check_log(resp[i], expected[i])
 
     def _test_args_before_after(self, tenant_users, events):
         # note events are newest first - highest idx is oldest
@@ -376,10 +387,10 @@ class TestAuditLogsEnterprise:
             if case["arg"] == "created_after":
                 expected = [e for e in events if e["test_unix_time"] >= time_unix]
 
-            assert len(resp) == len(expected)
-
-            for i in range(len(resp)):
-                check_log(resp[i], expected[i])
+            if not useExistingTenant():
+                assert len(resp) == len(expected)
+                for i in range(len(resp)):
+                    check_log(resp[i], expected[i])
 
     def _test_args_object(self, tenant_users, events):
         expected = events[0]
@@ -404,10 +415,10 @@ class TestAuditLogsEnterprise:
             )
 
             resp = resp.json()
-            assert len(resp) == len(expected)
-
-            for i in range(len(resp)):
-                check_log(resp[i], expected[i])
+            if not useExistingTenant():
+                assert len(resp) == len(expected)
+                for i in range(len(resp)):
+                    check_log(resp[i], expected[i])
 
     def _test_args_sort(self, tenant_users, events):
         cases = [
@@ -421,10 +432,10 @@ class TestAuditLogsEnterprise:
             )
 
             resp = resp.json()
-            assert len(resp) == len(case["expected"])
-
-            for i in range(len(resp)):
-                check_log(resp[i], case["expected"][i])
+            if not useExistingTenant():
+                assert len(resp) == len(case["expected"])
+                for i in range(len(resp)):
+                    check_log(resp[i], case["expected"][i])
 
 
 def make_deployment(token: str, tenant_token: str) -> Tuple[Dict, Dict]:

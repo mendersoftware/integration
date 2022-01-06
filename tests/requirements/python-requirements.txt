@@ -18,7 +18,7 @@ dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.9.0
 fabric==2.6.0
-filelock==3.4.0
+filelock==3.4.2
 html5lib==1.1
 idna==3.3
 iniconfig==1.1.1
@@ -28,7 +28,7 @@ lockfile==0.12.2
 msgpack==1.0.3
 ordered-set==4.0.2
 packaging==20.9
-paramiko==2.8.1
+paramiko==2.9.1
 pathlib2==2.3.6
 pep517==0.9.1
 pluggy==1.0.0
@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==10.1
 flaky==3.7.0
-stripe==2.63.0
+stripe==2.64.0

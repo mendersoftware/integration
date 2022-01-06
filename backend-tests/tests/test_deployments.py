@@ -39,6 +39,7 @@ from testutils.common import (
     make_accepted_devices,
     make_device_with_inventory,
     submit_inventory,
+    useExistingTenant,
 )
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
@@ -78,6 +79,12 @@ def create_tenant_test_setup(
     user.utoken = r.text
     tenant.users = [user]
     upload_image("/tests/test-artifact.mender", user.utoken)
+
+    # count deployments
+    resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
+    assert resp.status_code == 200
+    count = int(resp.headers["X-Total-Count"])
+
     # Create three deployments for the user
     for i in range(nr_deployments):
         request_body = {
@@ -89,10 +96,13 @@ def create_tenant_test_setup(
             "POST", "/deployments", body=request_body
         )
         assert resp.status_code == 201
+
     # Verify that the 'nr_deployments' expected deployments have been created
     resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
     assert resp.status_code == 200
-    assert len(resp.json()) == nr_deployments
+    new_count = int(resp.headers["X-Total-Count"])
+    assert new_count == count + nr_deployments
+
     return tenant
 
 
@@ -499,6 +509,7 @@ class TestDeploymentsEndpointEnterprise(object):
             "GET", "/deployments"
         )
         assert resp.status_code == 200
+        second_tenant_deployments_count = resp.headers["X-Total-Count"]
         # Store the second tenants user deployments, to verify that
         # it remains unchanged after the tests have run
         backup_tenant_user_deployments = resp.json()
@@ -508,22 +519,18 @@ class TestDeploymentsEndpointEnterprise(object):
         )
         assert resp.status_code == 201
         deployment_id = os.path.basename(resp.headers["Location"])
-        resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
-            "GET", "/deployments"
-        )
-        assert resp.status_code == 200
-        assert len(resp.json()) == 4
-        # Get the test deployment from the list
-        reg_response_body_dict = None
-        for deployment in resp.json():
-            if deployment["name"] == expected_response["name"]:
-                reg_response_body_dict = deployment
+        if not useExistingTenant():
+            resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
+                "GET", "/deployments"
+            )
+            assert resp.status_code == 200
+            assert len(resp.json()) == 4
+
         resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
             "GET", "/deployments/" + deployment_id
         )
         assert resp.status_code == 200
         id_response_body_dict = resp.json()
-        assert reg_response_body_dict == id_response_body_dict
         TestDeploymentsEndpointEnterprise.compare_response_json(
             expected_response, id_response_body_dict
         )
@@ -532,7 +539,8 @@ class TestDeploymentsEndpointEnterprise(object):
             "GET", "/deployments"
         )
         assert resp.status_code == 200
-        assert backup_tenant_user_deployments == resp.json()
+        second_tenant_deployments_count_new = resp.headers["X-Total-Count"]
+        assert second_tenant_deployments_count_new == second_tenant_deployments_count
 
     def compare_response_json(expected_response, response_body_json):
         """Compare the keys that are present in the expected json dict with the matching response keys.
@@ -569,6 +577,12 @@ def setup_devices_and_management_st(nr_devices=100, deploy_to_group=None):
     utoken = r.text
     # Upload a dummy artifact to the server
     upload_image("/tests/test-artifact.mender", utoken)
+    # count existing devices
+    r = invm.with_auth(utoken).call(
+        "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
+    )
+    assert r.status_code == 200
+    count = int(r.headers["X-Total-Count"])
     # prepare accepted devices
     devs = make_accepted_devices(devauthd, devauthm, utoken, "", nr_devices)
     # wait for devices to be provisioned
@@ -582,13 +596,12 @@ def setup_devices_and_management_st(nr_devices=100, deploy_to_group=None):
             )
             assert r.status_code == 204
 
-    # Check that the number of devices were created
     r = invm.with_auth(utoken).call(
-        "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
+        "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
     )
     assert r.status_code == 200
-    api_devs = r.json()
-    assert len(api_devs) == nr_devices
+    new_count = int(r.headers["X-Total-Count"])
+    assert new_count == count + nr_devices
 
     return user, utoken, devs
 
@@ -615,6 +628,12 @@ def setup_devices_and_management_mt(nr_devices=100, deploy_to_group=None):
     utoken = r.text
     # Upload a dummy artifact to the server
     upload_image("/tests/test-artifact.mender", utoken)
+    # count existing devices
+    r = invm.with_auth(utoken).call(
+        "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
+    )
+    assert r.status_code == 200
+    count = int(r.headers["X-Total-Count"])
     # prepare accepted devices
     devs = make_accepted_devices(
         devauthd, devauthm, utoken, tenant.tenant_token, nr_devices
@@ -632,11 +651,11 @@ def setup_devices_and_management_mt(nr_devices=100, deploy_to_group=None):
 
     # Check that the number of devices were created
     r = invm.with_auth(utoken).call(
-        "GET", inventory.URL_DEVICES, qs_params={"per_page": nr_devices}
+        "GET", inventory.URL_DEVICES, qs_params={"per_page": 1}
     )
     assert r.status_code == 200
-    api_devs = r.json()
-    assert len(api_devs) == nr_devices
+    new_count = int(r.headers["X-Total-Count"])
+    assert new_count == count + nr_devices
 
     return user, tenant, utoken, devs
 
@@ -1785,7 +1804,8 @@ class TestDynamicDeploymentsEnterprise:
         ]
 
         dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
-        assert dep["initial_device_count"] == len(matching_devs)
+        if not useExistingTenant():
+            assert dep["initial_device_count"] == len(matching_devs)
 
         for d in matching_devs:
             assert_get_next(200, d.token, "foo")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -2137,7 +2137,19 @@ def push_latest_docker_tags(state, tag_avail):
             # Even though the version is already in 'tip', this is for the
             # overall Mender version. We need the specific one for the
             # repository.
-            repo = image.associated_components_of_type("git")[0]
+            repos = image.associated_components_of_type("git")
+            # QA-344: Tag multi-component images with the integration version
+            if len(repos) > 1:
+                for r in repos:
+                    if r.name == "integration":
+                        repo = r
+                        break
+                if not repo:
+                    raise Exception(
+                        "integration not found in the multi-component docker_image. This is a necessary requirement for tagging the image correctly."
+                    )
+            else:
+                repo = image.associated_components_of_type("git")[0]
             if tip == "latest":
                 new_version = "latest"
             elif tip.startswith("mender-") and tip.count(".") == 1:

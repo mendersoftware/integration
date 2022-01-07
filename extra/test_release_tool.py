@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 SAMPLE_REPOS_BACKEND_BASE = ["deviceconnect", "devicemonitor", "gui", "tenantadm"]
 SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm", "deviceauth"]
 SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
-SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "integration"]
+SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "mender-artifact"]
 SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
 
 

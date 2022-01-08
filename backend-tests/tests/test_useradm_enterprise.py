@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import pyotp
 from testutils.infra.smtpd_mock import smtp_mock
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 from testutils.common import mongo, clean_mongo, create_org, create_user
@@ -53,26 +52,25 @@ def clean_migrated_mongo(clean_mongo):
 @pytest.fixture(scope="function")
 def tenants_users(clean_migrated_mongo):
     tenants = []
-    for n in range(2):
+    for _ in range(2):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@foo.com",
+            "ci.email.tests+" + uuidv4 + "@mender.io",
             "secretsecret",
         )
         # Create tenant with two users
         tenant = create_org(tenant, username, password, "enterprise")
         tenant.users.append(
-            create_user("some.other.user+" + uuidv4 + "@foo.com", password, tenant.id)
+            create_user(
+                "ci.email.tests+" + uuidv4 + "-user2@mender.io", password, tenant.id
+            )
         )
         tenants.append(tenant)
 
     yield tenants
 
 
-@pytest.mark.skipif(
-    isK8S(), reason="not testable in a staging or production environment"
-)
 class Test2FAEnterprise:
     def _login(self, user, totp=None):
         body = {}

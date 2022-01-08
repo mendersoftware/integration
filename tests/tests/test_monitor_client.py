@@ -303,7 +303,7 @@ class TestMonitorClientEnterprise:
     def test_monitorclient_alert_email(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting"""
         service_name = "crond"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -525,7 +525,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client flapping support"""
         wait_for_alert_interval_s = 120
         service_name = "crond"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -581,7 +581,7 @@ class TestMonitorClientEnterprise:
         """Tests the monitor client email alerting respecting RBAC"""
         # first let's get the OK and CRITICAL email alerts {{{
         service_name = "crond"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -714,7 +714,7 @@ class TestMonitorClientEnterprise:
     def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
         """Tests the monitor client alert local store"""
         service_name = "rpcbind"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -829,7 +829,7 @@ class TestMonitorClientEnterprise:
     def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         dbus_name = "test"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -852,7 +852,7 @@ class TestMonitorClientEnterprise:
     def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         dbus_name = "test"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -877,7 +877,7 @@ class TestMonitorClientEnterprise:
     def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         dbus_name = "test"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -905,7 +905,7 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for multiple services with extra checks"""
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -1123,7 +1123,7 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_logs_and_patterns(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for a Perl compatible regex"""
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -1282,7 +1282,7 @@ class TestMonitorClientEnterprise:
     ):
         """Tests the monitor client configuration push"""
         wait_for_alert_interval_s = 8
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
@@ -1385,7 +1385,7 @@ class TestMonitorClientEnterprise:
     ):
         """Tests that malformed alerts in the store (HTTP 400) are discarded"""
         service_name = "crond"
-        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )

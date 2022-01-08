@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import uuid
 
 from testutils.api import useradm
 from testutils.api.client import ApiClient
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.smtpd_mock import smtp_mock
 
 from testutils.common import clean_mongo, create_org, mongo
@@ -29,14 +28,11 @@ class TestVerifyEmailEnterprise:
 
     uc = ApiClient(useradm.URL_MGMT)
 
-    @pytest.mark.skipif(
-        isK8S(), reason="not testable in a staging or production environment"
-    )
     def test_verify_email(self, clean_mongo, smtp_mock):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@foo.com",
+            "ci.email.tests+" + uuidv4 + "@mender.io",
             "secretsecret",
         )
         create_org(tenant, email, password)

@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,6 +13,10 @@
 #    limitations under the License.
 
 import asyncore
+import base64
+import email
+import imaplib
+import os
 import pytest
 import time
 import smtpd
@@ -21,12 +25,25 @@ import logging
 from threading import Thread, Condition
 
 
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
+GMAIL_PASSWORD = (
+    base64.b64decode(os.environ.get("GMAIL_PASSWORD")).decode("utf-8")
+    if os.environ.get("GMAIL_PASSWORD")
+    else None
+)
+GMAIL_SERVER = "imap.gmail.com"
+
+
 class Message:
-    def __init__(self, peer, mailfrom, rcpttos, data):
+    def __init__(self, peer, mailfrom, rcpttos, subject, data):
         self.peer = peer
         self.mailfrom = mailfrom
         self.rcpttos = rcpttos
+        self.subject = subject
         self.data = data
+
+    def __repr__(self):
+        return f"<Message peer={self.peer} mailfrom={self.mailfrom} rcpttos={self.rcpttos} subject={self.subject}>"
 
 
 class SMTPServerMock(smtpd.SMTPServer):
@@ -36,7 +53,7 @@ class SMTPServerMock(smtpd.SMTPServer):
         self._msg_cond = Condition()
 
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
-        self.messages.append(Message(peer, mailfrom, rcpttos, data))
+        self.messages.append(Message(peer, mailfrom, rcpttos, None, data))
         logging.warning("got a message: %s" % mailfrom)
         with self._msg_cond:
             self._msg_cond.notify_all()
@@ -76,8 +93,80 @@ class SMTPMock:
         assert len(m.data) > 0
 
 
+class SMTPGmail:
+    def __init__(self, server, address, password):
+        self._server = server
+        self._address = address
+        self._password = password
+
+    def connect(self):
+        mail = imaplib.IMAP4_SSL(self._server)
+        mail.login(self._address, self._password)
+        mail.select("INBOX")
+        return mail
+
+    def await_messages(self, n=1, timeout=None):
+        timeout = int(timeout) if timeout else 60
+        for i in range(timeout):
+            time.sleep(1)
+            if len(self.messages()) >= n:
+                break
+
+    def messages(self):
+        mail = self.connect()
+        try:
+            type, data = mail.search(None, "ALL")
+            assert type == "OK"
+            messages = []
+            mail_ids = data[0].decode("utf-8").split()
+            if not mail_ids:
+                return messages
+            for i in range(int(mail_ids[-1]), int(mail_ids[0]) - 1, -1):
+                type, data = mail.fetch(str(i), "(RFC822)")
+                body = data[0][1]
+                msg = email.message_from_string(body.decode("utf-8"))
+                messages.append(
+                    Message(None, msg["from"], [msg["to"]], msg["subject"], body)
+                )
+            return messages
+        finally:
+            mail.close()
+
+    def filtered_messages(self, email):
+        messages = self.messages()
+        return tuple(filter(lambda m: email in m.rcpttos[0], messages))
+
+    def assert_called(self, email):
+        msgs = self.filtered_messages(email)
+        assert len(msgs) == 1
+        m = msgs[0]
+        assert "@mender.io" in m.mailfrom, m.mailfrom
+        assert email in m.rcpttos[0]
+        assert len(m.data) > 0
+
+    def clear(self):
+        mail = self.connect()
+        try:
+            type, data = mail.search(None, "ALL")
+            assert type == "OK"
+            mail_ids = data[0].decode("utf-8").split()
+            if not mail_ids:
+                return
+            for i in range(int(mail_ids[-1]), int(mail_ids[0]) - 1, -1):
+                mail.store(str(i), "+FLAGS", "\\Deleted")
+            mail.expunge()
+        finally:
+            mail.close()
+
+
 @pytest.fixture(scope="function")
 def smtp_mock():
+    global GMAIL_SERVER, GMAIL_ADDRESS, GMAIL_PASSWORD
+    if GMAIL_ADDRESS and GMAIL_PASSWORD:
+        smtp = SMTPGmail(GMAIL_SERVER, GMAIL_ADDRESS, GMAIL_PASSWORD)
+        smtp.clear()
+        yield smtp
+        return
     smtp_mock = SMTPMock()
     thread = Thread(target=smtp_mock.start)
     thread.daemon = True

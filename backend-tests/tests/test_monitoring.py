@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,7 +32,6 @@ from testutils.common import (
     mongo,
 )
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliDeviceMonitor
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.smtpd_mock import smtp_mock
 
 
@@ -51,7 +50,7 @@ def tenants_users(clean_migrated_mongo):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
+            "ci.email.tests+" + uuidv4 + "@mender.io",
             "secretsecret",
         )
         tenants.append(create_org(tenant, username, password))
@@ -166,9 +165,6 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
     useradm = ApiClient(useradm.URL_MGMT)
     devmonit = ApiClient(devicemonitor.URL_DEVICES)
 
-    @pytest.mark.skipif(
-        isK8S(), reason="no suitable smtp mock in staging environment",
-    )
     @pytest.mark.parametrize(
         argnames="test_case",
         argvalues=(

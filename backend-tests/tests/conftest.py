@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ pytest.register_assert_rewrite("testutils")
 from requests.packages import urllib3
 from testutils.common import wait_until_healthy
 from testutils.infra.container_manager.kubernetes_manager import isK8S
+from testutils.api.client import wait_for_port
 
 
 urllib3.disable_warnings()
@@ -55,8 +56,7 @@ def get_endpoint_url():
                 ]
                 p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
                 processes[host] = (p, host_forward_port)
-                # wait a few seconds to let the port-forwarding fully initialize
-                time.sleep(3)
+                wait_for_port(port=host_forward_port, host="localhost", timeout=10.0)
             url = ("http://localhost:%d" % host_forward_port) + url_parsed.path
         return url
 

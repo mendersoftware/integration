@@ -12,8 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
+import socketserver
 import subprocess
-import time
 
 from urllib.parse import urlparse
 
@@ -31,7 +31,9 @@ urllib3.disable_warnings()
 wait_until_healthy("backend-tests")
 
 
-forward_port = 8080
+def get_free_tcp_port() -> int:
+    with socketserver.TCPServer(("localhost", 0), None) as s:
+        return s.server_address[1]
 
 
 @pytest.fixture(scope="session")
@@ -46,8 +48,7 @@ def get_endpoint_url():
             port = url_parsed.port
             _, host_forward_port = processes.get(host, (None, None))
             if host_forward_port is None:
-                forward_port += 1
-                host_forward_port = forward_port
+                host_forward_port = get_free_tcp_port()
                 cmd = [
                     "kubectl",
                     "port-forward",

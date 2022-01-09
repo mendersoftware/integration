@@ -12,6 +12,7 @@ services:
         environment:
             PYTHONPATH: "/testutils"
             PYTHONDONTWRITEBYTECODE: 1
+            TESTS_IN_PARALLEL: ${TESTS_IN_PARALLEL}
             TENANTADM_STRIPE_API_KEY: ${STRIPE_API_KEY}
             GATEWAY_HOSTNAME: ${GATEWAY_HOSTNAME}
             AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}

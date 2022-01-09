@@ -34,7 +34,7 @@ from testutils.api import (
     iot_manager as iot,
     useradm,
 )
-from testutils.api.client import ApiClient
+from testutils.api.client import ApiClient, get_free_tcp_port
 from testutils.common import (
     Device,
     User,
@@ -48,7 +48,7 @@ from testutils.common import (
 )
 
 
-HTTPServer.DEFAULT_LISTEN_PORT = 8888
+HTTPServer.DEFAULT_LISTEN_PORT = get_free_tcp_port()
 HTTPServer.DEFAULT_LISTEN_HOST = (
     "mender-backend-tests-runner"  # name of the compose service
 )
@@ -513,7 +513,7 @@ class _TestAzureDeviceLifecycleBase:
             azure_user, httpserver, dev.id, "enabled"
         )
 
-        #  get the all device states (device twins)
+        # get the all device states (device twins)
         if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/devices"),
@@ -556,7 +556,7 @@ class _TestAzureDeviceLifecycleBase:
         assert "reported" in states[integration_id]
         assert state["desired"]["key"] == "value"
 
-        #  get the device state (device twin)
+        # get the device state (device twin)
         if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/twins"),

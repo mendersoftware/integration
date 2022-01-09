@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import requests
 
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliDeviceauth
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 import testutils.api.deviceauth as deviceauth
 import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
@@ -1406,6 +1407,9 @@ def compare_aset(authset, api_authset):
     assert authset.status == api_authset["status"]
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not testable in a staging or production environment"
+)
 class TestDefaultTenantTokenEnterprise(object):
 
     uc = ApiClient(useradm.URL_MGMT)

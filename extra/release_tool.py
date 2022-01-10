@@ -1196,6 +1196,10 @@ def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
+    if version == "master" and len(tag_list) > 0:
+        # For master, return the newest released version.
+        return tag_list[0]
+
     try:
         (
             version_major,

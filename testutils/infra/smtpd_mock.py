@@ -25,15 +25,6 @@ import logging
 from threading import Thread, Condition
 
 
-GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-GMAIL_PASSWORD = (
-    base64.b64decode(os.environ.get("GMAIL_PASSWORD")).decode("utf-8")
-    if os.environ.get("GMAIL_PASSWORD")
-    else None
-)
-GMAIL_SERVER = "imap.gmail.com"
-
-
 class Message:
     def __init__(self, peer, mailfrom, rcpttos, subject, data):
         self.peer = peer
@@ -159,19 +150,29 @@ class SMTPGmail:
             mail.close()
 
 
+def smtp_server_gmail():
+    server = "imap.gmail.com"
+    address = os.environ.get("GMAIL_ADDRESS")
+    password = (
+        base64.b64decode(os.environ.get("GMAIL_PASSWORD")).decode("utf-8")
+        if os.environ.get("GMAIL_PASSWORD")
+        else None
+    )
+    return SMTPGmail(server, address, password)
+
+
 @pytest.fixture(scope="function")
-def smtp_mock():
-    global GMAIL_SERVER, GMAIL_ADDRESS, GMAIL_PASSWORD
-    if GMAIL_ADDRESS and GMAIL_PASSWORD:
-        smtp = SMTPGmail(GMAIL_SERVER, GMAIL_ADDRESS, GMAIL_PASSWORD)
+def smtp_server():
+    if os.environ.get("GMAIL_ADDRESS"):
+        smtp = smtp_server_gmail()
         smtp.clear()
         yield smtp
         return
-    smtp_mock = SMTPMock()
-    thread = Thread(target=smtp_mock.start)
+    server = SMTPMock()
+    thread = Thread(target=server.start)
     thread.daemon = True
     thread.start()
-    yield smtp_mock
-    smtp_mock.stop()
+    yield server
+    server.stop()
     # need to wait for the port to be released
     time.sleep(30)

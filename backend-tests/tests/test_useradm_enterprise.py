@@ -23,7 +23,7 @@ from PIL import Image
 from pyzbar.pyzbar import decode
 import pyotp
 
-from testutils.infra.smtpd_mock import smtp_mock
+from testutils.infra.smtpd_mock import smtp_server
 from testutils.api.client import ApiClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 import testutils.api.useradm as useradm
@@ -122,7 +122,7 @@ class Test2FAEnterprise:
 
         return s
 
-    def test_enable_disable(self, tenants_users, smtp_mock):
+    def test_enable_disable(self, tenants_users, smtp_server):
         user_2fa = tenants_users[0].users[0]
         user_no_2fa = tenants_users[0].users[1]
 
@@ -152,7 +152,7 @@ class Test2FAEnterprise:
         # wait for the verification email
         message = None
         for i in range(15):
-            messages = smtp_mock.filtered_messages(user_2fa.name)
+            messages = smtp_server.filtered_messages(user_2fa.name)
             if len(messages) > 0:
                 message = messages[0]
                 break

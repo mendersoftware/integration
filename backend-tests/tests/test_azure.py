@@ -207,16 +207,15 @@ def get_connection_string():
 def azure_user(clean_mongo) -> Optional[User]:
     """Create Mender user and create an Azure IoT Hub integration in iot-manager using the connection string."""
     api_azure = ApiClient(base_url=iot.URL_MGMT)
+    uuidv4 = str(uuid.uuid4())
     try:
         tenant = create_org(
-            "TestAzureDeviceLifecycle",
-            f"user+{uuid.uuid4()}@example.com",
-            "password123",
+            "test.mender.io-" + uuidv4, f"user+{uuidv4}@example.com", "password123",
         )
         user = tenant.users[0]
         user.tenant = tenant
     except RuntimeError:  # If open-source
-        user = create_user(f"user+{uuid.uuid4()}@example.com", "password123")
+        user = create_user(f"user+{uuidv4}@example.com", "password123")
 
     # Authorize
     rsp = ApiClient(useradm.URL_MGMT).call(

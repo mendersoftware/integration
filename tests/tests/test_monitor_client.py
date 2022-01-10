@@ -66,7 +66,7 @@ message_mail_options_prefix = "mail options:"
 
 # tests constants
 mailbox_path = "/var/spool/mail/local"
-wait_for_alert_interval_s = 8
+wait_for_alert_interval_s = 8 if not isK8S() else 16
 expected_from = (
     "no-reply@hosted.mender.io"
     if not isK8S()
@@ -79,19 +79,13 @@ def clear_gmail():
     yield None
     if not isK8S():
         return
-    smtpd_mock.SMTPGmail(
-        smtpd_mock.GMAIL_SERVER, smtpd_mock.GMAIL_ADDRESS, smtpd_mock.GMAIL_PASSWORD,
-    ).clear()
+    smtpd_mock.smtp_server_gmail().clear()
 
 
 def get_and_parse_email(env):
     # get the message from gmail
     if isK8S():
-        smtp = smtpd_mock.SMTPGmail(
-            smtpd_mock.GMAIL_SERVER,
-            smtpd_mock.GMAIL_ADDRESS,
-            smtpd_mock.GMAIL_PASSWORD,
-        )
+        smtp = smtpd_mock.smtp_server_gmail()
         mail = ""
         headers = []
         messages = smtp.messages()

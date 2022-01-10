@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import pytest
-import socketserver
 import subprocess
 
 from urllib.parse import urlparse
@@ -23,17 +22,12 @@ pytest.register_assert_rewrite("testutils")
 from requests.packages import urllib3
 from testutils.common import wait_until_healthy
 from testutils.infra.container_manager.kubernetes_manager import isK8S
-from testutils.api.client import wait_for_port
+from testutils.api.client import get_free_tcp_port, wait_for_port
 
 
 urllib3.disable_warnings()
 
 wait_until_healthy("backend-tests")
-
-
-def get_free_tcp_port() -> int:
-    with socketserver.TCPServer(("localhost", 0), None) as s:
-        return s.server_address[1]
 
 
 @pytest.fixture(scope="session")

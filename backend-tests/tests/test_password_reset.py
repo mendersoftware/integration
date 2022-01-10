@@ -19,7 +19,7 @@ import uuid
 
 from testutils.api import useradm
 from testutils.api.client import ApiClient
-from testutils.infra.smtpd_mock import smtp_mock
+from testutils.infra.smtpd_mock import smtp_server
 
 from testutils.common import (
     clean_mongo,
@@ -32,7 +32,7 @@ class TestPasswordResetEnterprise:
 
     uc = ApiClient(useradm.URL_MGMT)
 
-    def test_password_reset(self, clean_mongo, smtp_mock):
+    def test_password_reset(self, clean_mongo, smtp_server):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
             "test.mender.io-" + uuidv4,
@@ -47,7 +47,7 @@ class TestPasswordResetEnterprise:
         # wait for the password reset email
         message = None
         for i in range(15):
-            messages = smtp_mock.filtered_messages(email)
+            messages = smtp_server.filtered_messages(email)
             if len(messages) > 0:
                 message = messages[0]
                 break

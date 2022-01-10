@@ -19,7 +19,7 @@ import uuid
 
 from testutils.api import useradm
 from testutils.api.client import ApiClient
-from testutils.infra.smtpd_mock import smtp_mock
+from testutils.infra.smtpd_mock import smtp_server
 
 from testutils.common import clean_mongo, create_org, mongo
 
@@ -28,7 +28,7 @@ class TestVerifyEmailEnterprise:
 
     uc = ApiClient(useradm.URL_MGMT)
 
-    def test_verify_email(self, clean_mongo, smtp_mock):
+    def test_verify_email(self, clean_mongo, smtp_server):
         uuidv4 = str(uuid.uuid4())
         tenant, email, password = (
             "test.mender.io-" + uuidv4,
@@ -55,7 +55,7 @@ class TestVerifyEmailEnterprise:
         # wait for the verification email
         message = None
         for i in range(15):
-            messages = smtp_mock.filtered_messages(email)
+            messages = smtp_server.filtered_messages(email)
             if len(messages) > 0:
                 message = messages[0]
                 break

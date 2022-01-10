@@ -268,7 +268,10 @@ class TestMonitorClientEnterprise:
     def prepare_env(self, env, user_name):
         u = User("", user_name, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org("monitor-tenant", u.name, u.pwd, plan="enterprise")
+
+        uuidv4 = str(uuid.uuid4())
+        name = "test.mender.io-" + uuidv4
+        tid = cli.create_org(name, u.name, u.pwd, plan="enterprise")
 
         # at the moment we do not have a notion of a monitor add-on in the
         # backend, but this will be needed here, see MEN-4809
@@ -279,9 +282,7 @@ class TestMonitorClientEnterprise:
         tenant = cli.get_tenant(tid)
         tenant = json.loads(tenant)
 
-        auth = authentication.Authentication(
-            name="monitor-tenant", username=u.name, password=u.pwd
-        )
+        auth = authentication.Authentication(name=name, username=u.name, password=u.pwd)
         auth.create_org = False
         auth.reset_auth_token()
         devauth_tenant = DeviceAuthV2(auth)

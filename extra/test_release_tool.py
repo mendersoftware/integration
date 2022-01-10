@@ -577,3 +577,23 @@ def test_generate_release_notes(request, capsys):
     finally:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
+
+
+def test_generate_release_notes_from_master(request, capsys):
+    try:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+
+        os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"] = "1"
+
+        output = run_main_assert_result(
+            capsys, ["--generate-release-notes", "-i", "master"], None
+        )
+
+        # Since master and therefore the latest version is a moving target, it's
+        # difficult to test content, but make sure the tool has selected a
+        # version to diff from, and not just the entire master branch.
+        assert re.search(r"[0-9]\.\.master", output) is not None
+
+    finally:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+        del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]

@@ -40,6 +40,7 @@ from testutils.api import useradm
 from testutils.api.client import ApiClient
 from testutils.infra.container_manager import factory
 from testutils.infra.container_manager.kubernetes_manager import isK8S
+from testutils.infra import smtpd_mock
 from testutils.common import User, new_tenant_client
 from testutils.infra.cli import CliTenantadm
 
@@ -66,32 +67,62 @@ message_mail_options_prefix = "mail options:"
 # tests constants
 mailbox_path = "/var/spool/mail/local"
 wait_for_alert_interval_s = 8
-expected_from = "no-reply@hosted.mender.io"
+expected_from = (
+    "no-reply@hosted.mender.io"
+    if not isK8S()
+    else "Mender <no-reply@staging.hosted.mender.io>"
+)
+
+
+@pytest.fixture(scope="function")
+def clear_gmail():
+    yield None
+    if not isK8S():
+        return
+    smtpd_mock.SMTPGmail(
+        smtpd_mock.GMAIL_SERVER, smtpd_mock.GMAIL_ADDRESS, smtpd_mock.GMAIL_PASSWORD,
+    ).clear()
 
 
 def get_and_parse_email(env):
+    # get the message from gmail
+    if isK8S():
+        smtp = smtpd_mock.SMTPGmail(
+            smtpd_mock.GMAIL_SERVER,
+            smtpd_mock.GMAIL_ADDRESS,
+            smtpd_mock.GMAIL_PASSWORD,
+        )
+        mail = ""
+        headers = []
+        messages = smtp.messages()
+        messages.reverse()
+        for m in messages:
+            data = m.data.decode("utf-8")
+            mail += data + "\n"
+            headers.append(Parser(policy=default).parsestr(data))
+        return mail, headers
     # get the email from the SMTP server
-    mail = env.get_file("local-smtp", mailbox_path)
-    logger.debug("got mail: '%s'", mail)
-
-    # read spool line by line, eval(line).decode('utf-8') for each line in lines
-    # between start and end of message
-    # concat and create header object for each
-    headers = []
-    message_string = ""
-    for line in mail.splitlines():
-        if line.startswith(message_mail_options_prefix):
-            continue
-        if message_start == line:
-            message_string = ""
-            continue
-        if message_end == line:
-            headers.append(Parser(policy=default).parsestr(message_string))
-            continue
-        # extra safety, we are supposed to only eval b'string' lines
-        if not line.startswith("b'"):
-            continue
-        message_string = message_string + eval(line).decode("utf-8") + "\n"
+    else:
+        mail = env.get_file("local-smtp", mailbox_path)
+        logger.debug("got mail: '%s'", mail)
+        # read spool line by line, eval(line).decode('utf-8') for each line in lines
+        # between start and end of message
+        # concat and create header object for each
+        headers = []
+        message_string = ""
+        for line in mail.splitlines():
+            if line.startswith(message_mail_options_prefix):
+                continue
+            if message_start == line:
+                message_string = ""
+                continue
+            if message_end == line:
+                headers.append(Parser(policy=default).parsestr(message_string))
+                continue
+            # extra safety, we are supposed to only eval b'string' lines
+            if not line.startswith("b'"):
+                continue
+            message_string = message_string + eval(line).decode("utf-8") + "\n"
 
     # log all messages for debug
     for m in headers:
@@ -105,10 +136,10 @@ def get_and_parse_email(env):
 
 
 def assert_valid_alert(message, bcc, subject):
-    assert "Bcc" in message
+    assert isK8S() or "Bcc" in message
     assert "From" in message
     assert "Subject" in message
-    assert message["Bcc"] == bcc
+    assert isK8S() or message["Bcc"] == bcc
     assert message["From"] == expected_from
     assert message["Subject"].startswith(subject)
 
@@ -231,9 +262,6 @@ def prepare_dbus_monitoring(
         shutil.rmtree(tmpdir)
 
 
-@pytest.mark.skipif(
-    isK8S(), reason="not testable in a staging or production environment"
-)
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -300,7 +328,9 @@ class TestMonitorClientEnterprise:
                 alerts = inventory_item["value"]
         return alerts, alert_count
 
-    def test_monitorclient_alert_email(self, monitor_commercial_setup_no_client):
+    def test_monitorclient_alert_email(
+        self, monitor_commercial_setup_no_client, clear_gmail
+    ):
         """Tests the monitor client email alerting"""
         service_name = "crond"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -521,7 +551,9 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_email: got OK alert email after log pattern expiration in case of streaming log file."
         )
 
-    def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
+    def test_monitorclient_flapping(
+        self, monitor_commercial_setup_no_client, clear_gmail
+    ):
         """Tests the monitor client flapping support"""
         wait_for_alert_interval_s = 120
         service_name = "crond"
@@ -577,7 +609,9 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_flapping: got OK alert email.")
 
-    def test_monitorclient_alert_email_rbac(self, monitor_commercial_setup_no_client):
+    def test_monitorclient_alert_email_rbac(
+        self, monitor_commercial_setup_no_client, clear_gmail
+    ):
         """Tests the monitor client email alerting respecting RBAC"""
         # first let's get the OK and CRITICAL email alerts {{{
         service_name = "crond"
@@ -711,7 +745,9 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_email_rbac: did not receive OK email alert."
         )
 
-    def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
+    def test_monitorclient_alert_store(
+        self, monitor_commercial_setup_no_client, clear_gmail
+    ):
         """Tests the monitor client alert local store"""
         service_name = "rpcbind"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -826,7 +862,7 @@ class TestMonitorClientEnterprise:
         assert len(messages) == expected_alerts_count
         logger.info("got %d alert messages." % len(messages))
 
-    def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
+    def test_dbus_subsystem(self, monitor_commercial_setup_no_client, clear_gmail):
         """Test the dbus subsystem"""
         dbus_name = "test"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -849,7 +885,7 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_dbus_subsystem: got CRITICAL alert email.")
 
-    def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
+    def test_dbus_pattern_match(self, monitor_commercial_setup_no_client, clear_gmail):
         """Test the dbus subsystem"""
         dbus_name = "test"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -874,7 +910,7 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_dbus_pattern_match: got CRITICAL alert email.")
 
-    def test_dbus_bus_filter(self, monitor_commercial_setup_no_client):
+    def test_dbus_bus_filter(self, monitor_commercial_setup_no_client, clear_gmail):
         """Test the dbus subsystem"""
         dbus_name = "test"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -903,7 +939,9 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_dbus_bus_filter: got CRITICAL alert email.")
 
-    def test_monitorclient_logs_and_services(self, monitor_commercial_setup_no_client):
+    def test_monitorclient_logs_and_services(
+        self, monitor_commercial_setup_no_client, clear_gmail
+    ):
         """Tests the monitor client email alerting for multiple services with extra checks"""
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, auth, mender_device = self.prepare_env(
@@ -1179,7 +1217,7 @@ class TestMonitorClientEnterprise:
         )
 
     def test_monitorclient_send_saved_alerts_on_network_issues(
-        self, monitor_commercial_setup_no_client
+        self, monitor_commercial_setup_no_client, clear_gmail
     ):
         """Tests that the client does indeed cache alerts and resend them in the face
         of issues, like network connectivity"""
@@ -1278,7 +1316,7 @@ class TestMonitorClientEnterprise:
         )
 
     def test_monitorclient_send_configuration_data(
-        self, monitor_commercial_setup_no_client
+        self, monitor_commercial_setup_no_client, clear_gmail
     ):
         """Tests the monitor client configuration push"""
         wait_for_alert_interval_s = 8
@@ -1381,7 +1419,7 @@ class TestMonitorClientEnterprise:
         mender_device.run("systemctl restart mender-monitor")
 
     def test_monitorclient_alert_store_discard_http_400(
-        self, monitor_commercial_setup_no_client
+        self, monitor_commercial_setup_no_client, clear_gmail
     ):
         """Tests that malformed alerts in the store (HTTP 400) are discarded"""
         service_name = "crond"

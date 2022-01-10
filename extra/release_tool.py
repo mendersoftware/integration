@@ -3164,10 +3164,11 @@ def main():
         "--in-integration-version",
         dest="in_integration_version",
         metavar="VERSION",
-        help="Used together with the `-g` argument to query for a version of a "
+        help="Used together with the `--version-of` argument to query for a version of a "
         + "service which is in the given version of integration, instead of the "
         + "currently checked out version of integration. If a range is given here "
-        + "it will return the range of the corresponding service. It is also used together with the --generate-release-notes argument.",
+        + "it will return the range of the corresponding service. "
+        + "It is also used together with the `--generate-release-notes` argument.",
     )
     parser.add_argument(
         "-s",
@@ -3188,7 +3189,7 @@ def main():
         "--feature-branches",
         action="store_true",
         default=False,
-        help="When used with -f, include upstream feature branches",
+        help="When used with `--integration-versions-including`, include upstream feature branches",
     )
     parser.add_argument(
         "-v",
@@ -3210,7 +3211,7 @@ def main():
         dest="pr",
         metavar="REPO/PR-NUMBER",
         action="append",
-        help="Can only be used with -b. Specifies a repository and pull request number "
+        help="Can only be used with `--build`. Specifies a repository and pull request number "
         + "that should be triggered with the rest of the repository versions. It is "
         + "also possible to specify a branch name instead of a pull request number. "
         + "May be specified more than once.",
@@ -3231,27 +3232,27 @@ def main():
         "--all",
         action="store_true",
         default=False,
-        help="When used with -l, list all repositories, including optional ones. "
-        + "When used with -f, include local branches in addition to upstream branches.",
+        help="When used with `--list`, list all repositories, including optional ones. "
+        + "When used with `--integration-versions-including`, include local branches in addition to upstream branches.",
     )
     parser.add_argument(
         "--only-backend",
         action="store_true",
         default=False,
-        help="When used with -l, list only backend repositories; ignored otherwise",
+        help="When used with `--list`, list only backend repositories; ignored otherwise",
     )
     parser.add_argument(
         "--only-client",
         action="store_true",
         default=False,
-        help="When used with -l, list only non-backend repositories; ignored otherwise",
+        help="When used with `--list`, list only non-backend repositories; ignored otherwise",
     )
     parser.add_argument(
         "--list-format",
         metavar="simple|table|json",
         default="simple",
         nargs="?",
-        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions "
+        help="When used with `--list`, 'simple' prints only the repos, 'table' adds the versions "
         + "of each component in a table format, and 'json' composes a json object",
     )
     parser.add_argument(
@@ -3291,7 +3292,8 @@ def main():
     parser.add_argument(
         "--generate-release-notes",
         action="store_true",
-        help="Generate changelogs and statistics and put them in `release_notes_*.txt` files. Use -i argument to choose which integration range to generate notes for.",
+        help="Generate changelogs and statistics and put them in `release_notes_*.txt` files. "
+        + "Use `--in-integration-version` argument to choose which integration range to generate notes for.",
     )
     args = parser.parse_args()
 

@@ -1,6 +1,6 @@
 apipkg==2.1.0
 appdirs==1.4.4
-attrs==21.2.0
+attrs==21.4.0
 bcrypt==3.2.0
 CacheControl==0.12.10
 cached-property==1.5.2
@@ -33,7 +33,7 @@ pathlib2==2.3.6
 pep517==0.9.1
 pluggy==1.0.0
 progress==1.6
-psutil==5.8.0
+psutil==5.9.0
 py==1.11.0
 py3dns==3.2.1
 pycparser==2.21

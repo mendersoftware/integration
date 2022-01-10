@@ -210,6 +210,9 @@ test:staging:integration-tests:
     # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
     - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
     - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    # Login for private repos
+    - docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}
+    - docker login -u ${REGISTRY_MENDER_IO_USERNAME} -p ${REGISTRY_MENDER_IO_PASSWORD} registry.mender.io
 
   script:
     - cd tests

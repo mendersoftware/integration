@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -1279,6 +1279,53 @@ class TestMonitorClientEnterprise:
                     found = True
                     break
             assert found
+
+    def test_monitorclient_remove_old_alerts(self, monitor_commercial_setup_no_client):
+        """Tests the removal of older alerts from the persistent store"""
+        alert_resend_interval_s = 4
+        alert_max_age = 16
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+
+        logger.info(
+            "test_monitorclient_remove_old_alerts: remove old alerts from store scenario."
+        )
+        mender_device.run("sed -i.backup -e '$a127.2.0.1 docker.mender.io' /etc/hosts")
+        mender_device.run("systemctl restart mender-client")
+
+        mender_device.run(
+            "sed -i.backup -e 's/ALERT_STORE_MAX_RECORD_AGE_S=.*/ALERT_STORE_MAX_RECORD_AGE_S="
+            + str(alert_max_age)
+            + "/' "
+            + "-e 's/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S=.*/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S="
+            + str(alert_resend_interval_s)
+            + "/' /usr/share/mender-monitor/config/config.sh"
+        )
+
+        mender_device.run(
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; for i in {1..4}; do fixlenstore_put key${i}; sleep 2; done;'"
+        )
+        mender_device.run("systemctl restart mender-monitor")
+        time.sleep(alert_resend_interval_s)
+        output = mender_device.run(
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; keys_nolock | wc -l;'"
+        )
+        logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
+        assert output == "2\n"
+
+        time.sleep(alert_resend_interval_s)
+        output = mender_device.run(
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; keys_nolock | wc -l;'"
+        )
+        logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
+        assert output == "0\n"
+
+        mender_device.run(
+            "mv /usr/share/mender-monitor/config/config.sh.backup /usr/share/mender-monitor/config/config.sh"
+        )
+        mender_device.run("systemctl restart mender-monitor")
 
     def test_monitorclient_alert_store_discard_http_400(
         self, monitor_commercial_setup_no_client

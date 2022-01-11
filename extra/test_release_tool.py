@@ -545,7 +545,7 @@ def test_generate_release_notes(request, capsys):
         os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"] = "1"
 
         run_main_assert_result(
-            capsys, ["--generate-release-notes", "-i", "3.0.1..3.1.0"], None
+            capsys, ["--generate-release-notes", "-i", "3.0.0..3.1.0"], None
         )
 
         files = []

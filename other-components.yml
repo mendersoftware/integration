@@ -12,3 +12,12 @@ services:
 
     mender-connect:
         image: mendersoftware/mender-connect:master
+
+    mender-binary-delta:
+        image: mendersoftware/mender-binary-delta:master
+
+    mender-convert:
+        image: mendersoftware/mender-convert:master
+
+    mender-configure-module:
+        image: mendersoftware/mender-configure-module:master

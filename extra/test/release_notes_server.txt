@@ -4,17 +4,17 @@ _Released 09.28.2021_
 
 ### Statistics
 
-A total of 14714 lines added, 5947 removed (delta 8767)
+A total of 14721 lines added, 5955 removed (delta 8766)
 
 | Developers with the most changesets | |
 |---|---|
-| Manuel Zedel | 124 (40.4%) |
-| Fabio Tranchitella | 58 (18.9%) |
-| Lluis Campos | 44 (14.3%) |
+| Manuel Zedel | 124 (40.1%) |
+| Fabio Tranchitella | 60 (19.4%) |
+| Lluis Campos | 44 (14.2%) |
 | Alf-Rune Siqveland | 24 (7.8%) |
 | Peter Grzybowski | 17 (5.5%) |
 | Alex Miliukov | 11 (3.6%) |
-| Kristian Amlie | 10 (3.3%) |
+| Kristian Amlie | 10 (3.2%) |
 | Ole Petter Orhagen | 9 (2.9%) |
 | Krzysztof Jaskiewicz | 5 (1.6%) |
 | Marcin Chalczynski | 3 (1.0%) |
@@ -22,7 +22,7 @@ A total of 14714 lines added, 5947 removed (delta 8767)
 | Developers with the most changed lines | |
 |---|---|
 | Manuel Zedel | 5133 (31.9%) |
-| Fabio Tranchitella | 2741 (17.0%) |
+| Fabio Tranchitella | 2749 (17.1%) |
 | Alf-Rune Siqveland | 2280 (14.2%) |
 | Peter Grzybowski | 1424 (8.9%) |
 | Alex Miliukov | 1383 (8.6%) |
@@ -39,13 +39,13 @@ A total of 14714 lines added, 5947 removed (delta 8767)
 
 | Top changeset contributors by employer | |
 |---|---|
-| Northern.tech | 298 (97.1%) |
+| Northern.tech | 300 (97.1%) |
 | RnDity | 8 (2.6%) |
 | prashanthjbabu@gmail.com | 1 (0.3%) |
 
 | Top lines changed by employer | |
 |---|---|
-| Northern.tech | 15189 (94.5%) |
+| Northern.tech | 15197 (94.5%) |
 | RnDity | 890 (5.5%) |
 | prashanthjbabu@gmail.com | 2 (0.0%) |
 
@@ -59,7 +59,7 @@ A total of 14714 lines added, 5947 removed (delta 8767)
 
 #### deployments (4.0.0)
 
-New changes in deployments since 3.0.1:
+New changes in deployments since 3.0.0:
 
 * datastore_mongo: fix nil pointer dereference
 * remove the CORS middleware, rely on the API gateway instead
@@ -172,9 +172,16 @@ New changes in deviceauth since 3.0.0:
       update-type: version-update:semver-minor
     ...
 
+#### deviceconnect (1.2.1)
+
+New changes in deviceconnect since 1.2.0:
+
+* store the correct offset in the recordings control messages
+  ([MEN-4770](https://tracker.mender.io/browse/MEN-4770))
+
 #### gui (3.1.0)
 
-New changes in gui since 3.0.1:
+New changes in gui since 3.0.0:
 
 * added copy capabilities & sha checksum to device authset information
   ([MEN-4791](https://tracker.mender.io/browse/MEN-4791))
@@ -1413,7 +1420,7 @@ New changes in workflows since 2.0.0:
 
 #### integration (3.1.0)
 
-New changes in integration since 3.0.1:
+New changes in integration since 3.0.0:
 
 * update RBAC tests for configuration deployments
   With new, simplified RBAC we do not support any other actions than

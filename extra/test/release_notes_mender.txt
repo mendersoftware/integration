@@ -64,7 +64,7 @@ A total of 588 lines added, 396 removed (delta 192)
 
 #### mender (3.1.0)
 
-New changes in mender since 3.0.1:
+New changes in mender since 3.0.0:
 
 * Fix a bug which could sometimes lead the client to do a
   rollback after it had already committed. This could happen if the

@@ -30,8 +30,22 @@ def aggregate_dependabot_changelogs(entry_list):
     for entry in entry_list:
         if re.search("[Bb]umps? .* from .* to .*", entry):
             if ORGANIZATION not in entry:
-                aggregated_dependabot_changelogs += "\n* " + "\n  ".join(
-                    [s for n, s in enumerate(entry.split("\n")) if s != "" and n != 0]
+                # Get rid of first line, which is a duplicate of the next one,
+                # then strip start and end whitespace, but keep the rest of the
+                # whitespace intact for indentation and line separation
+                # purposes.
+                aggregated_dependabot_changelogs += "\n* " + "\n    ".join(
+                    [
+                        s
+                        for n, s in enumerate(
+                            entry.split("\n", 1)[1].strip().split("\n")
+                        )
+                    ]
+                )
+                # Compress lines with only whitespace. Not really necessary, but
+                # looks better in editors.
+                aggregated_dependabot_changelogs = re.sub(
+                    "\n +\n", "\n\n", aggregated_dependabot_changelogs
                 )
         else:
             new_entry_list.append(entry)
@@ -203,7 +217,7 @@ for repo in repos:
                     continue
 
                 if log_entry:
-                    add_entry(sha, log_entry)
+                    add_entry(sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
@@ -225,7 +239,7 @@ for repo in repos:
             match_changelog = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
             if match_changelog:
                 if log_entry:
-                    add_entry(sha, log_entry)
+                    add_entry(sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
@@ -281,7 +295,7 @@ for repo in repos:
                 match = re.match(cancel_expr, line, re.IGNORECASE)
                 if match:
                     if log_entry:
-                        add_entry(sha, log_entry)
+                        add_entry(sha, log_entry.strip())
                         log_entry = ""
                     log_entry_local = False
 
@@ -301,7 +315,7 @@ for repo in repos:
             )
             if match:
                 if log_entry:
-                    add_entry(sha, log_entry)
+                    add_entry(sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
@@ -320,6 +334,12 @@ for repo in repos:
                 # Ignore such lines.
                 continue
 
+            # Replace lines consisting entirely of `---` and `...` by
+            # "```". These are typically added by dependabot, and render really
+            # badly in Grav Markdown.
+            if line == "---" or line == "...":
+                line = "```"
+
             if log_entry_local:
                 log_entry += "\n" + line
             else:
@@ -330,9 +350,9 @@ for repo in repos:
         blob.wait()
 
         if log_entry_commit:
-            add_entry(sha, commit_msg)
+            add_entry(sha, commit_msg.strip())
         if log_entry:
-            add_entry(sha, log_entry)
+            add_entry(sha, log_entry.strip())
 
     sha_list.wait()
 
@@ -398,11 +418,8 @@ for repo in repos:
         print(service_header)
     for entry in entry_list:
         entry = "* " + entry
-        # Blank lines look bad in changelog because entries don't have blank lines
-        # between them, so remove that from commit messages.
-        entry = re.sub("\n\n+", "\n", entry)
-        # Indent all lines.
-        entry = entry.replace("\n", "\n  ")
+        # Indent all non-empty lines.
+        entry = re.sub(r"\n([^\n])", r"\n  \1", entry)
         print(entry)
     if len(entry_list) > 0:
         print()

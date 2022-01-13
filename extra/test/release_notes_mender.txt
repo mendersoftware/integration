@@ -84,12 +84,14 @@ New changes in mender since 3.0.0:
 * Support passing docker run CLI arguments when deploying
   an artifact using the `docker` _update module_.
 * Implement support for non-U-Boot tool names.
+
   The tools still have to be command line compatible with the U-Boot
   tools (either u-boot-fw-utils or libubootenv), but the names can be
   different. This allows having U-Boot tools installed alongside
   grub-mender-grubenv tools, whose new names are
   `grub-mender-grubenv-set` and `grub-mender-grubenv-print`, instead of
   `fw_setenv` and `fw_printenv`.
+
   The two new configuration settings `BootUtilitiesSetActivePart` and
   `BootUtilitiesGetNextActivePart` have been introduced to configure the
   names. If no names are set, then the default is to try the

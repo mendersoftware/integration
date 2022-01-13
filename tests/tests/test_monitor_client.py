@@ -1068,6 +1068,59 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_logs_and_services: fds count have not increased"
         )
 
+    def test_monitorclient_logs_and_surround(self, monitor_commercial_setup_no_client):
+        """Tests more lines of logs surrounding a line matching a pattern"""
+        user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        inventory = Inventory(auth)
+
+        logger.info(
+            "test_monitorclient_logs_and_surround: lines surrounding a pattern scenario."
+        )
+        log_file = "/tmp/mylog.long.log"
+        log_pattern = "session opened for user \\w+"
+        service_name = "mylog"
+
+        lines_before_count = 64
+        lines_after_count = 64
+        for n in range(lines_before_count - 1):
+            mender_device.run(
+                "echo 'some long line of logs number: " + str(n) + "' >> " + log_file
+            )
+        mender_device.run(
+            "echo 'a new session opened for user root now' >> " + log_file
+        )
+        for n in range(lines_after_count - 1):
+            mender_device.run(
+                "echo 'some long line of logs number: " + str(n) + "' >> " + log_file
+            )
+        prepare_log_monitoring(
+            mender_device, service_name + "-pcre", log_file, log_pattern, use_ctl=True,
+        )
+        time.sleep(wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
+
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client)
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Log file contains "
+            + log_pattern
+            + " on "
+            + devid,
+        )
+        device_monitor = DeviceMonitor(auth)
+        alerts = device_monitor.get_alerts(devid)
+        assert len(alerts) == 1
+        assert len(alerts[0]["subject"]["details"]["lines_before"]) == 30
+        assert len(alerts[0]["subject"]["details"]["lines_after"]) == 30
+
     def test_monitorclient_logs_and_patterns(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting for a Perl compatible regex"""
         user_name = "some.user+{}@example.com".format(str(uuid.uuid4()))

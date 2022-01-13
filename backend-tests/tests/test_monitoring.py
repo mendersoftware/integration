@@ -119,7 +119,9 @@ class _TestMonitoringAlertsBase:
 
         try:
             wait_start = datetime.now()
-            smtp_server.await_messages(len(test_case["alerts"]), ONE_MINUTE_SEC)
+            smtp_server.await_messages(
+                user.name, len(test_case["alerts"]), ONE_MINUTE_SEC
+            )
             wait_time = datetime.now() - wait_start
             # Wait the same amount of time for which we expect
             # to see more messages incomming if there are any.
@@ -129,7 +131,7 @@ class _TestMonitoringAlertsBase:
                 "did not receive the expected number of emails in time (%.0f seconds)"
                 % ONE_MINUTE_SEC
             )
-        messages = smtp_server.messages()
+        messages = smtp_server.filtered_messages(user.name)
         assert len(messages) == len(test_case["alerts"])
 
         regex = test_case.get("email_regex", [])

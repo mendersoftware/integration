@@ -24,6 +24,8 @@ import logging
 
 from threading import Thread, Condition
 
+from redo import retriable
+
 
 class Message:
     def __init__(self, peer, mailfrom, rcpttos, subject, data):
@@ -66,11 +68,8 @@ class SMTPMock:
     def stop(self):
         self.server.close()
 
-    def await_messages(self, n=1, timeout=None) -> None:
+    def await_messages(self, _, n=1, timeout=None) -> None:
         self.server.wait_for_messages(n, timeout)
-
-    def messages(self):
-        return self.server.messages.copy()
 
     def filtered_messages(self, email):
         return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
@@ -96,36 +95,39 @@ class SMTPGmail:
         mail.select("INBOX")
         return mail
 
-    def await_messages(self, n=1, timeout=None):
+    def await_messages(self, email, n=1, timeout=None):
         timeout = int(timeout) if timeout else 60
         for i in range(timeout):
             time.sleep(1)
-            if len(self.messages()) >= n:
+            if len(self.filtered_messages(email)) >= n:
                 break
 
-    def messages(self):
+    @retriable(sleeptime=1, attempts=3)
+    def filtered_messages(self, address):
         mail = self.connect()
         try:
-            type, data = mail.search(None, "ALL")
+            type, data = mail.search(None, "X-GM-RAW \"deliveredto:'%s'\"" % address)
             assert type == "OK"
             messages = []
             mail_ids = data[0].decode("utf-8").split()
             if not mail_ids:
                 return messages
-            for i in range(int(mail_ids[-1]), int(mail_ids[0]) - 1, -1):
+            mail_ids.reverse()
+            for i in mail_ids:
                 type, data = mail.fetch(str(i), "(RFC822)")
                 body = data[0][1]
                 msg = email.message_from_string(body.decode("utf-8"))
-                messages.append(
-                    Message(None, msg["from"], [msg["to"]], msg["subject"], body)
+                if msg["Delivered-To"] != address:
+                    continue
+                messages.append((msg, body))
+            return [
+                Message(None, msg["from"], [msg["to"]], msg["subject"], body)
+                for (msg, body) in sorted(
+                    messages, key=lambda x: x[0]["Date"], reverse=True
                 )
-            return messages
+            ]
         finally:
             mail.close()
-
-    def filtered_messages(self, email):
-        messages = self.messages()
-        return tuple(filter(lambda m: email in m.rcpttos[0], messages))
 
     def assert_called(self, email):
         msgs = self.filtered_messages(email)
@@ -134,20 +136,6 @@ class SMTPGmail:
         assert "@mender.io" in m.mailfrom, m.mailfrom
         assert email in m.rcpttos[0]
         assert len(m.data) > 0
-
-    def clear(self):
-        mail = self.connect()
-        try:
-            type, data = mail.search(None, "ALL")
-            assert type == "OK"
-            mail_ids = data[0].decode("utf-8").split()
-            if not mail_ids:
-                return
-            for i in range(int(mail_ids[-1]), int(mail_ids[0]) - 1, -1):
-                mail.store(str(i), "+FLAGS", "\\Deleted")
-            mail.expunge()
-        finally:
-            mail.close()
 
 
 def smtp_server_gmail():
@@ -165,7 +153,6 @@ def smtp_server_gmail():
 def smtp_server():
     if os.environ.get("GMAIL_ADDRESS"):
         smtp = smtp_server_gmail()
-        smtp.clear()
         yield smtp
         return
     server = SMTPMock()
@@ -176,3 +163,9 @@ def smtp_server():
     server.stop()
     # need to wait for the port to be released
     time.sleep(30)
+
+
+# server = list(smtp_server())[0]
+# messages = server.filtered_messages("ci.email.tests+ae559765-458e-45db-9d2b-2b01135b76c0@mender.io")
+# for m in messages:
+#     print(m)

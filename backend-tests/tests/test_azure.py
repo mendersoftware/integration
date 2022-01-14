@@ -370,7 +370,7 @@ class _TestAzureDeviceLifecycleBase:
         assert rsp.status_code == 200
         conf = rsp.json().get("configured")
         assert len(conf) > 0
-        assert "$azure.connectionString" in conf
+        assert "azureConnectionString" in conf
 
     @retriable(sleeptime=2, attempts=5)
     def _check_if_device_status_is_set_to_value(

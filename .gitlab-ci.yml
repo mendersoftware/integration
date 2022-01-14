@@ -120,6 +120,7 @@ test:staging:backend-tests:
     GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
     GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
     DOCKER_HOST: tcp://docker:2375
+    TESTS_IN_PARALLEL: "4"
 
   before_script:
     - apt update
@@ -178,7 +179,7 @@ test:staging:integration-tests:
     DOCKER_CLIENT_TIMEOUT: 300
     COMPOSE_HTTP_TIMEOUT: 300
     SPECIFIC_INTEGRATION_TEST: "Enterprise"
-    TESTS_IN_PARALLEL: "1"
+    TESTS_IN_PARALLEL: "2"
 
   before_script:
     - unset DOCKER_HOST

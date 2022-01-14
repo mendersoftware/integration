@@ -216,11 +216,11 @@ class Component:
         have Docker images, it will be the git name, which is what is used in
         the other-components.yml file."""
 
-        comps = self.associated_components_of_type("docker_image")
+        comps = self.associated_components_of_type("git")
         if len(comps) == 0:
             # For the fake services that don't have Docker images, but reside in
             # other-components.yml.
-            comps = self.associated_components_of_type("git")
+            comps = self.associated_components_of_type("docker_image")
         for comp in comps:
             comp.type = "yml"
         return comps

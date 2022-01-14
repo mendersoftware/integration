@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -207,8 +207,8 @@ class TestUpdateControlEnterprise:
         longer than the UpdateControlMapExpiration time. This will only pass if
         the client renewes the control map.
         """
-
-        u = User("", "bugs.bunny@acme.org", "whatsupdoc")
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
+        u = User("", user_name, "whatsupdoc")
         cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
         tid = cli.create_org("enterprise-tenant", u.name, u.pwd, "enterprise")
         tenant = cli.get_tenant(tid)

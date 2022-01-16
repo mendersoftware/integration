@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -76,13 +76,13 @@ class TestMultiTenancyEnterprise(MenderTesting):
             {
                 "email": "foo2-%s@example.com" % uuidv4,
                 "password": "hunter2hunter2",
-                "username": "foo2.test.mender.io-" + uuidv4,
+                "username": "test.mender.io-" + uuidv4 + "-foo2",
                 "container": "mender-client-deployment-1",
             },
             {
                 "email": "bar2-%s@example.com" % uuidv4,
                 "password": "hunter2hunter2",
-                "username": "bar2.test.mender.io-" + uuidv4,
+                "username": "test.mender.io-" + uuidv4 + "-bar2",
                 "container": "mender-client-deployment-2",
             },
         ]

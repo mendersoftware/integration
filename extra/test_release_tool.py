@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 SAMPLE_REPOS_BACKEND_BASE = ["deviceconnect", "devicemonitor", "gui", "tenantadm"]
 SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm", "deviceauth"]
 SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
-SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "integration"]
+SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "mender-artifact"]
 SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
 
 
@@ -466,6 +466,21 @@ def test_list_repos(capsys, is_staging):
         assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
     else:
         assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+
+    # release_tool.py --list --all
+    captured = run_main_assert_result(capsys, ["--list", "--all"], None)
+    repos_list = captured.split("\n")
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
+    assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
+    if is_staging:
+        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    else:
+        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    assert "mender-binary-delta" in repos_list
+    assert "mender-convert" in repos_list
+    assert "mender-configure-module" in repos_list
 
 
 def test_list_repos_old_releases(capsys):

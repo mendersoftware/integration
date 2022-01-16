@@ -8,37 +8,37 @@ services:
     # backend open source services
     #
     mender-iot-manager:
-        image: mendersoftware/iot-manager:master
+        image: mendersoftware/iot-manager:1.0.x
 
     mender-deployments:
-        image: mendersoftware/deployments:master
+        image: mendersoftware/deployments:4.1.x
 
     mender-gui:
-        image: mendersoftware/gui:master
+        image: mendersoftware/gui:3.2.x
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:master
+        image: mendersoftware/deviceauth:3.1.x
 
     mender-inventory:
-        image: mendersoftware/inventory:master
+        image: mendersoftware/inventory:4.1.x
 
     mender-useradm:
-        image: mendersoftware/useradm:master
+        image: mendersoftware/useradm:1.17.x
 
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:master
+        image: mendersoftware/deviceconnect:1.3.x
 
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:master
+        image: mendersoftware/deviceconfig:1.2.x
 
     mender-reporting:
         image: mendersoftware/reporting:master
 
     mender-workflows-server:
-        image: mendersoftware/workflows:master
+        image: mendersoftware/workflows:2.2.x
 
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:master
+        image: mendersoftware/workflows-worker:2.2.x
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:master
+        image: mendersoftware/create-artifact-worker:1.1.x

@@ -14,10 +14,10 @@ services:
         image: mendersoftware/mender-connect:1.2.0
 
     mender-binary-delta:
-        image: mendersoftware/mender-binary-delta:master
+        image: mendersoftware/mender-binary-delta:1.3.0
 
     mender-convert:
-        image: mendersoftware/mender-convert:master
+        image: mendersoftware/mender-convert:2.6.0
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:master
+        image: mendersoftware/mender-configure-module:1.0.2

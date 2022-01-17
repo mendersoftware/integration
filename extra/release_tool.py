@@ -2001,16 +2001,22 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
         old.close()
         os.rename(filename + ".tmp", filename)
 
-    for yml in repo.yml_components():
-        compose_files_docker = docker_compose_files_list(dir, "docker")
-        for filename in compose_files_docker:
+    compose_files_docker = docker_compose_files_list(dir, "docker")
+    git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
+    for filename in compose_files_docker:
+        for yml in repo.yml_components():
             _replace_version_in_file(filename, yml.yml(), tag)
 
-        if git_tag is not None:
-            for filename in docker_compose_files_list(dir, "git"):
-                # Avoid rewriting duplicated files (client and other-components)
-                if filename not in compose_files_docker:
-                    _replace_version_in_file(filename, yml.yml(), git_tag)
+    if git_tag is not None:
+        for filename in git_files:
+            for yml in repo.yml_components():
+                # backend repositories use the full qualified Docker image name
+                _replace_version_in_file(filename, yml.yml(), git_tag)
+            if repo.type == "git":
+                # client repositories use "mendersoftware/<repo>"
+                _replace_version_in_file(
+                    filename, "mendersoftware/" + repo.git(), git_tag
+                )
 
 
 def purge_build_tags(state, tag_avail):

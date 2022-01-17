@@ -29,10 +29,10 @@ RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
 INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 
 # Samples of the different "types" of repos for listing tests
-SAMPLE_REPOS_BACKEND_BASE = ["deviceconnect", "devicemonitor", "gui", "tenantadm"]
+SAMPLE_REPOS_BASE = ["deviceconnect", "gui", "tenantadm", "mender", "mender-connect"]
 SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm", "deviceauth"]
 SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
-SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "mender-artifact"]
+SAMPLE_REPOS_NON_BACKEND = ["mender-cli", "mender-artifact", "mender-convert"]
 SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
 
 
@@ -385,7 +385,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # standard query (only_release=None)
     repos_comp = Component.get_components_of_type("git")
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -397,7 +397,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # only_release=False
     repos_comp = Component.get_components_of_type("git", only_release=False)
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -406,7 +406,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # only_non_release=True
     repos_comp = Component.get_components_of_type("git", only_non_release=True)
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -420,7 +420,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
         "git", only_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -431,7 +431,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
         "git", only_non_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -446,7 +446,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list
     captured = run_main_assert_result(capsys, ["--list"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
@@ -458,7 +458,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list --only-backend
     captured = run_main_assert_result(capsys, ["--list", "--only-backend"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
@@ -470,7 +470,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list --all
     captured = run_main_assert_result(capsys, ["--list", "--all"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])

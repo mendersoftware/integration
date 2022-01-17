@@ -260,11 +260,68 @@ def test_version_of_with_in_integration_version(capsys):
         "1.7.0",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-connect", "--in-integration-version", "3.1.0",],
+        "1.2.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender", "--in-integration-version", "3.1.0",],
+        "3.1.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "monitor-client", "--in-integration-version", "3.1.0",],
+        "1.0.0",
+    )
+
     # Ranges
     run_main_assert_result(
         capsys,
         ["--version-of", "inventory", "--in-integration-version", "3.0.1..3.1.0",],
         "3.0.0..4.0.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "mender-connect",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "1.2.0..master",
+    )
+
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "mender-configure-module",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "master",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
+        "3.1.0..master",
+    )
+
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "monitor-client",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "1.0.0..master",
     )
 
 

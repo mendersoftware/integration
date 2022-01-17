@@ -225,11 +225,11 @@ class Component:
         have Docker images, it will be the git name, which is what is used in
         the other-components.yml file."""
 
-        comps = self.associated_components_of_type("docker_image")
+        comps = self.associated_components_of_type("git")
         if len(comps) == 0:
             # For the fake services that don't have Docker images, but reside in
             # other-components.yml.
-            comps = self.associated_components_of_type("git")
+            comps = self.associated_components_of_type("docker_image")
         for comp in comps:
             comp.type = "yml"
         return comps
@@ -513,6 +513,55 @@ def get_docker_compose_data_from_json_list(json_list):
     return data
 
 
+def version_specific_docker_compose_data_patching(data, rev):
+    """This is a function which is unfortunately needed to patch legacy docker
+    compose data which exists in tags. This data is incorrect, but cannot be
+    fixed because they are tags.
+
+    The problem is this: The yml_components() function was changed to query
+    "git" components first, instead of "docker_image" components, as part of
+    introducing N-to-N mapping between docker images and git repos
+    (QA-344). After this it became impossible to query the mender and
+    monitor-client components, and the reason is that they're missing mappings
+    in the docker compose data. This went unnoticed before QA-344 because it
+    ended up querying the docker image instead, which has the same version. But
+    this is not true anymore.
+
+    Therefore, we patch in this modification below, since we cannot fix the
+    tags. Yes, this is ugly, but at least it's confined to versions below
+    3.2.0."""
+
+    last_comp = rev.split("/")[-1]
+    if re.match(r"^[0-9]+\.[0-9]\.", last_comp) is None:
+        # Not a recognized version, assume it's recent in which no change
+        # needed.
+        return data
+
+    major, minor, patch = last_comp.split(".", 2)
+    if int(major) > 3 or (int(major) == 3 and int(minor) > 1):
+        return data
+
+    # We need to insert these entries, which may be missing ("may be" because we
+    # don't check explicitly for more recent release branches or tags).
+    if data.get("mender") is None:
+        data["mender"] = {
+            "container": "mender",
+            "image_prefix": "mendersoftware/",
+            # In all versions < 3.2, mender-client-qemu version == mender version.
+            "version": data["mender-client-qemu"]["version"],
+        }
+
+    if last_comp.startswith("3.1.") and data.get("monitor-client") is None:
+        data["monitor-client"] = {
+            "container": "monitor-client",
+            "image_prefix": "mendersoftware/",
+            # Only monitor-client 1.0.x had this problem, so we can hardcode it.
+            "version": "1.0.%s" % patch,
+        }
+
+    return data
+
+
 def get_docker_compose_data(dir, version="git"):
     """Return docker-compose data from all the YML files in the directory.
     See get_docker_compose_data_from_json_list."""
@@ -540,7 +589,8 @@ def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
             )
             yamls.append(output)
 
-        return get_docker_compose_data_from_json_list(yamls)
+        data = get_docker_compose_data_from_json_list(yamls)
+        return version_specific_docker_compose_data_patching(data, rev)
     except Exception as ex:
         raise Exception("Cannot get docker-compose data for %s" % rev) from ex
 

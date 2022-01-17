@@ -6,6 +6,28 @@
 
 git:
 
+  mender-convert:
+    docker_image: []
+    docker_container: []
+    release_component: true
+    independent_component: true
+    non_core_component: true
+
+  mender-binary-delta:
+    docker_image: []
+    docker_container: []
+    release_component: true
+    independent_component: true
+    non_core_component: true
+
+  mender-configure-module:
+    docker_image:
+    - mender-client-docker-addons
+    docker_container: []
+    release_component: true
+    independent_component: true
+    non_core_component: true
+
   iot-manager:
     docker_image:
     - iot-manager
@@ -55,11 +77,14 @@ git:
 
   integration:
     docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
     - mender-client-docker-addons
+    - mender-monitor-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
-    independent_component: true
+    independent_component: false
 
   inventory:
     docker_image:
@@ -77,9 +102,11 @@ git:
 
   mender:
     docker_image:
-    - mender-client-docker
     - mender-client-qemu
     - mender-client-qemu-rofs
+    - mender-client-docker
+    - mender-client-docker-addons
+    - mender-monitor-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
@@ -197,8 +224,13 @@ git:
     release_component: true
 
   mender-connect:
-    docker_image: []
-    docker_container: []
+    docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
+    - mender-client-docker-addons
+    - mender-monitor-qemu-commercial
+    docker_container:
+      - mender-client
     release_component: true
     independent_component: true
 
@@ -222,7 +254,7 @@ git:
     - reporting
     docker_container:
     - mender-reporting
-    release_component: true
+    release_component: false
 
 docker_image:
 
@@ -292,20 +324,27 @@ docker_image:
   mender-client-docker-addons:
     git:
     - integration
+    - mender
+    - mender-connect
+    - mender-configure-module
     docker_container:
     - mender-client
     release_component: true
 
   mender-client-qemu:
     git:
+    - integration
     - mender
+    - mender-connect
     docker_container:
     - mender-client
     release_component: true
 
   mender-client-qemu-rofs:
     git:
+    - integration
     - mender
+    - mender-connect
     docker_container:
     - mender-client
     release_component: true
@@ -377,7 +416,7 @@ docker_image:
     git:
     - workflows-enterprise
     docker_container:
-    - mender-workflows
+    - mender-workflows-server
     release_component: true
 
   workflows-worker:
@@ -438,7 +477,10 @@ docker_image:
 
   mender-monitor-qemu-commercial:
     git:
+    - integration
     - monitor-client
+    - mender
+    - mender-connect
     docker_container:
     - mender-client
     release_component: true
@@ -448,7 +490,7 @@ docker_image:
     - reporting
     docker_container:
     - mender-reporting
-    release_component: true
+    release_component: false
 
 docker_container:
 
@@ -489,8 +531,10 @@ docker_container:
 
   mender-client:
     git:
+    - integration
     - mender
     - monitor-client
+    - mender-connect
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons
@@ -604,4 +648,4 @@ docker_container:
     - reporting
     docker_image:
     - reporting
-    release_component: true
+    release_component: false

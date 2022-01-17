@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,8 +32,7 @@ from testutils.common import (
     mongo,
 )
 from testutils.infra.cli import CliUseradm, CliDeviceauth, CliDeviceMonitor
-from testutils.infra.container_manager.kubernetes_manager import isK8S
-from testutils.infra.smtpd_mock import smtp_mock
+from testutils.infra.smtpd_mock import smtp_server
 
 
 @pytest.fixture(scope="function")
@@ -51,7 +50,7 @@ def tenants_users(clean_migrated_mongo):
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
             "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
+            "ci.email.tests+" + uuidv4 + "@mender.io",
             "secretsecret",
         )
         tenants.append(create_org(tenant, username, password))
@@ -111,7 +110,7 @@ class _TestMonitoringAlertsBase:
     devmond = ApiClient(devicemonitor.URL_DEVICES)
     invm = ApiClient(inventory.URL_MGMT)
 
-    def test_alerting_email(self, test_case, user, devices, smtp_mock):
+    def test_alerting_email(self, test_case, user, devices, smtp_server):
         device = devices.pop(1)
         r = self.devmond.with_auth(device.token).call(
             "POST", devicemonitor.URL_ALERT, test_case["alerts"],
@@ -120,7 +119,9 @@ class _TestMonitoringAlertsBase:
 
         try:
             wait_start = datetime.now()
-            smtp_mock.await_messages(len(test_case["alerts"]), ONE_MINUTE_SEC)
+            smtp_server.await_messages(
+                user.name, len(test_case["alerts"]), ONE_MINUTE_SEC
+            )
             wait_time = datetime.now() - wait_start
             # Wait the same amount of time for which we expect
             # to see more messages incomming if there are any.
@@ -130,7 +131,7 @@ class _TestMonitoringAlertsBase:
                 "did not receive the expected number of emails in time (%.0f seconds)"
                 % ONE_MINUTE_SEC
             )
-        messages = smtp_mock.messages()
+        messages = smtp_server.filtered_messages(user.name)
         assert len(messages) == len(test_case["alerts"])
 
         regex = test_case.get("email_regex", [])
@@ -166,9 +167,6 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
     useradm = ApiClient(useradm.URL_MGMT)
     devmonit = ApiClient(devicemonitor.URL_DEVICES)
 
-    @pytest.mark.skipif(
-        isK8S(), reason="no suitable smtp mock in staging environment",
-    )
     @pytest.mark.parametrize(
         argnames="test_case",
         argvalues=(
@@ -233,7 +231,7 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
         ),
         ids=["CRITICAL alert", "CRITICAL and OK alerts"],
     )
-    def test_alerting_email(self, test_case, tenants_users_devices, smtp_mock):
+    def test_alerting_email(self, test_case, tenants_users_devices, smtp_server):
         """
         Checks that each alert a device issues to the backend triggers
         an email sent to the user.
@@ -241,4 +239,4 @@ class TestMonitoringAlertsEnterprise(_TestMonitoringAlertsBase):
         tenant = tenants_users_devices[0]
         user = tenant.users[0]
         devices = tenant.devices
-        super().test_alerting_email(test_case, user, devices, smtp_mock)
+        super().test_alerting_email(test_case, user, devices, smtp_server)

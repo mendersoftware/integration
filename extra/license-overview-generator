@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 # Only do basic checks on these.
-OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'monitor-client' ]
+OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'monitor-client', 'mender-binary-delta', 'mender-configure-module', 'mender-convert' ]
 # We don't currently care about these.
 IGNORE_REPOS = [ ]
 

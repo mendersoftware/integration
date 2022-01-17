@@ -102,11 +102,6 @@ class Component:
             )
         return self.name
 
-    def yml(self):
-        if self.type != "yml":
-            raise Exception("Tried to get yml name from non-yml component")
-        return self.name
-
     def set_custom_component_maps(self, maps):
         # Set local maps for this object only.
         self.COMPONENT_MAPS = maps
@@ -218,21 +213,6 @@ class Component:
                 "No such combination: Component '%s' of type %s doesn't have any associated components of type %s"
                 % (self.name, self.type, type)
             )
-
-    def yml_components(self):
-        """Returns the name of the service in our YML docker-compose files. This is
-        usually the same as the docker_image name, but for services that don't
-        have Docker images, it will be the git name, which is what is used in
-        the other-components.yml file."""
-
-        comps = self.associated_components_of_type("git")
-        if len(comps) == 0:
-            # For the fake services that don't have Docker images, but reside in
-            # other-components.yml.
-            comps = self.associated_components_of_type("docker_image")
-        for comp in comps:
-            comp.type = "yml"
-        return comps
 
     def is_release_component(self):
         Component._initialize_component_maps()
@@ -596,10 +576,24 @@ def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
 
 
 def version_of(
-    integration_dir, yml_component, in_integration_version=None, git_version=True
+    integration_dir, component, in_integration_version=None, git_version=True
 ):
-    if yml_component.yml() in ["mender-client-docker-addons", "integration"]:
-        # "mender-client-docker-addons" is the Docker image from "integration".
+    git_components = component.associated_components_of_type("git")
+    docker_components = component.associated_components_of_type("docker_image")
+    if git_version:
+        if len(git_components) != 1:
+            raise Exception(
+                f"Component {component.name} (type: {component.type}) can not be mapped to a single git component, so its version is ambiguous"
+            )
+        image_name = git_components[0].git()
+    else:
+        if len(docker_components) != 1:
+            raise Exception(
+                f"Component {component.name} (type: {component.type}) can not be mapped to a single docker component, so its version is ambiguous"
+            )
+        image_name = docker_components[0].docker_image()
+
+    if git_components[0].git() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -660,14 +654,14 @@ def version_of(
                 data = get_docker_compose_data_for_rev(integration_dir, rev, "git")
                 # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
                 # would be missing the backend components. Try loading the old "docker" versions.
-                if data.get(yml_component.yml()) is None:
+                if data.get(image_name) is None:
                     data = get_docker_compose_data_for_rev(
                         integration_dir, rev, "docker"
                     )
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
-            if data.get(yml_component.yml()) is not None:
-                version = data[yml_component.yml()]["version"]
+            if data.get(image_name) is not None:
+                version = data[image_name]["version"]
                 # If it is a tag, do not prepend remote name
                 if re.search(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
                     repo_range.append(version)
@@ -679,20 +673,19 @@ def version_of(
             data = get_docker_compose_data(integration_dir, "docker")
         else:
             data = get_docker_compose_data(integration_dir, "git")
-        return data[yml_component.yml()]["version"]
+        return data[image_name]["version"]
 
 
 def do_version_of(args):
     """Process --version-of argument."""
 
+    comp = None
     try:
         Component.set_integration_version(args.in_integration_version)
         comp = Component.get_component_of_any_type(args.version_of)
     except KeyError:
         print("Unrecognized repository: %s" % args.version_of)
         sys.exit(1)
-
-    yml_component = comp.yml_components()[0]
 
     assert args.version_type in ["docker", "git"], (
         "%s is not a valid name type!" % args.version_type
@@ -701,7 +694,7 @@ def do_version_of(args):
     print(
         version_of(
             integration_dir(),
-            yml_component,
+            comp,
             args.in_integration_version,
             git_version=(args.version_type == "git"),
         )
@@ -742,7 +735,7 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         try:
             repos_versions_dict[repo.name] = version_of(
                 integration_dir(),
-                repo.yml_components()[0],
+                repo,
                 args.in_integration_version,
                 git_version=(args.list == "git"),
             )
@@ -1451,7 +1444,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 try:
                     prev_repo_version = version_of(
                         os.path.join(state["repo_dir"], "integration"),
-                        repo.yml_components()[0],
+                        repo,
                         in_integration_version=prev_version,
                     )
                 except KeyError:
@@ -1926,19 +1919,19 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
     compose_files_docker = docker_compose_files_list(dir, "docker")
     git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
     for filename in compose_files_docker:
-        for yml in repo.yml_components():
-            _replace_version_in_file(filename, yml.yml(), tag)
+        for comp in repo.associated_components_of_type("docker_image"):
+            _replace_version_in_file(filename, comp.docker_image(), tag)
+        for comp in repo.associated_components_of_type("git"):
+            _replace_version_in_file(filename, comp.git(), tag)
 
     if git_tag is not None:
         for filename in git_files:
-            for yml in repo.yml_components():
+            for comp in repo.associated_components_of_type("docker_image"):
                 # backend repositories use the full qualified Docker image name
-                _replace_version_in_file(filename, yml.yml(), git_tag)
-            if repo.type == "git":
-                # client repositories use "mendersoftware/<repo>"
-                _replace_version_in_file(
-                    filename, "mendersoftware/" + repo.git(), git_tag
-                )
+                _replace_version_in_file(filename, comp.docker_image(), git_tag)
+            for comp in repo.associated_components_of_type("git"):
+                # backend repositories use the full qualified Docker image name
+                _replace_version_in_file(filename, comp.git(), git_tag)
 
 
 def purge_build_tags(state, tag_avail):
@@ -2356,9 +2349,7 @@ def do_build(args):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
-                version = version_of(
-                    integration_dir(), repo.yml_components()[0], args.build
-                )
+                version = version_of(integration_dir(), repo, args.build)
                 update_state(state, [repo.git(), "version"], version)
         tag_avail = check_tag_availability(state)
         for repo in Component.get_components_of_type("git"):
@@ -2411,9 +2402,7 @@ def determine_version_to_include_in_release(state, repo):
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
         prev_of_repo = version_of(
-            integration_dir(),
-            repo.yml_components()[0],
-            in_integration_version=prev_of_integration,
+            integration_dir(), repo, in_integration_version=prev_of_integration,
         )
         if overall_beta is not None:
             (major, minor, patch, _) = version_components(prev_of_repo)
@@ -2610,14 +2599,10 @@ def do_generate_release_notes(
         if repo.git() == "integration":
             continue
         version = version_of(
-            integration_dir(),
-            repo.yml_components()[0],
-            in_integration_version=version_of_integration,
+            integration_dir(), repo, in_integration_version=version_of_integration,
         )
         prev_version = version_of(
-            integration_dir(),
-            repo.yml_components()[0],
-            in_integration_version=prev_of_integration,
+            integration_dir(), repo, in_integration_version=prev_of_integration,
         )
         workdir = os.path.join(base_dir, repo.git())
         output_file = "release_notes_%s.txt" % repo.git()
@@ -2921,13 +2906,16 @@ def do_integration_versions_including(args):
         data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
         # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
         # would be missing the backend components. Try loading the old "docker" versions.
-        if data.get(repo.yml_components()[0].yml()) is None:
+        docker_image = repo.associated_components_of_type("docker_image")[
+            0
+        ].docker_image()
+        if data.get(docker_image) is None:
             data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
-            version = data[repo.yml_components()[0].yml()]["version"]
+            version = data[docker_image]["version"]
         except KeyError:
-            # Key repo.yml_components()[0] doesn't exist because the version is
-            # from before that component existed.
+            # Key docker_image doesn't exist because the version is from before
+            # that component existed.
             # Not a match.
             continue
 
@@ -3073,10 +3061,12 @@ def do_hosted_release(version=None):
     for non_backend_comp in Component.get_components_of_type(
         "git", only_independent_component=True
     ):
-        yml_component = non_backend_comp.yml_components()[0]
+        docker_component = non_backend_comp.associated_components_of_type(
+            "docker_image"
+        )[0]
 
         non_backend_versions[non_backend_comp.git()] = version_of(
-            integration_dir(), yml_component
+            integration_dir(), docker_component
         )
 
     # Figure out Git sha for the tags

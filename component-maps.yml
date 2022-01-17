@@ -416,7 +416,7 @@ docker_image:
     git:
     - workflows-enterprise
     docker_container:
-    - mender-workflows
+    - mender-workflows-server
     release_component: true
 
   workflows-worker:

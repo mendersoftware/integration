@@ -474,10 +474,7 @@ def test_list_repos(capsys, is_staging):
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
-    if is_staging:
-        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
-    else:
-        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
     assert "mender-binary-delta" in repos_list
     assert "mender-convert" in repos_list
     assert "mender-configure-module" in repos_list

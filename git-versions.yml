@@ -31,9 +31,6 @@ services:
     mender-deviceconfig:
         image: mendersoftware/deviceconfig:1.2.x
 
-    mender-reporting:
-        image: mendersoftware/reporting:master
-
     mender-workflows-server:
         image: mendersoftware/workflows:2.2.x
 

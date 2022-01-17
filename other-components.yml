@@ -20,4 +20,4 @@ services:
         image: mendersoftware/mender-convert:2.6.x
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:master
+        image: mendersoftware/mender-configure-module:1.0.x

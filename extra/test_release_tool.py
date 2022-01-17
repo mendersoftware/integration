@@ -78,7 +78,7 @@ def master_yml_files(request):
         with open(filename, "w") as fd:
             fd.write(
                 re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender\-client\-.+|mender-artifact|mender-cli).+):.*",
+                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli).+):.*",
                     r"image: \g<1>/\g<2>:mender-master",
                     full_content,
                 )
@@ -88,7 +88,7 @@ def master_yml_files(request):
         with open(filename, "w") as fd:
             fd.write(
                 re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/(mender\-client\-.+|mender-artifact|mender-cli):.*",
+                    r"image:\s+(mendersoftware|.*mender\.io)/(mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli):.*",
                     r"image: \g<1>/\g<2>:master",
                     full_content,
                 )
@@ -142,25 +142,73 @@ def test_version_of(capsys):
         capsys, ["--version-of", "gui", "--version-type", "git"], "master"
     )
 
-    # For an independent component, it should still accept docker/git type of the query
+    # Querying mender with version-type docker should error, since it maps to
+    # multiple containers and we don't know which one to choose.
     run_main_assert_result(capsys, ["--version-of", "mender"], "master")
-    run_main_assert_result(
-        capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
-    )
+    try:
+        run_main_assert_result(
+            capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys, ["--version-of", "mender", "--version-type", "git"], "master"
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
+
+    # For an independent component, it should also error because it doesn't have
+    # a Docker image.
+    run_main_assert_result(capsys, ["--version-of", "mender-binary-delta"], "master")
+    try:
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-binary-delta", "--version-type", "docker"],
+            "master",
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-binary-delta", "--version-type", "git"],
+        "master",
+    )
+
+    # For a backend component, it should work for either
+    run_main_assert_result(capsys, ["--version-of", "inventory"], "master")
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--version-type", "docker"],
+        "mender-master",
+    )
+    run_main_assert_result(
+        capsys, ["--version-of", "inventory", "--version-type", "git"], "master"
+    )
+
+    # This cannot be mapped to a single git repo, so it should fail.
+    try:
+        run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-client-qemu", "--version-type", "docker"],
         "master",
     )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "mender-client-qemu", "--version-type", "git"],
-        "master",
-    )
+    try:
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-client-qemu", "--version-type", "git"],
+            "master",
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
 
     # Manually modifying the Git version:
     filename = os.path.join(INTEGRATION_DIR, "git-versions.yml")
@@ -342,15 +390,22 @@ def test_set_version_of(capsys, is_staging):
     run_main_assert_result(
         capsys, ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"]
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-deployments"], "4.5.6-test")
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender-deployments", "--version-type", "docker"],
+        ["--version-of", "deployments", "--version-type", "docker"],
         "4.5.6-test",
     )
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender-deployments", "--version-type", "git"],
+        ["--version-of", "deployments-enterprise", "--version-type", "docker"],
+        "4.5.6-test",
+    )
+    run_main_assert_result(
+        capsys, ["--version-of", "deployments", "--version-type", "git"], "4.5.6-test",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "deployments-enterprise", "--version-type", "git"],
         "4.5.6-test",
     )
     # NOTE: skip check for OS flavor for branches without it (namely staging)

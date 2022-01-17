@@ -1,4 +1,4 @@
-# This file lists software components that are part of a Mender Enterprise release
+# This file lists backend software components that are part of a Mender Enterprise release
 # which are published with the global Mender product version. The versions here
 # therefore point to the internal Git tags/branches. We keep this information as a
 # docker-compose YAML file for parsing purposes.

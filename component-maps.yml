@@ -80,10 +80,7 @@ git:
 
   integration:
     docker_image:
-    - mender-client-qemu
-    - mender-client-qemu-rofs
     - mender-client-docker-addons
-    - mender-monitor-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
@@ -336,7 +333,6 @@ docker_image:
 
   mender-client-qemu:
     git:
-    - integration
     - mender
     - mender-connect
     docker_container:
@@ -345,7 +341,6 @@ docker_image:
 
   mender-client-qemu-rofs:
     git:
-    - integration
     - mender
     - mender-connect
     docker_container:
@@ -480,7 +475,6 @@ docker_image:
 
   mender-monitor-qemu-commercial:
     git:
-    - integration
     - monitor-client
     - mender
     - mender-connect

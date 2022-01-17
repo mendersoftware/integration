@@ -23,7 +23,7 @@ html5lib==1.1
 idna==3.3
 iniconfig==1.1.1
 invoke==1.6.0
-jsonschema==3.2.0
+jsonschema==4.4.0
 lockfile==0.12.2
 msgpack==1.0.3
 ordered-set==4.0.2

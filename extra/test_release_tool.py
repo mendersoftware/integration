@@ -145,14 +145,10 @@ def test_version_of(capsys):
     # Querying mender with version-type docker should error, since it maps to
     # multiple containers and we don't know which one to choose.
     run_main_assert_result(capsys, ["--version-of", "mender"], "master")
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys, ["--version-of", "mender", "--version-type", "git"], "master"
     )
@@ -160,16 +156,12 @@ def test_version_of(capsys):
     # For an independent component, it should also error because it doesn't have
     # a Docker image.
     run_main_assert_result(capsys, ["--version-of", "mender-binary-delta"], "master")
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys,
             ["--version-of", "mender-binary-delta", "--version-type", "docker"],
             "master",
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-binary-delta", "--version-type", "git"],
@@ -188,27 +180,19 @@ def test_version_of(capsys):
     )
 
     # This cannot be mapped to a single git repo, so it should fail.
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-client-qemu", "--version-type", "docker"],
         "master",
     )
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys,
             ["--version-of", "mender-client-qemu", "--version-type", "git"],
             "master",
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
 
     # Manually modifying the Git version:
     filename = os.path.join(INTEGRATION_DIR, "git-versions.yml")

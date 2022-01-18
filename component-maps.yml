@@ -22,10 +22,13 @@ git:
 
   mender-configure-module:
     docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
     - mender-client-docker-addons
+    - mender-monitor-qemu-commercial
     docker_container: []
     release_component: true
-    independent_component: true
+    independent_component: false
     non_core_component: true
 
   iot-manager:
@@ -77,10 +80,7 @@ git:
 
   integration:
     docker_image:
-    - mender-client-qemu
-    - mender-client-qemu-rofs
     - mender-client-docker-addons
-    - mender-monitor-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
@@ -110,7 +110,7 @@ git:
     docker_container:
     - mender-client
     release_component: true
-    independent_component: true
+    independent_component: false
 
   mender-api-gateway-docker:
     docker_image:
@@ -232,7 +232,7 @@ git:
     docker_container:
       - mender-client
     release_component: true
-    independent_component: true
+    independent_component: false
 
   deviceconfig:
     docker_image:
@@ -247,7 +247,7 @@ git:
     docker_container:
     - mender-client
     release_component: true
-    independent_component: true
+    independent_component: false
 
   reporting:
     docker_image:
@@ -333,7 +333,6 @@ docker_image:
 
   mender-client-qemu:
     git:
-    - integration
     - mender
     - mender-connect
     docker_container:
@@ -342,7 +341,6 @@ docker_image:
 
   mender-client-qemu-rofs:
     git:
-    - integration
     - mender
     - mender-connect
     docker_container:
@@ -477,7 +475,6 @@ docker_image:
 
   mender-monitor-qemu-commercial:
     git:
-    - integration
     - monitor-client
     - mender
     - mender-connect

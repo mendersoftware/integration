@@ -339,22 +339,22 @@ def test_version_of_with_in_integration_version(capsys):
         "master",
     )
 
-    # run_main_assert_result(
-    #     capsys,
-    #     ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
-    #     "3.1.0..master",
-    # )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
+        "3.1.0..master",
+    )
 
-    # run_main_assert_result(
-    #     capsys,
-    #     [
-    #         "--version-of",
-    #         "monitor-client",
-    #         "--in-integration-version",
-    #         "3.1.0..master",
-    #     ],
-    #     "1.0.0..master",
-    # )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "monitor-client",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "1.0.0..master",
+    )
 
 
 def test_set_version_of(capsys, is_staging):

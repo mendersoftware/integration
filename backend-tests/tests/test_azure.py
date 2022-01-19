@@ -117,9 +117,19 @@ class _TestAzureBase:
         # Check for equality by parts:
         # Check that actual properties are a subset of expected integrations
         for part in actual.split(";"):
+            # SharedAccessKey will be masked, with only the first 4 characters visible
+            # and the rest of the string replaced with a place holder. For this reason,
+            # we'll test the first 20 bytes only
+            if part.startswith("SharedAccessKey="):
+                part = part[:20]
             assert part in expected_integration["credentials"]["connection_string"]
         # Check that expected properties are a subset of actual integrations
         for part in expected_integration["credentials"]["connection_string"].split(";"):
+            # SharedAccessKey will be masked, with only the first 4 characters visible
+            # and the rest of the string replaced with a place holder. For this reason,
+            # we'll test the first 20 bytes only
+            if part.startswith("SharedAccessKey="):
+                part = part[:20]
             assert part in actual
 
 

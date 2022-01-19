@@ -56,68 +56,6 @@ def is_staging():
         return not any(c in non_staging_components for c in content["services"])
 
 
-@pytest.fixture(scope="function", autouse=True)
-def master_yml_files(request):
-    """Edit all yml files setting them to 'master'/'mender-master' versions
-
-    So that the tests can be run from any branch or with any
-    local changes in the yml files. The files are restored after
-    the test run.
-    """
-
-    docker_files = docker_compose_files_list(INTEGRATION_DIR, "docker")
-    for filename in docker_files:
-        shutil.copyfile(filename, filename + ".bkp")
-    for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
-        if filename not in docker_files:
-            shutil.copyfile(filename, filename + ".bkp")
-
-    for filename in docker_files:
-        with open(filename) as fd:
-            full_content = "".join(fd.readlines())
-        with open(filename, "w") as fd:
-            fd.write(
-                re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli).+):.*",
-                    r"image: \g<1>/\g<2>:mender-master",
-                    full_content,
-                )
-            )
-        with open(filename) as fd:
-            full_content = "".join(fd.readlines())
-        with open(filename, "w") as fd:
-            fd.write(
-                re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/(mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli):.*",
-                    r"image: \g<1>/\g<2>:master",
-                    full_content,
-                )
-            )
-
-    for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
-        if filename not in docker_files:
-            with open(filename) as fd:
-                full_content = "".join(fd.readlines())
-            with open(filename, "w") as fd:
-                fd.write(
-                    re.sub(
-                        r"image:\s+(mendersoftware|.*mender\.io)/(.+):.*",
-                        r"image: \g<1>/\g<2>:master",
-                        full_content,
-                    )
-                )
-
-    def restore():
-        docker_files = docker_compose_files_list(INTEGRATION_DIR, "docker")
-        for filename in docker_files:
-            os.rename(filename + ".bkp", filename)
-        for filename in docker_compose_files_list(INTEGRATION_DIR, "git"):
-            if filename not in docker_files:
-                os.rename(filename + ".bkp", filename)
-
-    request.addfinalizer(restore)
-
-
 def run_main_assert_result(capsys, args, expect=None):
     testargs = [RELEASE_TOOL] + args
     with patch.object(sys, "argv", testargs):
@@ -133,6 +71,13 @@ def run_main_assert_result(capsys, args, expect=None):
 
 
 def test_version_of(capsys):
+    with open(os.path.join(INTEGRATION_DIR, "docker-compose.yml")) as fd:
+        content = fd.read()
+        assert "mendersoftware/gui:" in content
+        if re.search("mendersoftware/gui:.*master", content) is None:
+            # Skip this test for non-master branches.
+            pytest.skip("This test requires master tags in the docker-compose files.")
+
     # On a clean checkout, both will be master
     run_main_assert_result(capsys, ["--version-of", "gui"], "master")
     run_main_assert_result(
@@ -145,14 +90,10 @@ def test_version_of(capsys):
     # Querying mender with version-type docker should error, since it maps to
     # multiple containers and we don't know which one to choose.
     run_main_assert_result(capsys, ["--version-of", "mender"], "master")
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys, ["--version-of", "mender", "--version-type", "git"], "master"
     )
@@ -160,16 +101,12 @@ def test_version_of(capsys):
     # For an independent component, it should also error because it doesn't have
     # a Docker image.
     run_main_assert_result(capsys, ["--version-of", "mender-binary-delta"], "master")
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys,
             ["--version-of", "mender-binary-delta", "--version-type", "docker"],
             "master",
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-binary-delta", "--version-type", "git"],
@@ -188,60 +125,93 @@ def test_version_of(capsys):
     )
 
     # This cannot be mapped to a single git repo, so it should fail.
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-client-qemu", "--version-type", "docker"],
-        "master",
+        "mender-master",
     )
-    try:
+    with pytest.raises(Exception):
         run_main_assert_result(
             capsys,
             ["--version-of", "mender-client-qemu", "--version-type", "git"],
             "master",
         )
-    except:
-        pass
-    else:
-        pytest.fail("Expected exception!")
 
-    # Manually modifying the Git version:
-    filename = os.path.join(INTEGRATION_DIR, "git-versions.yml")
-    with open(filename, "w") as fd:
-        fd.write(
-            """services:
+    try:
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "git-versions.yml"),
+            os.path.join(INTEGRATION_DIR, "git-versions.yml.bkp"),
+        )
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml.bkp"),
+        )
+
+        # Manually modifying the Git version:
+        filename = os.path.join(INTEGRATION_DIR, "git-versions.yml")
+        with open(filename, "w") as fd:
+            fd.write(
+                """services:
     mender-gui:
         image: mendersoftware/gui:1.2.3-git
 """
+            )
+        run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-git")
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "gui", "--version-type", "docker"],
+            "mender-master",
         )
-    run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-git")
-    run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "docker"], "mender-master",
-    )
-    run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-git"
-    )
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-git"
+        )
 
-    # Manually modifying the Docker version:
-    filename = os.path.join(INTEGRATION_DIR, "docker-compose.yml")
-    with open(filename, "w") as fd:
-        fd.write(
-            """services:
+        # Manually modifying the Docker version:
+        filename = os.path.join(INTEGRATION_DIR, "docker-compose.yml")
+        with open(filename, "w") as fd:
+            fd.write(
+                """services:
     mender-gui:
         image: mendersoftware/gui:4.5.6-docker
 """
+            )
+        run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-git")
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "docker"], "4.5.6-docker",
         )
-    run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-git")
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-git"
+        )
+
+    finally:
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "git-versions.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "git-versions.yml"),
+        )
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml"),
+        )
+
+    # At the time of writing, workflows git repository has two docker images,
+    # where one has the same name as the repository (ambiguous). Make sure it
+    # still works to query this when specifically giving "docker" as the version
+    # type.
     run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "docker"], "4.5.6-docker",
+        capsys,
+        ["--version-of", "workflows", "--version-type", "docker"],
+        "mender-master",
     )
     run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-git"
+        capsys, ["--version-of", "workflows", "--version-type", "git"], "master",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-client-docker-addons", "--version-type", "docker"],
+        "mender-master",
     )
 
 
@@ -355,62 +325,70 @@ def test_version_of_with_in_integration_version(capsys):
         "master",
     )
 
-    # run_main_assert_result(
-    #     capsys,
-    #     ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
-    #     "3.1.0..master",
-    # )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
+        "3.1.0..master",
+    )
 
-    # run_main_assert_result(
-    #     capsys,
-    #     [
-    #         "--version-of",
-    #         "monitor-client",
-    #         "--in-integration-version",
-    #         "3.1.0..master",
-    #     ],
-    #     "1.0.0..master",
-    # )
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "monitor-client",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "1.0.0..master",
+    )
 
 
 def test_set_version_of(capsys, is_staging):
-    # Using --set-version-of modifies both versions, regardless of using the repo name
-    run_main_assert_result(
-        capsys, ["--set-version-of", "gui", "--version", "1.2.3-test"]
-    )
-    run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-test")
-    run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "docker"], "1.2.3-test"
-    )
-    run_main_assert_result(
-        capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-test"
-    )
+    try:
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "git-versions.yml"),
+            os.path.join(INTEGRATION_DIR, "git-versions.yml.bkp"),
+        )
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "git-versions-enterprise.yml"),
+            os.path.join(INTEGRATION_DIR, "git-versions-enterprise.yml.bkp"),
+        )
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml.bkp"),
+        )
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "docker-compose.enterprise.yml"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.enterprise.yml.bkp"),
+        )
+        shutil.copyfile(
+            os.path.join(
+                INTEGRATION_DIR,
+                "extra/failover-testing/docker-compose.failover-server.yml",
+            ),
+            os.path.join(
+                INTEGRATION_DIR,
+                "extra/failover-testing/docker-compose.failover-server.yml.bkp",
+            ),
+        )
 
-    # or the container name. However, setting from the container name sets all repos (os + ent)
-    run_main_assert_result(
-        capsys, ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"]
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments", "--version-type", "docker"],
-        "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments-enterprise", "--version-type", "docker"],
-        "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys, ["--version-of", "deployments", "--version-type", "git"], "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments-enterprise", "--version-type", "git"],
-        "4.5.6-test",
-    )
-    # NOTE: skip check for OS flavor for branches without it (namely staging)
-    if not is_staging:
-        run_main_assert_result(capsys, ["--version-of", "deployments"], "4.5.6-test")
+        # Using --set-version-of modifies both versions, regardless of using the repo name
+        run_main_assert_result(
+            capsys, ["--set-version-of", "gui", "--version", "1.2.3-test"]
+        )
+        run_main_assert_result(capsys, ["--version-of", "gui"], "1.2.3-test")
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "docker"], "1.2.3-test"
+        )
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-test"
+        )
+
+        # or the container name. However, setting from the container name sets all repos (os + ent)
+        run_main_assert_result(
+            capsys,
+            ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"],
+        )
         run_main_assert_result(
             capsys,
             ["--version-of", "deployments", "--version-type", "docker"],
@@ -418,22 +396,75 @@ def test_set_version_of(capsys, is_staging):
         )
         run_main_assert_result(
             capsys,
+            ["--version-of", "deployments-enterprise", "--version-type", "docker"],
+            "4.5.6-test",
+        )
+        run_main_assert_result(
+            capsys,
             ["--version-of", "deployments", "--version-type", "git"],
             "4.5.6-test",
         )
-    run_main_assert_result(
-        capsys, ["--version-of", "deployments-enterprise"], "4.5.6-test"
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments-enterprise", "--version-type", "docker"],
-        "4.5.6-test",
-    )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "deployments-enterprise", "--version-type", "git"],
-        "4.5.6-test",
-    )
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "deployments-enterprise", "--version-type", "git"],
+            "4.5.6-test",
+        )
+        # NOTE: skip check for OS flavor for branches without it (namely staging)
+        if not is_staging:
+            run_main_assert_result(
+                capsys, ["--version-of", "deployments"], "4.5.6-test"
+            )
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "deployments", "--version-type", "docker"],
+                "4.5.6-test",
+            )
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "deployments", "--version-type", "git"],
+                "4.5.6-test",
+            )
+        run_main_assert_result(
+            capsys, ["--version-of", "deployments-enterprise"], "4.5.6-test"
+        )
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "deployments-enterprise", "--version-type", "docker"],
+            "4.5.6-test",
+        )
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "deployments-enterprise", "--version-type", "git"],
+            "4.5.6-test",
+        )
+
+    finally:
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "git-versions.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "git-versions.yml"),
+        )
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "git-versions-enterprise.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "git-versions-enterprise.yml"),
+        )
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.yml"),
+        )
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "docker-compose.enterprise.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "docker-compose.enterprise.yml"),
+        )
+        os.rename(
+            os.path.join(
+                INTEGRATION_DIR,
+                "extra/failover-testing/docker-compose.failover-server.yml.bkp",
+            ),
+            os.path.join(
+                INTEGRATION_DIR,
+                "extra/failover-testing/docker-compose.failover-server.yml",
+            ),
+        )
 
 
 def test_integration_versions_including(capsys):
@@ -594,10 +625,7 @@ def test_list_repos(capsys, is_staging):
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
-    if is_staging:
-        assert not any([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
-    else:
-        assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_OS])
     assert "mender-binary-delta" in repos_list
     assert "mender-convert" in repos_list
     assert "mender-configure-module" in repos_list

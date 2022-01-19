@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -28,7 +28,11 @@ from .docker_compose_manager import (
     DockerComposeMTLSSetup,
     DockerComposeMenderClient_2_5,
 )
-from .kubernetes_manager import KubernetesEnterpriseSetup, isK8S
+from .kubernetes_manager import (
+    KubernetesEnterpriseSetup,
+    KubernetesEnterpriseMonitorCommercialSetup,
+    isK8S,
+)
 
 
 class ContainerManagerFactory:
@@ -137,7 +141,7 @@ class KubernetesManagerFactory(ContainerManagerFactory):
         return KubernetesEnterpriseSetup(name, num_clients)
 
     def getMonitorCommercialSetup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetup(name, num_clients)
+        return KubernetesEnterpriseMonitorCommercialSetup(name, num_clients)
 
 
 def get_factory():

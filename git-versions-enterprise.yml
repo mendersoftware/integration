@@ -26,13 +26,13 @@ services:
         image: registry.mender.io/mendersoftware/useradm-enterprise:1.17.x
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:2.1.x
+        image: registry.mender.io/mendersoftware/auditlogs:3.0.x
 
     mtls-ambassador:
         image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.x
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:1.0.x
+        image: registry.mender.io/mendersoftware/devicemonitor:1.1.x
 
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:3.1.x
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:3.2.x

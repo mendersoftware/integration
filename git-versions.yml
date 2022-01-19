@@ -17,7 +17,7 @@ services:
         image: mendersoftware/gui:3.2.x
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:3.1.x
+        image: mendersoftware/deviceauth:3.2.x
 
     mender-inventory:
         image: mendersoftware/inventory:4.1.x

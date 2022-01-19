@@ -49,7 +49,7 @@ services:
         image: mendersoftware/mender:master
 
     mender-connect:
-        image: mendersoftware/mender-connect:master
+        image: mendersoftware/mender-connect:1.2.0
 
     mender-configure-module:
         image: mendersoftware/mender-configure-module:master

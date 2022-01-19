@@ -10,9 +10,6 @@ services:
     mender-cli:
         image: mendersoftware/mender-cli:1.7.0
 
-    mender-connect:
-        image: mendersoftware/mender-connect:1.2.0
-
     mender-convert:
         image: mendersoftware/mender-convert:2.6.0
 

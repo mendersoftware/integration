@@ -52,7 +52,7 @@ services:
         image: mendersoftware/mender-connect:1.2.0
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:master
+        image: mendersoftware/mender-configure-module:1.0.2
 
     monitor-client:
         image: mendersoftware/monitor-client:master

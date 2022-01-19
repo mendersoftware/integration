@@ -244,6 +244,19 @@ def test_version_of(capsys):
         capsys, ["--version-of", "gui", "--version-type", "git"], "1.2.3-git"
     )
 
+    # At the time of writing, workflows git repository has two docker images,
+    # where one has the same name as the repository (ambiguous). Make sure it
+    # still works to query this when specifically giving "docker" as the version
+    # type.
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "workflows", "--version-type", "docker"],
+        "mender-master",
+    )
+    run_main_assert_result(
+        capsys, ["--version-of", "workflows", "--version-type", "git"], "master",
+    )
+
 
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master

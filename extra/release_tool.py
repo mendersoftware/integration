@@ -679,17 +679,23 @@ def version_of(
 def do_version_of(args):
     """Process --version-of argument."""
 
-    comp = None
-    try:
-        Component.set_integration_version(args.in_integration_version)
-        comp = Component.get_component_of_any_type(args.version_of)
-    except KeyError:
-        print("Unrecognized repository: %s" % args.version_of)
-        sys.exit(1)
-
     assert args.version_type in ["docker", "git"], (
         "%s is not a valid name type!" % args.version_type
     )
+
+    comp = None
+    try:
+        Component.set_integration_version(args.in_integration_version)
+        if args.version_type == "git":
+            comp = Component.get_component_of_type("git", args.version_of)
+        elif args.version_type == "docker":
+            comp = Component.get_component_of_type("docker_image", args.version_of)
+    except KeyError:
+        try:
+            comp = Component.get_component_of_any_type(args.version_of)
+        except KeyError:
+            print("Unrecognized repository: %s" % args.version_of)
+            sys.exit(1)
 
     print(
         version_of(

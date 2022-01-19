@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -71,6 +71,7 @@ class KubernetesEnterpriseSetup(KubernetesNamespace):
 
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
+        self.extra_files = []
         if self.num_clients > 0:
             raise NotImplementedError(
                 "Clients not implemented on setup time, use new_tenant_client"
@@ -103,6 +104,15 @@ class KubernetesEnterpriseSetup(KubernetesNamespace):
             },
         )
         time.sleep(5)
+
+
+class KubernetesEnterpriseMonitorCommercialSetup(KubernetesEnterpriseSetup):
+    COMPOSE_FILES_PATH = DockerComposeBaseNamespace.COMPOSE_FILES_PATH
+    MT_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.monitor-client.commercial.yml",
+    ]
 
 
 def isK8S() -> bool:

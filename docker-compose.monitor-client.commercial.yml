@@ -12,4 +12,5 @@ services:
         tty: true
         privileged: true
         environment:
+            - SERVER_URL=$SERVER_URL
             - TENANT_TOKEN=$TENANT_TOKEN

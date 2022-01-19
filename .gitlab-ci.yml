@@ -125,7 +125,10 @@ test:staging:backend-tests:
     AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
     AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
     GATEWAY_HOSTNAME: "staging.hosted.mender.io"
+    GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
+    GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
     DOCKER_HOST: tcp://docker:2375
+    TESTS_IN_PARALLEL: "4"
 
   before_script:
     - apt update
@@ -179,10 +182,12 @@ test:staging:integration-tests:
     AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
     AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
     GATEWAY_HOSTNAME: "staging.hosted.mender.io"
+    GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
+    GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
     DOCKER_CLIENT_TIMEOUT: 300
     COMPOSE_HTTP_TIMEOUT: 300
     SPECIFIC_INTEGRATION_TEST: "Enterprise"
-    TESTS_IN_PARALLEL: "1"
+    TESTS_IN_PARALLEL: "2"
 
   before_script:
     - unset DOCKER_HOST
@@ -214,6 +219,9 @@ test:staging:integration-tests:
     # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
     - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
     - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    # Login for private repos
+    - docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}
+    - docker login -u ${REGISTRY_MENDER_IO_USERNAME} -p ${REGISTRY_MENDER_IO_PASSWORD} registry.mender.io
 
   script:
     - cd tests

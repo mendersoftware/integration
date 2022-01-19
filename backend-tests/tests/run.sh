@@ -2,11 +2,17 @@
 
 set -e
 
+PYTEST_EXTRA_ARGS=""
 if [ -n "$K8S" ]; then
     export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
     aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
     kubectl config set-context --current --namespace=$K8S
     kubectl get pods -o wide
+    if ! python3 -m pip show pytest-xdist >/dev/null; then
+        echo "WARNING: install pytest-xdist for running tests in parallel"
+    else
+        PYTEST_EXTRA_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
+    fi
 fi
 
 if [ -n "$SSH_PRIVATE_KEY" ]; then
@@ -17,4 +23,4 @@ if [ -n "$SSH_PRIVATE_KEY" ]; then
     ssh-keyscan github.com >> ~/.ssh/known_hosts
 fi
 
-python3 -m pytest -v -s /tests/test_*.py "$@"
+python3 -m pytest -v -s /tests/test_*.py $PYTEST_EXTRA_ARGS "$@"

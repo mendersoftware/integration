@@ -34,7 +34,7 @@ from testutils.api import (
     iot_manager as iot,
     useradm,
 )
-from testutils.api.client import ApiClient
+from testutils.api.client import ApiClient, get_free_tcp_port
 from testutils.common import (
     Device,
     User,
@@ -48,7 +48,7 @@ from testutils.common import (
 )
 
 
-HTTPServer.DEFAULT_LISTEN_PORT = 8888
+HTTPServer.DEFAULT_LISTEN_PORT = get_free_tcp_port()
 HTTPServer.DEFAULT_LISTEN_HOST = (
     "mender-backend-tests-runner"  # name of the compose service
 )
@@ -117,9 +117,19 @@ class _TestAzureBase:
         # Check for equality by parts:
         # Check that actual properties are a subset of expected integrations
         for part in actual.split(";"):
+            # SharedAccessKey will be masked, with only the first 4 characters visible
+            # and the rest of the string replaced with a place holder. For this reason,
+            # we'll test the first 20 bytes only
+            if part.startswith("SharedAccessKey="):
+                part = part[:20]
             assert part in expected_integration["credentials"]["connection_string"]
         # Check that expected properties are a subset of actual integrations
         for part in expected_integration["credentials"]["connection_string"].split(";"):
+            # SharedAccessKey will be masked, with only the first 4 characters visible
+            # and the rest of the string replaced with a place holder. For this reason,
+            # we'll test the first 20 bytes only
+            if part.startswith("SharedAccessKey="):
+                part = part[:20]
             assert part in actual
 
 
@@ -207,16 +217,15 @@ def get_connection_string():
 def azure_user(clean_mongo) -> Optional[User]:
     """Create Mender user and create an Azure IoT Hub integration in iot-manager using the connection string."""
     api_azure = ApiClient(base_url=iot.URL_MGMT)
+    uuidv4 = str(uuid.uuid4())
     try:
         tenant = create_org(
-            "TestAzureDeviceLifecycle",
-            f"user+{uuid.uuid4()}@example.com",
-            "password123",
+            "test.mender.io-" + uuidv4, f"user+{uuidv4}@example.com", "password123",
         )
         user = tenant.users[0]
         user.tenant = tenant
     except RuntimeError:  # If open-source
-        user = create_user(f"user+{uuid.uuid4()}@example.com", "password123")
+        user = create_user(f"user+{uuidv4}@example.com", "password123")
 
     # Authorize
     rsp = ApiClient(useradm.URL_MGMT).call(
@@ -513,7 +522,7 @@ class _TestAzureDeviceLifecycleBase:
             azure_user, httpserver, dev.id, "enabled"
         )
 
-        #  get the all device states (device twins)
+        # get the all device states (device twins)
         if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/devices"),
@@ -556,7 +565,7 @@ class _TestAzureDeviceLifecycleBase:
         assert "reported" in states[integration_id]
         assert state["desired"]["key"] == "value"
 
-        #  get the device state (device twin)
+        # get the device state (device twin)
         if self.azure_iot_hub_mock:
             httpserver.expect_oneshot_request(
                 re.compile("^/twins"),

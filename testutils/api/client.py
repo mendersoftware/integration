@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 import os
 import os.path
 import socket
+import socketserver
 import subprocess
 import warnings
 
@@ -25,6 +26,11 @@ from urllib3.exceptions import InsecureRequestWarning
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "mender-api-gateway"
+
+
+def get_free_tcp_port() -> int:
+    with socketserver.TCPServer(("localhost", 0), None) as s:
+        return s.server_address[1]
 
 
 class ApiClient:
@@ -58,12 +64,20 @@ class ApiClient:
         try:
             p = None
             if isK8S() and url.startswith("http://mender-"):
+                host_forward_port = get_free_tcp_port()
                 host = self.host.split(":", 1)[0]
                 port = self.host.split(":", 1)[1] if ":" in self.host else "80"
-                cmd = ["kubectl", "port-forward", "service/" + host, "8080:%s" % port]
+                cmd = [
+                    "kubectl",
+                    "port-forward",
+                    "service/" + host,
+                    "%d:%s" % (host_forward_port, port),
+                ]
                 p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
-                url = "http://localhost:8080/" + url.split("/", 3)[-1]
-                wait_for_port(port=8080, host="localhost", timeout=10.0)
+                url = ("http://localhost:%d/" % host_forward_port) + url.split("/", 3)[
+                    -1
+                ]
+                wait_for_port(port=host_forward_port, host="localhost", timeout=10.0)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", category=InsecureRequestWarning)
                 return requests.request(

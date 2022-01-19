@@ -583,17 +583,31 @@ def version_of(
     if git_version:
         if len(git_components) != 1:
             raise Exception(
-                f"Component {component.name} (type: {component.type}) can not be mapped to a single git component, so its version is ambiguous"
+                "Component %s (type: %s) can not be mapped "
+                "to a single git component, so its version is ambiguous. "
+                "Candidates: (%s)"
+                % (
+                    component.name,
+                    component.type,
+                    ", ".join([c.name for c in git_components]),
+                )
             )
         image_name = git_components[0].git()
     else:
         if len(docker_components) != 1:
             raise Exception(
-                f"Component {component.name} (type: {component.type}) can not be mapped to a single docker component, so its version is ambiguous"
+                "Component %s (type: %s) can not be mapped "
+                "to a single docker component, so its version is ambiguous. "
+                "Candidates: (%s)"
+                % (
+                    component.name,
+                    component.type,
+                    ", ".join([c.name for c in docker_components]),
+                )
             )
         image_name = docker_components[0].docker_image()
 
-    if git_components[0].git() == "integration":
+    if git_version and git_components[0].git() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -679,17 +693,23 @@ def version_of(
 def do_version_of(args):
     """Process --version-of argument."""
 
-    comp = None
-    try:
-        Component.set_integration_version(args.in_integration_version)
-        comp = Component.get_component_of_any_type(args.version_of)
-    except KeyError:
-        print("Unrecognized repository: %s" % args.version_of)
-        sys.exit(1)
-
     assert args.version_type in ["docker", "git"], (
         "%s is not a valid name type!" % args.version_type
     )
+
+    comp = None
+    try:
+        Component.set_integration_version(args.in_integration_version)
+        if args.version_type == "git":
+            comp = Component.get_component_of_type("git", args.version_of)
+        elif args.version_type == "docker":
+            comp = Component.get_component_of_type("docker_image", args.version_of)
+    except KeyError:
+        try:
+            comp = Component.get_component_of_any_type(args.version_of)
+        except KeyError:
+            print("Unrecognized repository: %s" % args.version_of)
+            sys.exit(1)
 
     print(
         version_of(

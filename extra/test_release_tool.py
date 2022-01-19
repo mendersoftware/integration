@@ -16,6 +16,7 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 from unittest.mock import patch
 
@@ -29,10 +30,10 @@ RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
 INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 
 # Samples of the different "types" of repos for listing tests
-SAMPLE_REPOS_BACKEND_BASE = ["deviceconnect", "devicemonitor", "gui", "tenantadm"]
+SAMPLE_REPOS_BASE = ["deviceconnect", "gui", "tenantadm", "mender", "mender-connect"]
 SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm", "deviceauth"]
 SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
-SAMPLE_REPOS_NON_BACKEND = ["mender", "mender-cli", "mender-connect", "mender-artifact"]
+SAMPLE_REPOS_NON_BACKEND = ["mender-cli", "mender-artifact", "mender-convert"]
 SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
 
 
@@ -77,7 +78,7 @@ def master_yml_files(request):
         with open(filename, "w") as fd:
             fd.write(
                 re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender\-client\-.+|mender-artifact|mender-cli).+):.*",
+                    r"image:\s+(mendersoftware|.*mender\.io)/((?!mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli).+):.*",
                     r"image: \g<1>/\g<2>:mender-master",
                     full_content,
                 )
@@ -87,7 +88,7 @@ def master_yml_files(request):
         with open(filename, "w") as fd:
             fd.write(
                 re.sub(
-                    r"image:\s+(mendersoftware|.*mender\.io)/(mender\-client\-.+|mender-artifact|mender-cli):.*",
+                    r"image:\s+(mendersoftware|.*mender\.io)/(mender-binary-delta|mender\-client\-.+|mender-artifact|mender-cli):.*",
                     r"image: \g<1>/\g<2>:master",
                     full_content,
                 )
@@ -141,25 +142,73 @@ def test_version_of(capsys):
         capsys, ["--version-of", "gui", "--version-type", "git"], "master"
     )
 
-    # For an independent component, it should still accept docker/git type of the query
+    # Querying mender with version-type docker should error, since it maps to
+    # multiple containers and we don't know which one to choose.
     run_main_assert_result(capsys, ["--version-of", "mender"], "master")
-    run_main_assert_result(
-        capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
-    )
+    try:
+        run_main_assert_result(
+            capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys, ["--version-of", "mender", "--version-type", "git"], "master"
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
+
+    # For an independent component, it should also error because it doesn't have
+    # a Docker image.
+    run_main_assert_result(capsys, ["--version-of", "mender-binary-delta"], "master")
+    try:
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-binary-delta", "--version-type", "docker"],
+            "master",
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-binary-delta", "--version-type", "git"],
+        "master",
+    )
+
+    # For a backend component, it should work for either
+    run_main_assert_result(capsys, ["--version-of", "inventory"], "master")
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--version-type", "docker"],
+        "mender-master",
+    )
+    run_main_assert_result(
+        capsys, ["--version-of", "inventory", "--version-type", "git"], "master"
+    )
+
+    # This cannot be mapped to a single git repo, so it should fail.
+    try:
+        run_main_assert_result(capsys, ["--version-of", "mender-client-qemu"], "master")
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
     run_main_assert_result(
         capsys,
         ["--version-of", "mender-client-qemu", "--version-type", "docker"],
         "master",
     )
-    run_main_assert_result(
-        capsys,
-        ["--version-of", "mender-client-qemu", "--version-type", "git"],
-        "master",
-    )
+    try:
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-client-qemu", "--version-type", "git"],
+            "master",
+        )
+    except:
+        pass
+    else:
+        pytest.fail("Expected exception!")
 
     # Manually modifying the Git version:
     filename = os.path.join(INTEGRATION_DIR, "git-versions.yml")
@@ -259,6 +308,70 @@ def test_version_of_with_in_integration_version(capsys):
         "1.7.0",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-connect", "--in-integration-version", "3.1.0",],
+        "1.2.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender", "--in-integration-version", "3.1.0",],
+        "3.1.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "monitor-client", "--in-integration-version", "3.1.0",],
+        "1.0.0",
+    )
+
+    # Ranges
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "inventory", "--in-integration-version", "3.0.1..3.1.0",],
+        "3.0.0..4.0.0",
+    )
+
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "mender-connect",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "1.2.0..master",
+    )
+
+    run_main_assert_result(
+        capsys,
+        [
+            "--version-of",
+            "mender-configure-module",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
+        "master",
+    )
+
+    # run_main_assert_result(
+    #     capsys,
+    #     ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
+    #     "3.1.0..master",
+    # )
+
+    # run_main_assert_result(
+    #     capsys,
+    #     [
+    #         "--version-of",
+    #         "monitor-client",
+    #         "--in-integration-version",
+    #         "3.1.0..master",
+    #     ],
+    #     "1.0.0..master",
+    # )
+
 
 def test_set_version_of(capsys, is_staging):
     # Using --set-version-of modifies both versions, regardless of using the repo name
@@ -277,15 +390,22 @@ def test_set_version_of(capsys, is_staging):
     run_main_assert_result(
         capsys, ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"]
     )
-    run_main_assert_result(capsys, ["--version-of", "mender-deployments"], "4.5.6-test")
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender-deployments", "--version-type", "docker"],
+        ["--version-of", "deployments", "--version-type", "docker"],
         "4.5.6-test",
     )
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender-deployments", "--version-type", "git"],
+        ["--version-of", "deployments-enterprise", "--version-type", "docker"],
+        "4.5.6-test",
+    )
+    run_main_assert_result(
+        capsys, ["--version-of", "deployments", "--version-type", "git"], "4.5.6-test",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "deployments-enterprise", "--version-type", "git"],
         "4.5.6-test",
     )
     # NOTE: skip check for OS flavor for branches without it (namely staging)
@@ -385,7 +505,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # standard query (only_release=None)
     repos_comp = Component.get_components_of_type("git")
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -397,7 +517,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # only_release=False
     repos_comp = Component.get_components_of_type("git", only_release=False)
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -406,7 +526,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
     # only_non_release=True
     repos_comp = Component.get_components_of_type("git", only_non_release=True)
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -420,7 +540,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
         "git", only_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert not any([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -431,7 +551,7 @@ def test_get_components_of_type(integration_dir_func, is_staging):
         "git", only_non_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_name for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_name for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
@@ -446,7 +566,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list
     captured = run_main_assert_result(capsys, ["--list"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
@@ -458,7 +578,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list --only-backend
     captured = run_main_assert_result(capsys, ["--list", "--only-backend"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert not any([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
@@ -470,7 +590,7 @@ def test_list_repos(capsys, is_staging):
     # release_tool.py --list --all
     captured = run_main_assert_result(capsys, ["--list", "--all"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_BASE])
+    assert all([r in repos_list for r in SAMPLE_REPOS_BASE])
     assert all([r in repos_list for r in SAMPLE_REPOS_BACKEND_ENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
     assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
@@ -528,3 +648,61 @@ def test_git_to_buildparam():
 
     for k, v in GIT_TO_BUILDPARAM_MAP.items():
         assert git_to_buildparam(k) == v
+
+
+def test_generate_release_notes(request, capsys):
+    try:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+
+        os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"] = "1"
+
+        run_main_assert_result(
+            capsys, ["--generate-release-notes", "-i", "3.0.0..3.1.0"], None
+        )
+
+        files = []
+        for entry in os.listdir():
+            if re.match(r"^release_notes.*\.txt$", entry) is not None:
+                files.append(entry)
+        files = sorted(files)
+
+        expected_files = [
+            "release_notes_mender-artifact.txt",
+            "release_notes_mender-cli.txt",
+            "release_notes_mender-connect.txt",
+            "release_notes_mender.txt",
+            "release_notes_server.txt",
+        ]
+        assert expected_files == files
+
+        for f in expected_files:
+            with open(
+                os.path.join(request.fspath.dirname, "test", f)
+            ) as expected_fd, open(f) as actual_fd:
+                expected = expected_fd.read()
+                actual = actual_fd.read()
+                assert expected == actual
+
+    finally:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+        del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
+
+
+def test_generate_release_notes_from_master(request, capsys):
+    try:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+
+        os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"] = "1"
+
+        output = run_main_assert_result(
+            capsys, ["--generate-release-notes", "-i", "master"], None
+        )
+
+        # Since master and therefore the latest version is a moving target, it's
+        # difficult to test content, but make sure the tool has selected a
+        # version to diff from, and not just the entire master branch.
+        assert re.search(r"[0-9]\.\.master", output) is not None
+
+    finally:
+        subprocess.check_call("rm -f release_notes*.txt", shell=True)
+        del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]

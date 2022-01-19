@@ -433,6 +433,23 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 
 ################################################################################
 
+git commit --allow-empty -m 'Changelog:All: Bump paramiko from 2.9.1 to 2.9.2 in /tests/requirements
+
+Bumps [paramiko](https://github.com/paramiko/paramiko) from 2.9.1 to 2.9.2.
+- [Release notes](https://github.com/paramiko/paramiko/releases)
+- [Changelog](https://github.com/paramiko/paramiko/blob/main/NEWS)
+- [Commits](https://github.com/paramiko/paramiko/compare/2.9.1...2.9.2)
+
+---
+updated-dependencies:
+- dependency-name: paramiko
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>'
+
+################################################################################
 
 "$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
@@ -451,13 +468,24 @@ cat > expected.txt <<EOF
 
 * Aggregated Dependabot Changelogs:
   * Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.
-    - [Release notes](https://github.com/klauspost/pgzip/releases)
-    - [Commits](klauspost/pgzip@v1.2.3...v1.2.4)
+      - [Release notes](https://github.com/klauspost/pgzip/releases)
+      - [Commits](klauspost/pgzip@v1.2.3...v1.2.4)
   * Bumps [pytest-html](https://github.com/pytest-dev/pytest-html) from 2.0.1 to 2.1.1.
-    - [Release notes](https://github.com/pytest-dev/pytest-html/releases)
-    - [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
-    - [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
+      - [Release notes](https://github.com/pytest-dev/pytest-html/releases)
+      - [Changelog](https://github.com/pytest-dev/pytest-html/blob/master/CHANGES.rst)
+      - [Commits](https://github.com/pytest-dev/pytest-html/compare/v2.0.1...v2.1.1)
   * Bumps golang from 1.14 to 1.15.0.
+  * Bumps [paramiko](https://github.com/paramiko/paramiko) from 2.9.1 to 2.9.2.
+      - [Release notes](https://github.com/paramiko/paramiko/releases)
+      - [Changelog](https://github.com/paramiko/paramiko/blob/main/NEWS)
+      - [Commits](https://github.com/paramiko/paramiko/compare/2.9.1...2.9.2)
+
+      \`\`\`
+      updated-dependencies:
+      - dependency-name: paramiko
+        dependency-type: direct:production
+        update-type: version-update:semver-patch
+      \`\`\`
 * All bugs fixed N75
 * AllSomethingElse N77
 * As well as this. N34
@@ -472,40 +500,55 @@ cat > expected.txt <<EOF
 * Changelog with inline Jira refs. N58a
   ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
 * Changelog with invalid signed-off N65
+
   Commit message
   Mention "Signed-off-by: " mid sentence
 * Changelog with many Jira refs. N57
   ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-12345](https://tracker.mender.io/browse/MEN-12345), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
 * Changelog with signed-off N64
+
   Commit message
 * Changelog with suspicious number in it. N62
+
   1234
 * Changelog with suspicious number outside of it. N63
 * Commit with various "<something>-by:" tags
+
   Only this line should show in changelog N72
 * Complete Fix for changelog N4
+
   Should be included N5
 * Complete commit with inline entry N73
+
   Should be included N74
 * Fix for changelog N1
 * Jira duplicate (commit) N51
+
+
   More stuff. N52
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
 * Jira entries in parentheses (commit) N45
+
+
   Stuff. N46
   ([MEN-4321](https://tracker.mender.io/browse/MEN-4321), [MEN-54321](https://tracker.mender.io/browse/MEN-54321))
 * Jira entries in parentheses (title) N41
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
 * Jira entries inline (commit) N47
+
+
   Stuff N48 ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
 * Jira entries inline (title) N43
   ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
 * Jira entry N36
+
   Should be included N37
   ([MEN-645](https://tracker.mender.io/browse/MEN-645))
 * Jira entry in title N38
   ([MEN-76](https://tracker.mender.io/browse/MEN-76))
 * Jira twice (commit) N49
+
+
   More stuff. N50
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
 * Make sure the bugtracker reference is taken from the title
@@ -513,7 +556,11 @@ cat > expected.txt <<EOF
              included. N68
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
 * Several entries for changelog N30
+
   Should be included N31
+
+
+
   And finally this, part of the commit message. N35
 * Should also be included, but separately and not twice. N32
 * Should be in changelog though. N29
@@ -540,6 +587,7 @@ diff -u expected.txt result.txt
 if [ $(egrep -v '^\*\*\* Commit [0-9a-f]{40} had a number 1234 which may be a ticket reference we missed\. Should be manually checked\.$' stderr.txt \
              | egrep -v '^\*\*\* Commit [0-9a-f]{40} had conflicting changelog tags\. This might be a squashed commit which will not work correctly with changelogs\. Should be manually checked\.$' \
              | egrep -v '^Checking .: HEAD:$' \
+             | egrep -v '^commit |^Author: |^Date: |^    |^---$|^$' \
              | wc -c) -ne 0 ]
 then
     echo 'Unexpected error message in:'

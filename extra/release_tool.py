@@ -593,7 +593,7 @@ def version_of(
             )
         image_name = docker_components[0].docker_image()
 
-    if git_components[0].git() == "integration":
+    if git_version and git_components[0].git() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version

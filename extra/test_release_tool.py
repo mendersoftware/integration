@@ -257,6 +257,12 @@ def test_version_of(capsys):
         capsys, ["--version-of", "workflows", "--version-type", "git"], "master",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-client-docker-addons", "--version-type", "docker"],
+        "mender-master",
+    )
+
 
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master

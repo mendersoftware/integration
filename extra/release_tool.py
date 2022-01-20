@@ -145,7 +145,6 @@ class Component:
         only_non_release=False,
         only_independent_component=False,
         only_non_independent_component=False,
-        only_core_components=True,
     ):
         Component._initialize_component_maps()
         if only_release is None:
@@ -165,11 +164,6 @@ class Component:
             is_release_component = Component.COMPONENT_MAPS[type][comp][
                 "release_component"
             ]
-            is_non_core_component = (
-                Component.COMPONENT_MAPS.get(type, {})
-                .get(comp, {})
-                .get("is_non_core_component", False)
-            )
             if is_independent_component and only_non_independent_component:
                 continue
             if not is_independent_component and only_independent_component:
@@ -177,8 +171,6 @@ class Component:
             if is_release_component and only_non_release:
                 continue
             if not is_release_component and only_release:
-                continue
-            if is_non_core_component and only_core_components:
                 continue
             components.append(Component(comp, type))
 
@@ -742,7 +734,6 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         only_release=(not optional_too),
         only_non_independent_component=(only_backend),
         only_independent_component=(only_client),
-        only_core_components=(not optional_too),
     )
     repos.sort(key=lambda x: x.name)
 
@@ -1085,7 +1076,7 @@ def refresh_repos(state):
 
     git_list = []
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         remote = find_upstream_remote(state, repo.git())
         git_list.append(
             (
@@ -1114,7 +1105,7 @@ def check_tag_availability(state):
     tag_avail = {}
     highest_overall = -1
     all_released = True
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
         missing_repos = False
         try:
@@ -1203,10 +1194,7 @@ def report_release_state(state, tag_avail):
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
-    for repo in sorted(
-        Component.get_components_of_type("git", only_core_components=False),
-        key=repo_sort_key,
-    ):
+    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
         if tag_avail[repo.git()]["already_released"]:
             tag = state[repo.git()]["version"]
             # Report released tags as following themselves, even though behind
@@ -1349,7 +1337,7 @@ def generate_new_tags(state, tag_avail, final):
 
     # Find highest of all build tags in all repos.
     highest = 0
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if (
             not tag_avail[repo.git()]["already_released"]
             and tag_avail[repo.git()].get("build_tag") is not None
@@ -1360,7 +1348,7 @@ def generate_new_tags(state, tag_avail, final):
 
     # Assign new build tags to each repo based on our previous findings.
     next_tag_avail = copy.deepcopy(tag_avail)
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not tag_avail[repo.git()]["already_released"]:
             if final:
                 # For final tag, point to the previous build tag, not the
@@ -1445,10 +1433,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         changelogs = []
 
         # Modify docker tags in docker-compose file.
-        for repo in sorted(
-            Component.get_components_of_type("git", only_core_components=False),
-            key=repo_sort_key,
-        ):
+        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
             if repo.is_independent_component():
                 set_docker_compose_version_to(
                     tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
@@ -1527,7 +1512,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
     # Prepare Git tag and push commands.
     git_tag_list = []
     git_push_list = []
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"]:
             git_tag_list.append(
                 (
@@ -1556,7 +1541,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         return tag_avail
 
     # If this was the final tag, reflect that in our data.
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"] and final:
             next_tag_avail[repo.git()]["already_released"] = True
 
@@ -1592,7 +1577,7 @@ def get_extra_buildparams_from_yaml():
     # as extra build parameters.
     extra_buildparams = {}
     in_versioned_repos = {}
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         in_versioned_repos[git_to_buildparam(repo.git())] = True
 
     for key, value in build_variables.items():
@@ -1634,8 +1619,7 @@ def trigger_build(state, tag_avail):
 
             # Populate parameters with build tags for each repository.
             for repo in sorted(
-                Component.get_components_of_type("git", only_core_components=False),
-                key=repo_sort_key,
+                Component.get_components_of_type("git"), key=repo_sort_key,
             ):
                 if tag_avail[repo.git()].get("build_tag") is None:
                     print("%s doesn't have a build tag yet!" % repo.git())
@@ -1821,17 +1805,13 @@ def do_license_generation(state, tag_avail):
             return tag_avail[repo_git]["build_tag"]
 
     tmpdirs = []
-    for repo in Component.get_components_of_type(
-        "git", only_release=True, only_core_components=False
-    ):
+    for repo in Component.get_components_of_type("git", only_release=True):
         tmpdirs.append(
             setup_temp_git_checkout(
                 state, repo.git(), tag_or_followed_branch(repo.git())
             )
         )
-    for repo in Component.get_components_of_type(
-        "git", only_non_release=True, only_core_components=False
-    ):
+    for repo in Component.get_components_of_type("git", only_non_release=True):
         remote = find_upstream_remote(state, repo.git())
         tmpdirs.append(setup_temp_git_checkout(state, repo.git(), remote + "/master"))
 
@@ -1960,7 +1940,7 @@ def purge_build_tags(state, tag_avail):
     upstream as well."""
 
     git_list = []
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         remote = find_upstream_remote(state, repo.git())
         tag_list = execute_git(state, repo.git(), ["tag"], capture=True).split("\n")
         to_purge = []
@@ -2171,7 +2151,7 @@ def create_release_branches(state, tag_avail):
 
     any_repo_needs_branch = False
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if tag_avail[repo.git()]["already_released"]:
             continue
 
@@ -2227,7 +2207,7 @@ def create_release_branches(state, tag_avail):
 
 
 def do_beta_to_final_transition(state):
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         version = state[repo.git()]["version"]
         version = re.sub("b[0-9]+$", "", version)
         update_state(state, [repo.git(), "version"], version)
@@ -2365,7 +2345,7 @@ def do_build(args):
         tag_avail = check_tag_availability(state)
     else:
         update_state(state, ["version"], args.build)
-        for repo in Component.get_components_of_type("git", only_core_components=False):
+        for repo in Component.get_components_of_type("git"):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
@@ -2613,7 +2593,6 @@ def do_generate_release_notes(
         only_release=True,
         only_non_independent_component=False,
         only_independent_component=True,
-        only_core_components=False,
     )
     for repo in repos:
         if repo.git() == "integration":
@@ -2682,10 +2661,7 @@ def do_release(release_state_file):
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    repos = sorted(
-        Component.get_components_of_type("git", only_core_components=False),
-        key=repo_sort_key,
-    )
+    repos = sorted(Component.get_components_of_type("git"), key=repo_sort_key,)
     while len(repos) > 0:
         repo = repos.pop(0)
         if not determine_version_to_include_in_release(state, repo):
@@ -2694,7 +2670,7 @@ def do_release(release_state_file):
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if state_value(state, [repo.git(), "following"]) is None:
             # Follow "1.0.x" style branches by default.
             assign_default_following_branch(state, repo)
@@ -2778,9 +2754,7 @@ def do_release(release_state_file):
             push_latest_docker_tags(state, tag_avail)
         elif reply.lower() == "p":
             git_list = []
-            for repo in Component.get_components_of_type(
-                "git", only_core_components=False
-            ):
+            for repo in Component.get_components_of_type("git"):
                 remote = find_upstream_remote(state, repo.git())
                 git_list.append(
                     (

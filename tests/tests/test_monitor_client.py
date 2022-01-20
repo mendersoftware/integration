@@ -1135,11 +1135,11 @@ class TestMonitorClientEnterprise:
             )
 
         fds_count_timeout_s = 64
-        max_fds_count_diff = 2
+        max_fds_count_diff = 3
         logger.info(
             "test_monitorclient_logs_and_services: checking open file descriptors"
         )
-        time.sleep(fds_count_timeout_s)
+        time.sleep(fds_count_timeout_s * 0.25)
         fds_count0 = mender_device.run(
             "ls /proc/$(cat /var/run/monitoring-client.pid)/fd | wc -l"
         )
@@ -1148,7 +1148,7 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_logs_and_services: currently %s fds open" % fds_count0
         )
-        time.sleep(fds_count_timeout_s)
+        time.sleep(4 * fds_count_timeout_s)
         fds_count1 = mender_device.run(
             "ls /proc/$(cat /var/run/monitoring-client.pid)/fd | wc -l"
         )

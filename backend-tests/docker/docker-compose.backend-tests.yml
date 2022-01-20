@@ -1,10 +1,11 @@
 version: '2.1'
 services:
     mender-backend-tests-runner:
-        image: mender-backend-tests-runner
+        image: mendersoftware/mender-test-containers:backend-integration-testing
         networks:
             - mender
         volumes:
+            - ${INTEGRATION_PATH}/backend-tests/downloaded-tools/mender-artifact:/usr/local/bin/mender-artifact
             - ${INTEGRATION_PATH}/backend-tests/tests:/tests
             - ${INTEGRATION_PATH}/testutils:/testutils
             - /var/run/docker.sock:/var/run/docker.sock

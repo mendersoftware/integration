@@ -11,14 +11,12 @@ git:
     docker_container: []
     release_component: true
     independent_component: true
-    non_core_component: true
 
   mender-binary-delta:
     docker_image: []
     docker_container: []
     release_component: true
     independent_component: true
-    non_core_component: true
 
   mender-configure-module:
     docker_image:
@@ -29,7 +27,6 @@ git:
     docker_container: []
     release_component: true
     independent_component: false
-    non_core_component: true
 
   iot-manager:
     docker_image:

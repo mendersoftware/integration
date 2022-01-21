@@ -43,7 +43,7 @@ git:
     - deployments
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deployments-enterprise:
     docker_image:
@@ -62,7 +62,7 @@ git:
     - deviceauth
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   deviceauth-enterprise:
     docker_image:
@@ -91,7 +91,7 @@ git:
     - inventory
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   inventory-enterprise:
     docker_image:
@@ -161,7 +161,7 @@ git:
     - useradm
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   useradm-enterprise:
     docker_image:
@@ -177,7 +177,7 @@ git:
     docker_container:
     - mender-workflows-server
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   workflows-enterprise:
     docker_image:
@@ -270,7 +270,7 @@ docker_image:
     - deployments
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deployments-enterprise:
     git:
@@ -284,7 +284,7 @@ docker_image:
     - deviceauth
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   deviceauth-enterprise:
     git:
@@ -305,7 +305,7 @@ docker_image:
     - inventory
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   inventory-enterprise:
     git:
@@ -394,7 +394,7 @@ docker_image:
     - useradm
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   useradm-enterprise:
     git:
@@ -408,7 +408,7 @@ docker_image:
     - workflows
     docker_container:
     - mender-workflows-server
-    release_component: true
+    release_component: false
 
   workflows-enterprise:
     git:
@@ -422,7 +422,7 @@ docker_image:
     - workflows
     docker_container:
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   workflows-enterprise-worker:
     git:
@@ -500,19 +500,15 @@ docker_container:
 
   mender-deployments:
     git:
-    - deployments
     - deployments-enterprise
     docker_image:
-    - deployments
     - deployments-enterprise
     release_component: true
 
   mender-device-auth:
     git:
-    - deviceauth
     - deviceauth-enterprise
     docker_image:
-    - deviceauth
     - deviceauth-enterprise
     release_component: true
 
@@ -525,10 +521,8 @@ docker_container:
 
   mender-inventory:
     git:
-    - inventory
     - inventory-enterprise
     docker_image:
-    - inventory
     - inventory-enterprise
     release_component: true
 
@@ -585,28 +579,22 @@ docker_container:
 
   mender-useradm:
     git:
-    - useradm
     - useradm-enterprise
     docker_image:
-    - useradm
     - useradm-enterprise
     release_component: true
 
   mender-workflows-server:
     git:
-    - workflows
     - workflows-enterprise
     docker_image:
-    - workflows
     - workflows-enterprise
     release_component: true
 
   mender-workflows-worker:
     git:
-    - workflows
     - workflows-enterprise
     docker_image:
-    - workflows-worker
     - workflows-enterprise-worker
     release_component: true
 

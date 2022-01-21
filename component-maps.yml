@@ -253,6 +253,12 @@ git:
     - mender-reporting
     release_component: false
 
+  meta-mender:
+    docker_image: []
+    docker_container: []
+    release_component: false
+    independent_component: true
+
 docker_image:
 
   iot-manager:

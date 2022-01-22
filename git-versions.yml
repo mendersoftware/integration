@@ -42,3 +42,18 @@ services:
 
     mender-create-artifact-worker:
         image: mendersoftware/create-artifact-worker:staging
+
+    #
+    # client repositories - container and image names are placeholders
+    #
+    mender:
+        image: mendersoftware/mender:3.1.0
+
+    mender-connect:
+        image: mendersoftware/mender-connect:1.2.0
+
+    mender-configure-module:
+        image: mendersoftware/mender-configure-module:1.0.2
+
+    monitor-client:
+        image: mendersoftware/monitor-client:1.0.0

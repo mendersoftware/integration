@@ -1,0 +1,10 @@
+## mender-cli 1.7.0
+
+_Released 04.16.2021_
+
+### Statistics
+
+A total of 0 lines added, 0 removed (delta 0)
+
+### Changelogs
+

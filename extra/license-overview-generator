@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 # Only do basic checks on these.
-OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'monitor-client' ]
+OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'monitor-client', 'mender-binary-delta', 'mender-configure-module', 'mender-convert' ]
 # We don't currently care about these.
 IGNORE_REPOS = [ ]
 
@@ -1508,7 +1508,7 @@ def do_repos():
             if any([file.endswith(".go") for file in files]):
                 do_go_repo(repopath)
                 break
-            elif "gulpfile.js" in files:
+            elif os.path.basename(repopath) in ["gui", "gui-enterprise"]:
                 if not CALLED_FROM_RELEASE_TOOL:
                     sys.stderr.write("""GUI must be fetched manually when not using release tool:
   docker cp GUI_CONTAINER:/var/www/mender-gui/dist/disclaimer.txt .

@@ -1,0 +1,47 @@
+## mender-artifact 3.6.1
+
+_Released 09.28.2021_
+
+### Statistics
+
+A total of 38 lines added, 7 removed (delta 31)
+
+| Developers with the most changesets | |
+|---|---|
+| Lluis Campos | 3 (60.0%) |
+| Ole Petter Orhagen | 1 (20.0%) |
+| Kristian Amlie | 1 (20.0%) |
+
+| Developers with the most changed lines | |
+|---|---|
+| Lluis Campos | 28 (73.7%) |
+| Ole Petter Orhagen | 8 (21.1%) |
+| Kristian Amlie | 2 (5.3%) |
+
+| Top changeset contributors by employer | |
+|---|---|
+| Northern.tech | 5 (100.0%) |
+
+| Top lines changed by employer | |
+|---|---|
+| Northern.tech | 38 (100.0%) |
+
+| Employers with the most hackers (total 3) | |
+|---|---|
+| Northern.tech | 3 (100.0%) |
+
+### Changelogs
+
+#### mender-artifact (3.6.1)
+
+New changes in mender-artifact since 3.6.0:
+
+* Add missing error description when artifact header can't be written.
+* cli: Fix parsing of filenames containing ".mender"
+  ([MEN-5076](https://tracker.mender.io/browse/MEN-5076))
+* Fix the checksum errors encountered in rare cases where the entire byte
+  stream is not consumed during verification, and thus giving wrong checksum errors.
+  ([MEN-5094](https://tracker.mender.io/browse/MEN-5094))
+* Restore SSH snapshot feature on Mac OS
+  ([MEN-4362](https://tracker.mender.io/browse/MEN-4362), [MEN-5082](https://tracker.mender.io/browse/MEN-5082))
+

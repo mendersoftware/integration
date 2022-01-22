@@ -1,0 +1,111 @@
+## mender 3.1.0
+
+_Released 09.28.2021_
+
+### Statistics
+
+A total of 588 lines added, 396 removed (delta 192)
+
+| Developers with the most changesets | |
+|---|---|
+| Kristian Amlie | 11 (36.7%) |
+| Lluis Campos | 5 (16.7%) |
+| Alf-Rune Siqveland | 3 (10.0%) |
+| Ole Petter Orhagen | 3 (10.0%) |
+| Fabio Tranchitella | 2 (6.7%) |
+| Uri Ishon | 2 (6.7%) |
+| Prashanth Joseph Babu | 2 (6.7%) |
+| Alan Martinovic | 1 (3.3%) |
+| Manuel Zedel | 1 (3.3%) |
+
+| Developers with the most changed lines | |
+|---|---|
+| Kristian Amlie | 414 (58.5%) |
+| Ole Petter Orhagen | 117 (16.5%) |
+| Lluis Campos | 58 (8.2%) |
+| Prashanth Joseph Babu | 46 (6.5%) |
+| Uri Ishon | 31 (4.4%) |
+| Alf-Rune Siqveland | 24 (3.4%) |
+| Alan Martinovic | 13 (1.8%) |
+| Fabio Tranchitella | 4 (0.6%) |
+| Manuel Zedel | 1 (0.1%) |
+
+| Developers with the most lines removed | |
+|---|---|
+| Lluis Campos | 32 (8.1%) |
+
+| Developers with the most signoffs (total 1) | |
+|---|---|
+| Kristian Amlie | 1 (100.0%) |
+
+| Top changeset contributors by employer | |
+|---|---|
+| Northern.tech | 26 (86.7%) |
+| Complete Solution Robotics, LLC | 2 (6.7%) |
+| prashanthjbabu@gmail.com | 2 (6.7%) |
+
+| Top lines changed by employer | |
+|---|---|
+| Northern.tech | 631 (89.1%) |
+| prashanthjbabu@gmail.com | 46 (6.5%) |
+| Complete Solution Robotics, LLC | 31 (4.4%) |
+
+| Employers with the most signoffs (total 1) | |
+|---|---|
+| Northern.tech | 1 (100.0%) |
+
+| Employers with the most hackers (total 9) | |
+|---|---|
+| Northern.tech | 7 (77.8%) |
+| prashanthjbabu@gmail.com | 1 (11.1%) |
+| Complete Solution Robotics, LLC | 1 (11.1%) |
+
+### Changelogs
+
+#### mender (3.1.0)
+
+New changes in mender since 3.0.0:
+
+* Fix a bug which could sometimes lead the client to do a
+  rollback after it had already committed. This could happen if the
+  client happened to spontaneously reboot or fail during the status
+  update to the server. Doing this is not correct according to the state
+  flow, and can have unexpected consequences depending on the
+  combination of Update Modules and State Scripts.
+  ([MEN-4830](https://tracker.mender.io/browse/MEN-4830))
+* mender-inventory-network: Fix incompatibility with busybox,
+  by using short command line options in grep command.
+  ([MEN-4851](https://tracker.mender.io/browse/MEN-4851))
+* Do not put useless and sometimes even incorrect zero values
+  in the configuration file when running `mender setup`.
+  ([MEN-4857](https://tracker.mender.io/browse/MEN-4857))
+* Extend logs for docker module
+* Add artifact_name to device provides if not found in store
+* Support passing docker run CLI arguments when deploying
+  an artifact using the `docker` _update module_.
+* Implement support for non-U-Boot tool names.
+
+  The tools still have to be command line compatible with the U-Boot
+  tools (either u-boot-fw-utils or libubootenv), but the names can be
+  different. This allows having U-Boot tools installed alongside
+  grub-mender-grubenv tools, whose new names are
+  `grub-mender-grubenv-set` and `grub-mender-grubenv-print`, instead of
+  `fw_setenv` and `fw_printenv`.
+
+  The two new configuration settings `BootUtilitiesSetActivePart` and
+  `BootUtilitiesGetNextActivePart` have been introduced to configure the
+  names. If no names are set, then the default is to try the
+  grub-mender-grubenv tools first, followed by the "fw_" tools if the
+  former are not found.
+  ([MEN-3978](https://tracker.mender.io/browse/MEN-3978))
+* Add missing filesystem sync which could produce an empty or
+  corrupted Update Module file tree in
+  `/var/lib/mender/modules/v3/payloads/0000/tree/files/` after an
+  unexpected reboot.
+* If the mender.conf file has a new server URL or tenant token, the
+  client will now remove the cached authorization token upon the next restart of
+  the dameon, and hence respect the new configuration, as opposed to letting it
+  expire, which was the old functionality.
+  ([MEN-3420](https://tracker.mender.io/browse/MEN-3420))
+* [FIX] Fetch geo location data once per power cycle
+

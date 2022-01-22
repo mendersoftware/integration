@@ -106,16 +106,6 @@ parse_args(){
     done
 }
 
-build_backend_tests_runner() {
-    mkdir -p "$TOOLS"
-
-    if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
-        get_runner_requirements
-    fi
-
-    docker build -t mender-backend-tests-runner -f $INTEGRATION_PATH/backend-tests/docker/Dockerfile $INTEGRATION_PATH/backend-tests
-}
-
 get_runner_requirements() {
     local MENDER_ARTIFACT_PATH="$TOOLS/mender-artifact"
     local MENDER_ARTIFACT_BRANCH=$($INTEGRATION_PATH/extra/release_tool.py --version-of mender-artifact)
@@ -202,7 +192,11 @@ cleanup(){
 }
 
 parse_args "$@"
-build_backend_tests_runner
+mkdir -p "$TOOLS"
+
+if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+    get_runner_requirements
+fi
 
 script_failed=0
 

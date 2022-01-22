@@ -41,14 +41,6 @@ os.environ["GIT_PAGER"] = "cat"
 # The repositories are indexed by their Git repository names.
 RELEASE_TOOL_STATE = None
 
-JENKINS_SERVER = "https://mender-jenkins.mender.io"
-JENKINS_JOB = "job/mender-builder"
-JENKINS_USER = None
-JENKINS_PASSWORD = None
-JENKINS_CREDS_MISSING_ERR = """Jenkins credentials not found. Possible locations:
-- JENKINS_USER / JENKINS_PASSWORD environment variables
-- 'pass' password management storage."""
-
 GITLAB_SERVER = "https://gitlab.com/api/v4"
 GITLAB_JOB = "projects/Northern.tech%2FMender%2Fmender-qa"
 GITLAB_TOKEN = None
@@ -63,8 +55,6 @@ VERSION_BUMP_STRING = "Bump versions for Mender"
 PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
-# Whether we are using GitLab
-USE_GITLAB = True
 
 
 class NotAVersionException(Exception):
@@ -84,7 +74,14 @@ class Component:
         self.type = type
 
     def set_integration_version(version):
-        Component._integration_version = version
+        # If version is a range, use the later version.
+        if version is not None:
+            version = version.split("..")[-1]
+
+        if Component._integration_version != version:
+            Component._integration_version = version
+            # Invalidate cache.
+            Component.COMPONENT_MAPS = None
 
     def git(self):
         if self.type != "git":
@@ -103,11 +100,6 @@ class Component:
             raise Exception(
                 "Tried to get docker_image name from non-docker_image component"
             )
-        return self.name
-
-    def yml(self):
-        if self.type != "yml":
-            raise Exception("Tried to get yml name from non-yml component")
         return self.name
 
     def set_custom_component_maps(self, maps):
@@ -189,6 +181,18 @@ class Component:
             if is_non_core_component and only_core_components:
                 continue
             components.append(Component(comp, type))
+
+        # For testing, not used in production. This prevents listing of
+        # Enterprise repositories, to ease running in Gitlab when no Enterprise
+        # credentials are present.
+        if os.environ.get("TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"):
+            components = [
+                comp
+                for comp in components
+                if comp.git() not in BACKEND_SERVICES_ENT
+                and comp.git() not in CLIENT_SERVICES_ENT
+            ]
+
         return components
 
     def associated_components_of_type(self, type):
@@ -209,21 +213,6 @@ class Component:
                 "No such combination: Component '%s' of type %s doesn't have any associated components of type %s"
                 % (self.name, self.type, type)
             )
-
-    def yml_components(self):
-        """Returns the name of the service in our YML docker-compose files. This is
-        usually the same as the docker_image name, but for services that don't
-        have Docker images, it will be the git name, which is what is used in
-        the other-components.yml file."""
-
-        comps = self.associated_components_of_type("docker_image")
-        if len(comps) == 0:
-            # For the fake services that don't have Docker images, but reside in
-            # other-components.yml.
-            comps = self.associated_components_of_type("git")
-        for comp in comps:
-            comp.type = "yml"
-        return comps
 
     def is_release_component(self):
         Component._initialize_component_maps()
@@ -271,6 +260,10 @@ BACKEND_SERVICES_OPEN_ENT = {
 BACKEND_SERVICES = (
     BACKEND_SERVICES_OPEN | BACKEND_SERVICES_ENT | BACKEND_SERVICES_OPEN_ENT
 )
+CLIENT_SERVICES_ENT = {
+    "mender-binary-delta",
+    "monitor-client",
+}
 
 
 class BuildParam:
@@ -374,21 +367,6 @@ def get_value_from_password_storage(server, key):
 
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
-
-
-def init_jenkins_creds():
-    global JENKINS_USER
-    global JENKINS_PASSWORD
-    JENKINS_USER = os.getenv("JENKINS_USER")
-    JENKINS_PASSWORD = os.getenv("JENKINS_PASSWORD")
-
-    if JENKINS_USER is not None and JENKINS_PASSWORD is not None:
-        return
-
-    JENKINS_USER = get_value_from_password_storage(
-        JENKINS_SERVER, ["login", "user", "username"]
-    )
-    JENKINS_PASSWORD = get_value_from_password_storage(JENKINS_SERVER, None)
 
 
 def init_gitlab_creds():
@@ -515,6 +493,55 @@ def get_docker_compose_data_from_json_list(json_list):
     return data
 
 
+def version_specific_docker_compose_data_patching(data, rev):
+    """This is a function which is unfortunately needed to patch legacy docker
+    compose data which exists in tags. This data is incorrect, but cannot be
+    fixed because they are tags.
+
+    The problem is this: The yml_components() function was changed to query
+    "git" components first, instead of "docker_image" components, as part of
+    introducing N-to-N mapping between docker images and git repos
+    (QA-344). After this it became impossible to query the mender and
+    monitor-client components, and the reason is that they're missing mappings
+    in the docker compose data. This went unnoticed before QA-344 because it
+    ended up querying the docker image instead, which has the same version. But
+    this is not true anymore.
+
+    Therefore, we patch in this modification below, since we cannot fix the
+    tags. Yes, this is ugly, but at least it's confined to versions below
+    3.2.0."""
+
+    last_comp = rev.split("/")[-1]
+    if re.match(r"^[0-9]+\.[0-9]\.", last_comp) is None:
+        # Not a recognized version, assume it's recent in which no change
+        # needed.
+        return data
+
+    major, minor, patch = last_comp.split(".", 2)
+    if int(major) > 3 or (int(major) == 3 and int(minor) > 1):
+        return data
+
+    # We need to insert these entries, which may be missing ("may be" because we
+    # don't check explicitly for more recent release branches or tags).
+    if data.get("mender") is None:
+        data["mender"] = {
+            "container": "mender",
+            "image_prefix": "mendersoftware/",
+            # In all versions < 3.2, mender-client-qemu version == mender version.
+            "version": data["mender-client-qemu"]["version"],
+        }
+
+    if last_comp.startswith("3.1.") and data.get("monitor-client") is None:
+        data["monitor-client"] = {
+            "container": "monitor-client",
+            "image_prefix": "mendersoftware/",
+            # Only monitor-client 1.0.x had this problem, so we can hardcode it.
+            "version": "1.0.%s" % patch,
+        }
+
+    return data
+
+
 def get_docker_compose_data(dir, version="git"):
     """Return docker-compose data from all the YML files in the directory.
     See get_docker_compose_data_from_json_list."""
@@ -542,16 +569,45 @@ def get_docker_compose_data_for_rev(git_dir, rev, version="git"):
             )
             yamls.append(output)
 
-        return get_docker_compose_data_from_json_list(yamls)
+        data = get_docker_compose_data_from_json_list(yamls)
+        return version_specific_docker_compose_data_patching(data, rev)
     except Exception as ex:
         raise Exception("Cannot get docker-compose data for %s" % rev) from ex
 
 
 def version_of(
-    integration_dir, yml_component, in_integration_version=None, git_version=True
+    integration_dir, component, in_integration_version=None, git_version=True
 ):
-    if yml_component.yml() in ["mender-client-docker-addons", "integration"]:
-        # "mender-client-docker-addons" is the Docker image from "integration".
+    git_components = component.associated_components_of_type("git")
+    docker_components = component.associated_components_of_type("docker_image")
+    if git_version:
+        if len(git_components) != 1:
+            raise Exception(
+                "Component %s (type: %s) can not be mapped "
+                "to a single git component, so its version is ambiguous. "
+                "Candidates: (%s)"
+                % (
+                    component.name,
+                    component.type,
+                    ", ".join([c.name for c in git_components]),
+                )
+            )
+        image_name = git_components[0].git()
+    else:
+        if len(docker_components) != 1:
+            raise Exception(
+                "Component %s (type: %s) can not be mapped "
+                "to a single docker component, so its version is ambiguous. "
+                "Candidates: (%s)"
+                % (
+                    component.name,
+                    component.type,
+                    ", ".join([c.name for c in docker_components]),
+                )
+            )
+        image_name = docker_components[0].docker_image()
+
+    if git_version and git_components[0].git() == "integration":
         if in_integration_version is not None:
             # Just return the supplied version string.
             return in_integration_version
@@ -612,14 +668,14 @@ def version_of(
                 data = get_docker_compose_data_for_rev(integration_dir, rev, "git")
                 # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
                 # would be missing the backend components. Try loading the old "docker" versions.
-                if data.get(yml_component.yml()) is None:
+                if data.get(image_name) is None:
                     data = get_docker_compose_data_for_rev(
                         integration_dir, rev, "docker"
                     )
             # If the repository didn't exist in that version, just return all
             # commits in that case, IOW no lower end point range.
-            if data.get(yml_component.yml()) is not None:
-                version = data[yml_component.yml()]["version"]
+            if data.get(image_name) is not None:
+                version = data[image_name]["version"]
                 # If it is a tag, do not prepend remote name
                 if re.search(r"^[0-9]+\.[0-9]+\.[0-9]+$", version):
                     repo_range.append(version)
@@ -631,29 +687,34 @@ def version_of(
             data = get_docker_compose_data(integration_dir, "docker")
         else:
             data = get_docker_compose_data(integration_dir, "git")
-        return data[yml_component.yml()]["version"]
+        return data[image_name]["version"]
 
 
 def do_version_of(args):
     """Process --version-of argument."""
 
-    try:
-        Component.set_integration_version(args.in_integration_version)
-        comp = Component.get_component_of_any_type(args.version_of)
-    except KeyError:
-        print("Unrecognized repository: %s" % args.version_of)
-        sys.exit(1)
-
-    yml_component = comp.yml_components()[0]
-
     assert args.version_type in ["docker", "git"], (
         "%s is not a valid name type!" % args.version_type
     )
 
+    comp = None
+    try:
+        Component.set_integration_version(args.in_integration_version)
+        if args.version_type == "git":
+            comp = Component.get_component_of_type("git", args.version_of)
+        elif args.version_type == "docker":
+            comp = Component.get_component_of_type("docker_image", args.version_of)
+    except KeyError:
+        try:
+            comp = Component.get_component_of_any_type(args.version_of)
+        except KeyError:
+            print("Unrecognized repository: %s" % args.version_of)
+            sys.exit(1)
+
     print(
         version_of(
             integration_dir(),
-            yml_component,
+            comp,
             args.in_integration_version,
             git_version=(args.version_type == "git"),
         )
@@ -694,7 +755,7 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         try:
             repos_versions_dict[repo.name] = version_of(
                 integration_dir(),
-                repo.yml_components()[0],
+                repo,
                 args.in_integration_version,
                 git_version=(args.list == "git"),
             )
@@ -1198,6 +1259,10 @@ def find_prev_version(tag_list, version):
     """Finds the highest version in tag_list which is less than version.
     tag_list is expected to be sorted with highest version first."""
 
+    if version == "master" and len(tag_list) > 0:
+        # For master, return the newest released version.
+        return tag_list[0]
+
     try:
         (
             version_major,
@@ -1399,7 +1464,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 try:
                     prev_repo_version = version_of(
                         os.path.join(state["repo_dir"], "integration"),
-                        repo.yml_components()[0],
+                        repo,
                         in_integration_version=prev_version,
                     )
                 except KeyError:
@@ -1500,74 +1565,9 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
 
 def get_extra_buildparams():
     global EXTRA_BUILDPARAMS_CACHE
-    if EXTRA_BUILDPARAMS_CACHE is not None:
-        pass
-    elif USE_GITLAB:
+    if EXTRA_BUILDPARAMS_CACHE is None:
         EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_yaml()
-    else:
-        EXTRA_BUILDPARAMS_CACHE = get_extra_buildparams_from_jenkins()
     return EXTRA_BUILDPARAMS_CACHE
-
-
-def get_extra_buildparams_from_jenkins():
-    try:
-        import requests
-    except ImportError:
-        print("requests module missing, try running 'sudo pip3 install requests'.")
-        sys.exit(2)
-
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        logging.warn(JENKINS_CREDS_MISSING_ERR)
-
-    # Fetch list of parameters from Jenkins.
-    reply = requests.get(
-        "%s/%s/api/json" % (JENKINS_SERVER, JENKINS_JOB),
-        auth=(JENKINS_USER, JENKINS_PASSWORD),
-        verify=False,
-    )
-    jobInfo = json.loads(reply.content.decode())
-    parameters = [
-        prop["parameterDefinitions"]
-        for prop in jobInfo["property"]
-        if prop["_class"] == "hudson.model.ParametersDefinitionProperty"
-    ]
-    assert len(parameters) == 1, (
-        "Was expecting one hudson.model.ParametersDefinitionProperty, got %d"
-        % len(parameters)
-    )
-    parameters = parameters[0]
-
-    def jenkinsParamToDefaultMap(param):
-        if param["type"] == "BooleanParameterDefinition":
-            type = "bool"
-            value = "on" if param["defaultParameterValue"]["value"] else ""
-        elif param["type"] == "StringParameterDefinition":
-            type = "string"
-            if param.get("defaultParameterValue") is None:
-                value = ""
-            else:
-                value = param["defaultParameterValue"]["value"]
-        else:
-            raise Exception(
-                "Parameter has unknown type %s. Don't know how to handle that!"
-                % param["type"]
-            )
-        return (param["name"], type, value)
-
-    # Add all fetched parameters that are not part of our versioned repositories
-    # as extra build parameters.
-    extra_buildparams = {}
-    in_versioned_repos = {}
-    for repo in Component.get_components_of_type("git", only_core_compoments=False):
-        in_versioned_repos[git_to_buildparam(repo.git())] = True
-
-    for key, type, value in [jenkinsParamToDefaultMap(param) for param in parameters]:
-        # Skip keys that are in versioned repos.
-        if not in_versioned_repos.get(key):
-            extra_buildparams[key] = BuildParam(type, value)
-
-    return extra_buildparams
 
 
 def get_extra_buildparams_from_yaml():
@@ -1652,10 +1652,7 @@ def trigger_build(state, tag_avail):
 
         reply = ask("Will trigger a build with these values, ok? (no) ")
         if reply.startswith("Y") or reply.startswith("y"):
-            if USE_GITLAB:
-                trigger_gitlab_build(params, extra_buildparams)
-            else:
-                trigger_jenkins_build(params, extra_buildparams)
+            trigger_gitlab_build(params, extra_buildparams)
             return
 
         reply = ask(
@@ -1762,68 +1759,6 @@ DR = Disable automatic publishing of the release
 
         else:
             return
-
-
-def trigger_jenkins_build(params, extra_buildparams):
-    try:
-        import requests
-    except ImportError:
-        print("requests module missing, try running 'sudo pip3 install requests'.")
-        sys.exit(2)
-
-    init_jenkins_creds()
-    if not JENKINS_USER or not JENKINS_PASSWORD:
-        raise SystemExit(JENKINS_CREDS_MISSING_ERR)
-
-    # Order is important here, because Jenkins passes in the same parameters
-    # multiple times, as pairs that complete each other.
-    # Jenkins additionally needs the input as json as well, so create that from
-    # above parameters.
-    postdata = []
-    jdata = {"parameter": []}
-    for param in params.items():
-        postdata.append(("name", param[0]))
-        if param[1] != "":
-            postdata.append(("value", param[1]))
-
-        if (
-            extra_buildparams.get(param[0]) is not None
-            and extra_buildparams[param[0]].type == "bool"
-        ):
-            if param[1] == "on":
-                jdata["parameter"].append({"name": param[0], "value": True})
-            elif param[1] == "":
-                jdata["parameter"].append({"name": param[0], "value": False})
-        else:
-            jdata["parameter"].append({"name": param[0], "value": param[1]})
-
-    try:
-        postdata.append(("statusCode", "303"))
-        jdata["statusCode"] = "303"
-        postdata.append(("redirectTo", "."))
-        jdata["redirectTo"] = "."
-        postdata.append(("json", json.dumps(jdata)))
-
-        reply = requests.post(
-            "%s/%s/build?delay=0sec" % (JENKINS_SERVER, JENKINS_JOB),
-            data=postdata,
-            auth=(JENKINS_USER, JENKINS_PASSWORD),
-            verify=False,
-        )
-        if reply.status_code < 200 or reply.status_code >= 300:
-            print("Request returned: %d: %s" % (reply.status_code, reply.reason))
-        else:
-            print("Build started.")
-            # Crude way to find build number, pick first number starting with a
-            # hash between two html tags.
-            match = re.search(">#([0-9]+)<", reply.content.decode())
-            if match is not None:
-                print("Link: %s/%s/%s/" % (JENKINS_SERVER, JENKINS_JOB, match.group(1)))
-            else:
-                print("Unable to determine build number.")
-    except Exception:
-        print("Failed to start build:")
-        traceback.print_exc()
 
 
 def trigger_gitlab_build(params, extra_buildparams):
@@ -2001,16 +1936,22 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
         old.close()
         os.rename(filename + ".tmp", filename)
 
-    for yml in repo.yml_components():
-        compose_files_docker = docker_compose_files_list(dir, "docker")
-        for filename in compose_files_docker:
-            _replace_version_in_file(filename, yml.yml(), tag)
+    compose_files_docker = docker_compose_files_list(dir, "docker")
+    git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
+    for filename in compose_files_docker:
+        for comp in repo.associated_components_of_type("docker_image"):
+            _replace_version_in_file(filename, comp.docker_image(), tag)
+        for comp in repo.associated_components_of_type("git"):
+            _replace_version_in_file(filename, comp.git(), tag)
 
-        if git_tag is not None:
-            for filename in docker_compose_files_list(dir, "git"):
-                # Avoid rewriting duplicated files (client and other-components)
-                if filename not in compose_files_docker:
-                    _replace_version_in_file(filename, yml.yml(), git_tag)
+    if git_tag is not None:
+        for filename in git_files:
+            for comp in repo.associated_components_of_type("docker_image"):
+                # backend repositories use the full qualified Docker image name
+                _replace_version_in_file(filename, comp.docker_image(), git_tag)
+            for comp in repo.associated_components_of_type("git"):
+                # backend repositories use the full qualified Docker image name
+                _replace_version_in_file(filename, comp.git(), git_tag)
 
 
 def purge_build_tags(state, tag_avail):
@@ -2428,9 +2369,7 @@ def do_build(args):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
-                version = version_of(
-                    integration_dir(), repo.yml_components()[0], args.build
-                )
+                version = version_of(integration_dir(), repo, args.build)
                 update_state(state, [repo.git(), "version"], version)
         tag_avail = check_tag_availability(state)
         for repo in Component.get_components_of_type("git"):
@@ -2483,9 +2422,7 @@ def determine_version_to_include_in_release(state, repo):
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
         prev_of_repo = version_of(
-            integration_dir(),
-            repo.yml_components()[0],
-            in_integration_version=prev_of_integration,
+            integration_dir(), repo, in_integration_version=prev_of_integration,
         )
         if overall_beta is not None:
             (major, minor, patch, _) = version_components(prev_of_repo)
@@ -2598,8 +2535,9 @@ def run_and_combine_statistics_and_changelog(
         workdir if single_repo else integration_dir(),
         [
             "for-each-ref",
-            r"--format=%(taggerdate:format:%m.%d.%Y)",
+            r"--format=%(creatordate:format:%m.%d.%Y)",
             "refs/tags/" + to_version,
+            "refs/heads/" + to_version,
         ],
         capture=True,
     )
@@ -2640,17 +2578,32 @@ def run_and_combine_statistics_and_changelog(
         fd.write(changelog_out.decode())
 
 
-def do_generate_release_notes(state):
-    """Generate Release Notes for the released tags"""
+def do_generate_release_notes(
+    base_dir, version_of_integration, prev_of_integration=None
+):
+    """Generate Release Notes for given version range. If no previous version is
+    given, it is auto-detected."""
+
+    split = version_of_integration.split("..")
+    if len(split) > 1:
+        if prev_of_integration is not None:
+            raise Exception(
+                "version_of_integration is a range, and prev_of_integration is non-empty. This should not happen!"
+            )
+        prev_of_integration, version_of_integration = split[0], split[1]
+
+    Component.set_integration_version(version_of_integration)
+
+    if prev_of_integration is None:
+        tag_list = sorted_final_version_list(integration_dir())
+        prev_of_integration = find_prev_version(tag_list, version_of_integration)
 
     # Release notes for Mender (server)
-    tag_list = sorted_final_version_list(integration_dir())
-    prev_of_integration = find_prev_version(tag_list, state["version"])
     run_and_combine_statistics_and_changelog(
-        state["repo_dir"],
+        base_dir,
         False,
         prev_of_integration,
-        state["version"],
+        version_of_integration,
         "release_notes_server.txt",
     )
 
@@ -2665,10 +2618,13 @@ def do_generate_release_notes(state):
     for repo in repos:
         if repo.git() == "integration":
             continue
-        version = state_value(state, [repo.git(), "version"])
-        workdir = os.path.join(state["repo_dir"], repo.git())
-        tag_list = sorted_final_version_list(workdir)
-        prev_version = find_prev_version(tag_list, version)
+        version = version_of(
+            integration_dir(), repo, in_integration_version=version_of_integration,
+        )
+        prev_version = version_of(
+            integration_dir(), repo, in_integration_version=prev_of_integration,
+        )
+        workdir = os.path.join(base_dir, repo.git())
         output_file = "release_notes_%s.txt" % repo.git()
         run_and_combine_statistics_and_changelog(
             workdir, True, prev_version, version, output_file
@@ -2839,7 +2795,7 @@ def do_release(release_state_file):
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "n":
-            do_generate_release_notes(state)
+            do_generate_release_notes(state["repo_dir"], state["version"])
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":
@@ -2970,13 +2926,16 @@ def do_integration_versions_including(args):
         data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
         # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
         # would be missing the backend components. Try loading the old "docker" versions.
-        if data.get(repo.yml_components()[0].yml()) is None:
+        docker_image = repo.associated_components_of_type("docker_image")[
+            0
+        ].docker_image()
+        if data.get(docker_image) is None:
             data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
-            version = data[repo.yml_components()[0].yml()]["version"]
+            version = data[docker_image]["version"]
         except KeyError:
-            # Key repo.yml_components()[0] doesn't exist because the version is
-            # from before that component existed.
+            # Key docker_image doesn't exist because the version is from before
+            # that component existed.
             # Not a match.
             continue
 
@@ -3122,10 +3081,12 @@ def do_hosted_release(version=None):
     for non_backend_comp in Component.get_components_of_type(
         "git", only_independent_component=True
     ):
-        yml_component = non_backend_comp.yml_components()[0]
+        docker_component = non_backend_comp.associated_components_of_type(
+            "docker_image"
+        )[0]
 
         non_backend_versions[non_backend_comp.git()] = version_of(
-            integration_dir(), yml_component
+            integration_dir(), docker_component
         )
 
     # Figure out Git sha for the tags
@@ -3273,10 +3234,11 @@ def main():
         "--in-integration-version",
         dest="in_integration_version",
         metavar="VERSION",
-        help="Used together with the above argument to query for a version of a "
+        help="Used together with the `--version-of` argument to query for a version of a "
         + "service which is in the given version of integration, instead of the "
         + "currently checked out version of integration. If a range is given here "
-        + "it will return the range of the corresponding service.",
+        + "it will return the range of the corresponding service. "
+        + "It is also used together with the `--generate-release-notes` argument.",
     )
     parser.add_argument(
         "-s",
@@ -3297,7 +3259,7 @@ def main():
         "--feature-branches",
         action="store_true",
         default=False,
-        help="When used with -f, include upstream feature branches",
+        help="When used with `--integration-versions-including`, include upstream feature branches",
     )
     parser.add_argument(
         "-v",
@@ -3315,20 +3277,11 @@ def main():
         help="Build the given version of Mender",
     )
     parser.add_argument(
-        "-c",
-        "--ci-server",
-        metavar="jenkins|gitlab",
-        dest="ci_server",
-        default="gitlab",
-        nargs="?",
-        help="Select server CI where to trigger the builds. Default is GitLab.",
-    )
-    parser.add_argument(
         "--pr",
         dest="pr",
         metavar="REPO/PR-NUMBER",
         action="append",
-        help="Can only be used with -b. Specifies a repository and pull request number "
+        help="Can only be used with `--build`. Specifies a repository and pull request number "
         + "that should be triggered with the rest of the repository versions. It is "
         + "also possible to specify a branch name instead of a pull request number. "
         + "May be specified more than once.",
@@ -3349,27 +3302,27 @@ def main():
         "--all",
         action="store_true",
         default=False,
-        help="When used with -l, list all repositories, including optional ones. "
-        + "When used with -f, include local branches in addition to upstream branches.",
+        help="When used with `--list`, list all repositories, including optional ones. "
+        + "When used with `--integration-versions-including`, include local branches in addition to upstream branches.",
     )
     parser.add_argument(
         "--only-backend",
         action="store_true",
         default=False,
-        help="When used with -l, list only backend repositories; ignored otherwise",
+        help="When used with `--list`, list only backend repositories; ignored otherwise",
     )
     parser.add_argument(
         "--only-client",
         action="store_true",
         default=False,
-        help="When used with -l, list only non-backend repositories; ignored otherwise",
+        help="When used with `--list`, list only non-backend repositories; ignored otherwise",
     )
     parser.add_argument(
         "--list-format",
         metavar="simple|table|json",
         default="simple",
         nargs="?",
-        help="When used with -l, 'simple' prints only the repos, 'table' adds the versions"
+        help="When used with `--list`, 'simple' prints only the repos, 'table' adds the versions "
         + "of each component in a table format, and 'json' composes a json object",
     )
     parser.add_argument(
@@ -3406,6 +3359,12 @@ def main():
     parser.add_argument(
         "-n", "--dry-run", action="store_true", help="Don't take any action at all"
     )
+    parser.add_argument(
+        "--generate-release-notes",
+        action="store_true",
+        help="Generate changelogs and statistics and put them in `release_notes_*.txt` files. "
+        + "Use `--in-integration-version` argument to choose which integration range to generate notes for.",
+    )
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -3432,12 +3391,6 @@ def main():
     if args.dry_run:
         global DRY_RUN
         DRY_RUN = True
-    assert args.ci_server in ["jenkins", "gitlab"], (
-        "%s is not a valid CI server!" % args.ci_server
-    )
-    if args.ci_server == "jenkins":
-        global USE_GITLAB
-        USE_GITLAB = False
 
     if args.version_of is not None:
         do_version_of(args)
@@ -3465,6 +3418,14 @@ def main():
         do_hosted_release(args.version)
     elif args.select_test_suite:
         do_select_test_suite()
+    elif args.generate_release_notes:
+        if not args.in_integration_version:
+            raise Exception(
+                "--generate-release-notes requires --in-integration-version argument."
+            )
+        do_generate_release_notes(
+            os.path.dirname(integration_dir()), args.in_integration_version
+        )
     else:
         parser.print_help()
         sys.exit(1)

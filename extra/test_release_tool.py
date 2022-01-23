@@ -389,21 +389,25 @@ def test_set_version_of(capsys, is_staging):
             capsys,
             ["--set-version-of", "mender-deployments", "--version", "4.5.6-test"],
         )
-        run_main_assert_result(
-            capsys,
-            ["--version-of", "deployments", "--version-type", "docker"],
-            "4.5.6-test",
-        )
+        # NOTE: skip check for OS flavor for branches without it (namely staging)
+        if not is_staging:
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "deployments", "--version-type", "docker"],
+                "4.5.6-test",
+            )
         run_main_assert_result(
             capsys,
             ["--version-of", "deployments-enterprise", "--version-type", "docker"],
             "4.5.6-test",
         )
-        run_main_assert_result(
-            capsys,
-            ["--version-of", "deployments", "--version-type", "git"],
-            "4.5.6-test",
-        )
+        # NOTE: skip check for OS flavor for branches without it (namely staging)
+        if not is_staging:
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "deployments", "--version-type", "git"],
+                "4.5.6-test",
+            )
         run_main_assert_result(
             capsys,
             ["--version-of", "deployments-enterprise", "--version-type", "git"],

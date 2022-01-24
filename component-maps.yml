@@ -323,6 +323,7 @@ docker_image:
     docker_container:
     - mender-client
     release_component: true
+    independent_component: false
 
   mender-client-docker-addons:
     git:

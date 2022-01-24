@@ -15,3 +15,6 @@ services:
 
     mender-convert:
         image: mendersoftware/mender-convert:master
+
+    meta-mender:
+        image: mendersoftware/meta-mender:dunfell

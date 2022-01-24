@@ -11,14 +11,12 @@ git:
     docker_container: []
     release_component: true
     independent_component: true
-    non_core_component: true
 
   mender-binary-delta:
     docker_image: []
     docker_container: []
     release_component: true
     independent_component: true
-    non_core_component: true
 
   mender-configure-module:
     docker_image:
@@ -28,8 +26,7 @@ git:
     - mender-monitor-qemu-commercial
     docker_container: []
     release_component: true
-    independent_component: false
-    non_core_component: true
+    independent_component: true
 
   iot-manager:
     docker_image:
@@ -110,7 +107,7 @@ git:
     docker_container:
     - mender-client
     release_component: true
-    independent_component: false
+    independent_component: true
 
   mender-api-gateway-docker:
     docker_image:
@@ -232,7 +229,7 @@ git:
     docker_container:
       - mender-client
     release_component: true
-    independent_component: false
+    independent_component: true
 
   deviceconfig:
     docker_image:
@@ -247,7 +244,7 @@ git:
     docker_container:
     - mender-client
     release_component: true
-    independent_component: false
+    independent_component: true
 
   reporting:
     docker_image:
@@ -255,6 +252,12 @@ git:
     docker_container:
     - mender-reporting
     release_component: false
+
+  meta-mender:
+    docker_image: []
+    docker_container: []
+    release_component: false
+    independent_component: true
 
 docker_image:
 
@@ -330,6 +333,7 @@ docker_image:
     docker_container:
     - mender-client
     release_component: true
+    independent_component: false
 
   mender-client-qemu:
     git:
@@ -338,6 +342,7 @@ docker_image:
     docker_container:
     - mender-client
     release_component: true
+    independent_component: false
 
   mender-client-qemu-rofs:
     git:
@@ -346,6 +351,7 @@ docker_image:
     docker_container:
     - mender-client
     release_component: true
+    independent_component: false
 
   api-gateway:
     git:
@@ -481,6 +487,7 @@ docker_image:
     docker_container:
     - mender-client
     release_component: true
+    independent_component: false
 
   reporting:
     git:

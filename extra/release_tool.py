@@ -145,7 +145,6 @@ class Component:
         only_non_release=False,
         only_independent_component=False,
         only_non_independent_component=False,
-        only_core_components=True,
     ):
         Component._initialize_component_maps()
         if only_release is None:
@@ -165,11 +164,6 @@ class Component:
             is_release_component = Component.COMPONENT_MAPS[type][comp][
                 "release_component"
             ]
-            is_non_core_component = (
-                Component.COMPONENT_MAPS.get(type, {})
-                .get(comp, {})
-                .get("is_non_core_component", False)
-            )
             if is_independent_component and only_non_independent_component:
                 continue
             if not is_independent_component and only_independent_component:
@@ -177,8 +171,6 @@ class Component:
             if is_release_component and only_non_release:
                 continue
             if not is_release_component and only_release:
-                continue
-            if is_non_core_component and only_core_components:
                 continue
             components.append(Component(comp, type))
 
@@ -220,12 +212,22 @@ class Component:
 
     def is_independent_component(self):
         Component._initialize_component_maps()
-        associated_repo = self.associated_components_of_type("git")[0]
-        independent_component = self.COMPONENT_MAPS["git"][associated_repo.name].get(
-            "independent_component"
-        )
-        if independent_component is not None:
-            return independent_component
+
+        def components_to_try():
+            yield self
+            if self.type == "git":
+                assoc_comp = self.associated_components_of_type("docker_image")
+            else:
+                assoc_comp = self.associated_components_of_type("git")
+            if len(assoc_comp) > 0:
+                yield assoc_comp[0]
+
+        for comp in components_to_try():
+            independent_component = self.COMPONENT_MAPS[comp.type][comp.name].get(
+                "independent_component"
+            )
+            if independent_component is not None:
+                return independent_component
         return False
 
 
@@ -693,16 +695,20 @@ def version_of(
 def do_version_of(args):
     """Process --version-of argument."""
 
-    assert args.version_type in ["docker", "git"], (
-        "%s is not a valid name type!" % args.version_type
+    if args.version_type is None:
+        version_type = "git"
+    else:
+        version_type = args.version_type
+    assert version_type in ["docker", "git"], (
+        "%s is not a valid name type for --version-of!" % version_type
     )
 
     comp = None
     try:
         Component.set_integration_version(args.in_integration_version)
-        if args.version_type == "git":
+        if version_type == "git":
             comp = Component.get_component_of_type("git", args.version_of)
-        elif args.version_type == "docker":
+        elif version_type == "docker":
             comp = Component.get_component_of_type("docker_image", args.version_of)
     except KeyError:
         try:
@@ -716,7 +722,7 @@ def do_version_of(args):
             integration_dir(),
             comp,
             args.in_integration_version,
-            git_version=(args.version_type == "git"),
+            git_version=(version_type == "git"),
         )
     )
 
@@ -742,7 +748,6 @@ def do_list_repos(args, optional_too, only_backend, only_client):
         only_release=(not optional_too),
         only_non_independent_component=(only_backend),
         only_independent_component=(only_client),
-        only_core_components=(not optional_too),
     )
     repos.sort(key=lambda x: x.name)
 
@@ -1085,7 +1090,7 @@ def refresh_repos(state):
 
     git_list = []
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         remote = find_upstream_remote(state, repo.git())
         git_list.append(
             (
@@ -1114,7 +1119,7 @@ def check_tag_availability(state):
     tag_avail = {}
     highest_overall = -1
     all_released = True
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         tag_avail[repo.git()] = {}
         missing_repos = False
         try:
@@ -1203,10 +1208,7 @@ def report_release_state(state, tag_avail):
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
-    for repo in sorted(
-        Component.get_components_of_type("git", only_core_components=False),
-        key=repo_sort_key,
-    ):
+    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
         if tag_avail[repo.git()]["already_released"]:
             tag = state[repo.git()]["version"]
             # Report released tags as following themselves, even though behind
@@ -1349,7 +1351,7 @@ def generate_new_tags(state, tag_avail, final):
 
     # Find highest of all build tags in all repos.
     highest = 0
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if (
             not tag_avail[repo.git()]["already_released"]
             and tag_avail[repo.git()].get("build_tag") is not None
@@ -1360,7 +1362,7 @@ def generate_new_tags(state, tag_avail, final):
 
     # Assign new build tags to each repo based on our previous findings.
     next_tag_avail = copy.deepcopy(tag_avail)
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not tag_avail[repo.git()]["already_released"]:
             if final:
                 # For final tag, point to the previous build tag, not the
@@ -1445,21 +1447,24 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         changelogs = []
 
         # Modify docker tags in docker-compose file.
-        for repo in sorted(
-            Component.get_components_of_type("git", only_core_components=False),
-            key=repo_sort_key,
-        ):
-            if repo.is_independent_component():
-                set_docker_compose_version_to(
-                    tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
-                )
-            else:
-                set_docker_compose_version_to(
-                    tmpdir,
-                    repo,
-                    next_tag_avail["image_tag"],
-                    git_tag=next_tag_avail[repo.git()]["build_tag"],
-                )
+        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
+
+            # Set git version.
+            set_component_version_to(
+                tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
+            )
+
+            # Set docker version.
+            for docker in repo.associated_components_of_type("docker_image"):
+                if docker.is_independent_component():
+                    set_component_version_to(
+                        tmpdir, docker, next_tag_avail[repo.git()]["build_tag"]
+                    )
+                else:
+                    set_component_version_to(
+                        tmpdir, docker, next_tag_avail["image_tag"],
+                    )
+
             if prev_version:
                 try:
                     prev_repo_version = version_of(
@@ -1527,7 +1532,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
     # Prepare Git tag and push commands.
     git_tag_list = []
     git_push_list = []
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"]:
             git_tag_list.append(
                 (
@@ -1556,7 +1561,7 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         return tag_avail
 
     # If this was the final tag, reflect that in our data.
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if not next_tag_avail[repo.git()]["already_released"] and final:
             next_tag_avail[repo.git()]["already_released"] = True
 
@@ -1592,7 +1597,7 @@ def get_extra_buildparams_from_yaml():
     # as extra build parameters.
     extra_buildparams = {}
     in_versioned_repos = {}
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         in_versioned_repos[git_to_buildparam(repo.git())] = True
 
     for key, value in build_variables.items():
@@ -1634,8 +1639,7 @@ def trigger_build(state, tag_avail):
 
             # Populate parameters with build tags for each repository.
             for repo in sorted(
-                Component.get_components_of_type("git", only_core_components=False),
-                key=repo_sort_key,
+                Component.get_components_of_type("git"), key=repo_sort_key,
             ):
                 if tag_avail[repo.git()].get("build_tag") is None:
                     print("%s doesn't have a build tag yet!" % repo.git())
@@ -1821,17 +1825,13 @@ def do_license_generation(state, tag_avail):
             return tag_avail[repo_git]["build_tag"]
 
     tmpdirs = []
-    for repo in Component.get_components_of_type(
-        "git", only_release=True, only_core_components=False
-    ):
+    for repo in Component.get_components_of_type("git", only_release=True):
         tmpdirs.append(
             setup_temp_git_checkout(
                 state, repo.git(), tag_or_followed_branch(repo.git())
             )
         )
-    for repo in Component.get_components_of_type(
-        "git", only_non_release=True, only_core_components=False
-    ):
+    for repo in Component.get_components_of_type("git", only_non_release=True):
         remote = find_upstream_remote(state, repo.git())
         tmpdirs.append(setup_temp_git_checkout(state, repo.git(), remote + "/master"))
 
@@ -1916,9 +1916,10 @@ def do_license_generation(state, tag_avail):
     print("Output is captured in generated-license-text.txt.")
 
 
-def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
-    """Modifies docker-compose files in the given directory so that repo_docker
-    image points to the given tag."""
+def set_component_version_to(dir, component, tag):
+    """Modifies yml files in the given directory so that the image label points to
+    the given tag. It uses the component type to decide which file to put the
+    tag in."""
 
     def _replace_version_in_file(filename, image, version):
         old = open(filename)
@@ -1938,20 +1939,17 @@ def set_docker_compose_version_to(dir, repo, tag, git_tag=None):
 
     compose_files_docker = docker_compose_files_list(dir, "docker")
     git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
-    for filename in compose_files_docker:
-        for comp in repo.associated_components_of_type("docker_image"):
-            _replace_version_in_file(filename, comp.docker_image(), tag)
-        for comp in repo.associated_components_of_type("git"):
-            _replace_version_in_file(filename, comp.git(), tag)
 
-    if git_tag is not None:
+    if component.type == "docker_image":
+        for filename in compose_files_docker:
+            _replace_version_in_file(filename, component.docker_image(), tag)
+    elif component.type == "git":
         for filename in git_files:
-            for comp in repo.associated_components_of_type("docker_image"):
-                # backend repositories use the full qualified Docker image name
-                _replace_version_in_file(filename, comp.docker_image(), git_tag)
-            for comp in repo.associated_components_of_type("git"):
-                # backend repositories use the full qualified Docker image name
-                _replace_version_in_file(filename, comp.git(), git_tag)
+            _replace_version_in_file(filename, component.git(), tag)
+    else:
+        raise Exception(
+            f"Invalid component type {component.type} inside set_component_version_to"
+        )
 
 
 def purge_build_tags(state, tag_avail):
@@ -1960,7 +1958,7 @@ def purge_build_tags(state, tag_avail):
     upstream as well."""
 
     git_list = []
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         remote = find_upstream_remote(state, repo.git())
         tag_list = execute_git(state, repo.git(), ["tag"], capture=True).split("\n")
         to_purge = []
@@ -2171,7 +2169,7 @@ def create_release_branches(state, tag_avail):
 
     any_repo_needs_branch = False
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if tag_avail[repo.git()]["already_released"]:
             continue
 
@@ -2227,7 +2225,7 @@ def create_release_branches(state, tag_avail):
 
 
 def do_beta_to_final_transition(state):
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         version = state[repo.git()]["version"]
         version = re.sub("b[0-9]+$", "", version)
         update_state(state, [repo.git(), "version"], version)
@@ -2256,25 +2254,24 @@ def do_docker_compose_branches_from_follows(state):
             else:
                 bare_branch = branch
 
-            if repo.is_independent_component():
-                set_docker_compose_version_to(checkout, repo, bare_branch)
-            else:
-                set_docker_compose_version_to(
-                    checkout, repo, tag=mender_branch, git_tag=bare_branch,
-                )
+            set_component_version_to(checkout, repo, bare_branch)
+
+            for docker in repo.associated_components_of_type("docker_image"):
+                if docker.is_independent_component():
+                    set_component_version_to(checkout, docker, bare_branch)
+                else:
+                    set_component_version_to(
+                        checkout, docker, mender_branch,
+                    )
 
                 # Update extra files used in integration tests
-                set_docker_compose_version_to(
-                    os.path.join(checkout, "extra", "mtls"),
-                    repo,
-                    tag=mender_branch,
-                    git_tag=bare_branch,
+                set_component_version_to(
+                    os.path.join(checkout, "extra", "mtls"), docker, mender_branch,
                 )
-                set_docker_compose_version_to(
+                set_component_version_to(
                     os.path.join(checkout, "extra", "failover-testing"),
-                    repo,
-                    tag=mender_branch,
-                    git_tag=bare_branch,
+                    docker,
+                    mender_branch,
                 )
 
         print("This is the diff:")
@@ -2365,7 +2362,7 @@ def do_build(args):
         tag_avail = check_tag_availability(state)
     else:
         update_state(state, ["version"], args.build)
-        for repo in Component.get_components_of_type("git", only_core_components=False):
+        for repo in Component.get_components_of_type("git"):
             if repo.git() == "integration":
                 update_state(state, [repo.git(), "version"], args.build)
             else:
@@ -2613,7 +2610,6 @@ def do_generate_release_notes(
         only_release=True,
         only_non_independent_component=False,
         only_independent_component=True,
-        only_core_components=False,
     )
     for repo in repos:
         if repo.git() == "integration":
@@ -2682,10 +2678,7 @@ def do_release(release_state_file):
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    repos = sorted(
-        Component.get_components_of_type("git", only_core_components=False),
-        key=repo_sort_key,
-    )
+    repos = sorted(Component.get_components_of_type("git"), key=repo_sort_key,)
     while len(repos) > 0:
         repo = repos.pop(0)
         if not determine_version_to_include_in_release(state, repo):
@@ -2694,7 +2687,7 @@ def do_release(release_state_file):
     # Fill data about available tags.
     tag_avail = check_tag_availability(state)
 
-    for repo in Component.get_components_of_type("git", only_core_components=False):
+    for repo in Component.get_components_of_type("git"):
         if state_value(state, [repo.git(), "following"]) is None:
             # Follow "1.0.x" style branches by default.
             assign_default_following_branch(state, repo)
@@ -2778,9 +2771,7 @@ def do_release(release_state_file):
             push_latest_docker_tags(state, tag_avail)
         elif reply.lower() == "p":
             git_list = []
-            for repo in Component.get_components_of_type(
-                "git", only_core_components=False
-            ):
+            for repo in Component.get_components_of_type("git"):
                 remote = find_upstream_remote(state, repo.git())
                 git_list.append(
                     (
@@ -2820,24 +2811,46 @@ def do_set_version_to(args):
         print("--set-version-of requires --version")
         sys.exit(1)
 
-    repo = Component.get_component_of_any_type(args.set_version_of)
-    set_docker_compose_version_to(
-        integration_dir(), repo, args.version, git_tag=args.version
+    if args.version_type is None:
+        version_type = "all"
+    else:
+        version_type = args.version_type
+    assert version_type in ["all", "docker", "git"], (
+        "%s is not a valid name type for --set-version-of!" % version_type
     )
 
-    # Update extra files used in integration tests
-    set_docker_compose_version_to(
-        os.path.join(integration_dir(), "extra", "mtls"),
-        repo,
-        args.version,
-        git_tag=args.version,
-    )
-    set_docker_compose_version_to(
-        os.path.join(integration_dir(), "extra", "failover-testing"),
-        repo,
-        args.version,
-        git_tag=args.version,
-    )
+    if version_type == "all":
+        component = Component.get_component_of_any_type(args.set_version_of)
+        for assoc in component.associated_components_of_type("git"):
+            set_component_version_to(integration_dir(), assoc, args.version)
+        for assoc in component.associated_components_of_type("docker_image"):
+            set_component_version_to(integration_dir(), assoc, args.version)
+            # Update extra files used in integration tests
+            set_component_version_to(
+                os.path.join(integration_dir(), "extra", "mtls"), assoc, args.version,
+            )
+            set_component_version_to(
+                os.path.join(integration_dir(), "extra", "failover-testing"),
+                assoc,
+                args.version,
+            )
+
+    elif version_type == "git":
+        component = Component.get_component_of_type("git", args.set_version_of)
+        set_component_version_to(integration_dir(), component, args.version)
+
+    elif version_type == "docker":
+        component = Component.get_component_of_type("docker_image", args.set_version_of)
+        set_component_version_to(integration_dir(), component, args.version)
+        # Update extra files used in integration tests
+        set_component_version_to(
+            os.path.join(integration_dir(), "extra", "mtls"), component, args.version,
+        )
+        set_component_version_to(
+            os.path.join(integration_dir(), "extra", "failover-testing"),
+            component,
+            args.version,
+        )
 
 
 def is_marked_as_releaseable_in_integration_version(
@@ -3225,9 +3238,12 @@ def main():
         "-t",
         "--version-type",
         dest="version_type",
-        metavar="git|docker",
-        default="git",
-        help="Used together with the above to specify the type of version to query.",
+        metavar="git|docker|all",
+        help="Used together with --version-of and --set-version-of to specify "
+        "the type of version to query. "
+        'For --version-of, the default is "git", for --set-version-of, the '
+        'default is "all". '
+        '"all" is only valid with --set-version-of.',
     )
     parser.add_argument(
         "-i",

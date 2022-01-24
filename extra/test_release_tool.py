@@ -30,10 +30,16 @@ RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
 INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 
 # Samples of the different "types" of repos for listing tests
-SAMPLE_REPOS_BASE = ["deviceconnect", "gui", "tenantadm", "mender", "mender-connect"]
+SAMPLE_REPOS_BASE = ["deviceconnect", "gui", "tenantadm"]
 SAMPLE_REPOS_BACKEND_OS = ["deployments", "inventory", "useradm", "deviceauth"]
 SAMPLE_REPOS_BACKEND_ENT = [f"{repo}-enterprise" for repo in SAMPLE_REPOS_BACKEND_OS]
-SAMPLE_REPOS_NON_BACKEND = ["mender-cli", "mender-artifact", "mender-convert"]
+SAMPLE_REPOS_NON_BACKEND = [
+    "mender-cli",
+    "mender-artifact",
+    "mender-convert",
+    "mender",
+    "mender-connect",
+]
 SAMPLE_REPOS_DEPRECATED = ["deviceadm", "mender-api-gateway-docker", "mender-conductor"]
 
 
@@ -436,6 +442,45 @@ def test_set_version_of(capsys, is_staging):
             capsys,
             ["--version-of", "deployments-enterprise", "--version-type", "git"],
             "4.5.6-test",
+        )
+
+        # Using --set-version-of with --version-type modifies only one version
+        run_main_assert_result(
+            capsys,
+            [
+                "--set-version-of",
+                "gui",
+                "--version-type",
+                "git",
+                "--version",
+                "4.5.6-test",
+            ],
+        )
+        run_main_assert_result(capsys, ["--version-of", "gui"], "4.5.6-test")
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "docker"], "1.2.3-test"
+        )
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "git"], "4.5.6-test"
+        )
+
+        run_main_assert_result(
+            capsys,
+            [
+                "--set-version-of",
+                "gui",
+                "--version-type",
+                "docker",
+                "--version",
+                "7.8.9-test",
+            ],
+        )
+        run_main_assert_result(capsys, ["--version-of", "gui"], "4.5.6-test")
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "docker"], "7.8.9-test"
+        )
+        run_main_assert_result(
+            capsys, ["--version-of", "gui", "--version-type", "git"], "4.5.6-test"
         )
 
     finally:

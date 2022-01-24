@@ -5,7 +5,7 @@ services:
     # monitor-client
     #
     mender-client:
-        image: registry.mender.io/mendersoftware/mender-monitor-qemu-commercial:mender-master
+        image: registry.mender.io/mendersoftware/mender-monitor-qemu-commercial:mender-3.2.0
         networks:
             - mender
         stdin_open: true

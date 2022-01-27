@@ -6,6 +6,14 @@
 
 git:
 
+  mender-gateway:
+    docker_image:
+      - mender-gateway-qemu-commercial
+    docker_container:
+      - mender-gateway
+    release_component: true
+    independent_component: true
+
   mender-convert:
     docker_image: []
     docker_container: []
@@ -104,6 +112,7 @@ git:
     - mender-client-docker
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
+    - mender-gateway-qemu-commercial
     docker_container:
     - mender-client
     release_component: true
@@ -489,6 +498,15 @@ docker_image:
     release_component: true
     independent_component: false
 
+  mender-gateway-qemu-commercial:
+    git:
+    - mender-gateway
+    - mender
+    docker_container:
+    - mender-gateway
+    release_component: true
+    independent_component: true
+
   reporting:
     git:
     - reporting
@@ -497,6 +515,15 @@ docker_image:
     release_component: false
 
 docker_container:
+
+  mender-gateway:
+    git:
+      - integration
+      - mender
+      - mender-gateway
+    docker_image:
+      - mender-gateway-qemu-commercial
+    release_component: true
 
   mender-iot-manager:
     git:

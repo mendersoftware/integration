@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -95,6 +95,9 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
     MENDER_2_5_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
+    ]
+    MENDER_GATEWAY_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.enterprise.yml"
     ]
 
     def setup(self):
@@ -379,6 +382,96 @@ class DockerComposeMenderClient_2_5(DockerComposeCompatibilitySetup):
         super(DockerComposeCompatibilitySetup, self).__init__(
             name, extra_files=extra_files
         )
+
+
+class DockerComposeMenderGatewayCommercialSetup(DockerComposeNameSpace):
+    """
+    Spins up an image with the mender-gateway included.
+    """
+
+    def __init__(self, name, num_client=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.SMTP_MOCK_FILES
+            )
+        extra_files = MENDER_GATEWAY_FILES  + self.ENTERPRISE_FILES
+        super(DockerComposeNameSpace, self).__init__(
+            name, extra_files=extra_files
+        )
+
+    def setup(self, recreate=True, env=None):
+        cmd = "up -d"
+        if not recreate:
+            cmd += " --no-recreate"
+        self._docker_compose_cmd(cmd, env=env)
+        self._wait_for_containers()
+
+    def new_tenant_client(self, name, tenant):
+        if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MONITOR_CLIENT_COMMERCIAL_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+    def new_tenant_docker_client(self, name, tenant):
+        if not self.MT_DOCKER_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_DOCKER_CLIENT_FILES
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(5)
+
+
+
+class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.SMTP_MOCK_FILES
+            )
+
+    def setup(self, recreate=True, env=None):
+        cmd = "up -d"
+        if not recreate:
+            cmd += " --no-recreate"
+        self._docker_compose_cmd(cmd, env=env)
+        self._wait_for_containers()
+
+    def new_tenant_client(self, name, tenant):
+        if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MONITOR_CLIENT_COMMERCIAL_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+    def new_tenant_docker_client(self, name, tenant):
+        if not self.MT_DOCKER_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_DOCKER_CLIENT_FILES
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(5)
+
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

@@ -34,7 +34,7 @@ test:extra-tools:
     - git fetch origin --tags
     - git submodule update --init --recursive
 
-    # Fetch all Open Source release repositores for testing release_tool.
+    # Fetch all Open Source release repositories for testing release_tool.
     - for repo in $(env TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY=1 extra/release_tool.py --list); do
     -   if [ $repo == integration ]; then
     -     continue

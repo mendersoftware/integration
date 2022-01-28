@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import testutils.api.inventory as inventory
 import testutils.api.inventory_v2 as inventory_v2
 import testutils.api.deployments as deployments
 import testutils.api.deployments_v2 as deployments_v2
+import testutils.api.reporting as reporting
 
 from testutils.api.client import ApiClient
 from testutils.common import (
@@ -1242,6 +1243,9 @@ class TestDeploymentsStatusUpdateBase:
         deployment with four devices
         requires five devices (last one won't be part of the deployment
         """
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
 
         deploymentsm = ApiClient(deployments.URL_MGMT)
         deploymentsd = ApiClient(deployments.URL_DEVICES)
@@ -1803,6 +1807,10 @@ class TestDynamicDeploymentsEnterprise:
             for attrs in tc["nonmatches"]
         ]
 
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
         if not useExistingTenant():
             assert dep["initial_device_count"] == len(matching_devs)
@@ -1831,6 +1839,11 @@ class TestDynamicDeploymentsEnterprise:
             )
             for i in range(10)
         ]
+
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         for d in devs:
             assert_get_next(200, d.token, "foo")
 
@@ -1886,6 +1899,11 @@ class TestDynamicDeploymentsEnterprise:
             )
             for i in range(10)
         ]
+
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         for d in devs:
             assert_get_next(200, d.token, "foo")
 
@@ -1953,6 +1971,11 @@ class TestDynamicDeploymentsEnterprise:
         dev = make_device_with_inventory(
             [{"name": "foo", "value": "bar"}], user.utoken, setup_tenant.tenant_token
         )
+
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         assert_get_next(200, dev.token, "bar")
 
         # when running against staging, wait 5 seconds to avoid hitting
@@ -1970,6 +1993,11 @@ class TestDynamicDeploymentsEnterprise:
         # after updating inventory, the device would qualify for both 'foo' deployments, but
         # the ordering mechanism will prevent it
         submit_inventory([{"name": "foo", "value": "foo"}], dev.token)
+
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         assert_get_next(204, dev.token)
 
         # when running against staging, wait 5 seconds to avoid hitting
@@ -1983,6 +2011,11 @@ class TestDynamicDeploymentsEnterprise:
         create_dynamic_deployment(
             "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
         )
+
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         assert_get_next(200, dev.token, "foo3")
 
     @pytest.mark.parametrize(
@@ -2041,6 +2074,10 @@ class TestDynamicDeploymentsEnterprise:
             for i in range(10)
         ]
 
+        # sleep a few seconds waiting for the data propagation to the reporting service
+        # and the Elasticsearch indexing to complete
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
         # adjust phase start ts for previous test case duration
         # format for api consumption
         for phase in tc["phases"]:
@@ -2086,6 +2123,10 @@ class TestDynamicDeploymentsEnterprise:
                 )
                 for i in range(10)
             ]
+
+            # sleep a few seconds waiting for the data propagation to the reporting service
+            # and the Elasticsearch indexing to complete
+            time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
 
             for extra in extra_devs:
                 assert_get_next(200, extra.token, "bar")

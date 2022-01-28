@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
 import json
 import logging
 import pytest
+import time
 import uuid
 
 import testutils.api.deployments as deployments
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
+import testutils.api.reporting as reporting
 import testutils.api.useradm as useradm
 import testutils.api.deviceconfig as deviceconfig
 
@@ -116,6 +118,10 @@ def setup_tenant_devices(tenant, device_groups):
             device.group = group
             grouped_devices[group].append(device)
             tenant.devices.append(device)
+
+    # sleep a few seconds waiting for the data propagation to the reporting service
+    # and the Elasticsearch indexing to complete
+    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
 
     return grouped_devices
 

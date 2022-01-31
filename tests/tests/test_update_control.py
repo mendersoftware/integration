@@ -16,14 +16,23 @@
 import json
 import os
 import tempfile
+import pytest
+import time
 import uuid
 
-from testutils.common import User, new_tenant_client
+from testutils.common import User, new_tenant_client, ApiClient
 from testutils.infra.cli import CliTenantadm
+import testutils.api.tenantadm as tenantadm
 
 from .. import conftest
 from ..common_setup import enterprise_no_client
-from ..MenderAPI import Authentication, Deployments, DeviceAuthV2, image
+from ..MenderAPI import (
+    Authentication,
+    Deployments,
+    DeviceAuthV2,
+    image,
+    get_container_manager,
+)
 
 
 class TestUpdateControlEnterprise:
@@ -126,6 +135,133 @@ class TestUpdateControlEnterprise:
             update_control_map={
                 "Priority": 2,
                 "States": {"ArtifactCommit_Enter": {"action": "force_continue"}},
+            },
+        )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)
+
+    def test_update_control_limit(
+        self, enterprise_no_client, valid_image_with_mender_conf,
+    ):
+        """MEN-5421:
+
+        Test that the client gracefully handles being rate-limited by the
+        Mender server.
+
+        Set the rate-limit to 1 request/ 60 seconds for the deployments/next
+        endpoint, then schedule an update with a pause in ArtifactReboot_Enter
+        only, then continue, after the client has reported the paused substate
+        back to the server, all the way until the deployment is successfully
+        finished.
+
+        """
+
+        uuidv4 = str(uuid.uuid4())
+        tname = "test.mender.io-{}".format(uuidv4)
+        email = "some.user+{}@example.com".format(uuidv4)
+        u = User("", email, "whatsupdoc")
+        cli = CliTenantadm(containers_namespace=enterprise_no_client.name)
+        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
+
+        # Rate-limit the /deployments/next endpoint
+        tc = ApiClient(
+            tenantadm.URL_INTERNAL,
+            host=get_container_manager().get_ip_of_service("mender-tenantadm")[0]
+            + ":8080",
+            schema="http://",
+        )
+
+        r = tc.call(
+            "PUT",
+            tenantadm.URL_INTERNAL_TENANTS + "/" + tid,
+            body={
+                "api_limits": {
+                    "devices": {
+                        "bursts": [
+                            {
+                                "action": "POST",
+                                "uri": "/api/devices/v2/deployments/device/deployments/next",
+                                "min_interval_sec": 60,
+                            }
+                        ],
+                    }
+                }
+            },
+        )
+
+        assert r.ok, "Failed to set the rate-limit on the 'deployements/next' endpoint"
+
+        time.sleep(10)
+
+        r = tc.call("GET", tenantadm.URL_INTERNAL_TENANTS + "/" + tid,)
+        resp_json = r.json()
+        if (
+            resp_json.get("api_limits", {})
+            .get("devices", {})
+            .get("bursts", [{}])[0]
+            .get("min_interval_sec")
+            != 60
+        ):
+            pytest.fail("rate limits not enabled. The test is invalid")
+
+        tenant = cli.get_tenant(tid)
+        tenant = json.loads(tenant)
+        ttoken = tenant["tenant_token"]
+
+        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+        auth.create_org = False
+        auth.reset_auth_token()
+        devauth = DeviceAuthV2(auth)
+
+        device = new_tenant_client(
+            enterprise_no_client, "control-map-test-container", ttoken
+        )
+        devauth.accept_devices(1)
+
+        deploy = Deployments(auth, devauth)
+
+        devices = list(
+            set([device["id"] for device in devauth.get_devices_status("accepted")])
+        )
+        assert 1 == len(devices)
+
+        mender_conf = device.run("cat /etc/mender/mender.conf")
+
+        with tempfile.NamedTemporaryFile() as artifact_file:
+            image.make_rootfs_artifact(
+                valid_image_with_mender_conf(mender_conf),
+                conftest.machine_name,
+                "test-update-control",
+                artifact_file.name,
+            )
+
+            deploy.upload_image(
+                artifact_file.name, description="control map update test"
+            )
+
+        deployment_id = deploy.trigger_deployment(
+            name="New valid update",
+            artifact_name="test-update-control",
+            devices=devices,
+            update_control_map={
+                "Priority": 1,
+                "States": {"ArtifactReboot_Enter": {"action": "pause"}},
+            },
+        )
+
+        # Query the deployment, and verify that the map returned contains the
+        # deployment ID
+        res_json = deploy.get_deployment(deployment_id)
+        assert deployment_id == res_json.get("update_control_map").get("id"), res_json
+
+        # Wait for the device to pause in ArtifactInstall
+        deploy.check_expected_statistics(deployment_id, "pause_before_rebooting", 1)
+        deploy.patch_deployment(
+            deployment_id,
+            update_control_map={
+                "Priority": 2,
+                "States": {"ArtifactReboot_Enter": {"action": "force_continue"},},
             },
         )
 

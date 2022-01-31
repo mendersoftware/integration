@@ -456,9 +456,9 @@ def get_docker_compose_data_from_json_list(json_list):
     """Return the Yaml as a simplified structure from the json list:
     {
         image_name: {
-            "container": container_name,
+            "containers": ["container_name"],
             "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
-            "version": version,
+            "version": "version",
         }
     }
     """
@@ -476,21 +476,14 @@ def get_docker_compose_data_from_json_list(json_list):
             split = split[0].rsplit("/", 1)
             prefix = split[0]
             image = split[1]
-            if data.get(image) is not None:
-                raise Exception(
-                    (
-                        "More than one container is using the image name '%s'. "
-                        + "The tool currently does not support this. "
-                        + "Previous occurrence: %s. "
-                        + "While processing: %s %s."
-                    )
-                    % (image, data.get(image), container, cont_info)
-                )
-            data[image] = {
-                "container": container,
-                "image_prefix": prefix,
-                "version": ver,
-            }
+            if data.get(image):
+                data[image]["containers"].append(container)
+            else:
+                data[image] = {
+                    "containers": [container],
+                    "image_prefix": prefix,
+                    "version": ver,
+                }
 
     return data
 
@@ -527,7 +520,7 @@ def version_specific_docker_compose_data_patching(data, rev):
     # don't check explicitly for more recent release branches or tags).
     if data.get("mender") is None:
         data["mender"] = {
-            "container": "mender",
+            "containers": ["mender"],
             "image_prefix": "mendersoftware/",
             # In all versions < 3.2, mender-client-qemu version == mender version.
             "version": data["mender-client-qemu"]["version"],
@@ -535,7 +528,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     if last_comp.startswith("3.1.") and data.get("monitor-client") is None:
         data["monitor-client"] = {
-            "container": "monitor-client",
+            "containers": ["monitor-client"],
             "image_prefix": "mendersoftware/",
             # Only monitor-client 1.0.x had this problem, so we can hardcode it.
             "version": "1.0.%s" % patch,

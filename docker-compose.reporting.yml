@@ -17,6 +17,22 @@ services:
             REPORTING_ELASTICSEARCH_ADDRESSES: "http://mender-elasticsearch:9200"
 
     #
+    # mender-reporting-indexer
+    #
+    mender-reporting-indexer:
+        image: mendersoftware/reporting:mender-master
+        command: indexer
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-elasticsearch
+        environment:
+            REPORTING_ELASTICSEARCH_ADDRESSES: "http://mender-elasticsearch:9200"
+
+    #
     # mender-api-gateway
     #
     mender-api-gateway:

@@ -141,6 +141,7 @@ class TestUpdateControlEnterprise:
         deploy.check_expected_status("finished", deployment_id)
         deploy.check_expected_statistics(deployment_id, "success", 1)
 
+    @pytest.mark.min_mender_client_version("3.2.1")
     def test_update_control_limit(
         self, enterprise_no_client, valid_image_with_mender_conf,
     ):

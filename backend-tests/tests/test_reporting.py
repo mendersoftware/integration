@@ -66,14 +66,12 @@ def add_devices_to_tenant(tenant, dev_inventories):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invd = ApiClient(inventory.URL_DEV)
 
-    for inv in dev_inventories:
-        user = tenant.users[0]
-        utoken = useradmm.call(
-            "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-        ).text
-        assert utoken != ""
+    user = tenant.users[0]
+    utoken = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)).text
+    assert utoken != ""
+    tenant.api_token = utoken
 
-        tenant.api_token = utoken
+    for inv in dev_inventories:
         device = make_accepted_device(
             devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
         )
@@ -100,13 +98,11 @@ def add_devices_to_user(user, dev_inventories):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invd = ApiClient(inventory.URL_DEV)
 
-    for inv in dev_inventories:
-        utoken = useradmm.call(
-            "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-        ).text
-        assert utoken != ""
+    utoken = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)).text
+    assert utoken != ""
+    user.api_token = utoken
 
-        user.api_token = utoken
+    for inv in dev_inventories:
         device = make_accepted_device(devauthd, devauthm, utoken)
         user.devices.append(device)
 

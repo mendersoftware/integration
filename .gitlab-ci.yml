@@ -270,6 +270,39 @@ trigger:saas:sync-staging-component:
   rules:
     - when: never
 
+trigger:staging:cleanup-tenants:
+  image: alpine:3.13
+  stage: .post
+  rules:
+    - if: $RUN_TESTS_STAGING == "true"
+      when: always
+
+  variables:
+    K8S: "staging"
+
+  before_script:
+    # Install awscli, kubectl and aws-iam-authenticator
+    - apk add python3-dev py3-pip curl
+    - pip3 install awscli
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
+    - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
+    - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator
+    # Export AWS keys, as group takes precedence over yaml specified ones
+    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
+    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=$CI_JOBS_AWS_REGION
+    - export AWS_EKS_CLUSTER_NAME=$CI_JOBS_AWS_EKS_CLUSTER_NAME
+
+  script:
+    - export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
+    - aws eks update-kubeconfig --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
+    - kubectl config set-context --current --namespace=$K8S
+    - "kubectl exec -it mongodb-0 -- mongo tenantadm --eval 'db.tenants.update({name: {$regex: /^test.mender.io/}}, {$set: {\"status\": \"suspended\", \"cancelled_at\": ISODate(\"2021-01-01T00:00:00Z\")}}, {multi: true})'"
+    - kubectl delete job mender-drop-suspended-tenants-manual || true
+    - kubectl create job --from=cronjob/mender-drop-suspended-tenants mender-drop-suspended-tenants-manual
+
 publish:image:saas:
   rules:
     - when: never

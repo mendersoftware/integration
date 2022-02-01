@@ -768,6 +768,9 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
+@pytest.mark.skip(
+    reason="reporting has no git version in 3.2.0 tag. To be fixed with QA-310"
+)
 def test_generate_release_notes_from_master(request, capsys):
     try:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)

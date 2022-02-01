@@ -513,7 +513,7 @@ def version_specific_docker_compose_data_patching(data, rev):
         return data
 
     major, minor, patch = last_comp.split(".", 2)
-    if int(major) > 3 or (int(major) == 3 and int(minor) > 1):
+    if int(major) > 3 or (int(major) == 3 and int(minor) > 2):
         return data
 
     # We need to insert these entries, which may be missing ("may be" because we
@@ -532,6 +532,13 @@ def version_specific_docker_compose_data_patching(data, rev):
             "image_prefix": "mendersoftware/",
             # Only monitor-client 1.0.x had this problem, so we can hardcode it.
             "version": "1.0.%s" % patch,
+        }
+
+    if rev == "3.2.0" and data.get("reporting") is None:
+        data["reporting"] = {
+            "containers": ["mender-reporting"],
+            "image_prefix": "mendersoftware/",
+            "version": "master",
         }
 
     return data

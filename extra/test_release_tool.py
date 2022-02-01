@@ -348,6 +348,17 @@ def test_version_of_with_in_integration_version(capsys):
         "1.0.0..master",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.2.0..master",],
+        "master..master",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.1.0..master",],
+        "master..master",
+    )
+
 
 def test_set_version_of(capsys, is_staging):
     try:

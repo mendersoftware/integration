@@ -2898,6 +2898,12 @@ def do_integration_versions_including(args):
         print("--integration-versions-including requires --version argument")
         sys.exit(2)
 
+    if args.version_type is not None and args.version_type != "git":
+        print(
+            'Only "--version-type git" is supported for --integration-versions-including".'
+        )
+        sys.exit(2)
+
     try:
         repo = Component.get_component_of_any_type(args.integration_versions_including)
     except KeyError:
@@ -2932,6 +2938,8 @@ def do_integration_versions_including(args):
 
         candidates.append(line)
 
+    image = repo.associated_components_of_type("git")[0].git()
+
     # Now look at each docker compose file in each branch, and figure out which
     # ones contain the version of the service we are querying.
     matches = []
@@ -2939,15 +2947,12 @@ def do_integration_versions_including(args):
         data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
         # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
         # would be missing the backend components. Try loading the old "docker" versions.
-        docker_image = repo.associated_components_of_type("docker_image")[
-            0
-        ].docker_image()
-        if data.get(docker_image) is None:
+        if data.get(image) is None:
             data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
-            version = data[docker_image]["version"]
+            version = data[image]["version"]
         except KeyError:
-            # Key docker_image doesn't exist because the version is from before
+            # Key image doesn't exist because the version is from before
             # that component existed.
             # Not a match.
             continue

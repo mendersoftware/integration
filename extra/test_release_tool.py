@@ -348,6 +348,17 @@ def test_version_of_with_in_integration_version(capsys):
         "1.0.0..master",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.2.0..master",],
+        "master..master",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.1.0..master",],
+        "master..master",
+    )
+
 
 def test_set_version_of(capsys, is_staging):
     try:
@@ -536,6 +547,36 @@ def test_integration_versions_including(capsys):
     assert versions[0].endswith("/2.2.x")
     assert versions[1].endswith("/2.1.x")
     assert versions[2].endswith("/2.0.x")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "deployments", "--version", "4.0.x"],
+        None,
+    )
+    versions = captured.split("\n")
+    assert len(versions) == 1
+    assert versions[0].endswith("/3.1.x")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "mender-connect", "--version", "1.2.x"],
+        None,
+    )
+    versions = captured.split("\n")
+    assert len(versions) == 2
+    assert versions[0].endswith("/3.1.x")
+    assert versions[1].endswith("/3.0.x")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "mender-connect", "--version", "master"],
+        None,
+    )
+    versions = captured.split("\n")
+    # Ignore saas tags, some of the old ones have master in them.
+    versions = [v for v in versions if not v.startswith("saas-")]
+    assert len(versions) == 1
+    assert versions[0].endswith("/master")
 
 
 def test_docker_compose_files_list():
@@ -768,9 +809,6 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
-@pytest.mark.skip(
-    reason="reporting has no git version in 3.2.0 tag. To be fixed with QA-310"
-)
 def test_generate_release_notes_from_master(request, capsys):
     try:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)

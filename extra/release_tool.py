@@ -534,7 +534,7 @@ def version_specific_docker_compose_data_patching(data, rev):
             "version": "1.0.%s" % patch,
         }
 
-    if rev == "3.2.0" and data.get("reporting") is None:
+    if rev.startswith("3.2.") and data.get("reporting") is None:
         data["reporting"] = {
             "containers": ["mender-reporting"],
             "image_prefix": "mendersoftware/",

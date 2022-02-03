@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -54,12 +54,6 @@ class _TestWorkflowsBase:
         )
         return r
 
-
-class TestWorkflowMinVersion(_TestWorkflowsBase):
-    @property
-    def logger(self):
-        return logging.getLogger(self.__class__.__name__)
-
     def test_workflow_min_version(self):
         """
         Check that we can invoke a workflow with minimal required version
@@ -71,29 +65,41 @@ class TestWorkflowMinVersion(_TestWorkflowsBase):
         self.logger.info(
             "creating workflow: %s/v%s" % (workflow_name, str(workflow_version))
         )
-        r = super().new_workflow(workflow_name, workflow_version)
+        r = self.new_workflow(workflow_name, workflow_version)
         assert r.status_code == 201
         self.logger.info(
             "created workflow: %s/v%s" % (workflow_name, str(workflow_version))
         )
 
         self.logger.info("starting: %s/v%s" % (workflow_name, str(workflow_version)))
-        r = super().start_workflow(workflow_name, str(workflow_version))
+        r = self.start_workflow(workflow_name, str(workflow_version))
         assert r.status_code == 201
         self.logger.info("started: %s/v%s" % (workflow_name, str(workflow_version)))
 
         self.logger.info(
             "starting: %s/v%s" % (workflow_name, str(workflow_version - 1))
         )
-        r = super().start_workflow(workflow_name, str(workflow_version - 1))
+        r = self.start_workflow(workflow_name, str(workflow_version - 1))
         assert r.status_code == 201
         self.logger.info("started: %s/v%s" % (workflow_name, str(workflow_version - 1)))
 
         self.logger.info(
             "attempting to start: %s/v%s" % (workflow_name, str(workflow_version + 1))
         )
-        r = super().start_workflow(workflow_name, str(workflow_version + 1))
+        r = self.start_workflow(workflow_name, str(workflow_version + 1))
         assert r.status_code == 404
         self.logger.info(
             "not started: %s/v%s" % (workflow_name, str(workflow_version + 1))
         )
+
+
+class TestWorkflowMinVersion(_TestWorkflowsBase):
+    @property
+    def logger(self):
+        return logging.getLogger(self.__class__.__name__)
+
+
+class TestWorkflowMinVersionEnterprise(_TestWorkflowsBase):
+    @property
+    def logger(self):
+        return logging.getLogger(self.__class__.__name__)

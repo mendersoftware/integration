@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ REPO_TO_ENV_VARIABLE = {
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
     "iot-manager": "IOT_MANAGER_REV",
+    "reporting": "REPORTING_REV",
     "tenantadm": "TENANTADM_REV",
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",
@@ -170,6 +171,7 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
         "deviceconnect",
         "inventory",
         "iot-manager",
+        "reporting",
         "useradm",
         "workflows",
     )
@@ -198,6 +200,8 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "deviceconnect",
         "devicemonitor",
         "inventory-enterprise",
+        "iot-manager",
+        "reporting",
         "tenantadm",
         "useradm-enterprise",
         "workflows-enterprise",

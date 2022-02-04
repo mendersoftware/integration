@@ -504,7 +504,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     Therefore, we patch in this modification below, since we cannot fix the
     tags. Yes, this is ugly, but at least it's confined to versions below
-    3.2.0."""
+    3.3.0."""
 
     last_comp = rev.split("/")[-1]
     if re.match(r"^[0-9]+\.[0-9]\.", last_comp) is None:
@@ -534,7 +534,7 @@ def version_specific_docker_compose_data_patching(data, rev):
             "version": "1.0.%s" % patch,
         }
 
-    if rev == "3.2.0" and data.get("reporting") is None:
+    if (rev == "3.2.0" or rev == "3.2.1") and data.get("reporting") is None:
         data["reporting"] = {
             "containers": ["mender-reporting"],
             "image_prefix": "mendersoftware/",

@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -293,14 +293,12 @@ def add_devices_to_tenant(tenant, dev_inventories):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invd = ApiClient(inventory.URL_DEV)
 
-    for inv in dev_inventories:
-        user = tenant.users[0]
-        utoken = useradmm.call(
-            "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-        ).text
-        assert utoken != ""
+    user = tenant.users[0]
+    utoken = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)).text
+    assert utoken != ""
+    tenant.api_token = utoken
 
-        tenant.api_token = utoken
+    for inv in dev_inventories:
         device = make_accepted_device(
             devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
         )

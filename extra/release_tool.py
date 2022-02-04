@@ -408,18 +408,6 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = [
-        "docker-compose.yml",
-        "docker-compose.enterprise.yml",
-        "docker-compose.auditlogs.yml",
-        "docker-compose.connect.yml",
-        "docker-compose.config.yml",
-        "docker-compose.monitor.yml",
-        "docker-compose.reporting.yml",
-        "other-components-docker.yml",
-    ]
-    _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
-
     def _is_known_yml_file(entry):
         return (
             entry.startswith("git-versions")
@@ -436,9 +424,8 @@ def filter_docker_compose_files_list(list, version):
         and (
             version == "all"
             or (
-                (version == "git" and entry in _GIT_ONLY_YML)
-                or (version == "docker" and entry in _DOCKER_ONLY_YML)
-                or (entry not in _GIT_ONLY_YML + _DOCKER_ONLY_YML)
+                (version == "git" and "docker" not in entry)
+                or (version == "docker" and "docker" in entry)
             )
         )
     ]
@@ -456,9 +443,9 @@ def get_docker_compose_data_from_json_list(json_list):
     """Return the Yaml as a simplified structure from the json list:
     {
         image_name: {
-            "container": container_name,
+            "containers": ["container_name"],
             "image_prefix": "mendersoftware/" or "someserver.mender.io/blahblah",
-            "version": version,
+            "version": "version",
         }
     }
     """
@@ -476,21 +463,14 @@ def get_docker_compose_data_from_json_list(json_list):
             split = split[0].rsplit("/", 1)
             prefix = split[0]
             image = split[1]
-            if data.get(image) is not None:
-                raise Exception(
-                    (
-                        "More than one container is using the image name '%s'. "
-                        + "The tool currently does not support this. "
-                        + "Previous occurrence: %s. "
-                        + "While processing: %s %s."
-                    )
-                    % (image, data.get(image), container, cont_info)
-                )
-            data[image] = {
-                "container": container,
-                "image_prefix": prefix,
-                "version": ver,
-            }
+            if data.get(image):
+                data[image]["containers"].append(container)
+            else:
+                data[image] = {
+                    "containers": [container],
+                    "image_prefix": prefix,
+                    "version": ver,
+                }
 
     return data
 
@@ -511,7 +491,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     Therefore, we patch in this modification below, since we cannot fix the
     tags. Yes, this is ugly, but at least it's confined to versions below
-    3.2.0."""
+    3.3.0."""
 
     last_comp = rev.split("/")[-1]
     if re.match(r"^[0-9]+\.[0-9]\.", last_comp) is None:
@@ -520,14 +500,14 @@ def version_specific_docker_compose_data_patching(data, rev):
         return data
 
     major, minor, patch = last_comp.split(".", 2)
-    if int(major) > 3 or (int(major) == 3 and int(minor) > 1):
+    if int(major) > 3 or (int(major) == 3 and int(minor) > 2):
         return data
 
     # We need to insert these entries, which may be missing ("may be" because we
     # don't check explicitly for more recent release branches or tags).
-    if data.get("mender") is None:
+    if data.get("mender") is None and data.get("mender-client-qemu") is not None:
         data["mender"] = {
-            "container": "mender",
+            "containers": ["mender"],
             "image_prefix": "mendersoftware/",
             # In all versions < 3.2, mender-client-qemu version == mender version.
             "version": data["mender-client-qemu"]["version"],
@@ -535,11 +515,30 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     if last_comp.startswith("3.1.") and data.get("monitor-client") is None:
         data["monitor-client"] = {
-            "container": "monitor-client",
+            "containers": ["monitor-client"],
             "image_prefix": "mendersoftware/",
             # Only monitor-client 1.0.x had this problem, so we can hardcode it.
             "version": "1.0.%s" % patch,
         }
+
+    if (rev == "3.2.0" or rev == "3.2.1") and data.get("reporting") is None:
+        data["reporting"] = {
+            "containers": ["mender-reporting"],
+            "image_prefix": "mendersoftware/",
+            "version": "master",
+        }
+
+    if rev == "3.2.1":
+        for comp in [
+            ("mender-artifact", ".0"),
+            ("mender-cli", ".0"),
+            ("mender-binary-delta", ".0"),
+            ("mender-convert", ".2"),
+        ]:
+            if data.get(comp[0]) is not None and data[comp[0]]["version"].endswith(
+                ".x"
+            ):
+                data[comp[0]]["version"] = data[comp[0]]["version"][:-2] + comp[1]
 
     return data
 
@@ -1938,7 +1937,7 @@ def set_component_version_to(dir, component, tag):
         os.rename(filename + ".tmp", filename)
 
     compose_files_docker = docker_compose_files_list(dir, "docker")
-    git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
+    git_files = docker_compose_files_list(dir, "git")
 
     if component.type == "docker_image":
         for filename in compose_files_docker:
@@ -2898,6 +2897,12 @@ def do_integration_versions_including(args):
         print("--integration-versions-including requires --version argument")
         sys.exit(2)
 
+    if args.version_type is not None and args.version_type != "git":
+        print(
+            'Only "--version-type git" is supported for --integration-versions-including".'
+        )
+        sys.exit(2)
+
     try:
         repo = Component.get_component_of_any_type(args.integration_versions_including)
     except KeyError:
@@ -2932,6 +2937,8 @@ def do_integration_versions_including(args):
 
         candidates.append(line)
 
+    image = repo.associated_components_of_type("git")[0].git()
+
     # Now look at each docker compose file in each branch, and figure out which
     # ones contain the version of the service we are querying.
     matches = []
@@ -2939,15 +2946,12 @@ def do_integration_versions_including(args):
         data = get_docker_compose_data_for_rev(git_dir, candidate, version="git")
         # For pre 2.4.x releases git-versions.*.yml files do not exist hence this listing
         # would be missing the backend components. Try loading the old "docker" versions.
-        docker_image = repo.associated_components_of_type("docker_image")[
-            0
-        ].docker_image()
-        if data.get(docker_image) is None:
+        if data.get(image) is None:
             data = get_docker_compose_data_for_rev(git_dir, candidate, version="docker")
         try:
-            version = data[docker_image]["version"]
+            version = data[image]["version"]
         except KeyError:
-            # Key docker_image doesn't exist because the version is from before
+            # Key image doesn't exist because the version is from before
             # that component existed.
             # Not a match.
             continue

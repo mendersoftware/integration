@@ -220,6 +220,28 @@ def test_version_of(capsys):
         "mender-master",
     )
 
+    # Some known hardcodings for these.
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-artifact", "--in-integration-version", "3.2.1"],
+        "3.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-cli", "--in-integration-version", "3.2.1"],
+        "1.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-binary-delta", "--in-integration-version", "3.2.1"],
+        "1.3.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-convert", "--in-integration-version", "3.2.1"],
+        "2.6.2",
+    )
+
 
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master
@@ -348,6 +370,17 @@ def test_version_of_with_in_integration_version(capsys):
         "1.0.0..master",
     )
 
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.2.0..master",],
+        "master..master",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "reporting", "--in-integration-version", "3.1.0..master",],
+        "master..master",
+    )
+
 
 def test_set_version_of(capsys, is_staging):
     try:
@@ -376,6 +409,10 @@ def test_set_version_of(capsys, is_staging):
                 INTEGRATION_DIR,
                 "extra/failover-testing/docker-compose.failover-server.yml.bkp",
             ),
+        )
+        shutil.copyfile(
+            os.path.join(INTEGRATION_DIR, "other-components.yml"),
+            os.path.join(INTEGRATION_DIR, "other-components.yml.bkp"),
         )
 
         # Using --set-version-of modifies both versions, regardless of using the repo name
@@ -487,6 +524,80 @@ def test_set_version_of(capsys, is_staging):
             capsys, ["--version-of", "gui", "--version-type", "git"], "4.5.6-test"
         )
 
+        with pytest.raises(Exception):
+            # No docker version of mender-cli.
+            run_main_assert_result(
+                capsys,
+                [
+                    "--set-version-of",
+                    "mender-cli",
+                    "--version-type",
+                    "docker",
+                    "--version",
+                    "1.2.3-docker",
+                ],
+            )
+        run_main_assert_result(
+            capsys,
+            [
+                "--set-version-of",
+                "mender-cli",
+                "--version-type",
+                "git",
+                "--version",
+                "1.2.3-git",
+            ],
+        )
+        run_main_assert_result(capsys, ["--version-of", "mender-cli"], "1.2.3-git")
+        with pytest.raises(Exception):
+            # No docker version of mender-cli.
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "mender-cli", "--version-type", "docker"],
+                "1.2.3-git",
+            )
+        run_main_assert_result(
+            capsys, ["--version-of", "mender-cli", "--version-type", "git"], "1.2.3-git"
+        )
+
+        with pytest.raises(Exception):
+            # No docker version of mender-artifact.
+            run_main_assert_result(
+                capsys,
+                [
+                    "--set-version-of",
+                    "mender-artifact",
+                    "--version-type",
+                    "docker",
+                    "--version",
+                    "1.2.3-docker",
+                ],
+            )
+        run_main_assert_result(
+            capsys,
+            [
+                "--set-version-of",
+                "mender-artifact",
+                "--version-type",
+                "git",
+                "--version",
+                "1.2.3-git",
+            ],
+        )
+        run_main_assert_result(capsys, ["--version-of", "mender-artifact"], "1.2.3-git")
+        with pytest.raises(Exception):
+            # No docker version of mender-artifact.
+            run_main_assert_result(
+                capsys,
+                ["--version-of", "mender-artifact", "--version-type", "docker"],
+                "1.2.3-git",
+            )
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-artifact", "--version-type", "git"],
+            "1.2.3-git",
+        )
+
     finally:
         os.rename(
             os.path.join(INTEGRATION_DIR, "git-versions.yml.bkp"),
@@ -514,6 +625,10 @@ def test_set_version_of(capsys, is_staging):
                 "extra/failover-testing/docker-compose.failover-server.yml",
             ),
         )
+        os.rename(
+            os.path.join(INTEGRATION_DIR, "other-components.yml.bkp"),
+            os.path.join(INTEGRATION_DIR, "other-components.yml"),
+        )
 
 
 def test_integration_versions_including(capsys):
@@ -537,33 +652,62 @@ def test_integration_versions_including(capsys):
     assert versions[1].endswith("/2.1.x")
     assert versions[2].endswith("/2.0.x")
 
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "deployments", "--version", "4.0.x"],
+        None,
+    )
+    versions = captured.split("\n")
+    assert len(versions) == 1
+    assert versions[0].endswith("/3.1.x")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "mender-connect", "--version", "1.2.x"],
+        None,
+    )
+    versions = captured.split("\n")
+    assert len(versions) == 2
+    assert versions[0].endswith("/3.1.x")
+    assert versions[1].endswith("/3.0.x")
+
+    captured = run_main_assert_result(
+        capsys,
+        ["--integration-versions-including", "mender-connect", "--version", "master"],
+        None,
+    )
+    versions = captured.split("\n")
+    # Ignore saas tags, some of the old ones have master in them.
+    versions = [v for v in versions if not v.startswith("saas-")]
+    assert len(versions) == 1
+    assert versions[0].endswith("/master")
+
 
 def test_docker_compose_files_list():
     list_git = docker_compose_files_list(INTEGRATION_DIR, version="git")
     list_git_filenames = [os.path.basename(file) for file in list_git]
-    assert "docker-compose.client.demo.yml" in list_git_filenames
-    assert "docker-compose.no-ssl.yml" in list_git_filenames
-    assert "docker-compose.testing.enterprise.yml" in list_git_filenames
-    assert "other-components.yml" in list_git_filenames
-    assert "docker-compose.storage.minio.yml" in list_git_filenames
-    assert "docker-compose.client.rofs.yml" in list_git_filenames
-    assert "docker-compose.client-dev.yml" in list_git_filenames
-    assert "docker-compose.mt.client.yml" in list_git_filenames
-    assert "docker-compose.demo.yml" in list_git_filenames
-    assert "docker-compose.client.yml" in list_git_filenames
-    assert "docker-compose.docker-client.yml" in list_git_filenames
+    assert "docker-compose.client.demo.yml" not in list_git_filenames
+    assert "docker-compose.no-ssl.yml" not in list_git_filenames
+    assert "docker-compose.testing.enterprise.yml" not in list_git_filenames
+    assert "docker-compose.storage.minio.yml" not in list_git_filenames
+    assert "docker-compose.client.rofs.yml" not in list_git_filenames
+    assert "docker-compose.client-dev.yml" not in list_git_filenames
+    assert "docker-compose.mt.client.yml" not in list_git_filenames
+    assert "docker-compose.demo.yml" not in list_git_filenames
+    assert "docker-compose.client.yml" not in list_git_filenames
+    assert "docker-compose.docker-client.yml" not in list_git_filenames
+    assert "docker-compose.yml" not in list_git_filenames
+    assert "docker-compose.enterprise.yml" not in list_git_filenames
 
     assert "git-versions.yml" in list_git_filenames
     assert "git-versions-enterprise.yml" in list_git_filenames
-    assert "docker-compose.yml" not in list_git_filenames
-    assert "docker-compose.enterprise.yml" not in list_git_filenames
+    assert "other-components.yml" in list_git_filenames
 
     list_docker = docker_compose_files_list(INTEGRATION_DIR, version="docker")
     list_docker_filenames = [os.path.basename(file) for file in list_docker]
     assert "docker-compose.client.demo.yml" in list_docker_filenames
     assert "docker-compose.no-ssl.yml" in list_docker_filenames
     assert "docker-compose.testing.enterprise.yml" in list_docker_filenames
-    assert "other-components.yml" in list_docker_filenames
     assert "docker-compose.storage.minio.yml" in list_docker_filenames
     assert "docker-compose.client.rofs.yml" in list_docker_filenames
     assert "docker-compose.client-dev.yml" in list_docker_filenames
@@ -571,11 +715,12 @@ def test_docker_compose_files_list():
     assert "docker-compose.demo.yml" in list_docker_filenames
     assert "docker-compose.client.yml" in list_docker_filenames
     assert "docker-compose.docker-client.yml" in list_docker_filenames
+    assert "docker-compose.yml" in list_docker_filenames
+    assert "docker-compose.enterprise.yml" in list_docker_filenames
 
     assert "git-versions.yml" not in list_docker_filenames
     assert "git-versions-enterprise.yml" not in list_docker_filenames
-    assert "docker-compose.yml" in list_docker_filenames
-    assert "docker-compose.enterprise.yml" in list_docker_filenames
+    assert "other-components.yml" not in list_docker_filenames
 
 
 @patch("release_tool.integration_dir")

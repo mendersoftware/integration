@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import requests
 
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
+import testutils.api.reporting as reporting
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
@@ -47,8 +48,18 @@ def mongo():
 def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""
+    elasticsearch_cleanup()
     mongo_cleanup(mongo)
     yield mongo.client
+
+
+def elasticsearch_cleanup():
+    try:
+        requests.post(
+            reporting.ELASTICSEARCH_DELETE_URL, json={"query": {"match_all": {}}}
+        )
+    except requests.RequestException:
+        pass
 
 
 def mongo_cleanup(mongo):

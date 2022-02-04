@@ -26,7 +26,7 @@ invoke==1.6.0
 jsonschema==3.2.0
 lockfile==0.12.2
 msgpack==1.0.3
-ordered-set==4.0.2
+ordered-set==4.1.0
 packaging==20.9
 paramiko==2.9.2
 pathlib2==2.3.6
@@ -39,13 +39,13 @@ py3dns==3.2.1
 pycparser==2.21
 pymongo==4.0.1
 PyNaCl==1.5.0
-pyparsing==3.0.6
+pyparsing==3.0.7
 pyrsistent==0.18.1
 pytest==6.2.5
 pytest-forked==1.4.0
 pytest-html==3.1.1
 pytest-metadata==1.11.0
-pytest-timeout==2.0.2
+pytest-timeout==2.1.0
 pytest-xdist==2.5.0
 python-dotenv==0.19.2
 pytoml==0.1.21
@@ -61,4 +61,4 @@ webencodings==0.5.1
 websocket-client==0.59.0
 websockets==10.1
 flaky==3.7.0
-stripe==2.64.0
+stripe==2.65.0

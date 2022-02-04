@@ -408,18 +408,6 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = [
-        "docker-compose.yml",
-        "docker-compose.enterprise.yml",
-        "docker-compose.auditlogs.yml",
-        "docker-compose.connect.yml",
-        "docker-compose.config.yml",
-        "docker-compose.monitor.yml",
-        "docker-compose.reporting.yml",
-        "other-components-docker.yml",
-    ]
-    _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
-
     def _is_known_yml_file(entry):
         return (
             entry.startswith("git-versions")
@@ -436,9 +424,8 @@ def filter_docker_compose_files_list(list, version):
         and (
             version == "all"
             or (
-                (version == "git" and entry in _GIT_ONLY_YML)
-                or (version == "docker" and entry in _DOCKER_ONLY_YML)
-                or (entry not in _GIT_ONLY_YML + _DOCKER_ONLY_YML)
+                (version == "git" and "docker" not in entry)
+                or (version == "docker" and "docker" in entry)
             )
         )
     ]
@@ -518,7 +505,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     # We need to insert these entries, which may be missing ("may be" because we
     # don't check explicitly for more recent release branches or tags).
-    if data.get("mender") is None:
+    if data.get("mender") is None and data.get("mender-client-qemu") is not None:
         data["mender"] = {
             "containers": ["mender"],
             "image_prefix": "mendersoftware/",
@@ -1938,7 +1925,7 @@ def set_component_version_to(dir, component, tag):
         os.rename(filename + ".tmp", filename)
 
     compose_files_docker = docker_compose_files_list(dir, "docker")
-    git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
+    git_files = docker_compose_files_list(dir, "git")
 
     if component.type == "docker_image":
         for filename in compose_files_docker:

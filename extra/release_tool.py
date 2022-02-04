@@ -408,18 +408,6 @@ def filter_docker_compose_files_list(list, version):
 
     assert version in ["git", "docker"]
 
-    _DOCKER_ONLY_YML = [
-        "docker-compose.yml",
-        "docker-compose.enterprise.yml",
-        "docker-compose.auditlogs.yml",
-        "docker-compose.connect.yml",
-        "docker-compose.config.yml",
-        "docker-compose.monitor.yml",
-        "docker-compose.reporting.yml",
-        "other-components-docker.yml",
-    ]
-    _GIT_ONLY_YML = ["git-versions.yml", "git-versions-enterprise.yml"]
-
     def _is_known_yml_file(entry):
         return (
             entry.startswith("git-versions")
@@ -436,9 +424,8 @@ def filter_docker_compose_files_list(list, version):
         and (
             version == "all"
             or (
-                (version == "git" and entry in _GIT_ONLY_YML)
-                or (version == "docker" and entry in _DOCKER_ONLY_YML)
-                or (entry not in _GIT_ONLY_YML + _DOCKER_ONLY_YML)
+                (version == "git" and "docker" not in entry)
+                or (version == "docker" and "docker" in entry)
             )
         )
     ]
@@ -504,7 +491,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     Therefore, we patch in this modification below, since we cannot fix the
     tags. Yes, this is ugly, but at least it's confined to versions below
-    3.2.0."""
+    3.3.0."""
 
     last_comp = rev.split("/")[-1]
     if re.match(r"^[0-9]+\.[0-9]\.", last_comp) is None:
@@ -518,7 +505,7 @@ def version_specific_docker_compose_data_patching(data, rev):
 
     # We need to insert these entries, which may be missing ("may be" because we
     # don't check explicitly for more recent release branches or tags).
-    if data.get("mender") is None:
+    if data.get("mender") is None and data.get("mender-client-qemu") is not None:
         data["mender"] = {
             "containers": ["mender"],
             "image_prefix": "mendersoftware/",
@@ -534,12 +521,24 @@ def version_specific_docker_compose_data_patching(data, rev):
             "version": "1.0.%s" % patch,
         }
 
-    if rev == "3.2.0" and data.get("reporting") is None:
+    if (rev == "3.2.0" or rev == "3.2.1") and data.get("reporting") is None:
         data["reporting"] = {
             "containers": ["mender-reporting"],
             "image_prefix": "mendersoftware/",
             "version": "master",
         }
+
+    if rev == "3.2.1":
+        for comp in [
+            ("mender-artifact", ".0"),
+            ("mender-cli", ".0"),
+            ("mender-binary-delta", ".0"),
+            ("mender-convert", ".2"),
+        ]:
+            if data.get(comp[0]) is not None and data[comp[0]]["version"].endswith(
+                ".x"
+            ):
+                data[comp[0]]["version"] = data[comp[0]]["version"][:-2] + comp[1]
 
     return data
 
@@ -1938,7 +1937,7 @@ def set_component_version_to(dir, component, tag):
         os.rename(filename + ".tmp", filename)
 
     compose_files_docker = docker_compose_files_list(dir, "docker")
-    git_files = set(docker_compose_files_list(dir, "git")) - set(compose_files_docker)
+    git_files = docker_compose_files_list(dir, "git")
 
     if component.type == "docker_image":
         for filename in compose_files_docker:

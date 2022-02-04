@@ -220,6 +220,28 @@ def test_version_of(capsys):
         "mender-master",
     )
 
+    # Some known hardcodings for these.
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-artifact", "--in-integration-version", "3.2.1"],
+        "3.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-cli", "--in-integration-version", "3.2.1"],
+        "1.7.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-binary-delta", "--in-integration-version", "3.2.1"],
+        "1.3.0",
+    )
+    run_main_assert_result(
+        capsys,
+        ["--version-of", "mender-convert", "--in-integration-version", "3.2.1"],
+        "2.6.2",
+    )
+
 
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master

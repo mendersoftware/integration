@@ -528,6 +528,18 @@ def version_specific_docker_compose_data_patching(data, rev):
             "version": "master",
         }
 
+    if rev == "3.2.1":
+        for comp in [
+            ("mender-artifact", ".0"),
+            ("mender-cli", ".0"),
+            ("mender-binary-delta", ".0"),
+            ("mender-convert", ".2"),
+        ]:
+            if data.get(comp[0]) is not None and data[comp[0]]["version"].endswith(
+                ".x"
+            ):
+                data[comp[0]]["version"] = data[comp[0]]["version"][:-2] + comp[1]
+
     return data
 
 

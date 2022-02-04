@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -23,11 +23,14 @@ class TestHealthCheck:
     @pytest.mark.parametrize(
         "url",
         [
-            "http://mender-workflows-server:8080/api/v1/health",
-            "http://mender-inventory:8080/api/internal/v1/inventory/health",
             "http://mender-deployments:8080/api/internal/v1/deployments/health",
             "http://mender-device-auth:8080/api/internal/v1/devauth/health",
+            "http://mender-deviceconfig:8080/api/internal/v1/deviceconfig/health",
+            "http://mender-deviceconnect:8080/api/internal/v1/deviceconnect/health",
+            "http://mender-inventory:8080/api/internal/v1/inventory/health",
+            "http://mender-iot-manager:8080/api/internal/v1/iot-manager/health",
             "http://mender-useradm:8080/api/internal/v1/useradm/health",
+            "http://mender-workflows-server:8080/api/v1/health",
         ],
     )
     def test_health_check(self, url):
@@ -45,12 +48,17 @@ class TestHealthCheckEnterprise:
     @pytest.mark.parametrize(
         "url",
         [
-            "http://mender-workflows-server:8080/api/v1/health",
-            "http://mender-inventory:8080/api/internal/v1/inventory/health",
+            "http://mender-auditlogs:8080/api/internal/v1/auditlogs/health",
             "http://mender-deployments:8080/api/internal/v1/deployments/health",
             "http://mender-device-auth:8080/api/internal/v1/devauth/health",
-            "http://mender-useradm:8080/api/internal/v1/useradm/health",
+            "http://mender-deviceconfig:8080/api/internal/v1/deviceconfig/health",
+            "http://mender-deviceconnect:8080/api/internal/v1/deviceconnect/health",
+            "http://mender-devicemonitor:8080/api/internal/v1/devicemonitor/health",
+            "http://mender-inventory:8080/api/internal/v1/inventory/health",
+            "http://mender-iot-manager:8080/api/internal/v1/iot-manager/health",
             "http://mender-tenantadm:8080/api/internal/v1/tenantadm/health",
+            "http://mender-useradm:8080/api/internal/v1/useradm/health",
+            "http://mender-workflows-server:8080/api/v1/health",
         ],
     )
     def test_health_check(self, url):

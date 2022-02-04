@@ -41,6 +41,7 @@ from testutils.common import (
     make_device_with_inventory,
     submit_inventory,
     useExistingTenant,
+    Tenant,
 )
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
@@ -567,7 +568,8 @@ def setup_devices_and_management_st(nr_devices=100, deploy_to_group=None):
     """
     Sets up user creates authorized devices.
     """
-    user = create_user("bugs@bunny.org", "correcthorse")
+    uuidv4 = str(uuid.uuid4())
+    user = create_user("some.user+" + uuidv4 + "@example.com", "secretsecret")
     useradmm = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
@@ -695,10 +697,8 @@ def try_update(
     return resp.status_code
 
 
-class TestDeploymentsEnterprise(object):
-    def test_regular_deployment(self, clean_mongo):
-        user, tenant, utoken, devs = setup_devices_and_management_mt()
-
+class TestDeploymentsBase(object):
+    def do_test_regular_deployment(self, clean_mongo, user_token, devs):
         api_mgmt_dep = ApiClient(deployments.URL_MGMT)
 
         # Make deployment request
@@ -707,7 +707,7 @@ class TestDeploymentsEnterprise(object):
             "artifact_name": "deployments-phase-testing",
             "devices": [dev.id for dev in devs],
         }
-        api_mgmt_dep.with_auth(utoken).call(
+        api_mgmt_dep.with_auth(user_token).call(
             "POST", deployments.URL_DEPLOYMENTS, deployment_req
         )
 
@@ -722,13 +722,25 @@ class TestDeploymentsEnterprise(object):
             assert status_code == 204
 
         deployment_req["name"] = "really-old-update"
-        api_mgmt_dep.with_auth(utoken).call(
+        api_mgmt_dep.with_auth(user_token).call(
             "POST", deployments.URL_DEPLOYMENTS, deployment_req
         )
         for dev in devs:
             # Already installed
             status_code = try_update(dev)
             assert status_code == 204
+
+
+class TestDeploymentOpenSource(TestDeploymentsBase):
+    def test_regular_deployment(self, clean_mongo):
+        _user, user_token, devs = setup_devices_and_management_st(5)
+        self.do_test_regular_deployment(clean_mongo, user_token, devs)
+
+
+class TestDeploymentEnterprise(TestDeploymentsBase):
+    def test_regular_deployment(self, clean_mongo):
+        _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
+        self.do_test_regular_deployment(clean_mongo, user_token, devs)
 
 
 class TestPhasedRolloutDeploymentsEnterprise:

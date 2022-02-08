@@ -1,0 +1,117 @@
+
+include:
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-commits.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-license.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-python3-format.yml'
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-docker-build.yml'
+
+variables:
+  LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
+
+test:extra-tools:
+  image: "python:3"
+  stage: test
+
+  before_script:
+    - pip install pytest pyyaml
+    # Rename the branch we're on, so that it's not in the way for the
+    # subsequent fetch. It's ok if this fails, it just means we're not on any
+    # branch.
+    - git branch -m temp-branch || true
+    # Set up git identity
+    - git config --global user.name "Northern.tech" && git config --global user.email "info@northern.tech"
+    # Needed for the statistics generator
+    - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
+    # Add github remote for tests using --integration-versions-including
+    - git remote add github https://github.com/mendersoftware/integration.git
+    - git fetch github
+    # Fetch master branch for tests using --in-integration-version
+    - git fetch origin master:master
+    - git fetch origin --tags
+    - git submodule update --init --recursive
+
+    # Fetch all Open Source release repositores for testing release_tool.
+    - for repo in $(env TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY=1 extra/release_tool.py --list); do
+    -   if [ $repo == integration ]; then
+    -     continue
+    -   fi
+    -   git clone https://github.com/mendersoftware/$repo ../$repo
+    - done
+
+  script:
+    - ( cd extra/changelog-generator && ./test-changelog-generator )
+    - python3 -m pytest extra/test_release_tool.py
+    - python3 -m pytest extra/test_statistics_generator.py
+
+test:docs:
+  image: tiangolo/docker-with-compose
+  services:
+    - docker:19.03.5-dind
+
+  before_script:
+    - apk add bash git openssl pwgen python3 jq
+    - git config --global user.name "user"
+    - git config --global user.email "user@example.com"
+    - git clone https://github.com/mendersoftware/mender-docs.git mender-docs
+
+    - MENDER_DOCS_BRANCH=$(
+        for i in $(
+            git for-each-ref
+            --format='%(refname:short)'
+            'refs/remotes/origin/[0-9].[0-9].x'
+            'refs/remotes/origin/staging'
+            'refs/remotes/origin/master'
+            ); do
+          echo $(git log --oneline $(git merge-base $i HEAD)..HEAD | wc -l) $i;
+        done | sort -n | head -n1 | awk '{print $2}'
+      )
+    - if [[ $MENDER_DOCS_BRANCH == "origin/staging" ]]; then
+    -   MENDER_DOCS_BRANCH="origin/hosted"
+    - fi
+
+    - cd mender-docs
+    - git checkout $MENDER_DOCS_BRANCH
+
+  script:
+    - ./run-tests.sh
+
+# Smoke test to verify requirements.txt are sane
+test:integration-tests:requirements:
+  stage: test
+  rules:
+    - changes:
+      - tests/requirements/apk-requirements.txt
+      - tests/requirements/python-requirements.txt
+  # Use same image as in mender-qa
+  image: docker:19.03-dind
+  script:
+    # Get and install the integration test requirements
+    - apk add $(cat tests/requirements/apk-requirements.txt)
+    - pip install -r tests/requirements/python-requirements.txt
+
+build:docker:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+publish:image:mender:
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
+    DOCKER_DIR: extra/mender-client-docker-addons
+
+trigger:saas:sync-staging-component:
+  rules:
+    - when: never
+
+publish:image:saas:
+  rules:
+    - when: never

@@ -5,7 +5,7 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:2.5.x
+        image: mendersoftware/mender-client-qemu:2.5.4
         networks:
             - mender
         stdin_open: true

@@ -5,7 +5,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:mender-3.0.x
+        image: mendersoftware/deployments:mender-3.0.2
         extends:
             file: common.yml
             service: mender-base
@@ -20,7 +20,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:mender-3.0.x
+        image: mendersoftware/gui:mender-3.0.2
         extends:
             file: common.yml
             service: mender-base
@@ -73,7 +73,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:mender-3.0.x
+        image: mendersoftware/deviceauth:mender-3.0.2
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -91,7 +91,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:mender-3.0.x
+        image: mendersoftware/inventory:mender-3.0.2
         extends:
             file: common.yml
             service: mender-base
@@ -106,7 +106,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:mender-3.0.x
+        image: mendersoftware/useradm:mender-3.0.2
         extends:
             file: common.yml
             service: mender-base
@@ -121,7 +121,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server:
-        image: mendersoftware/workflows:mender-3.0.x
+        image: mendersoftware/workflows:mender-3.0.2
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -138,7 +138,7 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:mender-3.0.x
+        image: mendersoftware/workflows-worker:mender-3.0.2
         command: worker --excluded-workflows generate_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
@@ -154,7 +154,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:mender-3.0.x
+        image: mendersoftware/create-artifact-worker:mender-3.0.2
         extends:
             file: common.yml
             service: mender-base

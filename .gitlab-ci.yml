@@ -54,8 +54,9 @@ test:extra-tools:
     # Add github remote for tests using --integration-versions-including
     - git remote add github https://github.com/mendersoftware/integration.git
     - git fetch github
-    # Fetch master branch for tests using --in-integration-version
-    - git fetch origin master:master
+    # Git trick: Fetch directly into our local branches instead of remote
+    # branches.
+    - git fetch origin 'refs/heads/*:refs/heads/*'
     - git fetch origin --tags
     - git submodule update --init --recursive
 

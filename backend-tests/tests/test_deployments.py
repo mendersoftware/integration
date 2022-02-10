@@ -74,16 +74,10 @@ def create_tenant_test_setup(
     api_mgmt_deploy = ApiClient(deployments.URL_MGMT)
     tenant = create_org(tenant_name, user_name, "correcthorse", plan=plan)
     user = tenant.users[0]
-    r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert r.status_code == 200
-    user.utoken = r.text
-    tenant.users = [user]
-    upload_image("/tests/test-artifact.mender", user.utoken)
+    upload_image("/tests/test-artifact.mender", user.token)
 
     # count deployments
-    resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
+    resp = api_mgmt_deploy.with_auth(user.token).call("GET", "/deployments")
     assert resp.status_code == 200
     count = int(resp.headers["X-Total-Count"])
 
@@ -94,13 +88,13 @@ def create_tenant_test_setup(
             "artifact_name": "deployments-phase-testing",
             "devices": ["uuid not needed" + str(i) for i in range(nr_devices)],
         }
-        resp = api_mgmt_deploy.with_auth(user.utoken).call(
+        resp = api_mgmt_deploy.with_auth(user.token).call(
             "POST", "/deployments", body=request_body
         )
         assert resp.status_code == 201
 
     # Verify that the 'nr_deployments' expected deployments have been created
-    resp = api_mgmt_deploy.with_auth(user.utoken).call("GET", "/deployments")
+    resp = api_mgmt_deploy.with_auth(user.token).call("GET", "/deployments")
     assert resp.status_code == 200
     new_count = int(resp.headers["X-Total-Count"])
     assert new_count == count + nr_deployments
@@ -507,7 +501,7 @@ class TestDeploymentsEndpointEnterprise(object):
 
         deploymentclient = ApiClient(deployments.URL_MGMT)
         tenant1, tenant2 = setup_deployments_enterprise_test
-        resp = deploymentclient.with_auth(tenant2.users[0].utoken).call(
+        resp = deploymentclient.with_auth(tenant2.users[0].token).call(
             "GET", "/deployments"
         )
         assert resp.status_code == 200
@@ -516,19 +510,19 @@ class TestDeploymentsEndpointEnterprise(object):
         # it remains unchanged after the tests have run
         backup_tenant_user_deployments = resp.json()
         request_body, expected_response = test_case
-        resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
+        resp = deploymentclient.with_auth(tenant1.users[0].token).call(
             "POST", "/deployments", body=request_body
         )
         assert resp.status_code == 201
         deployment_id = os.path.basename(resp.headers["Location"])
         if not useExistingTenant():
-            resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
+            resp = deploymentclient.with_auth(tenant1.users[0].token).call(
                 "GET", "/deployments"
             )
             assert resp.status_code == 200
             assert len(resp.json()) == 4
 
-        resp = deploymentclient.with_auth(tenant1.users[0].utoken).call(
+        resp = deploymentclient.with_auth(tenant1.users[0].token).call(
             "GET", "/deployments/" + deployment_id
         )
         assert resp.status_code == 200
@@ -537,7 +531,7 @@ class TestDeploymentsEndpointEnterprise(object):
             expected_response, id_response_body_dict
         )
         # Verify that the second tenant's deployemnts remain untouched
-        resp = deploymentclient.with_auth(tenant2.users[0].utoken).call(
+        resp = deploymentclient.with_auth(tenant2.users[0].token).call(
             "GET", "/deployments"
         )
         assert resp.status_code == 200
@@ -625,10 +619,7 @@ def setup_devices_and_management_mt(nr_devices=100, deploy_to_group=None):
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invm = ApiClient(inventory.URL_MGMT)
-    # log in user
-    r = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
-    assert r.status_code == 200
-    utoken = r.text
+    utoken = user.token
     # Upload a dummy artifact to the server
     upload_image("/tests/test-artifact.mender", utoken)
     # count existing devices
@@ -1511,23 +1502,14 @@ class TestDeploymentsToGroupStatusUpdateEnterprise(TestDeploymentsStatusUpdateBa
         )
 
 
-def create_tenant(name, username, plan):
-    tenant = create_org(name, username, "correcthorse", plan=plan)
-    user = tenant.users[0]
-    r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert r.status_code == 200
-    user.utoken = r.text
-
-    return tenant
-
-
 @pytest.fixture(scope="function")
 def setup_tenant(clean_mongo):
     uuidv4 = str(uuid.uuid4())
-    tenant = create_tenant(
-        "test.mender.io-" + uuidv4, "some.user+" + uuidv4 + "@example.com", "enterprise"
+    tenant = create_org(
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "correcthorse",
+        plan="enterprise",
     )
     # give workflows time to finish provisioning
     time.sleep(10)
@@ -1803,19 +1785,20 @@ class TestDynamicDeploymentsEnterprise:
             - deployments match on inventory attributes via various filter predicates
         """
         uuidv4 = str(uuid.uuid4())
-        tenant = create_tenant(
+        tenant = create_org(
             "test.mender.io-" + uuidv4,
             "some.user+" + uuidv4 + "@example.com",
-            "enterprise",
+            "correcthorse",
+            plan="enterprise",
         )
         user = tenant.users[0]
 
         matching_devs = [
-            make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+            make_device_with_inventory(attrs, user.token, tenant.tenant_token)
             for attrs in tc["matches"]
         ]
         nonmatching_devs = [
-            make_device_with_inventory(attrs, user.utoken, tenant.tenant_token)
+            make_device_with_inventory(attrs, user.token, tenant.tenant_token)
             for attrs in tc["nonmatches"]
         ]
 
@@ -1823,7 +1806,7 @@ class TestDynamicDeploymentsEnterprise:
         # and the Elasticsearch indexing to complete
         time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
 
-        dep = create_dynamic_deployment("foo", tc["predicates"], user.utoken)
+        dep = create_dynamic_deployment("foo", tc["predicates"], user.token)
         if not useExistingTenant():
             assert dep["initial_device_count"] == len(matching_devs)
 
@@ -1840,13 +1823,13 @@ class TestDynamicDeploymentsEnterprise:
         user = setup_tenant.users[0]
 
         dep = create_dynamic_deployment(
-            "foo", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+            "foo", [predicate("foo", "inventory", "$eq", "foo")], user.token
         )
 
         devs = [
             make_device_with_inventory(
                 [{"name": "foo", "value": "foo"}],
-                user.utoken,
+                user.token,
                 setup_tenant.tenant_token,
             )
             for i in range(10)
@@ -1860,7 +1843,7 @@ class TestDynamicDeploymentsEnterprise:
             assert_get_next(200, d.token, "foo")
 
         # just getting a 'next' deployment has no effect on overall status
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "pending"
 
         # when some devices start activity ('downloading', 'installing', 'rebooting'),
@@ -1871,10 +1854,10 @@ class TestDynamicDeploymentsEnterprise:
             elif devs.index(d) < 6:
                 set_status(dep["id"], "installing", d.token)
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "inprogress"
 
-        stats = get_stats(dep["id"], user.utoken)
+        stats = get_stats(dep["id"], user.token)
         verify_stats(stats, {"downloading": 3, "installing": 3, "pending": 4})
 
         # when all devices finish, the deployment goes back to 'pending'
@@ -1884,10 +1867,10 @@ class TestDynamicDeploymentsEnterprise:
             else:
                 set_status(dep["id"], "failure", d.token)
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "inprogress"
 
-        stats = get_stats(dep["id"], user.utoken)
+        stats = get_stats(dep["id"], user.token)
         verify_stats(stats, {"success": 5, "failure": 5})
 
     def test_bounded_deployment_lifecycle(self, setup_tenant):
@@ -1899,14 +1882,14 @@ class TestDynamicDeploymentsEnterprise:
         dep = create_dynamic_deployment(
             "foo",
             [predicate("foo", "inventory", "$eq", "foo")],
-            user.utoken,
+            user.token,
             max_devices=10,
         )
 
         devs = [
             make_device_with_inventory(
                 [{"name": "foo", "value": "foo"}],
-                user.utoken,
+                user.token,
                 setup_tenant.tenant_token,
             )
             for i in range(10)
@@ -1920,7 +1903,7 @@ class TestDynamicDeploymentsEnterprise:
             assert_get_next(200, d.token, "foo")
 
         # just getting a 'next' deployment has no effect on overall status
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "pending"
 
         # when devices start activity ('downloading', 'installing', 'rebooting'),
@@ -1931,32 +1914,32 @@ class TestDynamicDeploymentsEnterprise:
             else:
                 set_status(dep["id"], "installing", d.token)
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "inprogress"
 
-        stats = get_stats(dep["id"], user.utoken)
+        stats = get_stats(dep["id"], user.token)
         verify_stats(stats, {"downloading": 5, "installing": 5})
 
         # all devices finish - and the deployment actually becomes 'finished'
         for d in devs:
             set_status(dep["id"], "success", d.token)
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "finished"
 
-        stats = get_stats(dep["id"], user.utoken)
+        stats = get_stats(dep["id"], user.token)
         verify_stats(stats, {"success": 10})
 
         # an extra dev won't get this deployment
         extra_dev = make_device_with_inventory(
-            [{"name": "foo", "value": "foo"}], user.utoken, setup_tenant.tenant_token
+            [{"name": "foo", "value": "foo"}], user.token, setup_tenant.tenant_token
         )
         assert_get_next(204, extra_dev.token, "foo")
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
         assert dep["status"] == "finished"
 
-        stats = get_stats(dep["id"], user.utoken)
+        stats = get_stats(dep["id"], user.token)
         verify_stats(stats, {"success": 10})
 
     def test_deployment_ordering(self, setup_tenant):
@@ -1970,18 +1953,18 @@ class TestDynamicDeploymentsEnterprise:
         user = setup_tenant.users[0]
 
         create_dynamic_deployment(
-            "foo1", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+            "foo1", [predicate("foo", "inventory", "$eq", "foo")], user.token
         )
         create_dynamic_deployment(
-            "foo2", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+            "foo2", [predicate("foo", "inventory", "$eq", "foo")], user.token
         )
         depbar = create_dynamic_deployment(
-            "bar", [predicate("foo", "inventory", "$eq", "bar")], user.utoken
+            "bar", [predicate("foo", "inventory", "$eq", "bar")], user.token
         )
 
         # the device will ignore the 'foo' deployments, because of its inventory
         dev = make_device_with_inventory(
-            [{"name": "foo", "value": "bar"}], user.utoken, setup_tenant.tenant_token
+            [{"name": "foo", "value": "bar"}], user.token, setup_tenant.tenant_token
         )
 
         # sleep a few seconds waiting for the data propagation to the reporting service
@@ -2018,10 +2001,10 @@ class TestDynamicDeploymentsEnterprise:
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
         create_dynamic_deployment(
-            "foo3", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+            "foo3", [predicate("foo", "inventory", "$eq", "foo")], user.token
         )
         create_dynamic_deployment(
-            "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.utoken
+            "foo4", [predicate("foo", "inventory", "$eq", "foo")], user.token
         )
 
         # sleep a few seconds waiting for the data propagation to the reporting service
@@ -2051,10 +2034,11 @@ class TestDynamicDeploymentsEnterprise:
         """ Check phased rollouts with and without max_devices.
         """
         uuidv4 = str(uuid.uuid4())
-        tenant = create_tenant(
+        tenant = create_org(
             "test.mender.io-" + uuidv4,
             "some.user+" + uuidv4 + "@example.com",
-            "enterprise",
+            "correcthorse",
+            plan="enterprise",
         )
         user = tenant.users[0]
 
@@ -2072,7 +2056,7 @@ class TestDynamicDeploymentsEnterprise:
         create_dynamic_deployment(
             "foo",
             [predicate("foo", "inventory", "$eq", "foo")],
-            user.utoken,
+            user.token,
             phases=tc["phases"],
             max_devices=tc["max_devices"],
             status_code=400,
@@ -2081,7 +2065,7 @@ class TestDynamicDeploymentsEnterprise:
         # a deployment with initial devs succeeds
         devs = [
             make_device_with_inventory(
-                [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
+                [{"name": "bar", "value": "bar"}], user.token, tenant.tenant_token,
             )
             for i in range(10)
         ]
@@ -2102,7 +2086,7 @@ class TestDynamicDeploymentsEnterprise:
         dep = create_dynamic_deployment(
             "bar",
             [predicate("bar", "inventory", "$eq", "bar")],
-            user.utoken,
+            user.token,
             phases=tc["phases"],
             max_devices=tc["max_devices"],
         )
@@ -2124,14 +2108,14 @@ class TestDynamicDeploymentsEnterprise:
             assert_get_next(200, d.token, "bar")
             set_status(dep["id"], "success", d.token)
 
-        dep = get_deployment(dep["id"], user.utoken)
+        dep = get_deployment(dep["id"], user.token)
 
         if tc["max_devices"] is None:
             # no max_devices = deployment remains in progress
             assert dep["status"] == "inprogress"
             extra_devs = [
                 make_device_with_inventory(
-                    [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
+                    [{"name": "bar", "value": "bar"}], user.token, tenant.tenant_token,
                 )
                 for i in range(10)
             ]

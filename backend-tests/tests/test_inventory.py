@@ -293,9 +293,7 @@ def add_devices_to_tenant(tenant, dev_inventories):
     devauthm = ApiClient(deviceauth.URL_MGMT)
     invd = ApiClient(inventory.URL_DEV)
 
-    user = tenant.users[0]
-    utoken = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)).text
-    assert utoken != ""
+    utoken = tenant.users[0].token
     tenant.api_token = utoken
 
     for inv in dev_inventories:

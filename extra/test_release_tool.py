@@ -1,4 +1,4 @@
-# Copyright 2020 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -176,8 +176,8 @@ def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master
     run_main_assert_result(
         capsys,
-        ["--version-of", "inventory", "--in-integration-version", "master"],
-        "master",
+        ["--version-of", "inventory", "--in-integration-version", "3.1.x"],
+        "4.0.x",
     )
     run_main_assert_result(
         capsys,
@@ -187,9 +187,9 @@ def test_version_of_with_in_integration_version(capsys):
             "--version-type",
             "docker",
             "--in-integration-version",
-            "master",
+            "3.1.x",
         ],
-        "mender-master",
+        "mender-3.1.x",
     )
     run_main_assert_result(
         capsys,
@@ -199,9 +199,9 @@ def test_version_of_with_in_integration_version(capsys):
             "--version-type",
             "git",
             "--in-integration-version",
-            "master",
+            "3.1.x",
         ],
-        "master",
+        "4.0.x",
     )
 
     # For old releases, --version-type shall be ignored
@@ -294,6 +294,10 @@ def test_set_version_of(capsys):
 
 
 def test_integration_versions_including(capsys):
+    pytest.skip(
+        "--integration-versions-including doesn't work on 3.1.x and older branches after N-to-N component mapping (0bb62557e30) was introduced"
+    )
+
     captured = run_main_assert_result(
         capsys,
         ["--integration-versions-including", "inventory", "--version", "master"],

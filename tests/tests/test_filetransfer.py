@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import shutil
 import tempfile
 import pytest
 import time
-import uuid
 import urllib.parse
 
 from tempfile import NamedTemporaryFile
@@ -32,19 +31,17 @@ from ..common_setup import standard_setup_one_client, enterprise_no_client
 
 from ..MenderAPI import (
     authentication,
-    devauth,
     get_container_manager,
     reset_mender_api,
     DeviceAuthV2,
     logger,
 )
-from .common_connect import wait_for_connect
+from .common_connect import prepare_env_for_connect, wait_for_connect
 from .common import md5sum
 from .mendertesting import MenderTesting
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
-from testutils.common import User, update_tenant, new_tenant_client
-from testutils.infra.cli import CliTenantadm
+
 
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"
@@ -105,7 +102,7 @@ def set_limits(mender_device, limits, auth, devid):
     logger.info("ls -al /etc/mender/:\n%s" % debugoutput)
 
 
-class _TestFileTransferBase(MenderTesting):
+class BaseTestFileTransfer(MenderTesting):
     def test_filetransfer(
         self, devid, authtoken, path="/etc/mender/mender.conf", content_assertion=None
     ):
@@ -615,32 +612,31 @@ class _TestFileTransferBase(MenderTesting):
             )
 
 
-class TestFileTransfer(_TestFileTransferBase):
+class TestFileTransfer(BaseTestFileTransfer):
     """Tests the file transfer functionality"""
 
-    def prepare_env(self):
+    def prepare_env(self, auth):
         # accept the device
+        devauth = DeviceAuthV2(auth)
         devauth.accept_devices(1)
 
         # list of devices
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
+        devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
 
-        # wait for the device to connect via websocket
-        auth = authentication.Authentication()
-        wait_for_connect(auth, devices[0])
-
         # device ID and auth token
-        devid = devices[0]
+        devid = devices[0]["id"]
         authtoken = auth.get_auth_token()
 
-        return devid, authtoken, auth
+        # wait for the device to connect via websocket
+        wait_for_connect(auth, devid)
+
+        return devid, authtoken
 
     def test_filetransfer(self, standard_setup_one_client):
         """Tests the file transfer features"""
-        devid, authtoken, _ = self.prepare_env()
+        auth = authentication.Authentication()
+        devid, authtoken = self.prepare_env(auth)
         super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
 
     @pytest.fixture(scope="function")
@@ -662,7 +658,8 @@ class TestFileTransfer(_TestFileTransferBase):
 
     def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
         """Tests the file transfer is not implemented with mender-connect 1.0"""
-        devid, authtoken, _ = self.prepare_env()
+        auth = authentication.Authentication()
+        devid, authtoken = self.prepare_env(auth)
 
         rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
         assert rsp.status_code == 502
@@ -672,7 +669,8 @@ class TestFileTransfer(_TestFileTransferBase):
     @pytest.mark.min_mender_client_version("2.7.0")
     def test_filetransfer_limits_upload(self, standard_setup_one_client):
         """Tests the file transfer upload limits"""
-        (devid, _, auth,) = self.prepare_env()
+        auth = authentication.Authentication()
+        devid, _ = self.prepare_env(auth)
         super().test_filetransfer_limits_upload(
             standard_setup_one_client.device, devid, auth
         )
@@ -681,76 +679,47 @@ class TestFileTransfer(_TestFileTransferBase):
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, standard_setup_one_client):
         """Tests the file transfer download limits"""
-        (devid, _, auth,) = self.prepare_env()
+        auth = authentication.Authentication()
+        devid, _ = self.prepare_env(auth)
         super().test_filetransfer_limits_download(
             standard_setup_one_client.device, devid, auth
         )
 
 
-class TestFileTransferEnterprise(_TestFileTransferBase):
+class TestFileTransferEnterprise(BaseTestFileTransfer):
     """Tests the file transfer functionality for enterprise setup"""
-
-    def prepare_env(self, env):
-        uuidv4 = str(uuid.uuid4())
-        tname = "test.mender.io-{}".format(uuidv4)
-        email = "some.user+{}@example.com".format(uuidv4)
-        u = User("", email, "whatsupdoc")
-        cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org(tname, u.name, u.pwd, plan="os")
-
-        # FT requires "troubleshoot"
-        update_tenant(
-            tid, addons=["troubleshoot"], container_manager=get_container_manager(),
-        )
-
-        tenant = cli.get_tenant(tid)
-        tenant = json.loads(tenant)
-
-        auth = authentication.Authentication(
-            name="os-tenant", username=u.name, password=u.pwd
-        )
-        auth.create_org = False
-        auth.reset_auth_token()
-        devauth_tenant = DeviceAuthV2(auth)
-
-        mender_device = new_tenant_client(
-            env, "configuration-test-container", tenant["tenant_token"]
-        )
-        mender_device.ssh_is_opened()
-
-        devauth_tenant.accept_devices(1)
-
-        devices = list(
-            set(
-                [
-                    device["id"]
-                    for device in devauth_tenant.get_devices_status("accepted")
-                ]
-            )
-        )
-        assert 1 == len(devices)
-
-        wait_for_connect(auth, devices[0])
-
-        devid = devices[0]
-        authtoken = auth.get_auth_token()
-
-        return devid, authtoken, auth, mender_device
 
     def test_filetransfer(self, enterprise_no_client):
         """Tests the file transfer features"""
-        devid, authtoken, _, _ = self.prepare_env(enterprise_no_client)
+        devid, authtoken, _, _ = prepare_env_for_connect(enterprise_no_client)
         super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
+
+    @pytest.fixture(scope="function")
+    def setup_mender_connect_1_0(self, request):
+        self.env = container_factory.getMenderClient_2_5(enterprise=True)
+        request.addfinalizer(self.env.teardown)
+        self.env.setup()
+        reset_mender_api(self.env)
+        yield self.env
+
+    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
+        """Tests the file transfer is not implemented with mender-connect 1.0"""
+        devid, authtoken, _, _ = prepare_env_for_connect(setup_mender_connect_1_0)
+
+        rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
+        assert rsp.status_code == 502
+        rsp = download_file("/foo/bar", devid, authtoken)
+        assert rsp.status_code == 502
 
     @pytest.mark.min_mender_client_version("2.7.0")
     def test_filetransfer_limits_upload(self, enterprise_no_client):
         """Tests the file transfer upload limits"""
-        devid, _, auth, mender_device = self.prepare_env(enterprise_no_client)
+        devid, _, auth, mender_device = prepare_env_for_connect(enterprise_no_client)
         super().test_filetransfer_limits_upload(mender_device, devid, auth)
 
     @pytest.mark.min_mender_client_version("2.7.0")
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download(self, enterprise_no_client):
         """Tests the file transfer download limits"""
-        devid, _, auth, mender_device = self.prepare_env(enterprise_no_client)
+        devid, _, auth, mender_device = prepare_env_for_connect(enterprise_no_client)
         super().test_filetransfer_limits_download(mender_device, devid, auth)

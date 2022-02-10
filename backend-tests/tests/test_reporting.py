@@ -157,7 +157,7 @@ def tenant_ent(clean_mongo):
         "some.user+" + uuidv4 + "@example.com",
         "secretsecret",
     )
-    tenant_ent = create_org(tenant, username, password, "enterprise")
+    tenant_ent = create_org(tenant, username, password, "enterprise", force=True)
     add_devices_to_tenant(
         tenant_ent,
         [
@@ -187,7 +187,7 @@ def tenant_pro(clean_mongo):
         "some.user+" + uuidv4 + "@example.com",
         "secretsecret",
     )
-    tenant_pro = create_org(tenant, username, password, "professional")
+    tenant_pro = create_org(tenant, username, password, "professional", force=True)
     add_devices_to_tenant(
         tenant_pro,
         [
@@ -216,7 +216,7 @@ def tenant_os(clean_mongo):
         "some.user+" + uuidv4 + "@example.com",
         "secretsecret",
     )
-    tenant_os = create_org(tenant, username, password, "os")
+    tenant_os = create_org(tenant, username, password, "os", force=True)
     add_devices_to_tenant(
         tenant_os,
         [
@@ -231,9 +231,6 @@ def tenant_os(clean_mongo):
     return tenant_os
 
 
-@pytest.mark.skipif(
-    useExistingTenant(), reason="not feasible to test with existing tenant",
-)
 @pytest.mark.skipif(
     isK8S(),
     reason="reporting service not deployed to staging or production environment",

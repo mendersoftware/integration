@@ -28,6 +28,7 @@ from testutils.common import (
     mongo,
     clean_mongo,
     mongo_cleanup,
+    lock_tenant,
     create_user,
     create_org,
     make_accepted_device,
@@ -312,9 +313,6 @@ def add_devices_to_tenant(tenant, dev_inventories):
     return tenant
 
 
-@pytest.mark.skipif(
-    useExistingTenant(), reason="not feasible to test with existing tenant",
-)
 class TestDeviceFilteringEnterprise:
     @property
     def logger(self):
@@ -333,7 +331,9 @@ class TestDeviceFilteringEnterprise:
             "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
-        self.tenant_ent = create_org(tenant, username, password, "enterprise")
+        self.tenant_ent = create_org(
+            tenant, username, password, "enterprise", force=True
+        )
         #
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
@@ -341,7 +341,9 @@ class TestDeviceFilteringEnterprise:
             "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
-        self.tenant_pro = create_org(tenant, username, password, "professional")
+        self.tenant_pro = create_org(
+            tenant, username, password, "professional", force=True
+        )
         #
         uuidv4 = str(uuid.uuid4())
         tenant, username, password = (
@@ -349,7 +351,7 @@ class TestDeviceFilteringEnterprise:
             "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
-        self.tenant_os = create_org(tenant, username, password, "os")
+        self.tenant_os = create_org(tenant, username, password, "os", force=True)
         #
         add_devices_to_tenant(
             self.tenant_ent,
@@ -1287,12 +1289,8 @@ class TestDeviceFilteringEnterprise:
             "some.user+" + uuidv4 + "@example.com",
             "secretsecret",
         )
-        tenant = create_org(tenant, username, password, "enterprise")
-        rsp = usradmm.call(
-            "POST", useradm.URL_LOGIN, auth=(tenant.users[0].name, tenant.users[0].pwd),
-        )
-        assert rsp.status_code == 200
-        tenant.api_token = rsp.text
+        tenant = create_org(tenant, username, password, "enterprise", force=True)
+        tenant.api_token = tenant.users[0].token
 
         # Create accepted devices with inventory.
         add_devices_to_tenant(tenant, inventories)

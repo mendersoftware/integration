@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 pytest.register_assert_rewrite("testutils")
 
 from requests.packages import urllib3
-from testutils.common import wait_until_healthy
+from testutils.common import wait_until_healthy, setup_tenant_locking
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.api.client import get_free_tcp_port, wait_for_port
 
@@ -28,6 +28,8 @@ from testutils.api.client import get_free_tcp_port, wait_for_port
 urllib3.disable_warnings()
 
 wait_until_healthy("backend-tests")
+if isK8S():
+    setup_tenant_locking()
 
 
 @pytest.fixture(scope="session")

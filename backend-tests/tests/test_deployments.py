@@ -61,7 +61,10 @@ def upload_image(filename, auth_token, description="abc"):
             ("artifact", (filename, open(filename, "rb"), "application/octet-stream")),
         ),
     )
-    assert r.status_code == 201
+    if useExistingTenant():
+        assert r.status_code == 201 or r.status_code == 409
+    else:
+        assert r.status_code == 201
 
 
 def create_tenant_test_setup(

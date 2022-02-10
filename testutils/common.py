@@ -38,6 +38,8 @@ from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
 
+TENANTS_COUNT_TRESHOLD = 50
+
 
 @pytest.fixture(scope="session")
 def mongo():
@@ -64,6 +66,18 @@ def elasticsearch_cleanup():
 
 def mongo_cleanup(mongo):
     mongo.cleanup()
+
+
+def lock_tenant(mongo: MongoClient, tenant_id: str) -> bool:
+    return mongo.lock_tenant(tenant_id)
+
+
+def setup_tenant_locking():
+    if isK8S():
+        mongo = MongoClient("mongodb-0:27017")
+    else:
+        mongo = MongoClient("mender-mongo:27017")
+    mongo.setup_tenant_locking()
 
 
 class User:
@@ -157,13 +171,50 @@ def create_org(
     plan: str = "os",
     containers_namespace: str = "backend-tests",
     container_manager=None,
+    force: bool = False,
 ) -> Tenant:
     cli = CliTenantadm(
         containers_namespace=containers_namespace, container_manager=container_manager
     )
     user_id = None
-    tenant_id = cli.create_org(name, username, password, plan=plan)
-    tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
+    tenant_id = ""
+    tenant_token = ""
+    count = int(cli.count_tenants(plan=plan))
+    if isK8S():
+        mongo = MongoClient("mongodb:27017")
+    else:
+        mongo = MongoClient("mender-mongo:27017")
+    if not force and useExistingTenant() and count > TENANTS_COUNT_TRESHOLD:
+        ## pick random tenant and create user
+        for i in range(count - 1):
+            num = random.randint(0, count - 1)
+            tenants = json.loads(cli.list_tenants(skip=num, limit=1, plan=plan))
+            assert len(tenants) == 1
+            tenant = tenants[0]
+            name = tenant["name"]
+            # do not use tenants created for demo or private use
+            if name.lower().find("nt") >= 0:
+                continue
+            # lock tenant so no other test will use it at the same time
+            if not lock_tenant(mongo, tenant_id=tenant["id"]):
+                continue
+            tenant_id = tenant["id"]
+            tenant_token = tenant["tenant_token"]
+            _ = create_user(username, password, tid=tenant_id)
+            break
+
+    if tenant_id == "":
+        if useExistingTenant():
+            while True:
+                tenant_id = cli.create_org(name, username, password, plan=plan)
+                if not lock_tenant(mongo, tenant_id=tenant_id):
+                    continue
+                else:
+                    break
+        else:
+            tenant_id = cli.create_org(name, username, password, plan=plan)
+
+        tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
 
     host = GATEWAY_HOSTNAME
     if container_manager is not None:

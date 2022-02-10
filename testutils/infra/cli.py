@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -127,6 +127,33 @@ class CliTenantadm(BaseCli):
 
         tenant = self.container_manager.execute(self.cid, cmd)
         return tenant
+
+    def count_tenants(self, plan=None, status=None, trial=None):
+        cmd = ["/usr/bin/tenantadm", "count-tenants"]
+        if plan is not None:
+            cmd.extend(["--plan", plan])
+        if status is not None:
+            cmd.extend(["--status", status])
+        if trial is not None:
+            cmd.extend(["--trial", trial])
+
+        count = self.container_manager.execute(self.cid, cmd)
+        return count
+
+    def list_tenants(self, skip=0, limit=20, plan=None, status=None, trial=None):
+        cmd = ["/usr/bin/tenantadm", "list-tenants"]
+        cmd.extend(["--limit", str(limit)])
+        if skip > 0:
+            cmd.extend(["--skip", str(skip)])
+        if plan is not None:
+            cmd.extend(["--plan", plan])
+        if status is not None:
+            cmd.extend(["--status", status])
+        if trial is not None:
+            cmd.extend(["--trial", trial])
+
+        tenants = self.container_manager.execute(self.cid, cmd)
+        return tenants
 
     def migrate(self):
         if isK8S():

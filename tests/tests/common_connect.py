@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,15 +13,61 @@
 #    limitations under the License.
 #
 
+import json
 import redo
+import uuid
 
 import testutils.api.deviceconnect as deviceconnect
+from testutils.common import User, update_tenant, new_tenant_client
+from testutils.infra.cli import CliTenantadm
 
 from testutils.api.client import ApiClient
 from ..MenderAPI import (
+    authentication,
     get_container_manager,
     logger,
+    DeviceAuthV2,
 )
+
+
+def prepare_env_for_connect(env):
+    uuidv4 = str(uuid.uuid4())
+    tname = "test.mender.io-{}".format(uuidv4)
+    email = "some.user+{}@example.com".format(uuidv4)
+    u = User("", email, "whatsupdoc")
+    cli = CliTenantadm(containers_namespace=env.name)
+    tid = cli.create_org(tname, u.name, u.pwd, plan="os")
+
+    # FT requires "troubleshoot"
+    update_tenant(
+        tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+    )
+
+    tenant = cli.get_tenant(tid)
+    tenant = json.loads(tenant)
+    env.tenant = tenant
+
+    auth = authentication.Authentication(
+        name="os-tenant", username=u.name, password=u.pwd
+    )
+    auth.create_org = False
+    auth.reset_auth_token()
+    devauth_tenant = DeviceAuthV2(auth)
+
+    mender_device = new_tenant_client(env, "test-container", tenant["tenant_token"])
+    mender_device.ssh_is_opened()
+
+    devauth_tenant.accept_devices(1)
+
+    devices = devauth_tenant.get_devices_status("accepted")
+    assert 1 == len(devices)
+
+    devid = devices[0]["id"]
+    authtoken = auth.get_auth_token()
+
+    wait_for_connect(auth, devid)
+
+    return devid, authtoken, auth, mender_device
 
 
 def wait_for_connect(auth, devid):

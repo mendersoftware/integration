@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -379,6 +379,14 @@ class DockerComposeMenderClient_2_5(DockerComposeCompatibilitySetup):
         super(DockerComposeCompatibilitySetup, self).__init__(
             name, extra_files=extra_files
         )
+
+    def new_tenant_client(self, name, tenant):
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client-2-5" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

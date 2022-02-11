@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,29 +16,19 @@
 import subprocess
 import time
 
-from ..common_setup import standard_setup_one_client_bootstrapped
+from ..common_setup import standard_setup_one_client_bootstrapped, enterprise_no_client
+from .common_connect import prepare_env_for_connect
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
 from .mendertesting import MenderTesting
 
 
-class TestRemoteTerminal(MenderTesting):
+class BaseTestRemoteTerminal(MenderTesting):
     """Tests the remote terminal functionality"""
 
-    def test_remote_terminal(self, standard_setup_one_client_bootstrapped):
-        # list of devices
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
-        assert 1 == len(devices)
-
+    def do_test_remote_terminal(self, env, auth, devid):
         # wait for the device to connect via websocket
-        auth = authentication.Authentication()
-        wait_for_connect(auth, devices[0])
-
-        # device ID and auth token
-        devid = devices[0]
-        assert devid is not None
+        wait_for_connect(auth, devid)
 
         # authenticate with mender-cli
         server_url = "https://" + get_container_manager().get_mender_gateway()
@@ -82,3 +72,24 @@ class TestRemoteTerminal(MenderTesting):
 
         assert exit_code == 0, (stdout, stderr)
         assert b"mender.conf" in stdout, (stdout, stderr)
+
+
+class TestRemoteTerminalOpenSource(BaseTestRemoteTerminal):
+    def test_portforward(self, standard_setup_one_client_bootstrapped):
+        # list of devices
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+        # device ID
+        devid = devices[0]["id"]
+        assert devid is not None
+        #
+        auth = authentication.Authentication()
+        self.do_test_remote_terminal(
+            standard_setup_one_client_bootstrapped, auth, devid
+        )
+
+
+class TestRemoteTerminalEnterprise(BaseTestRemoteTerminal):
+    def test_portforward(self, enterprise_no_client):
+        devid, _, auth, _ = prepare_env_for_connect(enterprise_no_client)
+        self.do_test_remote_terminal(enterprise_no_client, auth, devid)

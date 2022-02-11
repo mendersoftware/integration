@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -22,29 +22,19 @@ from tempfile import NamedTemporaryFile
 
 from DNS import DnsRequest
 
-from ..common_setup import standard_setup_one_client_bootstrapped
+from ..common_setup import standard_setup_one_client_bootstrapped, enterprise_no_client
+from .common_connect import prepare_env_for_connect
 from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
 from .common import md5sum
 from .mendertesting import MenderTesting
 
 
-class TestPortForward(MenderTesting):
+class BaseTestPortForward(MenderTesting):
     """Tests the port forward functionality"""
 
-    def test_portforward(self, standard_setup_one_client_bootstrapped):
-        # list of devices
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
-        assert 1 == len(devices)
-
-        # device ID
-        devid = devices[0]
-        assert devid is not None
-
+    def do_test_portforward(self, env, auth, devid):
         # wait for the device to connect via websocket
-        auth = authentication.Authentication()
         wait_for_connect(auth, devid)
 
         # authenticate with mender-cli
@@ -172,3 +162,22 @@ class TestPortForward(MenderTesting):
 
         # stop the port-forwarding
         pfw.kill()
+
+
+class TestPortForwardOpenSource(BaseTestPortForward):
+    def test_portforward(self, standard_setup_one_client_bootstrapped):
+        # list of devices
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+        # device ID
+        devid = devices[0]["id"]
+        assert devid is not None
+        #
+        auth = authentication.Authentication()
+        self.do_test_portforward(standard_setup_one_client_bootstrapped, auth, devid)
+
+
+class TestPortForwardEnterprise(BaseTestPortForward):
+    def test_portforward(self, enterprise_no_client):
+        devid, _, auth, _ = prepare_env_for_connect(enterprise_no_client)
+        self.do_test_portforward(enterprise_no_client, auth, devid)

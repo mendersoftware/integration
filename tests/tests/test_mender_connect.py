@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -162,6 +162,22 @@ class _TestRemoteTerminalBase:
             # Nothing to do, just connecting successfully is enough.
             pass
 
+    def test_bogus_proto_message(self, docker_env):
+        with docker_env.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
+
     def test_bogus_shell_message(self, docker_env):
         self.assert_env(docker_env)
 
@@ -264,22 +280,6 @@ class TestRemoteTerminal(_TestRemoteTerminalBase):
         env.devconnect = devconnect
         yield env
 
-    def test_bogus_proto_message(self, docker_env):
-        with docker_env.devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
-
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            data = ws.recv()
-            rsp = protomsg.ProtoMsg(0xFFFF)
-            rsp.decode(data)
-            assert rsp.typ == "error"
-            body = rsp.body
-            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
-
 
 class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
     """
@@ -305,57 +305,45 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         env.devconnect = devconnect
         yield env
 
+    @pytest.mark.skip(reason="not testable with mender-connect v1.0")
     def test_bogus_proto_message(self, docker_env):
-        with docker_env.devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
+        pass
 
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
 
-            msg = ws.recv()
-            prot.decode(msg)
-            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
-            assert prot.protoType == 12345
-            assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
+def connected_device(env):
+    uuidv4 = str(uuid.uuid4())
+    tname = "test.mender.io-{}".format(uuidv4)
+    email = "some.user+{}@example.com".format(uuidv4)
+    u = User("", email, "whatsupdoc")
+    cli = CliTenantadm(containers_namespace=env.name)
+    tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
+    update_tenant(
+        tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+    )
+    tenant = cli.get_tenant(tid)
+    tenant = json.loads(tenant)
+    ttoken = tenant["tenant_token"]
+
+    auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
+    auth.create_org = False
+    auth.reset_auth_token()
+    devauth = DeviceAuthV2(auth)
+
+    env.new_tenant_client("test-container", ttoken)
+    device = MenderDevice(env.get_mender_clients()[0])
+    devauth.accept_devices(1)
+
+    devices = devauth.get_devices_status("accepted")
+    assert 1 == len(devices)
+
+    wait_for_connect(auth, devices[0]["id"])
+
+    devconn = DeviceConnect(auth, devauth)
+
+    return device, devconn
 
 
 class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
-    def connected_device(self, env):
-        uuidv4 = str(uuid.uuid4())
-        tname = "test.mender.io-{}".format(uuidv4)
-        email = "some.user+{}@example.com".format(uuidv4)
-        u = User("", email, "whatsupdoc")
-        cli = CliTenantadm(containers_namespace=env.name)
-        tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
-        update_tenant(
-            tid, addons=["troubleshoot"], container_manager=get_container_manager(),
-        )
-        tenant = cli.get_tenant(tid)
-        tenant = json.loads(tenant)
-        ttoken = tenant["tenant_token"]
-
-        auth = Authentication(name="enterprise-tenant", username=u.name, password=u.pwd)
-        auth.create_org = False
-        auth.reset_auth_token()
-        devauth = DeviceAuthV2(auth)
-
-        env.new_tenant_client("configuration-test-container", ttoken)
-        device = MenderDevice(env.get_mender_clients()[0])
-        devauth.accept_devices(1)
-
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
-        assert 1 == len(devices)
-
-        wait_for_connect(auth, devices[0])
-
-        devconn = DeviceConnect(auth, devauth)
-
-        return device, devconn
-
     @pytest.fixture(scope="class")
     def docker_env(self, enterprise_no_client_class):
         """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
@@ -367,9 +355,33 @@ class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
 
         env = enterprise_no_client_class
 
-        device, devconn = self.connected_device(env)
+        device, devconn = connected_device(env)
 
         env.device = device
         env.devconnect = devconn
 
         yield env
+
+
+class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
+    """
+    This set of tests uses mender-connect v1.0
+    """
+
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, request):
+        env = container_factory.getMenderClient_2_5(enterprise=True)
+        request.addfinalizer(env.teardown)
+        env.setup()
+
+        reset_mender_api(env)
+        device, devconn = connected_device(env)
+
+        env.device = device
+        env.devconnect = devconn
+
+        yield env
+
+    @pytest.mark.skip(reason="not testable with mender-connect v1.0")
+    def test_bogus_proto_message(self, docker_env):
+        pass

@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,16 +13,22 @@
 #    limitations under the License.
 
 from .. import conftest
-from ..common_setup import standard_setup_one_client_bootstrapped
+from ..common_setup import (
+    standard_setup_one_client_bootstrapped,
+    enterprise_one_client_bootstrapped,
+)
 from .common_update import common_update_procedure
-from ..MenderAPI import devauth, deploy
+from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
 
 
-class TestDeploymentAborting(MenderTesting):
-    @staticmethod
+class BaseTestDeploymentAborting(MenderTesting):
     def abort_deployment(
-        container_manager, install_image, abort_step=None, mender_performs_reboot=False,
+        self,
+        container_manager,
+        install_image,
+        abort_step=None,
+        mender_performs_reboot=False,
     ):
         """
         Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
@@ -35,12 +41,15 @@ class TestDeploymentAborting(MenderTesting):
 
         mender_device = container_manager.device
 
+        devauth = DeviceAuthV2(container_manager.auth)
+        deploy = Deployments(container_manager.auth, devauth)
+
         expected_partition = mender_device.get_active_partition()
         expected_image_id = mender_device.yocto_id_installed_on_machine()
         host_ip = container_manager.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
-                install_image, verify_status=False
+                install_image, verify_status=False, devauth=devauth, deploy=deploy,
             )
 
             if abort_step is not None:
@@ -72,19 +81,19 @@ class TestDeploymentAborting(MenderTesting):
         assert mender_device.yocto_id_installed_on_machine() == expected_image_id
         deploy.check_expected_status("finished", deployment_id)
 
+
+class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
     @MenderTesting.fast
     def test_deployment_abortion_instantly(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        TestDeploymentAborting.abort_deployment(
-            standard_setup_one_client_bootstrapped, valid_image
-        )
+        self.abort_deployment(standard_setup_one_client_bootstrapped, valid_image)
 
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        TestDeploymentAborting.abort_deployment(
+        self.abort_deployment(
             standard_setup_one_client_bootstrapped, valid_image, "downloading"
         )
 
@@ -92,8 +101,35 @@ class TestDeploymentAborting(MenderTesting):
     def test_deployment_abortion_rebooting(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        TestDeploymentAborting.abort_deployment(
+        self.abort_deployment(
             standard_setup_one_client_bootstrapped,
+            valid_image,
+            "rebooting",
+            mender_performs_reboot=True,
+        )
+
+
+class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
+    @MenderTesting.fast
+    def test_deployment_abortion_instantly(
+        self, enterprise_one_client_bootstrapped, valid_image
+    ):
+        self.abort_deployment(enterprise_one_client_bootstrapped, valid_image)
+
+    @MenderTesting.fast
+    def test_deployment_abortion_downloading(
+        self, enterprise_one_client_bootstrapped, valid_image
+    ):
+        self.abort_deployment(
+            enterprise_one_client_bootstrapped, valid_image, "downloading"
+        )
+
+    @MenderTesting.fast
+    def test_deployment_abortion_rebooting(
+        self, enterprise_one_client_bootstrapped, valid_image
+    ):
+        self.abort_deployment(
+            enterprise_one_client_bootstrapped,
             valid_image,
             "rebooting",
             mender_performs_reboot=True,

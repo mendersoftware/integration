@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -19,13 +19,16 @@ import shutil
 import pytest
 
 from .. import conftest
-from ..common_setup import setup_with_legacy_client
+from ..common_setup import (
+    setup_with_legacy_client,
+    enterprise_with_legacy_client,
+)
 from .common_update import update_image, common_update_procedure
-from ..MenderAPI import deploy, logger
+from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 
-class TestDBMigration(MenderTesting):
+class BaseTestDBMigration(MenderTesting):
     def ensure_persistent_conf_script(self, dir):
         # Because older versions of Yocto branches did not split mender.conf
         # into /etc/mender/mender.conf and /data/mender/mender.conf, we need to
@@ -49,9 +52,8 @@ exit 0
             )
         return name
 
-    @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_failure(
-        self, setup_with_legacy_client, valid_image
+    def do_test_migrate_from_legacy_mender_v1_failure(
+        self, env, valid_image_with_mender_conf
     ):
         """
         Start a legacy client (1.7.0) first and update it to the new one.
@@ -63,7 +65,9 @@ exit 0
         and this time the update should succeed.
         """
 
-        mender_device = setup_with_legacy_client.device
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
 
         dirpath = tempfile.mkdtemp()
         script_content = "#!/bin/sh\nexit 1\n"
@@ -74,8 +78,11 @@ exit 0
 
         ensure_persistent_conf = self.ensure_persistent_conf_script(dirpath)
 
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        valid_image = valid_image_with_mender_conf(mender_conf)
+
         # first start with the failed update
-        host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
+        host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
                 valid_image,
@@ -84,6 +91,8 @@ exit 0
                     os.path.join(dirpath, "ArtifactCommit_Enter_01"),
                 ],
                 version=2,
+                devauth=devauth,
+                deploy=deploy,
             )
 
             logger.info("waiting for system to reboot twice")
@@ -92,18 +101,19 @@ exit 0
             assert mender_device.get_active_partition() == active_part
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-        # do the next update, this time succesfull
+        # do the next update, this time succesful
         update_image(
             mender_device,
             host_ip,
             scripts=[ensure_persistent_conf],
             install_image=valid_image,
             version=2,
+            devauth=devauth,
+            deploy=deploy,
         )
 
-    @pytest.mark.usefixtures("setup_with_legacy_client")
-    def test_migrate_from_legacy_mender_v1_success(
-        self, setup_with_legacy_client, valid_image
+    def do_test_migrate_from_legacy_mender_v1_success(
+        self, env, valid_image_with_mender_conf
     ):
         """
         Start a legacy client (1.7.0) first and update it to the new one.
@@ -114,7 +124,9 @@ exit 0
         any traces in the database that are causing issues.
         """
 
-        mender_device = setup_with_legacy_client.device
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
 
         tmpdir = tempfile.mkdtemp()
         test_log = "/var/lib/mender/migration_state_scripts.log"
@@ -130,14 +142,19 @@ exit 0
                 with open(script_path, "w") as fd:
                     fd.write("#!/bin/sh\necho $(basename $0) >> %s\n" % test_log)
 
-            # do the succesfull update twice
-            host_ip = setup_with_legacy_client.get_virtual_network_host_ip()
+            mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+            valid_image = valid_image_with_mender_conf(mender_conf)
+
+            # do the succesful update twice
+            host_ip = env.get_virtual_network_host_ip()
             update_image(
                 mender_device,
                 host_ip,
                 install_image=valid_image,
                 scripts=[ensure_persistent_conf] + scripts_paths,
                 version=2,
+                devauth=devauth,
+                deploy=deploy,
             )
             assert mender_device.run("cat %s" % test_log).strip() == "\n".join(scripts)
 
@@ -147,6 +164,8 @@ exit 0
                 install_image=valid_image,
                 scripts=[ensure_persistent_conf] + scripts_paths,
                 version=2,
+                devauth=devauth,
+                deploy=deploy,
             )
             assert mender_device.run("cat %s" % test_log).strip() == "\n".join(
                 scripts
@@ -154,3 +173,35 @@ exit 0
 
         finally:
             shutil.rmtree(tmpdir)
+
+
+class TestDBMigrationOpenSource(BaseTestDBMigration):
+    def test_migrate_from_legacy_mender_v1_failure(
+        self, setup_with_legacy_client, valid_image_with_mender_conf
+    ):
+        self.do_test_migrate_from_legacy_mender_v1_failure(
+            setup_with_legacy_client, valid_image_with_mender_conf
+        )
+
+    def test_migrate_from_legacy_mender_v1_success(
+        self, setup_with_legacy_client, valid_image_with_mender_conf
+    ):
+        self.do_test_migrate_from_legacy_mender_v1_success(
+            setup_with_legacy_client, valid_image_with_mender_conf
+        )
+
+
+class TestDBMigrationEnterprise(BaseTestDBMigration):
+    def test_migrate_from_legacy_mender_v1_failure(
+        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+    ):
+        self.do_test_migrate_from_legacy_mender_v1_failure(
+            enterprise_with_legacy_client, valid_image_with_mender_conf
+        )
+
+    def test_migrate_from_legacy_mender_v1_success(
+        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+    ):
+        self.do_test_migrate_from_legacy_mender_v1_success(
+            enterprise_with_legacy_client, valid_image_with_mender_conf
+        )

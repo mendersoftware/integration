@@ -273,6 +273,69 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
         time.sleep(5)
 
 
+class DockerComposeEnterpriseSignedArtifactClientSetup(DockerComposeEnterpriseSetup):
+    def new_tenant_client(self, name, tenant):
+        if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MT_CLIENT_FILES
+            self.extra_files += self.SIGNED_ARTIFACT_CLIENT_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+
+class DockerComposeEnterpriseShortLivedTokenSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.SHORT_LIVED_TOKEN_FILES
+            )
+
+
+class DockerComposeEnterpriseLegacyClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.LEGACY_CLIENT_FILES
+            )
+
+
+class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.MT_DOCKER_CLIENT_FILES
+            )
+
+    def setup(self):
+        compose_args = "up -d --scale mender-client=0"
+        self._docker_compose_cmd(compose_args)
+
+    def new_tenant_docker_client(self, name, tenant):
+        logger.info("creating docker client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "up -d --scale mender-client=1", env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(5)
+
+
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):
     def __init__(self, name, enterprise=False):
         self._enterprise = enterprise

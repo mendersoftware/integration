@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -371,7 +371,7 @@ class TestAccessEnterprise(_TestAccessBase):
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        new_tenant_client(env, "test-container-{}".format(plan), ttoken)
+        new_tenant_client(env, "mender-client-{}".format(plan), ttoken)
         devauth.accept_devices(1)
 
         devices = list(
@@ -442,7 +442,7 @@ class TestAccessEnterprise(_TestAccessBase):
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        new_tenant_client(env, "test-container-trial", ttoken)
+        new_tenant_client(env, "mender-client-trial", ttoken)
         devauth.accept_devices(1)
 
         devices = list(

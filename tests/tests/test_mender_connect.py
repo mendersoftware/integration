@@ -329,7 +329,7 @@ def connected_device(env):
     auth.reset_auth_token()
     devauth = DeviceAuthV2(auth)
 
-    env.new_tenant_client("test-container", ttoken)
+    env.new_tenant_client("mender-client", ttoken)
     device = MenderDevice(env.get_mender_clients()[0])
     devauth.accept_devices(1)
 

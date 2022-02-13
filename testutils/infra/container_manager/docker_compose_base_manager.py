@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -46,9 +46,12 @@ class DockerComposeBaseNamespace(DockerNamespace):
         self._debug_log_containers_logs()
         self._stop_docker_compose()
 
-    def get_mender_clients(self):
+    def get_mender_clients(self, network="mender"):
         """Returns IP address(es) of mender-client cotainer(s)"""
-        clients = [ip + ":8822" for ip in self.get_ip_of_service("mender-client")]
+        clients = [
+            ip + ":8822"
+            for ip in self.get_ip_of_service("mender-client", network=network)
+        ]
         return clients
 
     def get_mender_client_by_container_name(self, image_name):
@@ -61,7 +64,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     _re_newlines_sub = re.compile(r"[\r\n]*").sub
 
-    def get_ip_of_service(self, service):
+    def get_ip_of_service(self, service, network="mender"):
         """Return a list of IP addresseses of `service`. `service` is the same name as
         present in docker-compose files.
         """
@@ -74,8 +77,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
         output = subprocess.check_output(
             cmd + "| xargs -r "
-            "docker inspect --format='{{.NetworkSettings.Networks.%s_mender.IPAddress}}'"
-            % self.name,
+            "docker inspect --format='{{.NetworkSettings.Networks.%s_%s.IPAddress}}'"
+            % (self.name, network),
             shell=True,
         )
 
@@ -87,8 +90,12 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def get_virtual_network_host_ip(self):
         """Returns the IP of the host running the Docker containers"""
-        temp = "docker ps -q " "--filter label=com.docker.compose.project={project} "
-        cmd = temp.format(project=self.name)
+        temp = (
+            "docker ps -q "
+            "--filter label=com.docker.compose.project={project} "
+            "--filter label=com.docker.compose.service={service}"
+        )
+        cmd = temp.format(project=self.name, service="mender-api-gateway")
 
         output = subprocess.check_output(
             cmd + "| head -n1 | xargs -r "

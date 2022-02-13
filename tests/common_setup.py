@@ -264,8 +264,7 @@ def enterprise_one_client(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def enterprise_one_client_bootstrapped(request):
+def enterprise_one_client_bootstrapped_impl(request):
     env = container_factory.getEnterpriseSetup(num_clients=0)
     request.addfinalizer(env.teardown)
 
@@ -283,6 +282,16 @@ def enterprise_one_client_bootstrapped(request):
     assert 1 == len(devices)
 
     return env
+
+
+@pytest.fixture(scope="function")
+def enterprise_one_client_bootstrapped(request):
+    return enterprise_one_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_enterprise_one_client_bootstrapped(request):
+    return enterprise_one_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")
@@ -318,6 +327,27 @@ def enterprise_one_docker_client_bootstrapped(request):
     mender_device = new_tenant_client(
         env, "mender-client", tenant["tenant_token"], docker=True
     )
+    mender_device.ssh_is_opened()
+    env.device = mender_device
+
+    devauth_tenant = DeviceAuthV2(env.auth)
+    devauth_tenant.accept_devices(1)
+    devices = devauth_tenant.get_devices_status("accepted")
+    assert 1 == len(devices)
+
+    return env
+
+
+@pytest.fixture(scope="function")
+def enterprise_one_rofs_client_bootstrapped(request):
+    env = container_factory.getEnterpriseRofsClientSetup(num_clients=0)
+    request.addfinalizer(env.teardown)
+
+    env.setup()
+    reset_mender_api(env)
+
+    tenant = create_tenant(env)
+    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
     mender_device.ssh_is_opened()
     env.device = mender_device
 

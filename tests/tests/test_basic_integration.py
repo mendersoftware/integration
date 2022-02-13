@@ -25,6 +25,7 @@ from ..common_setup import (
     setup_failover,
     standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
+    enterprise_one_rofs_client_bootstrapped,
     enterprise_with_short_lived_token,
 )
 from .common_update import update_image, update_image_failed
@@ -51,6 +52,44 @@ class DeviceAuthFailover(DeviceAuthV2):
 
 
 class BaseTestBasicIntegration(MenderTesting):
+    def do_test_double_update_rofs(self, env, valid_image_rofs_with_mender_conf):
+        """Upgrade a device with two consecutive R/O images using different compression algorithms"""
+
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        valid_image_rofs = valid_image_rofs_with_mender_conf(mender_conf)
+        if valid_image_rofs is None:
+            pytest.skip(
+                "Thud branch and older from Yocto does not have R/O rootfs support"
+            )
+
+        # Verify that partition is read-only as expected
+        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
+
+        host_ip = env.get_virtual_network_host_ip()
+        update_image(
+            mender_device,
+            host_ip,
+            install_image=valid_image_rofs,
+            compression_type="gzip",
+            devauth=devauth,
+            deploy=deploy,
+        )
+        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
+
+        update_image(
+            mender_device,
+            host_ip,
+            install_image=valid_image_rofs,
+            compression_type="lzma",
+            devauth=devauth,
+            deploy=deploy,
+        )
+        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
+
     def do_test_update_jwt_expired(self, env, valid_image_with_mender_conf):
         """Update a device with a short lived JWT token"""
         devauth = DeviceAuthV2(env.auth)
@@ -213,41 +252,6 @@ class BaseTestBasicIntegration(MenderTesting):
 
 class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
     @MenderTesting.fast
-    def test_double_update_rofs(
-        self, standard_setup_one_rofs_client_bootstrapped, valid_image_rofs
-    ):
-        """Upgrade a device with two consecutive R/O images using different compression algorithms"""
-
-        if not os.path.exists(valid_image_rofs):
-            pytest.skip(
-                "Thud branch and older from Yocto does not have R/O rootfs support"
-            )
-
-        mender_device = standard_setup_one_rofs_client_bootstrapped.device
-
-        # Verify that partition is read-only as expected
-        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
-
-        host_ip = (
-            standard_setup_one_rofs_client_bootstrapped.get_virtual_network_host_ip()
-        )
-        update_image(
-            mender_device,
-            host_ip,
-            install_image=valid_image_rofs,
-            compression_type="gzip",
-        )
-        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
-
-        update_image(
-            mender_device,
-            host_ip,
-            install_image=valid_image_rofs,
-            compression_type="lzma",
-        )
-        mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
-
-    @MenderTesting.fast
     def test_update_failover_server(self, setup_failover, valid_image):
         """
         Client is initially set up against server A, and then receives an update
@@ -310,6 +314,17 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             os.remove(tmp_image)
 
     @MenderTesting.fast
+    def test_double_update_rofs(
+        self,
+        standard_setup_one_rofs_client_bootstrapped,
+        valid_image_rofs_with_mender_conf,
+    ):
+        self.do_test_double_update_rofs(
+            standard_setup_one_rofs_client_bootstrapped,
+            valid_image_rofs_with_mender_conf,
+        )
+
+    @MenderTesting.fast
     def test_update_jwt_expired(
         self, standard_setup_with_short_lived_token, valid_image_with_mender_conf
     ):
@@ -349,6 +364,14 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 
 
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
+    @MenderTesting.fast
+    def test_double_update_rofs(
+        self, enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+    ):
+        self.do_test_double_update_rofs(
+            enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+        )
+
     @MenderTesting.fast
     def test_update_jwt_expired(
         self, enterprise_with_short_lived_token, valid_image_with_mender_conf

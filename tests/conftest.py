@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -117,8 +117,19 @@ def valid_image_with_mender_conf(request, valid_image):
 
 
 @pytest.fixture(scope="session")
-def valid_image_rofs(request):
-    return "mender-image-full-cmdline-rofs-%s.ext4" % machine_name
+def valid_image_rofs_with_mender_conf(request):
+    valid_image = "mender-image-full-cmdline-rofs-%s.ext4" % machine_name
+    if not os.path.exists(valid_image):
+        yield None
+        return
+
+    with tempfile.TemporaryDirectory() as d:
+
+        def cleanup():
+            shutil.rmtree(d, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
 def pytest_configure(config):

@@ -27,6 +27,7 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseSignedArtifactClientSetup,
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyClientSetup,
+    DockerComposeEnterpriseRofsClientSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
@@ -102,6 +103,10 @@ class ContainerManagerFactory:
         """Enterprise setup with one Mender Docker client"""
         pass
 
+    def getEnterpriseRofsClientSetup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender QEMU Read-Only FS client"""
+        pass
+
     def getEnterpriseSMTPSetup(self, name=None):
         """Enterprise setup with SMTP enabled"""
         pass
@@ -154,6 +159,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseDockerClientSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseDockerClientSetup(name, num_clients)
+
+    def getEnterpriseRofsClientSetup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseRofsClientSetup(name, num_clients)
 
     def getCompatibilitySetup(self, name=None, **kwargs):
         return DockerComposeCompatibilitySetup(name, **kwargs)

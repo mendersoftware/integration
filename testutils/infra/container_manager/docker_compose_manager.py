@@ -312,6 +312,19 @@ class DockerComposeEnterpriseLegacyClientSetup(DockerComposeEnterpriseSetup):
             )
 
 
+class DockerComposeEnterpriseRofsClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.QEMU_CLIENT_ROFS_FILES
+            )
+
+
 class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients

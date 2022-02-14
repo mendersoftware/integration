@@ -118,6 +118,17 @@ function get_requirements() {
         exit 1
     fi
 
+    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/single-file-artifact-gen" \
+         -o downloaded-tools/single-file-artifact-gen \
+         -z downloaded-tools/single-file-artifact-gen
+
+    if [ $? -ne 0 ]; then
+        echo "failed to download single-file-artifact-gen"
+        exit 1
+    fi
+
+    chmod +x downloaded-tools/single-file-artifact-gen
+
     export PATH=$PWD/downloaded-tools:$PATH
 
     inject_pre_generated_ssh_keys

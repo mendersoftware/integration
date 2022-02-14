@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@ import pytest
 import queue
 import threading
 import time
+import subprocess
+from tempfile import NamedTemporaryFile
+from os import path
 
 from datetime import datetime, timedelta, timezone
 
-from testutils.util.artifact import Artifact
 from testutils.infra.container_manager import factory
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
@@ -218,42 +220,6 @@ class RebootDetectorThread(threading.Thread):
                 raise exc
 
 
-class ParallelRebootDetector:
-    """
-       A parallel implementation of the RebootDetector class
-
-    :param clients: running Mender clients
-    :param host_ip: The IP of the host
-    :param timeout: The timeout for the reboot detector
-    :param deadline: The deadline for the timeout, waiting for the reboot detector(s) to finish the join
-    """
-
-    def __init__(self, clients, host_ip, timeout, deadline):
-        self.reboot_detectors = []
-        self.deadline = deadline
-        self.enter_barrier = threading.Barrier(
-            len(clients) + 1  # +1 for the main-thread to block
-        )
-        for client in clients:
-            self.reboot_detectors.append(
-                RebootDetectorThread(host_ip, client, timeout, self.enter_barrier)
-            )
-
-    def __enter__(self):
-        for d in self.reboot_detectors:
-            d.start()
-
-        # Wait for all reboot-detectors to finish their setup, before starting
-        # the code within the 'with' statement
-        self.enter_barrier.wait()
-
-        # Now all devices are ready to check for reboots during an update process
-
-    def __exit__(self, *args, **kwargs):
-        for d in self.reboot_detectors:
-            d.join((self.deadline - datetime.now()).total_seconds() + 1)
-
-
 class TestClientCompatibilityBase:
     """
     This class contains compatibility tests implementation for assessing
@@ -308,41 +274,31 @@ class TestClientCompatibilityBase:
         # Check that inventory gets updated successfully
         assert_inventory_updated(api_inventory, len(devices))
 
-        # Deploy an update with an artifact with an empty payload which
-        # effectively performs a "rollback" marking the unchanged
-        # passive partition as the new updated active partition.
-        artifact = Artifact(
-            artifact_name="rootfs-noop-update",
-            device_types=["qemux86-64"],
-            payload="",
-            payload_type="rootfs-image",
-        )
-        artifact_file = artifact.make()
+        with NamedTemporaryFile(suffix="testcompat") as tf:
 
-        rsp = api_deployments.call(
-            "POST",
-            deployments.URL_DEPLOYMENTS_ARTIFACTS,
-            files={
-                "artifact": (
-                    "artifact.mender",
-                    artifact_file,
-                    "application/octet-stream",
-                )
-            },
-        )
-        assert rsp.status_code == 201
+            cmd = f"single-file-artifact-gen -n {path.basename(tf.name)} -t qemux86-64 -o {tf.name} -d /tmp/test_file_compat tests/test_compat.py -- --no-default-software-version --no-default-clears-provides"
+            subprocess.check_call(cmd, shell=True)
 
-        with ParallelRebootDetector(
-            env.devices, env.get_virtual_network_host_ip(), TIMEOUT, deadline
-        ):
+            rsp = api_deployments.call(
+                "POST",
+                deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                files={
+                    (
+                        "artifact",
+                        (tf.name, open(tf.name, "rb"), "application/octet-stream",),
+                    ),
+                },
+            )
+
+            assert rsp.status_code == 201
 
             rsp = api_deployments.call(
                 "POST",
                 deployments.URL_DEPLOYMENTS,
                 body={
-                    "artifact_name": "rootfs-noop-update",
+                    "artifact_name": f"{path.basename(tf.name)}",
                     "devices": [device["id"] for device in devices],
-                    "name": "noop_deployment",
+                    "name": "test-compat-deployment",
                 },
             )
             assert rsp.status_code == 201

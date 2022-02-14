@@ -274,9 +274,8 @@ def enterprise_one_client(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     return env
 
@@ -289,9 +288,8 @@ def enterprise_one_client_bootstrapped_impl(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -320,11 +318,10 @@ def enterprise_one_client_bootstrapped_with_gateway(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(
+    new_tenant_client(
         env, "mender-client", tenant["tenant_token"], network="mender_local"
     )
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -364,11 +361,8 @@ def enterprise_one_docker_client_bootstrapped(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(
-        env, "mender-client", tenant["tenant_token"], docker=True
-    )
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"], docker=True)
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -387,9 +381,8 @@ def enterprise_one_rofs_client_bootstrapped(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -441,9 +434,8 @@ def enterprise_with_signed_artifact_client(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -462,9 +454,8 @@ def enterprise_with_short_lived_token(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)
@@ -483,9 +474,8 @@ def enterprise_with_legacy_client(request):
     reset_mender_api(env)
 
     tenant = create_tenant(env)
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    mender_device.ssh_is_opened()
-    env.device = mender_device
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)
     devauth_tenant.accept_devices(1)

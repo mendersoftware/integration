@@ -501,7 +501,10 @@ def new_tenant_client(
     if hasattr(test_env, "device_group"):
         test_env.device_group.append(device)
     else:
-        test_env.device_group = MenderDeviceGroup(test_env.get_mender_clients())
+        test_env.device = device
+        test_env.device_group = MenderDeviceGroup(
+            test_env.get_mender_clients(network=network)
+        )
     return device
 
 

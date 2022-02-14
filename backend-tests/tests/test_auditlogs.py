@@ -69,7 +69,7 @@ def tenant_users(clean_migrated_mongo):
     )
     tenant = create_org(tenant, username, password, "enterprise")
     user = create_user(
-        "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
+        "foo+" + uuidv4 + "@another_user.com", "correcthorsebatterystaple", tid=tenant.id
     )
 
     tenant.users.append(user)

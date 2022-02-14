@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ class TestConfigurationEnterprise(MenderTesting):
 
         # Add a client to the tenant
         mender_device = new_tenant_client(
-            enterprise_no_client, "configuration-test-container", tenant.tenant_token
+            enterprise_no_client, "mender-client", tenant.tenant_token
         )
         mender_device.ssh_is_opened()
 

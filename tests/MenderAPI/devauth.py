@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ class DeviceAuthV2:
             )
             if (
                 devices.status_code == requests.status_codes.codes.ok
-                and len(devices.json()) == expected_devices
+                and len(devices.json()) >= expected_devices
             ):
                 got_devices = True
                 break

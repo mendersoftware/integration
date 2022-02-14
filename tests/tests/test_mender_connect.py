@@ -162,22 +162,6 @@ class _TestRemoteTerminalBase:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    def test_bogus_proto_message(self, docker_env):
-        with docker_env.devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
-
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            data = ws.recv()
-            rsp = protomsg.ProtoMsg(0xFFFF)
-            rsp.decode(data)
-            assert rsp.typ == "error"
-            body = rsp.body
-            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
-
     def test_bogus_shell_message(self, docker_env):
         self.assert_env(docker_env)
 
@@ -273,7 +257,27 @@ class _TestRemoteTerminalBase:
         ), "docker_env must have a set up 'devconnect' instance"
 
 
-class TestRemoteTerminal(_TestRemoteTerminalBase):
+class _TestRemoteTerminalBaseBogusProtoMessage:
+    def test_bogus_proto_message(self, docker_env):
+        with docker_env.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
+
+
+class TestRemoteTerminal(
+    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
+):
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
         env = class_persistent_standard_setup_one_client_bootstrapped
@@ -305,10 +309,6 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         env.devconnect = devconnect
         yield env
 
-    @pytest.mark.skip(reason="not testable with mender-connect v1.0")
-    def test_bogus_proto_message(self, docker_env):
-        pass
-
 
 def connected_device(env):
     uuidv4 = str(uuid.uuid4())
@@ -329,7 +329,7 @@ def connected_device(env):
     auth.reset_auth_token()
     devauth = DeviceAuthV2(auth)
 
-    env.new_tenant_client("test-container", ttoken)
+    env.new_tenant_client("mender-client", ttoken)
     device = MenderDevice(env.get_mender_clients()[0])
     devauth.accept_devices(1)
 
@@ -343,7 +343,9 @@ def connected_device(env):
     return device, devconn
 
 
-class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
+class TestRemoteTerminalEnterprise(
+    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
+):
     @pytest.fixture(scope="class")
     def docker_env(self, enterprise_no_client_class):
         """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
@@ -381,7 +383,3 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
         env.devconnect = devconn
 
         yield env
-
-    @pytest.mark.skip(reason="not testable with mender-connect v1.0")
-    def test_bogus_proto_message(self, docker_env):
-        pass

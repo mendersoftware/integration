@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ class TestDeploymentRetryEnterprise(MenderTesting):
 
         # Add a client to the tenant
         device = new_tenant_client(
-            enterprise_no_client, "retry-test-container", tenant.tenant_token
+            enterprise_no_client, "mender-client", tenant.tenant_token
         )
         devauth.accept_devices(1)
 

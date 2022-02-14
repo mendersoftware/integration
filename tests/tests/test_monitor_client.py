@@ -282,7 +282,7 @@ class TestMonitorClientEnterprise:
         auth.reset_auth_token()
         devauth_tenant = DeviceAuthV2(auth)
 
-        mender_device = new_tenant_client(env, "test-container", tenant["tenant_token"])
+        mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
         mender_device.ssh_is_opened()
 
         devauth_tenant.accept_devices(1)

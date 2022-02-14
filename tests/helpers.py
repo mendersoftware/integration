@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class Helpers:
         return json.dumps(data_dict, separators=(",", ":"))
 
     @staticmethod
-    def ip_to_device_id_map(device_group):
+    def ip_to_device_id_map(device_group, devauth=devauth):
         # Get deviceauth data, which includes device identity.
         devauth_devices = devauth.get_devices(expected_devices=len(device_group))
 

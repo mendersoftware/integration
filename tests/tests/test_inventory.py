@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -19,8 +19,11 @@ import time
 import pytest
 
 from .. import conftest
-from ..common_setup import standard_setup_one_client_bootstrapped
-from ..MenderAPI import deploy, devauth, inv, logger
+from ..common_setup import (
+    standard_setup_one_client_bootstrapped,
+    enterprise_one_client_bootstrapped,
+)
+from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, logger
 from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 
@@ -35,14 +38,15 @@ exit 0
     )
 
 
-@pytest.mark.usefixtures("standard_setup_one_client_bootstrapped")
-class TestInventory(MenderTesting):
-    @MenderTesting.fast
-    def test_inventory(self):
+class BaseTestInventory(MenderTesting):
+    def do_test_inventory(self, env):
         """
         Test that device reports inventory after having bootstrapped and performed
         an application update using a dummy script artifact.
         """
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+        inv = Inventory(env.auth)
 
         def deploy_simple_artifact(artifact_name, extra_args):
             # create a simple artifact (script) which doesn't do anything
@@ -203,16 +207,16 @@ class TestInventory(MenderTesting):
                 return
         raise latest_exception
 
-    @MenderTesting.fast
-    def test_inventory_update_after_successfull_deployment(
-        self, standard_setup_one_client_bootstrapped
-    ):
+    def do_test_inventory_update_after_successful_deployment(self, env):
         """
-        Test that device reports inventory after a new successfull deployment,
+        Test that device reports inventory after a new successful deployment,
         and not simply after a boot.
         """
 
-        mender_device = standard_setup_one_client_bootstrapped.device
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+        inv = Inventory(env.auth)
 
         # Give the image a larger wait interval.
         sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
@@ -265,3 +269,31 @@ class TestInventory(MenderTesting):
         assert "rootfs-image.swname.version" in str(
             post_deployment_inv_json
         ), "The device has not updated the inventory after the udpate"
+
+
+class TestInventoryOpenSource(BaseTestInventory):
+    @MenderTesting.fast
+    def test_inventory(self, standard_setup_one_client_bootstrapped):
+        self.do_test_inventory(standard_setup_one_client_bootstrapped)
+
+    @MenderTesting.fast
+    def test_inventory_update_after_successful_deployment(
+        self, standard_setup_one_client_bootstrapped
+    ):
+        self.do_test_inventory_update_after_successful_deployment(
+            standard_setup_one_client_bootstrapped
+        )
+
+
+class TestInventoryEnterprise(BaseTestInventory):
+    @MenderTesting.fast
+    def test_inventory(self, enterprise_one_client_bootstrapped):
+        self.do_test_inventory(enterprise_one_client_bootstrapped)
+
+    @MenderTesting.fast
+    def test_inventory_update_after_successful_deployment(
+        self, enterprise_one_client_bootstrapped
+    ):
+        self.do_test_inventory_update_after_successful_deployment(
+            enterprise_one_client_bootstrapped
+        )

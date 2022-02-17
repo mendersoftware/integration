@@ -33,6 +33,7 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
 from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
+from testutils.api.client import get_free_tcp_port, wait_for_port
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
@@ -74,10 +75,29 @@ def lock_tenant(mongo: MongoClient, tenant_id: str) -> bool:
 
 def setup_tenant_locking():
     if isK8S():
-        mongo = MongoClient("mongodb-0:27017")
+        host_forward_port = get_free_tcp_port()
+        cmd = [
+            "kubectl",
+            "port-forward",
+            "mongodb-0",
+            "%d:%d" % (host_forward_port, 27017),
+        ]
+        p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
+        wait_for_port(port=host_forward_port, host="localhost", timeout=10.0)
+        # output = subprocess.check_output(
+        #    "netstat -an | grep {}".format(host_forward_port), shell=True
+        # )
+        # print("DBG: netstat: {}".format(output))
+        output = subprocess.check_output("ps axuw | grep port-forward", shell=True)
+        print("DBG: ps output: {}".format(output))
+
+        print("DBG: port: {}".format(host_forward_port))
+        mongo = MongoClient("localhost:{}".format(host_forward_port))
+        mongo.setup_tenant_locking()
+        p.terminate()
     else:
         mongo = MongoClient("mender-mongo:27017")
-    mongo.setup_tenant_locking()
+        mongo.setup_tenant_locking()
 
 
 class User:

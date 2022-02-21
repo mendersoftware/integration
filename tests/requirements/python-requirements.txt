@@ -18,7 +18,7 @@ dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.9.0
 fabric==2.6.0
-filelock==3.4.2
+filelock==3.6.0
 html5lib==1.1
 idna==3.3
 iniconfig==1.1.1

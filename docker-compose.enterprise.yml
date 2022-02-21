@@ -12,18 +12,10 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-master
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1
 
-    mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
-
-    mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-master
-
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-master
         environment:
             HAVE_AUDITLOGS: 1
             HAVE_DEVICECONFIG: 1
@@ -31,7 +23,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:mender-master
+        image: registry.mender.io/mendersoftware/tenantadm:staging
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -44,7 +36,6 @@ services:
 
     # configure the rest
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-master
         environment:
             DEVICEAUTH_REDIS_ADDR: "mender-redis:6379"
             DEVICEAUTH_REDIS_USERNAME: ""
@@ -57,7 +48,6 @@ services:
             DEVICEAUTH_ENABLE_AUDIT: 1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-master
         environment:
             USERADM_REDIS_ADDR: "mender-redis:6379"
             USERADM_REDIS_USERNAME: ""
@@ -70,7 +60,7 @@ services:
             USERADM_ENABLE_AUDIT: 1
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:mender-master
+        image: registry.mender.io/mendersoftware/auditlogs:staging
         extends:
             file: common.yml
             service: mender-base
@@ -103,7 +93,7 @@ services:
             DEVICECONNECT_ENABLE_AUDIT: 1
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:mender-master
+        image: registry.mender.io/mendersoftware/devicemonitor:staging
         command: server --automigrate
         extends:
             file: common.yml

@@ -5,16 +5,16 @@
 # 'services' tag.
 services:
     mender-artifact:
-        image: mendersoftware/mender-artifact:master
+        image: mendersoftware/mender-artifact:3.7.0
 
     mender-cli:
-        image: mendersoftware/mender-cli:master
+        image: mendersoftware/mender-cli:1.7.0
 
     mender-binary-delta:
-        image: mendersoftware/mender-binary-delta:master
+        image: mendersoftware/mender-binary-delta:1.3.0
 
     mender-convert:
-        image: mendersoftware/mender-convert:master
+        image: mendersoftware/mender-convert:2.6.1
 
     meta-mender:
         image: mendersoftware/meta-mender:dunfell

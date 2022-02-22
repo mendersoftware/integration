@@ -482,14 +482,13 @@ def new_tenant_client(
 ) -> MenderDevice:
     """Create new Mender client in the test environment with the given name for the given tenant.
 
-    The passed test_env must implement new_tenant_client. Currently supported in
-    DockerComposeEnterpriseSetup and DockerComposeMonitorCommercialSetup
+    The passed test_env must implement new_tenant_client and/or new_tenant_docker_client.
 
     This helper attaches the recently created Mender client to the test environment, so that systemd
     logs can be printed on test failures.
     """
 
-    pre_existing_clients = set(test_env.get_mender_clients())
+    pre_existing_clients = set(test_env.get_mender_clients(network=network))
     if docker:
         test_env.new_tenant_docker_client(name, tenant)
     else:

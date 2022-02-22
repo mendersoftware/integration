@@ -47,10 +47,18 @@ class DockerComposeBaseNamespace(DockerNamespace):
         self._stop_docker_compose()
 
     def get_mender_clients(self, network="mender"):
-        """Returns IP address(es) of mender-client cotainer(s)"""
+        """Returns IP address(es) of mender-client container(s)"""
         clients = [
             ip + ":8822"
             for ip in self.get_ip_of_service("mender-client", network=network)
+        ]
+        return clients
+
+    def get_mender_gateways(self, network="mender"):
+        """Returns IP address(es) of mender-gateway container(s)"""
+        clients = [
+            ip + ":8822"
+            for ip in self.get_ip_of_service("mender-gateway", network=network)
         ]
         return clients
 

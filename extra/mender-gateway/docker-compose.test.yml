@@ -1,7 +1,6 @@
 version: '2.1'
 services:
   mender-gateway:
-    image: registry.mender.io/mendersoftware/mender-gateway:master
     networks:
       - mender
       - mender_local

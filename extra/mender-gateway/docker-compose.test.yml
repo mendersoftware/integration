@@ -1,12 +1,14 @@
 version: '2.1'
 services:
   mender-gateway:
-    image: registry.mender.io/mendersoftware/mender-gateway:master
+    image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:mender-master
     networks:
       - mender
       - mender_local
     volumes:
-      - "./extra/mender-gateway/mender-gateway.conf:/etc/mender/mender-gateway.conf:ro"
+      - "./extra/mender-gateway/mender-gateway.conf:/mender-gateway.conf:ro"
+    environment:
+      - MENDER_GATEWAY_CONFFILE="/mender-gateway.conf"
 
 networks:
     mender:

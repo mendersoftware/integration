@@ -19,6 +19,8 @@ from ..common_setup import (
 from .common_update import update_image
 from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
+from ..helpers import Helpers
+from testutils.infra.device import MenderDeviceGroup
 
 
 class BaseTestMenderGateway(MenderTesting):
@@ -29,12 +31,18 @@ class BaseTestMenderGateway(MenderTesting):
 
         host_ip = env.get_virtual_network_host_ip()
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+
+        device_id = Helpers.ip_to_device_id_map(
+            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+        )[mender_device.host_string]
+
         update_image(
             mender_device,
             host_ip,
             install_image=valid_image_with_mender_conf(mender_conf),
             devauth=devauth,
             deploy=deploy,
+            devices=[device_id],
         )
 
 

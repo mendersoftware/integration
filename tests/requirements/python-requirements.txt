@@ -11,14 +11,14 @@ colorama==0.4.4
 contextlib2==21.6.0
 cryptography==36.0.1
 distlib==0.3.1
-distro==1.6.0
+distro==1.7.0
 docker==5.0.3
 docker-compose==1.29.2
 dockerpty==0.4.1
 docopt==0.6.2
 execnet==1.9.0
 fabric==2.6.0
-filelock==3.4.2
+filelock==3.6.0
 html5lib==1.1
 idna==3.3
 iniconfig==1.1.1
@@ -59,6 +59,6 @@ toml==0.10.2
 urllib3==1.26.8
 webencodings==0.5.1
 websocket-client==0.59.0
-websockets==10.1
+websockets==10.2
 flaky==3.7.0
-stripe==2.65.0
+stripe==2.66.0

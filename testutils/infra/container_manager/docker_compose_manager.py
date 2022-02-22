@@ -97,6 +97,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
     MENDER_GATEWAY_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.commercial.yml",
         COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.test.yml",
     ]
     MENDER_GATEWAY_CLIENT_FILES = [

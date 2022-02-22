@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -24,13 +24,39 @@ from .. import conftest
 from ..common_setup import (
     running_custom_production_setup,
     standard_setup_with_short_lived_token,
+    enterprise_with_short_lived_token,
 )
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
-from ..MenderAPI import logger
+from ..MenderAPI import DeviceAuthV2, Deployments, logger
 
 
-class TestSecurity(MenderTesting):
+class BaseTestSecurity(MenderTesting):
+    def do_test_token_token_expiration(self, env, valid_image_with_mender_conf):
+        """verify that an expired token is handled correctly (client gets a new, valid one)
+        and that deployments are still recieved by the client
+        """
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        mender_device.run(
+            'journalctl -u %s -l --no-pager | grep "received new authorization data"'
+            % mender_device.get_client_service_name(),
+            wait=60,
+        )
+
+        # this call verifies that the deployment process goes into an "inprogress" state
+        # which is only possible when the client has a valid token.
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        common_update_procedure(
+            install_image=valid_image_with_mender_conf(mender_conf),
+            devauth=devauth,
+            deploy=deploy,
+        )
+
+
+class TestSecurityOpenSource(BaseTestSecurity):
     def test_ssl_only(self, running_custom_production_setup):
         """ make sure we are not exposing any non-ssl connections in production environment """
         done = False
@@ -88,19 +114,17 @@ class TestSecurity(MenderTesting):
             )
 
     def test_token_token_expiration(
-        self, standard_setup_with_short_lived_token, valid_image
+        self, standard_setup_with_short_lived_token, valid_image_with_mender_conf
     ):
-        """verify that an expired token is handled correctly (client gets a new, valid one)
-        and that deployments are still recieved by the client
-        """
-
-        mender_device = standard_setup_with_short_lived_token.device
-        mender_device.run(
-            'journalctl -u %s -l --no-pager | grep "received new authorization data"'
-            % mender_device.get_client_service_name(),
-            wait=60,
+        self.do_test_token_token_expiration(
+            standard_setup_with_short_lived_token, valid_image_with_mender_conf
         )
 
-        # this call verifies that the deployment process goes into an "inprogress" state
-        # which is only possible when the client has a valid token.
-        common_update_procedure(install_image=valid_image)
+
+class TestSecurityEnterprise(BaseTestSecurity):
+    def test_token_token_expiration(
+        self, enterprise_with_short_lived_token, valid_image_with_mender_conf
+    ):
+        self.do_test_token_token_expiration(
+            enterprise_with_short_lived_token, valid_image_with_mender_conf
+        )

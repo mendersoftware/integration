@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -37,6 +37,8 @@ def common_update_procedure(
     make_artifact=None,
     compression_type="gzip",
     version=None,
+    devauth=devauth,
+    deploy=deploy,
 ):
 
     with artifact_lock:
@@ -107,6 +109,8 @@ def update_image(
     make_artifact=None,
     compression_type="gzip",
     version=None,
+    devauth=devauth,
+    deploy=deploy,
 ):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
@@ -129,6 +133,8 @@ def update_image(
             make_artifact=make_artifact,
             compression_type=compression_type,
             version=version,
+            devauth=devauth,
+            deploy=deploy,
         )
         reboot.verify_reboot_performed()
 
@@ -173,6 +179,8 @@ def update_image_failed(
     install_image="broken_update.ext4",
     make_artifact=None,
     expected_number_of_reboots=2,
+    devauth=devauth,
+    deploy=deploy,
 ):
     """
         Perform a upgrade using a broken image (random data)
@@ -185,7 +193,7 @@ def update_image_failed(
     previous_active_part = device.get_active_partition()
     with device.get_reboot_detector(host_ip) as reboot:
         deployment_id, _ = common_update_procedure(
-            install_image, make_artifact=make_artifact
+            install_image, make_artifact=make_artifact, devauth=devauth, deploy=deploy,
         )
         # It will reboot twice. Once into the failed update, which the
         # bootloader will roll back, and therefore we will end up on the

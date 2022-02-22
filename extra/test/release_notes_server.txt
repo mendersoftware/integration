@@ -66,7 +66,7 @@ New changes in deployments since 3.0.0:
   ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
 * move the /deployments/devices/{id} end-point to internal
   ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
-* [] Listing devices in deployment sorts by statuses
+* Listing devices in deployment sorts by statuses
   ([MEN-4847](https://tracker.mender.io/browse/MEN-4847))
 * Aggregated Dependabot Changelogs:
   * Bumps alpine from 3.13.5 to 3.14.0.
@@ -157,7 +157,7 @@ New changes in deviceauth since 3.0.0:
   ([MEN-3152](https://tracker.mender.io/browse/MEN-3152))
 * remove the CORS middleware, rely on the API gateway instead
   ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
-* [] Restrict access to monitor APIs to devices with monitor add-on
+* Restrict access to monitor APIs to devices with monitor add-on
   ([MEN-5077](https://tracker.mender.io/browse/MEN-5077))
 * Aggregated Dependabot Changelogs:
   * Bumps [go.mongodb.org/mongo-driver](https://github.com/mongodb/mongo-go-driver) from 1.5.3 to 1.5.4.

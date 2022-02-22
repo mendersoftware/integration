@@ -19,10 +19,15 @@ from .docker_compose_manager import (
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
     DockerComposeLegacyClientSetup,
+    DockerComposeEnterpriseDockerClientSetup,
     DockerComposeSignedArtifactClientSetup,
     DockerComposeShortLivedTokenSetup,
     DockerComposeFailoverServerSetup,
     DockerComposeEnterpriseSetup,
+    DockerComposeEnterpriseSignedArtifactClientSetup,
+    DockerComposeEnterpriseShortLivedTokenSetup,
+    DockerComposeEnterpriseLegacyClientSetup,
+    DockerComposeEnterpriseRofsClientSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
@@ -82,6 +87,26 @@ class ContainerManagerFactory:
         """Setup with enterprise versions for the applicable services"""
         pass
 
+    def getEnterpriseSignedArtifactClientSetup(self, name=None):
+        """Enterprise setup with pre-installed verification key in the client"""
+        pass
+
+    def getEnterpriseShortLivedTokenSetup(self, name=None, num_clients=0):
+        """Enterprise setup on which deviceauth has a short lived token (expire timeout = 0)"""
+        pass
+
+    def getEnterpriseLegacyClientSetup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender client v1.7"""
+        pass
+
+    def getEnterpriseDockerClientSetup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender Docker client"""
+        pass
+
+    def getEnterpriseRofsClientSetup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender QEMU Read-Only FS client"""
+        pass
+
     def getEnterpriseSMTPSetup(self, name=None):
         """Enterprise setup with SMTP enabled"""
         pass
@@ -122,6 +147,21 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
+
+    def getEnterpriseSignedArtifactClientSetup(self, name=None):
+        return DockerComposeEnterpriseSignedArtifactClientSetup(name)
+
+    def getEnterpriseShortLivedTokenSetup(self, name=None):
+        return DockerComposeEnterpriseShortLivedTokenSetup(name)
+
+    def getEnterpriseLegacyClientSetup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseLegacyClientSetup(name, num_clients)
+
+    def getEnterpriseDockerClientSetup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseDockerClientSetup(name, num_clients)
+
+    def getEnterpriseRofsClientSetup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseRofsClientSetup(name, num_clients)
 
     def getCompatibilitySetup(self, name=None, **kwargs):
         return DockerComposeCompatibilitySetup(name, **kwargs)

@@ -265,6 +265,7 @@ BACKEND_SERVICES = (
 CLIENT_SERVICES_ENT = {
     "mender-binary-delta",
     "monitor-client",
+    "mender-gateway",
 }
 
 

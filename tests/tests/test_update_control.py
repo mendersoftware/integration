@@ -61,9 +61,7 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        device = new_tenant_client(
-            enterprise_no_client, "control-map-test-container", ttoken
-        )
+        device = new_tenant_client(enterprise_no_client, "mender-client", ttoken)
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -215,9 +213,7 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        device = new_tenant_client(
-            enterprise_no_client, "control-map-test-container", ttoken
-        )
+        device = new_tenant_client(enterprise_no_client, "mender-client", ttoken)
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -291,7 +287,7 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        new_tenant_client(enterprise_no_client, "control-map-test-container", ttoken)
+        new_tenant_client(enterprise_no_client, "mender-client", ttoken)
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)
@@ -357,9 +353,7 @@ class TestUpdateControlEnterprise:
         auth.reset_auth_token()
         devauth = DeviceAuthV2(auth)
 
-        device = new_tenant_client(
-            enterprise_no_client, "control-map-test-container", ttoken
-        )
+        device = new_tenant_client(enterprise_no_client, "mender-client", ttoken)
         devauth.accept_devices(1)
 
         deploy = Deployments(auth, devauth)

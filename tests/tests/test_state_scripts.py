@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ import pathlib
 import pytest
 
 from .. import conftest
-from ..common_setup import class_persistent_standard_setup_one_client_bootstrapped
+from ..common_setup import (
+    class_persistent_standard_setup_one_client_bootstrapped,
+    class_persistent_enterprise_one_client_bootstrapped,
+)
 from .common_update import common_update_procedure
 from ..helpers import Helpers
-from ..MenderAPI import deploy, logger, image
+from ..MenderAPI import DeviceAuthV2, Deployments, logger, image
 from .mendertesting import MenderTesting
 from testutils.infra.device import MenderDeviceGroup
 
@@ -41,6 +44,20 @@ def class_persistent_setup_client_state_scripts_update_module(
     )
 
     return class_persistent_standard_setup_one_client_bootstrapped
+
+
+@pytest.fixture(scope="class")
+def class_persistent_enterprise_setup_client_state_scripts_update_module(
+    class_persistent_enterprise_one_client_bootstrapped,
+):
+    device = class_persistent_enterprise_one_client_bootstrapped.device
+    device.put(
+        "module-state-scripts-test",
+        local_path=pathlib.Path(__file__).parent.parent.absolute(),
+        remote_path="/usr/share/mender/modules/v3",
+    )
+
+    return class_persistent_enterprise_one_client_bootstrapped
 
 
 TEST_SETS = [
@@ -499,7 +516,7 @@ REBOOT_TEST_SET = [
 ]
 
 
-class TestStateScripts(MenderTesting):
+class BaseTestStateScripts(MenderTesting):
     scripts = [
         "Idle_Enter_08_testing",
         "Idle_Enter_09",
@@ -555,15 +572,14 @@ class TestStateScripts(MenderTesting):
         "ArtifactFailure_Error_55",  # Error for this state doesn't exist, should never run.
     ]
 
-    @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
-    def test_reboot_recovery(
-        self,
-        class_persistent_setup_client_state_scripts_update_module,
-        description,
-        test_set,
+    def do_test_reboot_recovery(
+        self, env, description, test_set,
     ):
 
-        mender_device = class_persistent_setup_client_state_scripts_update_module.device
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
         work_dir = "test_state_scripts.%s" % mender_device.host_string
 
         script_content = (
@@ -606,12 +622,10 @@ class TestStateScripts(MenderTesting):
 
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map(
-            MenderDeviceGroup([mender_device.host_string])
+            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
         )[mender_device.host_string]
 
-        host_ip = (
-            class_persistent_setup_client_state_scripts_update_module.get_virtual_network_host_ip()
-        )
+        host_ip = env.get_virtual_network_host_ip()
 
         def make_artifact(filename, artifact_name):
             return image.make_module_artifact(
@@ -629,6 +643,8 @@ class TestStateScripts(MenderTesting):
                 devices=[device_id],
                 scripts=[artifact_script_dir],
                 make_artifact=make_artifact,
+                devauth=devauth,
+                deploy=deploy,
             )
 
             try:
@@ -681,18 +697,16 @@ class TestStateScripts(MenderTesting):
                     % (client_service_name, client_service_name)
                 )
 
-    @MenderTesting.slow
-    @pytest.mark.parametrize("description,test_set", TEST_SETS)
-    def test_state_scripts(
-        self,
-        class_persistent_setup_client_state_scripts_update_module,
-        description,
-        test_set,
+    def do_test_state_scripts(
+        self, env, description, test_set,
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        mender_device = class_persistent_setup_client_state_scripts_update_module.device
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
         work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
         client_service_name = mender_device.get_client_service_name()
@@ -771,13 +785,15 @@ class TestStateScripts(MenderTesting):
 
             # Now create the artifact, and make the deployment.
             device_id = Helpers.ip_to_device_id_map(
-                MenderDeviceGroup([mender_device.host_string])
+                MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
             )[mender_device.host_string]
             deployment_id = common_update_procedure(
                 verify_status=False,
                 devices=[device_id],
                 scripts=[artifact_script_dir],
                 make_artifact=make_artifact,
+                devauth=devauth,
+                deploy=deploy,
             )[0]
             if test_set["ExpectedStatus"] is None:
                 # In this case we don't expect the deployment to even be
@@ -913,3 +929,61 @@ class TestStateScripts(MenderTesting):
             )
             logger.error("scripts we expected = '%s'" % "\n".join(expected_order))
             raise
+
+
+class TestStateScriptsOpenSource(BaseTestStateScripts):
+    @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
+    def test_reboot_recovery(
+        self,
+        class_persistent_setup_client_state_scripts_update_module,
+        description,
+        test_set,
+    ):
+        self.do_test_reboot_recovery(
+            class_persistent_setup_client_state_scripts_update_module,
+            description,
+            test_set,
+        )
+
+    @MenderTesting.slow
+    @pytest.mark.parametrize("description,test_set", TEST_SETS)
+    def test_state_scripts(
+        self,
+        class_persistent_setup_client_state_scripts_update_module,
+        description,
+        test_set,
+    ):
+        self.do_test_state_scripts(
+            class_persistent_setup_client_state_scripts_update_module,
+            description,
+            test_set,
+        )
+
+
+class TestStateScriptsEnterprise(BaseTestStateScripts):
+    @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
+    def test_reboot_recovery(
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
+        description,
+        test_set,
+    ):
+        self.do_test_reboot_recovery(
+            class_persistent_enterprise_setup_client_state_scripts_update_module,
+            description,
+            test_set,
+        )
+
+    @MenderTesting.slow
+    @pytest.mark.parametrize("description,test_set", TEST_SETS)
+    def test_state_scripts(
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
+        description,
+        test_set,
+    ):
+        self.do_test_state_scripts(
+            class_persistent_enterprise_setup_client_state_scripts_update_module,
+            description,
+            test_set,
+        )

@@ -12,7 +12,8 @@ services:
     tty: true
     privileged: true
     environment:
-      TENANT_TOKEN: ""
+      - SERVER_URL=$SERVER_URL
+      - TENANT_TOKEN=$TENANT_TOKEN
     volumes:
       # Provision demo certificate
       - ./cert/cert.crt:/mnt/config/server.crt

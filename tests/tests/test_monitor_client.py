@@ -1122,7 +1122,7 @@ class TestMonitorClientEnterprise:
             monitor_commercial_setup_no_client, user_name, 4
         )
         assert messages_count >= 4
-        for m in [messages[-1], messages[-2]]:
+        for m in [messages[-1]]:
             assert_valid_alert(
                 m,
                 user_name,
@@ -1131,6 +1131,9 @@ class TestMonitorClientEnterprise:
                 + " on "
                 + devid,
             )
+
+        for m in [messages[-2]]:
+            assert not m["Subject"].startswith("CRITICAL: Monitor Alert for Log file contains ")
 
         fds_count_timeout_s = 64
         max_fds_count_diff = 3

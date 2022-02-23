@@ -1957,12 +1957,19 @@ def purge_build_tags(state, tag_avail):
     of each repository and ends in '-build[0-9]+'. Then deletes this from
     upstream as well."""
 
+    print("Checking which remote tags need to be purged...")
     git_list = []
     for repo in Component.get_components_of_type("git"):
         remote = find_upstream_remote(state, repo.git())
-        tag_list = execute_git(state, repo.git(), ["tag"], capture=True).split("\n")
+        remote_tag_list = [
+            re.match(r".*refs/tags/(.*)", line).group(1)
+            for line in execute_git(
+                state, repo.git(), ["ls-remote", "--tags", remote], capture=True,
+            ).split("\n")
+            if line
+        ]
         to_purge = []
-        for tag in tag_list:
+        for tag in remote_tag_list:
             if re.match(
                 "^%s-build[0-9]+$" % re.escape(state[repo.git()]["version"]), tag
             ):

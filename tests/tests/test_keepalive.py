@@ -132,6 +132,11 @@ class TestMenderClientKeepAlive:
         idle_connections_timeout_seconds = 15
         disable_keep_alive = False
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        logger.info("test_keepalive_idle_connections got: '%s'",output)
+        t="/tmp/bp0"
+        logger.info("test_keepalive_idle_connections waiting on '%s'",t)
+        while not os.path.exists(t):
+         time.sleep(0.4)
         assert int(output) > 1
 
         configure_connectivity(
@@ -143,6 +148,11 @@ class TestMenderClientKeepAlive:
         )
         time.sleep(1)
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        t="/tmp/bp1"
+        logger.info("test_keepalive_idle_connections waiting on '%s'",t)
+        while not os.path.exists(t):
+         time.sleep(0.4)
+
         assert int(output) == 1
 
         logger.info(
@@ -151,6 +161,11 @@ class TestMenderClientKeepAlive:
         time.sleep(1.5 * idle_connections_timeout_seconds)
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
         clean_config(mender_device)
+        t="/tmp/bp2"
+        logger.info("test_keepalive_idle_connections waiting on '%s'",t)
+        while not os.path.exists(t):
+         time.sleep(0.4)
+
         assert int(output) == 0
         logger.info("test_keepalive_idle_connections: ok, no connections to backend")
 

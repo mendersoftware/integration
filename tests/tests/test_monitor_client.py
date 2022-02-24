@@ -139,7 +139,27 @@ def assert_valid_alert(message, bcc, subject):
     assert message["Subject"].startswith(subject)
 
 
+def wait_for_mender_client(mender_device):
+    max_tries = 255
+    try_number = 0
+    status = ""
+    expected_status = "active"
+    logger.info("waiting for mender-client to be active")
+    while (not status.startswith("active")) and try_number < max_tries:
+        status = mender_device.run("systemctl is-active mender-client || true")
+        try_number = try_number + 1
+        time.sleep(1)
+    if not status.startswith(expected_status):
+        logger.info(
+            "hic sunt dracones: mender-client is inactive after %ds" % try_number
+        )
+    else:
+        logger.info("mender-client: "+expected_status)
+
+
 def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
+    wait_for_mender_client(mender_device)
+
     if use_ctl:
         mender_device.run(
             'mender-monitorctl create service "%s" systemd' % (service_name)
@@ -173,7 +193,7 @@ def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
             )
         finally:
             shutil.rmtree(tmpdir)
-
+    mender_device.run("systemctl restart mender-monitor || true")
 
 def prepare_log_monitoring(
     mender_device,
@@ -184,6 +204,8 @@ def prepare_log_monitoring(
     update_check_file_only=False,
     use_ctl=False,
 ):
+    wait_for_mender_client(mender_device)
+
     if use_ctl:
         # create log mender-client "State transition: .*" "@journalctl -u mender-client -f"
         mender_device.run(
@@ -230,6 +252,9 @@ def prepare_log_monitoring(
 def prepare_dbus_monitoring(
     mender_device, dbus_name, log_pattern=None, dbus_pattern=None
 ):
+    wait_for_mender_client(mender_device)
+    mender_device.run("systemctl restart mender-monitor || true")
+
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"

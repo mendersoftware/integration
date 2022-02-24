@@ -75,6 +75,13 @@ expected_from = (
 )
 
 
+def bp(n):
+    t = "/tmp/bp" + str(n)
+    logger.info("bp: waiting on " + t)
+    while not os.path.exists(t):
+        time.sleep(1)
+
+
 @retriable(sleeptime=60, attempts=5)
 def get_and_parse_email_n(env, address, n):
     mail, messages = get_and_parse_email(env, address)
@@ -334,6 +341,7 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_email: email alert on systemd service not running scenario."
         )
+        bp(0)
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -346,7 +354,10 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
+        logger.info("got: alerts_count:" + str(alert_count) + " alerts:" + str(alerts))
+        bp(1)
         assert (True, 1) == (alerts, alert_count)
+        bp(2)
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1

@@ -132,7 +132,7 @@ class TestMenderClientKeepAlive:
         idle_connections_timeout_seconds = 15
         disable_keep_alive = False
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
-        assert int(output) > 1
+        assert int(output) > 0
 
         configure_connectivity(
             mender_device,
@@ -161,7 +161,7 @@ class TestMenderClientKeepAlive:
 
         disable_keep_alive = True
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
-        assert int(output) > 1
+        assert int(output) > 0
 
         configure_connectivity(mender_device, disable_keep_alive=disable_keep_alive)
         logger.info("test_keepalive_disable: waiting for client to restart")

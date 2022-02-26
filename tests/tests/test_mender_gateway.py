@@ -12,6 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+import pytest
+import shutil
+import subprocess
 import tempfile
 
 from .. import conftest
@@ -27,6 +31,58 @@ from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 from testutils.infra.device import MenderDeviceGroup
+
+
+@pytest.fixture(scope="function")
+def image_with_mender_conf_and_mender_gateway_conf(request):
+    """Insert the given mender_conf into a valid_image"""
+    with tempfile.TemporaryDirectory() as d:
+
+        def cleanup():
+            shutil.rmtree(d, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        yield lambda image, mender_conf, mender_gateway_conf: add_mender_conf_and_mender_gateway_conf(
+            d, image, mender_conf, mender_gateway_conf
+        )
+
+
+def add_mender_conf_and_mender_gateway_conf(d, image, mender_conf, mender_gateway_conf):
+    mender_conf_tmp = os.path.join(d, "mender.conf")
+    with open(mender_conf_tmp, "w") as f:
+        f.write(mender_conf)
+    mender_gateway_conf_tmp = os.path.join(d, "mender-gateway.conf")
+    with open(mender_gateway_conf_tmp, "w") as f:
+        f.write(mender_gateway_conf)
+    new_image = os.path.join(d, image)
+    shutil.copy(image, new_image)
+    instr_file = os.path.join(d, "write.instr")
+    with open(os.path.join(d, "write.instr"), "w") as f:
+        f.write(
+            """cd /etc/mender
+        rm mender.conf
+        write {local1} mender.conf
+        write {local2} mender-gateway.conf
+        """.format(
+                local1=mender_conf_tmp, local2=mender_gateway_conf_tmp,
+            )
+        )
+    subprocess.run(
+        ["debugfs", "-w", "-f", instr_file, new_image],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    subprocess.run(
+        ["debugfs", "-R", "cat /etc/mender/mender.conf", new_image],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    subprocess.run(
+        ["debugfs", "-R", "cat /etc/mender/mender-gateway.conf", new_image],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    return new_image
 
 
 class BaseTestMenderGateway(MenderTesting):
@@ -51,6 +107,52 @@ class BaseTestMenderGateway(MenderTesting):
             deploy=deploy,
             devices=[device_id],
         )
+
+    def do_test_deployment_gateway_and_one_device(
+        self,
+        env,
+        valid_image_with_mender_conf,
+        image_with_mender_conf_and_mender_gateway_conf,
+    ):
+        mender_device = env.device
+        mender_gateway = env.device_gateway
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        host_ip = env.get_virtual_network_host_ip()
+
+        gateway_id = Helpers.ip_to_device_id_map(
+            MenderDeviceGroup([mender_gateway.host_string]), devauth=devauth,
+        )[mender_gateway.host_string]
+
+        mender_conf = mender_gateway.run("cat /etc/mender/mender.conf")
+        mender_gateway_conf = mender_gateway.run("cat /etc/mender/mender-gateway.conf")
+        mender_gateway_image = image_with_mender_conf_and_mender_gateway_conf(
+            "mender-gateway-image-full-cmdline-%s.ext4" % conftest.machine_name,
+            mender_conf,
+            mender_gateway_conf,
+        )
+
+        deployment_id, _ = common_update_procedure(
+            mender_gateway_image, devices=[gateway_id], devauth=devauth, deploy=deploy,
+        )
+
+        device_id = Helpers.ip_to_device_id_map(
+            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+        )[mender_device.host_string]
+
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        update_image(
+            mender_device,
+            host_ip,
+            expected_mender_clients=1,
+            install_image=valid_image_with_mender_conf(mender_conf),
+            devauth=devauth,
+            deploy=deploy,
+            devices=[device_id],
+        )
+
+        deploy.check_expected_statistics(deployment_id, "success", 1)
 
     def do_test_deployment_two_devices_update_both(
         self, env, valid_image_with_mender_conf
@@ -317,6 +419,19 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
         )
 
     @MenderTesting.fast
+    def test_deployment_gateway_and_one_device(
+        self,
+        standard_setup_one_client_bootstrapped_with_gateway,
+        valid_image_with_mender_conf,
+        image_with_mender_conf_and_mender_gateway_conf,
+    ):
+        self.do_test_deployment_gateway_and_one_device(
+            standard_setup_one_client_bootstrapped_with_gateway,
+            valid_image_with_mender_conf,
+            image_with_mender_conf_and_mender_gateway_conf,
+        )
+
+    @MenderTesting.fast
     def test_deployment_two_devices_update_both(
         self,
         standard_setup_two_clients_bootstrapped_with_gateway,
@@ -393,6 +508,19 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
         self.do_test_deployment_one_device(
             enterprise_one_client_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
+        )
+
+    @MenderTesting.fast
+    def test_deployment_gateway_and_one_device(
+        self,
+        enterprise_one_client_bootstrapped_with_gateway,
+        valid_image_with_mender_conf,
+        image_with_mender_conf_and_mender_gateway_conf,
+    ):
+        self.do_test_deployment_gateway_and_one_device(
+            enterprise_one_client_bootstrapped_with_gateway,
+            valid_image_with_mender_conf,
+            image_with_mender_conf_and_mender_gateway_conf,
         )
 
     @MenderTesting.fast

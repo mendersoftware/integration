@@ -143,18 +143,21 @@ def wait_for_mender_client(mender_device):
     max_tries = 255
     try_number = 0
     status = ""
-    expected_status = "active"
-    logger.info("waiting for mender-client to be active")
-    while (not status.startswith("active")) and try_number < max_tries:
-        status = mender_device.run("systemctl is-active mender-client || true")
+    logger.info("waiting for mender-client to be authorized")
+    while try_number < max_tries:
+        status = mender_device.run(
+            "dbus-send --system --dest=io.mender.AuthenticationManager --print-reply /io/mender/AuthenticationManager io.mender.Authentication1.GetJwtToken"
+        )
+        if status.find('string ""') < 0:
+            break
         try_number = try_number + 1
         time.sleep(1)
-    if not status.startswith(expected_status):
+    if status.find('string ""') >= 0:
         logger.info(
             "hic sunt dracones: mender-client is inactive after %ds" % try_number
         )
     else:
-        logger.info("mender-client: "+expected_status)
+        logger.info("mender-client: authorized")
 
 
 def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
@@ -194,6 +197,7 @@ def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
         finally:
             shutil.rmtree(tmpdir)
     mender_device.run("systemctl restart mender-monitor || true")
+
 
 def prepare_log_monitoring(
     mender_device,

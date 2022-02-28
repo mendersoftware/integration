@@ -35,7 +35,7 @@ from testutils.infra.device import MenderDeviceGroup
 
 @pytest.fixture(scope="function")
 def image_with_mender_conf_and_mender_gateway_conf(request):
-    """Insert the given mender_conf into a valid_image"""
+    """Insert mender.conf and mender-gateway.conf into an image"""
     with tempfile.TemporaryDirectory() as d:
 
         def cleanup():
@@ -119,37 +119,42 @@ class BaseTestMenderGateway(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        mender_gateway_conf = mender_gateway.run("cat /etc/mender/mender-gateway.conf")
+
         host_ip = env.get_virtual_network_host_ip()
 
-        gateway_id = Helpers.ip_to_device_id_map(
-            MenderDeviceGroup([mender_gateway.host_string]), devauth=devauth,
-        )[mender_gateway.host_string]
+        ip_to_device_id = Helpers.ip_to_device_id_map(
+            MenderDeviceGroup([mender_device.host_string, mender_gateway.host_string]),
+            devauth=devauth,
+        )
 
-        mender_conf = mender_gateway.run("cat /etc/mender/mender.conf")
-        mender_gateway_conf = mender_gateway.run("cat /etc/mender/mender-gateway.conf")
         mender_gateway_image = image_with_mender_conf_and_mender_gateway_conf(
             "mender-gateway-image-full-cmdline-%s.ext4" % conftest.machine_name,
             mender_conf,
             mender_gateway_conf,
         )
 
+        def update_device():
+            device_id = ip_to_device_id[mender_device.host_string]
+            update_image(
+                mender_device,
+                host_ip,
+                expected_mender_clients=1,
+                install_image=valid_image_with_mender_conf(mender_conf),
+                devauth=devauth,
+                deploy=deploy,
+                devices=[device_id],
+            )
+
+        gateway_id = ip_to_device_id[mender_gateway.host_string]
         deployment_id, _ = common_update_procedure(
-            mender_gateway_image, devices=[gateway_id], devauth=devauth, deploy=deploy,
-        )
-
-        device_id = Helpers.ip_to_device_id_map(
-            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
-        )[mender_device.host_string]
-
-        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-        update_image(
-            mender_device,
-            host_ip,
-            expected_mender_clients=1,
-            install_image=valid_image_with_mender_conf(mender_conf),
+            mender_gateway_image,
+            devices=[gateway_id],
             devauth=devauth,
             deploy=deploy,
-            devices=[device_id],
+            deployment_triggered_callback=update_device,
+            verify_status=False,
         )
 
         deploy.check_expected_statistics(deployment_id, "success", 1)

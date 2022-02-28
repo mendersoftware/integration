@@ -345,10 +345,11 @@ def enterprise_one_client_bootstrapped_with_gateway(request):
     new_tenant_client(
         env, "mender-client", tenant["tenant_token"], network="mender_local"
     )
-    env.device_group.ssh_is_opened()
 
     env.start_tenant_mender_gateway(tenant["tenant_token"])
     env.device_gateway = MenderDevice(env.get_mender_gateways(network="mender").pop())
+
+    env.device_group.ssh_is_opened()
     env.device_gateway.ssh_is_opened()
 
     devauth_tenant = DeviceAuthV2(env.auth)

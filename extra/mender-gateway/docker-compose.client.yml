@@ -1,0 +1,19 @@
+version: '2.1'
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:mender-master
+        networks:
+            - mender_local
+        stdin_open: true
+        tty: true
+        privileged: true
+        environment:
+            - SERVER_URL=http://mender-gateway:8080
+            - TENANT_TOKEN
+
+networks:
+    mender_local:

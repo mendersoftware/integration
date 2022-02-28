@@ -96,6 +96,13 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     MENDER_2_5_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
+    MENDER_GATEWAY_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.commercial.yml",
+        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.test.yml",
+    ]
+    MENDER_GATEWAY_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.client.yml",
+    ]
 
     def setup(self):
         self._docker_compose_cmd("up -d")
@@ -142,6 +149,20 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
             DockerComposeNamespace.__init__(self, name)
         else:
             DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES)
+
+    def setup(self):
+        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+
+
+class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
+    def __init__(self, name, num_clients=1):
+        self.num_clients = num_clients
+        if self.num_clients == 0:
+            DockerComposeNamespace.__init__(self, name, self.MENDER_GATEWAY_FILES)
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
+            )
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
@@ -273,6 +294,42 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
         time.sleep(5)
 
 
+class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self, name, self.ENTERPRISE_FILES + self.MENDER_GATEWAY_FILES
+            )
+
+    def setup(self):
+        self._docker_compose_cmd(
+            "up -d --scale mender-gateway=0 --scale mender-client=0",
+        )
+        self._wait_for_containers()
+
+    def new_tenant_client(self, name, tenant):
+        if not self.MENDER_GATEWAY_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.MENDER_GATEWAY_CLIENT_FILES
+        logger.info("creating client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            "run -d --name=%s_%s mender-client" % (self.name, name),
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+    def start_tenant_mender_gateway(self, tenant):
+        self._docker_compose_cmd(
+            "up -d --scale mender-gateway=1  --scale mender-client=0",
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+
 class DockerComposeEnterpriseSignedArtifactClientSetup(DockerComposeEnterpriseSetup):
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
@@ -385,7 +442,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
             for service in client_services:
                 self._docker_compose_cmd(compose_cmd.format(service=service))
 
-    def get_mender_clients(self):
+    def get_mender_clients(self, network="mender"):
         cmd = [
             "docker",
             "ps",
@@ -401,7 +458,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
 
         addrs = []
         for client in clients:
-            for ip in self.get_ip_of_service(client):
+            for ip in self.get_ip_of_service(client, network=network):
                 addrs.append(ip + ":8822")
 
         return addrs

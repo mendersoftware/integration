@@ -428,7 +428,7 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
         )
 
 
-class TestFaultToleranceEEnterprise(BasicTestFaultTolerance):
+class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
         self, enterprise_one_client_bootstrapped,

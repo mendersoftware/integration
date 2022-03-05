@@ -158,6 +158,8 @@ docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
        mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker)
 docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
         mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
+docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker)
 mv output/* .
 rmdir output
 

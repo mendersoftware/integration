@@ -75,13 +75,14 @@ class Helpers:
             ] = device.host_string
 
         # Match them.
+        identity_to_id = {}
+        for dev in devauth_devices:
+            identity_to_id[
+                json.dumps(dev["identity_data"], separators=(",", ":"))
+            ] = dev["id"]
         ip_to_device_id = {}
-        for device in devauth_devices:
-            ip_to_device_id[
-                identity_to_ip[
-                    json.dumps(device["identity_data"], separators=(",", ":"))
-                ]
-            ] = device["id"]
+        for identity, ip in identity_to_ip.items():
+            ip_to_device_id[ip] = identity_to_id[identity]
 
         return ip_to_device_id
 

@@ -478,30 +478,32 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
 
 
 def new_tenant_client(
-    test_env, name: str, tenant: str, docker: bool = False
+    test_env, name: str, tenant: str, docker: bool = False, network: str = "mender"
 ) -> MenderDevice:
     """Create new Mender client in the test environment with the given name for the given tenant.
 
-    The passed test_env must implement new_tenant_client. Currently supported in
-    DockerComposeEnterpriseSetup and DockerComposeMonitorCommercialSetup
+    The passed test_env must implement new_tenant_client and/or new_tenant_docker_client.
 
     This helper attaches the recently created Mender client to the test environment, so that systemd
     logs can be printed on test failures.
     """
 
-    pre_existing_clients = set(test_env.get_mender_clients())
+    pre_existing_clients = set(test_env.get_mender_clients(network=network))
     if docker:
         test_env.new_tenant_docker_client(name, tenant)
     else:
         test_env.new_tenant_client(name, tenant)
-    all_clients = set(test_env.get_mender_clients())
+    all_clients = set(test_env.get_mender_clients(network=network))
     new_client = all_clients - pre_existing_clients
     assert len(new_client) == 1
     device = MenderDevice(new_client.pop())
     if hasattr(test_env, "device_group"):
         test_env.device_group.append(device)
     else:
-        test_env.device_group = MenderDeviceGroup(test_env.get_mender_clients())
+        test_env.device = device
+        test_env.device_group = MenderDeviceGroup(
+            test_env.get_mender_clients(network=network)
+        )
     return device
 
 

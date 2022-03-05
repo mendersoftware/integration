@@ -10,7 +10,7 @@ git:
     docker_image:
       - mender-gateway-qemu-commercial
     docker_container:
-      - mender-client
+      - mender-gateway
     release_component: true
     independent_component: true
 
@@ -680,4 +680,12 @@ docker_container:
     - reporting
     docker_image:
     - reporting
+    release_component: true
+
+  mender-gateway:
+    git:
+    - mender
+    - mender-gateway
+    docker_image:
+    - mender-gateway-qemu-commercial
     release_component: true

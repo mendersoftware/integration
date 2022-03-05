@@ -15,6 +15,7 @@
 
 from .docker_compose_manager import (
     DockerComposeStandardSetup,
+    DockerComposeStandardSetupWithGateway,
     DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
@@ -24,6 +25,7 @@ from .docker_compose_manager import (
     DockerComposeShortLivedTokenSetup,
     DockerComposeFailoverServerSetup,
     DockerComposeEnterpriseSetup,
+    DockerComposeEnterpriseSetupWithGateway,
     DockerComposeEnterpriseSignedArtifactClientSetup,
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyClientSetup,
@@ -43,6 +45,13 @@ from .kubernetes_manager import (
 class ContainerManagerFactory:
     def getStandardSetup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
+
+        The num_clients define how many QEMU Mender clients will be spawn.
+        """
+        pass
+
+    def getStandardSetupWithGateway(self, name=None, num_clients=1):
+        """Standard setup with the Mender Gateway
 
         The num_clients define how many QEMU Mender clients will be spawn.
         """
@@ -87,6 +96,10 @@ class ContainerManagerFactory:
         """Setup with enterprise versions for the applicable services"""
         pass
 
+    def getEnterpriseSetupWithGateway(self, name=None, num_clients=0):
+        """Setup with enterprise versions and the Mender Gateway"""
+        pass
+
     def getEnterpriseSignedArtifactClientSetup(self, name=None):
         """Enterprise setup with pre-installed verification key in the client"""
         pass
@@ -124,6 +137,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def getStandardSetup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
 
+    def getStandardSetupWithGateway(self, name=None, num_clients=1):
+        return DockerComposeStandardSetupWithGateway(name, num_clients)
+
     def getMonitorCommercialSetup(self, name=None, num_clients=0):
         return DockerComposeMonitorCommercialSetup(name, num_clients)
 
@@ -147,6 +163,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def getEnterpriseSetup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
+
+    def getEnterpriseSetupWithGateway(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseSetupWithGateway(name, num_clients)
 
     def getEnterpriseSignedArtifactClientSetup(self, name=None):
         return DockerComposeEnterpriseSignedArtifactClientSetup(name)

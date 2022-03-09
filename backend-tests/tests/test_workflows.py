@@ -14,6 +14,7 @@
 
 import pytest
 import logging
+import uuid
 
 from testutils.api import workflows
 from testutils.api.client import ApiClient
@@ -58,7 +59,8 @@ class _TestWorkflowsBase:
         """
         Check that we can invoke a workflow with minimal required version
         """
-        workflow_name = "wf1"
+        uuidv4 = str(uuid.uuid4())
+        workflow_name = "wf1-" + uuidv4
         workflow_version = 4
 
         # first let's create a workflow

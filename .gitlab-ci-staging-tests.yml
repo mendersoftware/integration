@@ -126,6 +126,7 @@ test:staging:integration-tests:
 trigger:staging:cleanup-tenants:
   image: alpine:3.13
   stage: .post
+  when: always
   variables:
     K8S: "staging"
 

@@ -47,6 +47,7 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
 WAITING_MULTIPLIER = 8 if isK8S() else 1
+WAITING_TIME_K8S = 5.0
 
 
 def upload_image(filename, auth_token, description="abc"):
@@ -716,10 +717,18 @@ class TestDeploymentsBase(object):
             assert status_code == 200
             dev.artifact_name = deployment_req["artifact_name"]
 
+        # when running against staging, wait 5 seconds to avoid hitting
+        # the rate limits for the devices (one inventory update / 5 seconds)
+        isK8S() and time.sleep(5.0)
+
         for dev in devs:
             # Deployment already finished
             status_code = try_update(dev)
             assert status_code == 204
+
+        # when running against staging, wait 5 seconds to avoid hitting
+        # the rate limits for the devices (one inventory update / 5 seconds)
+        isK8S() and time.sleep(5.0)
 
         deployment_req["name"] = "really-old-update"
         api_mgmt_dep.with_auth(user_token).call(
@@ -1992,7 +2001,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8S() and time.sleep(WAITING_TIME_K8S)
 
         # after finishing 'bar' - no other deployments qualify
         set_status(depbar["id"], "success", dev.token)
@@ -2000,7 +2009,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8S() and time.sleep(WAITING_TIME_K8S)
 
         # after updating inventory, the device would qualify for both 'foo' deployments, but
         # the ordering mechanism will prevent it
@@ -2014,7 +2023,7 @@ class TestDynamicDeploymentsEnterprise:
 
         # when running against staging, wait 5 seconds to avoid hitting
         # the rate limits for the devices (one inventory update / 5 seconds)
-        isK8S() and time.sleep(5.0)
+        isK8S() and time.sleep(WAITING_TIME_K8S)
 
         # it will however get a brand new 'foo3' deployment, because it's fresher than the finished 'bar'
         create_dynamic_deployment(

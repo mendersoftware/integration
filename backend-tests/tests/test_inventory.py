@@ -35,6 +35,8 @@ from testutils.common import (
     useExistingTenant,
 )
 
+WAITING_TIME_K8S = 5.0
+
 
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
@@ -1343,7 +1345,7 @@ class TestDeviceFilteringEnterprise:
                 devices[dev.id] = dev
             # when running against staging, wait 5 seconds to avoid hitting
             # the rate limits for the devices (one inventory update / 5 seconds)
-            isK8S() and time.sleep(5.0)
+            isK8S() and time.sleep(WAITING_TIME_K8S)
 
         # Remove devices
         for fltr in test_case["remove"]:

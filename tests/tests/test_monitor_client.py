@@ -1392,7 +1392,6 @@ class TestMonitorClientEnterprise:
         mender_device.run(
             "sed -i.backup -e 's/CONFPUSH_INTERVAL=.*/CONFPUSH_INTERVAL=8/' /usr/share/mender-monitor/config/config.sh"
         )
-        mender_device.run("systemctl restart mender-monitor")
         prepare_service_monitoring(mender_device, "crond", use_ctl=True)
         prepare_service_monitoring(mender_device, "dbus", use_ctl=True)
         prepare_log_monitoring(
@@ -1405,6 +1404,7 @@ class TestMonitorClientEnterprise:
             "[Ee]rror.*",
             use_ctl=True,
         )
+        mender_device.run("systemctl restart mender-monitor")
         device_monitor = DeviceMonitor(auth)
         wait_iterations = wait_for_alert_interval_s
         while wait_iterations > 0:

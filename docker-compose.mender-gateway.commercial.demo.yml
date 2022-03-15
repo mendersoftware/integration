@@ -1,0 +1,30 @@
+version: '2.1'
+services:
+
+    #
+    # mender-gateway
+    #
+    mender-gateway:
+        networks:
+            mender:
+            mender_local:
+                aliases:
+                    - gateway.docker.mender.io
+
+    #
+    # mender-client
+    #
+    mender-client:
+        image: mendersoftware/mender-client-qemu:mender-master
+        networks:
+            mender_local:
+        stdin_open: true
+        tty: true
+        privileged: true
+        environment:
+            - SERVER_URL=https://gateway.docker.mender.io
+            - TENANT_TOKEN=$TENANT_TOKEN
+
+networks:
+    mender:
+    mender_local:

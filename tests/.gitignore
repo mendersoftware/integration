@@ -7,7 +7,10 @@ core-image-full-cmdline-qemux86-64-broken-network.ext4
 core-image-full-cmdline-qemux86-64.ext4
 mender-image-full-cmdline-rofs-qemux86-64.ext4
 mender-image-full-cmdline-rofs-vexpress-qemu.ext4
+mender-gateway-image-full-cmdline-qemux86-64.ext4
 large_image.dat
 results.xml
 report.html
 downloaded-tools
+.artifact_modification_lock
+docker_lock

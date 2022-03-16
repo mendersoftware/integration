@@ -510,7 +510,7 @@ class TestMonitorClientEnterprise:
         prepare_log_monitoring(
             mender_device,
             service_name,
-            "@journalctl -u " + service_name,
+            "@journalctl -f -u " + service_name,
             "State transition: .*",
         )
         mender_device.run("systemctl restart mender-monitor")
@@ -868,8 +868,8 @@ class TestMonitorClientEnterprise:
 
         patterns_count = 30
         expected_alerts_count = (
-            expected_alerts_count + patterns_count
-        )  # onefor each pattern detected in log
+            expected_alerts_count + 1
+        )  # one for all the patterns detected in log (changed with MEN-5458)
         for i in range(patterns_count):
             mender_device.run(
                 "for i in {1..4}; do echo 'some line '$i >> " + log_file + "; done"
@@ -1024,17 +1024,13 @@ class TestMonitorClientEnterprise:
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 4
         )
-        messages_count = len(messages)
         assert "Content-Type: multipart/alternative;" in mail
         assert "Content-Type: text/html" in mail
         assert "Content-Type: text/plain" in mail
         assert devid in mail
         assert service_name in mail
         assert "${workflow.input." not in mail
-        messages_count = len(messages)
-        assert messages_count == 4
-
-        assert len(messages) > 0
+        assert len(messages) == 4
 
         # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
         # sort the emails by subject to avoid wrong-order issues because of delivery time
@@ -1098,9 +1094,9 @@ class TestMonitorClientEnterprise:
 
         time.sleep(2 * wait_for_alert_interval_s)
         _, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, messages_count
+            monitor_commercial_setup_no_client, user_name, 4
         )
-        assert messages_count == len(messages)
+        assert 4 == len(messages)
 
         mender_device.run(
             "echo -ne 'a new session opened for user root now\nsome line 3\n' >> "
@@ -1119,10 +1115,11 @@ class TestMonitorClientEnterprise:
 
         time.sleep(2 * wait_for_alert_interval_s)
         _, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 4
+            monitor_commercial_setup_no_client, user_name, 5
         )
-        assert messages_count >= 4
-        for m in [messages[-1], messages[-2]]:
+        assert len(messages) == 5
+        # after MEN-5458 we expect only one critical for the log subsystem
+        for m in [messages[-1]]:
             assert_valid_alert(
                 m,
                 user_name,
@@ -1374,7 +1371,7 @@ class TestMonitorClientEnterprise:
         )
         assert not "${workflow.input" in mail
         logger.info(
-            "test_monitorclient_send_saved_alerts_on_network_issues: got OK alert email."
+            "test_monitorclient_send_saved_alerts_on_network_issues: got CRITICAL alert email."
         )
 
     def test_monitorclient_send_configuration_data(

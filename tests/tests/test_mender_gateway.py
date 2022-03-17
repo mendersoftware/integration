@@ -119,8 +119,11 @@ class BaseTestMenderGateway(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
-        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-        mender_gateway_conf = mender_gateway.run("cat /etc/mender/mender-gateway.conf")
+        mender_device_mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        mender_gateway_gateway_conf = mender_gateway.run(
+            "cat /etc/mender/mender-gateway.conf"
+        )
+        mender_gateway_mender_conf = mender_gateway.run("cat /etc/mender/mender.conf")
 
         host_ip = env.get_virtual_network_host_ip()
 
@@ -131,8 +134,8 @@ class BaseTestMenderGateway(MenderTesting):
 
         mender_gateway_image = image_with_mender_conf_and_mender_gateway_conf(
             "mender-gateway-image-full-cmdline-%s.ext4" % conftest.machine_name,
-            mender_conf,
-            mender_gateway_conf,
+            mender_gateway_mender_conf,
+            mender_gateway_gateway_conf,
         )
 
         def update_device():
@@ -141,7 +144,7 @@ class BaseTestMenderGateway(MenderTesting):
                 mender_device,
                 host_ip,
                 expected_mender_clients=1,
-                install_image=valid_image_with_mender_conf(mender_conf),
+                install_image=valid_image_with_mender_conf(mender_device_mender_conf),
                 devauth=devauth,
                 deploy=deploy,
                 devices=[device_id],
@@ -158,6 +161,7 @@ class BaseTestMenderGateway(MenderTesting):
         )
 
         deploy.check_expected_statistics(deployment_id, "success", 1)
+        deploy.check_expected_status("finished", deployment_id)
 
     def do_test_deployment_two_devices_update_both(
         self, env, valid_image_with_mender_conf

@@ -61,6 +61,7 @@ def add_mender_conf_and_mender_gateway_conf(d, image, mender_conf, mender_gatewa
         f.write(
             """cd /etc/mender
         rm mender.conf
+        rm mender-gateway.conf
         write {local1} mender.conf
         write {local2} mender-gateway.conf
         """.format(

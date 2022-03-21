@@ -28,7 +28,7 @@ lockfile==0.12.2
 msgpack==1.0.3
 ordered-set==4.1.0
 packaging==20.9
-paramiko==2.10.2
+paramiko==2.10.3
 pathlib2==2.3.7.post1
 pep517==0.9.1
 pluggy==1.0.0

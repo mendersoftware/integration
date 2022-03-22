@@ -174,8 +174,8 @@ def pytest_exception_interact(node, call, report):
             "Test %s failed with exception:\n%s" % (node.name, call.excinfo.getrepr())
         )
 
-        # Hack-ish way to inspect the fixtures in use by the node to find a MenderDevice/MenderDeviceGroup
-        device = None
+        # Inspect the fixtures in use by the node to find instances of MenderDevice/MenderDeviceGroup
+        devices = []
         env_candidates = []
         if getattr(node, "funcargs", None) is not None:
             env_candidates = [
@@ -191,40 +191,44 @@ def pytest_exception_interact(node, call, report):
                 if isinstance(getattr(env, attr), MenderDevice)
                 or isinstance(getattr(env, attr), MenderDeviceGroup)
             ]
-            if len(dev_candidates) == 1:
-                device = dev_candidates[0]
+            if len(dev_candidates) >= 1:
+                devices = dev_candidates
 
-        # If we have a device (or group) try to print deployment and systemd logs
-        if device is None:
-            logger.info("Could not find device in test environment, no printing logs")
+        # If we have devices (or groups) try to print deployment and systemd logs
+        if devices is []:
+            logger.info("Could not find devices in test environment, no printing logs")
         else:
 
-            def print_device_output(instance, output):
-                """Log command output of either a MenderDevice or a MenderDeviceGroup."""
-                if isinstance(instance, MenderDevice):
-                    logger.info(output)
-                else:
-                    for dev, log in output.items():
-                        logger.info("Printing log of device %s", dev)
-                        logger.info(log)
+            def run_remote_command(instances, command):
+                """Log command output for a list of MenderDevice and/or MenderDeviceGroup."""
+                for instance in instances:
+                    logger.info("Executing %s in instance %s", command, instance)
+
+                    output = instance.run(command, wait=60)
+
+                    if isinstance(instance, MenderDevice):
+                        logger.info(output)
+                    else:
+                        for dev, log in output.items():
+                            logger.info("Printing output of device %s", dev)
+                            logger.info(log)
 
             try:
                 logger.info("Printing client deployment log, if possible:")
-                output = device.run("cat /data/mender/deployment*.log || true", wait=60)
-                print_device_output(device, output)
+                run_remote_command(devices, "cat /data/mender/deployment*.log || true")
 
             except:
                 logger.info("Not able to print client deployment log")
 
             for service in [
-                device.get_client_service_name(),
+                "mender-client",
                 "mender-connect",
                 "mender-monitor",
+                "mender-gateway",
             ]:
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)
-                    output = device.run("journalctl -u %s || true" % service, wait=60,)
-                    print_device_output(device, output)
+                    run_remote_command(devices, "journalctl -u %s || true" % service)
                 except:
                     logger.info("Not able to print %s systemd log" % service)
 

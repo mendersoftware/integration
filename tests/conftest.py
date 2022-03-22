@@ -22,7 +22,6 @@ from distutils.version import LooseVersion
 
 import filelock
 import pytest
-import requests
 from testutils.infra.container_manager.base import BaseContainerManagerNamespace
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
 
@@ -42,11 +41,6 @@ logger = logging.getLogger()
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 machine_name = None
-
-try:
-    requests.packages.urllib3.disable_warnings()
-except:
-    pass
 
 
 def pytest_addoption(parser):

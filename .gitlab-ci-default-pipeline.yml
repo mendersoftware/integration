@@ -48,12 +48,20 @@ test:extra-tools:
     - python3 -m pytest extra/test_statistics_generator.py
 
 test:docs:
-  image: tiangolo/docker-with-compose
+  image: ubuntu:focal
   services:
     - docker:19.03.5-dind
-
+  tags:
+    - mender-qa-slave
+  variables:
+    # DinD setup in mender-qa-slave
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_TLS_CERTDIR: "/certs"
   before_script:
-    - apk add bash git openssl pwgen python3 jq
+    - apt-get update && apt-get install -y
+      docker.io bash git openssl pwgen python3 jq docker-compose wget sudo
     - git config --global user.name "user"
     - git config --global user.email "user@example.com"
     - git clone https://github.com/mendersoftware/mender-docs.git mender-docs

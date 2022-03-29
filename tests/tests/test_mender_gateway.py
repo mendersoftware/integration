@@ -139,13 +139,25 @@ class BaseTestMenderGateway(MenderTesting):
             mender_gateway_gateway_conf,
         )
 
+        mender_device_image = valid_image_with_mender_conf(mender_device_mender_conf)
+
+        Helpers.set_service_logs_debug(
+            mender_gateway, "mender-gateway", mender_gateway_image
+        )
+        Helpers.set_service_logs_debug(
+            mender_gateway, "mender-client", mender_gateway_image
+        )
+        Helpers.set_service_logs_debug(
+            mender_device, "mender-client", mender_device_image
+        )
+
         def update_device():
             device_id = ip_to_device_id[mender_device.host_string]
             update_image(
                 mender_device,
                 host_ip,
                 expected_mender_clients=1,
-                install_image=valid_image_with_mender_conf(mender_device_mender_conf),
+                install_image=mender_device_image,
                 devauth=devauth,
                 deploy=deploy,
                 devices=[device_id],

@@ -17,6 +17,8 @@ import logging
 import pytest
 import json
 import time
+import os
+import tempfile
 from . import conftest
 
 from .MenderAPI import devauth
@@ -113,3 +115,49 @@ class Helpers:
         assert (
             sleepsec <= MENDER_STORE_TIMEOUT
         ), "timeout for mender-store file exceeded"
+
+    @staticmethod
+    def set_service_logs_debug(device, service_name="mender-client", fs_image=None):
+        """Append '--log-level debug' to the service on the device and reload it. Optionally,
+        modify also the service file in given filesystem image."""
+
+        device.run(f"grep -F ExecStart= /lib/systemd/system/{service_name}.service")
+        device.run(
+            f'sed -i.backup -e "s/ExecStart=\([^ ]*\)\(.*\)/ExecStart=\\1 --log-level debug\\2/" /lib/systemd/system/{service_name}.service'
+        )
+        device.run(f"grep -F ExecStart= /lib/systemd/system/{service_name}.service")
+
+        device.run(f"systemctl daemon-reload")
+        device.run(f"systemctl restart {service_name}")
+
+        if fs_image != None:
+            service_content = device.run(
+                f"cat /lib/systemd/system/{service_name}.service"
+            )
+            with tempfile.TemporaryDirectory() as d:
+                service_tmp = os.path.join(d, f"{service_name}.service")
+                with open(service_tmp, "w") as f:
+                    f.write(service_content)
+                instr_file = os.path.join(d, "instr_file")
+                with open(instr_file, "w") as f:
+                    f.write(
+                        f"""cd /lib/systemd/system
+                    rm {service_name}.service
+                    write {service_tmp} {service_name}.service
+                    """
+                    )
+                subprocess.run(
+                    ["debugfs", "-w", "-f", instr_file, fs_image],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )
+                subprocess.run(
+                    [
+                        "debugfs",
+                        "-R",
+                        f"cat /lib/systemd/system/{service_name}.service",
+                        fs_image,
+                    ],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                )

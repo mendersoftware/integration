@@ -200,10 +200,12 @@ if [ -n "$K8S" ]; then
     kubectl get pods -o wide
 fi
 
+python3 -m pip install pytest-repeat
+
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \
     "$@" \
-    $SPECIFIC_INTEGRATION_TEST_FLAG ${SPECIFIC_INTEGRATION_TEST:+"$SPECIFIC_INTEGRATION_TEST"}
+    --count=20 -k 'TestMenderGatewayOpenSource and test_deployment_gateway_and_one_device'

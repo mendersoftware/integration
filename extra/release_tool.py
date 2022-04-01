@@ -2280,6 +2280,11 @@ def do_docker_compose_branches_from_follows(state):
                     docker,
                     mender_branch,
                 )
+                set_component_version_to(
+                    os.path.join(checkout, "extra", "mender-gateway"),
+                    docker,
+                    mender_branch,
+                )
 
         print("This is the diff:")
         execute_git(state, checkout, ["diff"])
@@ -2841,6 +2846,11 @@ def do_set_version_to(args):
                 assoc,
                 args.version,
             )
+            set_component_version_to(
+                os.path.join(integration_dir(), "extra", "mender-gateway"),
+                assoc,
+                args.version,
+            )
 
     elif version_type == "git":
         component = Component.get_component_of_type("git", args.set_version_of)
@@ -2855,6 +2865,11 @@ def do_set_version_to(args):
         )
         set_component_version_to(
             os.path.join(integration_dir(), "extra", "failover-testing"),
+            component,
+            args.version,
+        )
+        set_component_version_to(
+            os.path.join(integration_dir(), "extra", "mender-gateway"),
             component,
             args.version,
         )

@@ -31,6 +31,7 @@ from testutils.common import (
     mongo,
     clean_mongo,
     update_tenant,
+    setup_tenant_devices,
 )
 from testutils.util.artifact import Artifact
 from testutils.api.client import ApiClient
@@ -76,54 +77,6 @@ def login_tenant_users(tenant):
         rsp = useradm_MGMT.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert rsp.status_code == 200, "Failed to setup test environment"
         user.token = rsp.text
-
-
-def setup_tenant_devices(tenant, device_groups):
-    """
-    setup_user_devices authenticates the user and creates devices
-    attached to (static) groups given by the proportion map from
-    the groups parameter.
-    :param users:     Users to setup devices for (list).
-    :param n_devices: Number of accepted devices created for each
-                      user (int).
-    :param groups:    Map of group names to device proportions, the
-                      sum of proportion must be less than or equal
-                      to 1 (dict[str] = float)
-    :return: Dict mapping group_name -> list(devices)
-    """
-    devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
-    devauth_MGMT = ApiClient(deviceauth.URL_MGMT)
-    invtry_MGMT = ApiClient(inventory.URL_MGMT)
-    user = tenant.users[0]
-    grouped_devices = {}
-    group = None
-
-    login_tenant_users(tenant)
-
-    tenant.devices = []
-    for group, dev_cnt in device_groups.items():
-        grouped_devices[group] = []
-        for i in range(dev_cnt):
-            device = make_accepted_device(
-                devauth_DEV, devauth_MGMT, user.token, tenant.tenant_token
-            )
-            if group is not None:
-                rsp = invtry_MGMT.with_auth(user.token).call(
-                    "PUT",
-                    inventory.URL_DEVICE_GROUP.format(id=device.id),
-                    body={"group": group},
-                )
-                assert rsp.status_code == 204
-
-            device.group = group
-            grouped_devices[group].append(device)
-            tenant.devices.append(device)
-
-    # sleep a few seconds waiting for the data propagation to the reporting service
-    # and the Elasticsearch indexing to complete
-    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
-
-    return grouped_devices
 
 
 def add_user_to_role(user, tenant, role):
@@ -474,3 +427,84 @@ class TestRBACDeploymentsToGroupEnterprise:
         )
         assert rsp.status_code == test_case["get_configuration_status_code"], rsp.text
         self.logger.info("PASS: %s" % test_case["name"])
+
+
+class TestRBACGetEmailsByGroupEnterprise:
+    @property
+    def logger(self):
+        return logging.getLogger(self.__class__.__name__)
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "ok, admin users only",
+                "users": [
+                    {
+                        "name": "test1-UUID@example.com",
+                        "pwd": "password",
+                        "roles": ["RBAC_ROLE_PERMIT_ALL"],
+                    }
+                ],
+                "roles": [
+                    {
+                        "name": "test",
+                        "permissions": [
+                            UserPermission("VIEW_DEVICE", "DEVICE_GROUP", "test")
+                        ],
+                    }
+                ],
+                "device_groups": {"test": 3, "production": 3, "staging": 2},
+                "device_group": "test",
+                "status_code": 200,
+                "emails_prefix": "test",
+                "emails_count": 1,
+            },
+        ],
+    )
+    def test_get_emails_by_group(self, clean_mongo, test_case):
+        """
+        Tests endpoint for retrieving list of users emails with access
+        to devices from given group.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "admin+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        for i in range(len(test_case["users"])):
+            test_case["users"][i]["name"] = test_case["users"][i]["name"].replace(
+                "UUID", uuidv4
+            )
+            test_user = create_user(
+                test_case["users"][i]["name"],
+                test_case["users"][i]["pwd"],
+                tid=tenant.id,
+                roles=test_case["users"][i]["roles"],
+            )
+            tenant.users.append(test_user)
+
+        # Initialize tenant's devices
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
+        device_id = grouped_devices[test_case["device_group"]][0].id
+
+        useradm_INT = ApiClient(
+            useradm.URL_INTERNAL, host=useradm.HOST, schema="http://"
+        )
+
+        rsp = useradm_INT.call(
+            "GET",
+            useradm.URL_EMAILS,
+            path_params={"tenant_id": tenant.id, "device_id": device_id},
+        )
+        assert rsp.status_code == test_case["status_code"], rsp.text
+        emails = rsp.json()["emails"]
+        assert len(emails) == test_case["emails_count"] + 1
+        for email in emails:
+            assert email.startswith(test_case["emails_prefix"]) or email.startswith(
+                "admin"
+            )

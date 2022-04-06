@@ -41,5 +41,9 @@ services:
             WORKFLOWS_REV: ${WORKFLOWS_REV}
             WORKFLOWS_ENTERPRISE_REV: ${WORKFLOWS_ENTERPRISE_REV}
 
+    mender-iot-manager:
+        environment:
+          IOT_MANAGER_DOMAIN_WHITELIST: "localhost *.azure-devices.net mender-backend-tests-runner"
+
 networks:
     mender:

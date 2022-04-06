@@ -20,7 +20,8 @@ LINKED_SHAS = {}
 SHA_TO_TRACKER = {}
 
 JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)\]?"
-TRACKER_REGEX = r"\(?(?:Ref:? *)?%s\)?:? *" % (JIRA_REGEX)
+TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
+CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat)(?:\(\S+\))?!?: "
 ORGANIZATION = "mendersoftware"
 
 
@@ -161,6 +162,36 @@ def get_range_for_repo(repo, range):
     )
 
 
+def extract_message_and_bucket(message, fixes, feats, others):
+    bucket = others
+    match = re.match(CONVENTIONAL_COMMIT_TYPE_REGEX, message, re.IGNORECASE)
+    if not match:
+        return message, others
+    t = match.group(1).lower()
+    stripped_message = re.sub(
+        CONVENTIONAL_COMMIT_TYPE_REGEX, "", message, count=1, flags=re.IGNORECASE
+    )
+    if t == "fix":
+        bucket = fixes
+    elif t == "feat":
+        bucket = feats
+    return stripped_message, bucket
+
+
+def print_category_entries(entry_list, category, print_category=True):
+    if not entry_list:
+        return
+    entry_list = aggregate_dependabot_changelogs(entry_list)
+    if print_category:
+        print("##### " + category + "\n")
+    for entry in entry_list:
+        entry = "* " + entry
+        # Indent all non-empty lines.
+        entry = re.sub(r"\n([^\n])", r"\n  \1", entry)
+        print(entry)
+    print()
+
+
 print("### Changelogs\n")
 
 for repo in repos:
@@ -232,16 +263,28 @@ for repo in repos:
                 tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
                 line = tracker_removed.strip(" ")
 
+            if re.match("^ticket: *none *$", line, re.IGNORECASE):
+                continue
+
             if not title_fetched:
                 title = line
                 title_fetched = True
 
-            match_changelog = re.match("^ *Changelog: *(.*)", line, re.IGNORECASE)
+            match_changelog = re.match(
+                "^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
+            )
             if match_changelog:
                 if log_entry:
                     add_entry(sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
+
+                type_keyword = match_changelog.group(1)
+                if type_keyword:
+                    add_entry(
+                        sha, type_keyword.lower() + ": " + match_changelog.group(2)
+                    )
+                    continue
 
                 # The logic of this regex is:
                 # - Shall start with Title|Commit|All|None
@@ -249,7 +292,7 @@ for repo in repos:
                 # - Else just expect end line
                 match_keyword = re.match(
                     "^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
-                    match_changelog.group(1),
+                    match_changelog.group(2),
                     re.IGNORECASE,
                 )
 
@@ -285,7 +328,11 @@ for repo in repos:
                             commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    log_entry = match_changelog.group(1)
+                    type_match = re.match(
+                        CONVENTIONAL_COMMIT_TYPE_REGEX, commit_msg, re.IGNORECASE
+                    )
+                    cc_prefix = type_match.group(0) if type_match else ""
+                    log_entry = cc_prefix + match_changelog.group(2)
                 continue
 
             for cancel_expr in [
@@ -394,7 +441,6 @@ for repo in repos:
                 entry += tracker
             entry_list.append(entry)
 
-    entry_list = aggregate_dependabot_changelogs(entry_list)
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
@@ -416,13 +462,16 @@ for repo in repos:
         else:
             service_header += " (%s)\n" % range
         print(service_header)
+    fixes = []
+    feats = []
+    others = []
     for entry in entry_list:
-        entry = "* " + entry
-        # Indent all non-empty lines.
-        entry = re.sub(r"\n([^\n])", r"\n  \1", entry)
-        print(entry)
-    if len(entry_list) > 0:
-        print()
+        (entry, bucket) = extract_message_and_bucket(entry, fixes, feats, others)
+        bucket.append(entry)
+
+    print_category_entries(fixes, "Bug Fixes")
+    print_category_entries(feats, "Features")
+    print_category_entries(others, "Other", fixes or feats)
 
     for problem in POSSIBLE_PROBLEMS:
         if sys.stderr.isatty():

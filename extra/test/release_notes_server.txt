@@ -1556,6 +1556,12 @@ New changes in workflows since 2.0.0:
 
 New changes in integration since 3.0.0:
 
+##### Bug Fixes
+
+* Traefik is proxying minio requests on (80,443) ports, not on 9000
+
+##### Other
+
 * update RBAC tests for configuration deployments
 
   With new, simplified RBAC we do not support any other actions than
@@ -1563,7 +1569,6 @@ New changes in integration since 3.0.0:
   If user can view the device then user is allowed to deploy to the
   device too.
 * [ENT] Enable Redis for JWT and tenant settings cache by default
-* Fix: Traefik is proxying minio requests on (80,443) ports, not on 9000
 * Bumped Traefik from 2.4 to 2.5
 * New demo certificate with Subject Alternative Names field
 * Updated keygen script, replaced env parameters

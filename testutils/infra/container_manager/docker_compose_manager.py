@@ -100,6 +100,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d")
+        self._wait_for_containers()
 
     def _wait_for_containers(self):
         wait_until_healthy(self.name, timeout=60 * 5)
@@ -146,6 +147,7 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+        self._wait_for_containers()
 
 
 class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
@@ -160,6 +162,7 @@ class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+        self._wait_for_containers()
 
 
 class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
@@ -391,6 +394,7 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
     def setup(self):
         compose_args = "up -d --scale mender-client=0"
         self._docker_compose_cmd(compose_args)
+        self._wait_for_containers()
 
     def new_tenant_docker_client(self, name, tenant):
         logger.info("creating docker client connected to tenant: " + tenant)
@@ -421,6 +425,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
             ["--scale %s=0" % service for service in self.client_services()]
         )
         self._docker_compose_cmd(compose_args)
+        self._wait_for_containers()
 
     def populate_clients(self, name=None, tenant_token="", replicas=1):
         client_services = self.client_services()

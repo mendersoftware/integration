@@ -153,15 +153,23 @@ if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
 fi
 
 # Extract file system images from Docker images
+# the argument for the /extract_fs is the prefix of the image name
+# as per QA-387 now we are explicitly extracting a clean image
+# that is: an image which is crafted to be the one we update to.
+IMG_PREFIX="clean-"
 mkdir -p output
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker)
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-        mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker)
+docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker) "${IMG_PREFIX}"
+docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
+        mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker) "${IMG_PREFIX}"
+docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
+        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker) "${IMG_PREFIX}"
 mv output/* .
 rmdir output
+
+for i in ${IMG_PREFIX}*; do
+    mv -v "$i" "${i/${IMG_PREFIX}/}"
+done
 
 modify_services_for_testing
 

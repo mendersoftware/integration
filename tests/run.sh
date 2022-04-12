@@ -166,10 +166,27 @@ docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output
         registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker) "${IMG_PREFIX}"
 mv output/* .
 rmdir output
+
+# check if the expected artifact_name is present
+expected_artifact_info="artifact_name=mender-image-clean"
 for i in ${IMG_PREFIX}*; do
- mv -v "$i" "${i/${IMG_PREFIX}/}";
+ mv -v "$i" "${i/${IMG_PREFIX}/}"
  downloaded-tools/mender-artifact write rootfs-image -t beaglebone -n release-1 --software-version rootfs-v1 -f "${i/${IMG_PREFIX}/}" -o "/tmp/${i/${IMG_PREFIX}/}.mender"
- downloaded-tools/mender-artifact cat "/tmp/${i/${IMG_PREFIX}/}.mender:/etc/mender/artifact_info"
+ actual_artifact_info=`downloaded-tools/mender-artifact cat "/tmp/${i/${IMG_PREFIX}/}.mender:/etc/mender/artifact_info"`
+ [[ "${expected_artifact_info}" == "${actual_artifact_info}" ]] || { echo "mismatched artifact_info. expected: $expected_artifact_info got: ${actual_artifact_info}"; exit 1; };
+done
+
+# check if artifact_info from inside the image we run is different than the one we update to
+# the condition/naming is misleading since we expect the $expected_artifact_info to not be equal to 
+# $artifact_info in the below images
+for image_tag in mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker) mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker) registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker); do
+ id=`docker run --rm -d "${image_tag}"`
+ docker exec -it "${image_tag}" apk update;
+ docker exec -it "${image_tag}" apk add openssh-client;
+ artifact_info=`docker exec -it "${image_tag}" ssh -o StrictHostKeyChecking=no -p8822 127.0.0.1 cat /etc/mender/artifact_info`
+# we expect the artifact info to be different than the one we expected from the clean image
+ [[ "${expected_artifact_info}" == "${artifact_info}" ]] && { echo "artifact_info is the same in the clean image and the image we run. got: ${artifact_info}"; exit 1; };
+ docker stop "$id"
 done
 
 modify_services_for_testing

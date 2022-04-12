@@ -165,6 +165,9 @@ docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
         registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker) "clean-"
 mv output/* .
 rmdir output
+for i in clean-*; do
+ mv -v "$i" "${i/clean-/}";
+done
 
 modify_services_for_testing
 

@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -152,7 +152,7 @@ def migrate_ent_setup(env):
 
 
 @pytest.mark.usefixtures("migrated_enterprise_setup")
-class TestEntMigration:
+class TestEnterpriseMigration:
     def test_users_ok(self, migrated_enterprise_setup):
         mender_gateway = migrated_enterprise_setup.get_mender_gateway()
         uadmm = ApiClient(useradm.URL_MGMT, host=mender_gateway)

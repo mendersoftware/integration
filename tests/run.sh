@@ -168,6 +168,8 @@ mv output/* .
 rmdir output
 for i in ${IMG_PREFIX}*; do
  mv -v "$i" "${i/${IMG_PREFIX}/}";
+ downloaded-tools/mender-artifact write rootfs-image -t beaglebone -n release-1 --software-version rootfs-v1 -f "${i/${IMG_PREFIX}/}" -o "/tmp/${i/${IMG_PREFIX}/}.mender"
+ downloaded-tools/mender-artifact cat "/tmp/${i/${IMG_PREFIX}/}.mender:/etc/mender/artifact_info"
 done
 
 modify_services_for_testing

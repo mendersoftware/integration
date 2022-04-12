@@ -171,8 +171,8 @@ rmdir output
 expected_artifact_info="artifact_name=mender-image-clean"
 for i in ${IMG_PREFIX}*; do
  mv -v "$i" "${i/${IMG_PREFIX}/}"
- downloaded-tools/mender-artifact write rootfs-image -t beaglebone -n release-1 --software-version rootfs-v1 -f "${i/${IMG_PREFIX}/}" -o "/tmp/${i/${IMG_PREFIX}/}.mender"
- actual_artifact_info=`downloaded-tools/mender-artifact cat "/tmp/${i/${IMG_PREFIX}/}.mender:/etc/mender/artifact_info"`
+ mender-artifact write rootfs-image -t beaglebone -n release-1 --software-version rootfs-v1 -f "${i/${IMG_PREFIX}/}" -o "/tmp/${i/${IMG_PREFIX}/}.mender"
+ actual_artifact_info=`mender-artifact cat "/tmp/${i/${IMG_PREFIX}/}.mender:/etc/mender/artifact_info"`
  [[ "${expected_artifact_info}" == "${actual_artifact_info}" ]] || { echo "mismatched artifact_info. expected: $expected_artifact_info got: ${actual_artifact_info}"; exit 1; };
 done
 

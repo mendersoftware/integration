@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -42,12 +42,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
-    ]
-    LEGACY_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
-        COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
     ]
     LEGACY_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
@@ -99,6 +93,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d")
+        self._wait_for_containers()
 
     def _wait_for_containers(self):
         wait_until_healthy(self.name, timeout=60 * 5)
@@ -145,6 +140,7 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+        self._wait_for_containers()
 
 
 class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
@@ -294,6 +290,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
             ["--scale %s=0" % service for service in self.client_services()]
         )
         self._docker_compose_cmd(compose_args)
+        self._wait_for_containers()
 
     def populate_clients(self, name=None, tenant_token="", replicas=1):
         client_services = self.client_services()

@@ -260,6 +260,8 @@ class BaseTestMenderGateway(MenderTesting):
     def do_test_deployment_two_devices_parallel_updates_one_failure(
         self, env, valid_image_with_mender_conf
     ):
+        pytest.skip("Disabled due to MEN-5567.")
+
         device_group = env.device_group
         mender_device_1 = device_group[0]
         mender_device_2 = device_group[1]

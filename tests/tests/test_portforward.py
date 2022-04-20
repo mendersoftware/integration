@@ -87,9 +87,9 @@ class BaseTestPortForward(MenderTesting):
 
         # wait a few seconds to let the port-forward start
         logger.info("port-forward started, waiting a few seconds")
-        time.sleep(2)
+        time.sleep(10)
 
-        #  verify the UDP port-forward querying the Google's DNS server
+        # verify the UDP port-forward querying the Google's DNS server
         logger.info("resolve mender.io (A record)")
         req = DnsRequest(name="mender.io", qtype="A", server="localhost", port=9953)
         response = req.req()

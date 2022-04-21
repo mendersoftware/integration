@@ -68,6 +68,7 @@ message_mail_options_prefix = "mail options:"
 # tests constants
 mailbox_path = "/var/spool/mail/local"
 wait_for_alert_interval_s = 8 if not isK8S() else 32
+alert_expiration_time_seconds = 32 if not isK8S() else 64
 expected_from = (
     "no-reply@hosted.mender.io"
     if not isK8S()
@@ -255,6 +256,19 @@ def prepare_dbus_monitoring(
         )
     finally:
         shutil.rmtree(tmpdir)
+
+
+def prepare_dockerevents_monitoring(
+    mender_device, container_name, alert_expiration="", action="restart"
+):
+    mender_device.run(
+        "mender-monitorctl create dockerevents container_%s_%s %s %s %s"
+        % (container_name, action, container_name, action, alert_expiration)
+    )
+    mender_device.run(
+        "mender-monitorctl enable dockerevents container_%s_%s"
+        % (container_name, action)
+    )
 
 
 class TestMonitorClientEnterprise:
@@ -1636,3 +1650,139 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_store_discard_http_400: got OK alert email."
         )
+
+    def mock_docker_events(self, mender_device):
+        docker_events_exec = """
+#!/bin/bash
+
+while [ ! -f /tmp/docker_restart ]; do
+ sleep 1;
+done
+
+cat <<EOF
+2022-04-21T11:00:54.473698242+01:00 container kill 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (image=alpine, name=mycontainer, signal=15)
+2022-04-21T11:01:04.608227731+01:00 container kill 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (image=alpine, name=mycontainer, signal=9)
+2022-04-21T11:01:04.808707990+01:00 container die 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (exitCode=137, image=alpine, name=mycontainer)
+2022-04-21T11:01:05.276636214+01:00 network disconnect a8a7c0f83bc81948886602fb3752fa5e63cc80c5997e696384ecefad8540cf32 (container=91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f, name=bridge, type=bridge)
+2022-04-21T11:01:05.370419301+01:00 container stop 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (image=alpine, name=mycontainer)
+2022-04-21T11:01:05.643509121+01:00 network connect a8a7c0f83bc81948886602fb3752fa5e63cc80c5997e696384ecefad8540cf32 (container=91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f, name=bridge, type=bridge)
+2022-04-21T11:01:06.701635304+01:00 container start 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (image=alpine, name=mycontainer)
+2022-04-21T11:01:06.701815043+01:00 container restart 91ee1d4888921c267bcaab048bd964778333d9d09db399a47d1ca9784441b69f (image=alpine, name=mycontainer)
+EOF
+while :; do
+ sleep 2;
+ [ ! -f /tmp/docker_restart ] && break;
+done;
+while [ ! -f /tmp/docker_restart ]; do
+ sleep 1;
+done
+        """
+        tmpdir = tempfile.mkdtemp()
+        try:
+            mender_device.run("mkdir -p /tmp/bin || true")
+            docker_exec_file = os.path.join(tmpdir, "docker")
+            with open(docker_exec_file, "w") as fd:
+                fd.write(docker_events_exec)
+            mender_device.put(
+                os.path.basename(docker_exec_file),
+                local_path=os.path.dirname(docker_exec_file),
+                remote_path="/bin",
+            )
+            # lets assume we are not running tests in the rofs
+            mender_device.run("chmod 755 /bin/docker")
+        finally:
+            shutil.rmtree(tmpdir)
+
+    @pytest.fixture(scope="function")
+    def setup_dockerevents(
+        self, monitor_commercial_setup_no_client, action, container_name
+    ):
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        inventory = Inventory(auth)
+
+        logger.info(
+            "test_monitorclient_dockerevents: email alert on container %s restart scenario."
+            % container_name
+        )
+        self.mock_docker_events(mender_device)
+        prepare_dockerevents_monitoring(
+            mender_device,
+            container_name,
+            str(alert_expiration_time_seconds),
+            action=action,
+        )
+        # restart below is required as dockerevents is built upon log subsystem in the streaming from command mode
+        mender_device.run("systemctl restart mender-monitor")
+        time.sleep(2 * wait_for_alert_interval_s)
+        return user_name, devid, mender_device, inventory
+
+    @pytest.mark.parametrize("container_name", ["mycontainer"])
+    @pytest.mark.parametrize("action", ["restart"])
+    def test_monitorclient_dockerevents(
+        self,
+        monitor_commercial_setup_no_client,
+        setup_dockerevents,
+        action,
+        container_name,
+    ):
+        """Tests the monitor client docker events subsystem"""
+        user_name, devid, mender_device, inventory = setup_dockerevents
+        mender_device.run("touch /tmp/docker_restart")
+        logger.info(
+            "restarted %s, sleeping %ds." % (container_name, wait_for_alert_interval_s)
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
+
+        mail, messages = get_and_parse_email_n(
+            monitor_commercial_setup_no_client, user_name, 1
+        )
+        assert len(messages) > 0
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Docker container "
+            + container_name
+            + " "
+            + action
+            + " on "
+            + devid,
+        )
+        assert "${workflow.input." not in mail
+        logger.info("test_monitorclient_dockerevents: got CRITICAL alert email.")
+
+        mender_device.run("rm -f /tmp/docker_restart")
+        logger.info(
+            "test_monitorclient_dockerevents: emulated restarts finished. waiting for OK."
+        )
+        time.sleep(alert_expiration_time_seconds)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (False, 0) == (alerts, alert_count)
+
+        mail, messages = get_and_parse_email_n(
+            monitor_commercial_setup_no_client, user_name, 1
+        )
+        messages_count = len(messages)
+        assert messages_count > 0
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Docker container "
+            + container_name
+            + " "
+            + action
+            + " on "
+            + devid,
+        )
+        assert "${workflow.input" not in mail
+        logger.info("test_monitorclient_dockerevents: got OK alert email.")

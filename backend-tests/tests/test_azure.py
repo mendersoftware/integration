@@ -140,14 +140,14 @@ class TestAzureIntegrations(_TestAzureBase):
             {
                 "provider": "iot-hub",
                 "credentials": {
-                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
+                    "connection_string": "HostName=mender-test-hub.azure-devices.net;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
                     "type": "sas",
                 },
             },
             {
                 "provider": "iot-hub",
                 "credentials": {
-                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
+                    "connection_string": "HostName=mender-test-hub.azure-devices.net;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
                     "type": "sas",
                 },
             },
@@ -169,14 +169,14 @@ class TestAzureIntegrationsEnterprise(_TestAzureBase):
             {
                 "provider": "iot-hub",
                 "credentials": {
-                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
+                    "connection_string": "HostName=mender-test-hub.azure-devices.net;SharedAccessKey=thisIsBase64;SharedAccessKeyName=OldKey",
                     "type": "sas",
                 },
             },
             {
                 "provider": "iot-hub",
                 "credentials": {
-                    "connection_string": "HostName=localhost;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
+                    "connection_string": "HostName=mender-test-hub.azure-devices.net;SharedAccessKey=thisIsBase64;SharedAccessKeyName=NewKey",
                     "type": "sas",
                 },
             },

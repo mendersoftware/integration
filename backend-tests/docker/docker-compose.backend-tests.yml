@@ -43,7 +43,7 @@ services:
 
     mender-iot-manager:
         environment:
-          IOT_MANAGER_DOMAIN_WHITELIST: "localhost *.azure-devices.net mender-backend-tests-runner"
+          IOT_MANAGER_DOMAIN_WHITELIST: "*.azure-devices.net mender-backend-tests-runner"
 
 networks:
     mender:

@@ -26,6 +26,7 @@ import requests
 import yaml
 
 from testutils.api.client import GATEWAY_HOSTNAME
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 logging.basicConfig(format="%(asctime)s %(message)s")
 logger = logging.getLogger("test_decomission")
@@ -217,6 +218,8 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
     def test_api_endpoints(
         self, kind, auth, method, scheme, host, path, get_endpoint_url
     ):
+        if "reporting" in path and isK8S():
+            pytest.skip("reporting not deployed to staging")
         self.do_test_api_endpoints(
             kind, auth, method, scheme, host, path, get_endpoint_url
         )

@@ -21,7 +21,8 @@ SHA_TO_TRACKER = {}
 
 JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
-CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat)(?:\(\S+\))?!?: "
+CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: "
+DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
 
 
@@ -29,7 +30,7 @@ def aggregate_dependabot_changelogs(entry_list):
     new_entry_list = []
     aggregated_dependabot_changelogs = ""
     for entry in entry_list:
-        if re.search("[Bb]umps? .* from .* to .*", entry):
+        if re.search(DEPENDABOT_REGEX, entry):
             if ORGANIZATION not in entry:
                 # Get rid of first line, which is a duplicate of the next one,
                 # then strip start and end whitespace, but keep the rest of the
@@ -162,12 +163,12 @@ def get_range_for_repo(repo, range):
     )
 
 
-def extract_message_and_bucket(message, fixes, feats, others):
+def extract_message_and_bucket(message, fixes, feats, others, dep_bumps):
+    t = ""
     bucket = others
     match = re.match(CONVENTIONAL_COMMIT_TYPE_REGEX, message, re.IGNORECASE)
-    if not match:
-        return message, others
-    t = match.group(1).lower()
+    if match:
+        t = match.group(1).lower()
     stripped_message = re.sub(
         CONVENTIONAL_COMMIT_TYPE_REGEX, "", message, count=1, flags=re.IGNORECASE
     )
@@ -175,6 +176,8 @@ def extract_message_and_bucket(message, fixes, feats, others):
         bucket = fixes
     elif t == "feat":
         bucket = feats
+    elif re.search(DEPENDABOT_REGEX, stripped_message):
+        bucket = dep_bumps
     return stripped_message, bucket
 
 
@@ -465,13 +468,17 @@ for repo in repos:
     fixes = []
     feats = []
     others = []
+    dep_bumps = []
     for entry in entry_list:
-        (entry, bucket) = extract_message_and_bucket(entry, fixes, feats, others)
+        (entry, bucket) = extract_message_and_bucket(
+            entry, fixes, feats, others, dep_bumps
+        )
         bucket.append(entry)
 
     print_category_entries(fixes, "Bug Fixes")
     print_category_entries(feats, "Features")
     print_category_entries(others, "Other", fixes or feats)
+    print_category_entries(dep_bumps, "Dependabot bumps")
 
     for problem in POSSIBLE_PROBLEMS:
         if sys.stderr.isatty():

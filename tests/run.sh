@@ -167,10 +167,6 @@ docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output
 mv output/* .
 rmdir output
 
-for i in ${IMG_PREFIX}*; do
-    mv -v "$i" "${i/${IMG_PREFIX}/}"
-done
-
 modify_services_for_testing
 
 cp -f core-image-full-cmdline-$MACHINE_NAME.ext4 core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4

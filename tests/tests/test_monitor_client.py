@@ -744,7 +744,7 @@ class TestMonitorClientEnterprise:
             "PUT",
             useradm.URL_USERS_ID.format(id=users[0]["id"]),
             headers=auth.get_auth_token(),
-            body={"roles": ["deviceaccess"]},
+            body={"roles": ["RBAC_ROLE_OBSERVER", "deviceaccess"]},
         )
         assert res.status_code == 204
         logger.info("test_monitorclient_alert_email_rbac: role assigned to user.")

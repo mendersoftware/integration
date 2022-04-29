@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -11,6 +11,9 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+
+import os
+import tempfile
 
 from collections import namedtuple
 from typing import List
@@ -174,13 +177,15 @@ class CliDeviceauth(BaseCli):
         """
 
         # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml' or '/etc/deviceauth-enterprise/config.yaml')
-        cmd = [
-            "/bin/sed",
-            "-i",
-            "$adefault_tenant_token: {}".format(tenant_token),
-            f"{self.service.data_path}/config.yaml",
-        ]
-        self.container_manager.execute(self.cid, cmd)
+        config_file = f"{self.service.data_path}/config.yaml"
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_config = os.path.join(tmp, "config.yaml")
+            self.container_manager.download(self.cid, config_file, tmp_config)
+            tmp_config_content = open(tmp_config).read().strip()
+            tmp_config_content += "\ndefault_tenant_token: {}\n".format(tenant_token)
+            open(tmp_config, "w").write(tmp_config_content)
+            self.container_manager.upload(self.cid, tmp_config, config_file)
+            os.unlink(tmp_config)
 
         # Restart the container, so that it is picked up by the device-auth service on startup
         self.container_manager.cmd(self.cid, "stop")

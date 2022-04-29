@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -43,6 +43,14 @@ class BaseContainerManagerNamespace:
 
     def cmd(self, container_id, docker_cmd, cmd=[]):
         """Executes a docker command with arguments on an specific container"""
+        raise NotImplementedError
+
+    def download(self, container_id, source, destination):
+        """Download a file from a container"""
+        raise NotImplementedError
+
+    def upload(self, container_id, source, destination):
+        """Upload a file to a container"""
         raise NotImplementedError
 
     def getid(self, filters):

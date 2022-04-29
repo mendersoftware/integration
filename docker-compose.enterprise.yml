@@ -26,6 +26,7 @@ services:
         image: registry.mender.io/mendersoftware/tenantadm:staging
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+            TENANTADM_ENABLE_SELF_SERVICE_SIGN_UP: 1
         extends:
             file: common.yml
             service: mender-base

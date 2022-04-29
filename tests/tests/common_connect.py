@@ -76,7 +76,7 @@ def wait_for_connect(auth, devid):
         base_url=deviceconnect.URL_MGMT,
     )
 
-    for _ in redo.retrier(attempts=60, sleeptime=1):
+    for _ in redo.retrier(attempts=12, sleeptime=5):
         logger.info("waiting for device in deviceconnect")
         res = devconn.call(
             "GET",

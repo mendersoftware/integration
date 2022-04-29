@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,13 +18,8 @@ import logging
 api_version = os.getenv("MENDER_API_VERSION", "v1")
 logger = logging.getLogger()
 
-import requests
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
-# don't complain about non-verified ssl connections
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
-# Define get funtion before the below imports to avoid circular dependency
+# Define get function before the below imports to avoid circular dependency
 container_manager = None
 
 

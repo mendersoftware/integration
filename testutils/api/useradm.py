@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,7 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+HOST = "mender-useradm:8080"
+
 URL_MGMT = "/api/management/v1/useradm"
+URL_MGMT_V2 = "/api/management/v2/useradm"
+URL_INTERNAL = "/api/internal/v1/useradm"
 
 URL_LOGIN = "/auth/login"
 URL_PASSWORD_RESET_START = "/auth/password-reset/start"
@@ -27,3 +31,5 @@ URL_VERIFY_EMAIL_START = "/auth/verify-email/start"
 URL_VERIFY_EMAIL_COMPLETE = "/auth/verify-email/complete"
 URL_2FA_ENABLE = "/users/{id}/2fa/enable"
 URL_2FA_DISABLE = "/users/{id}/2fa/disable"
+URL_EMAILS = "/tenants/{tenant_id}/devices/{device_id}/users"
+URL_TENANT_USERS = "/tenants/{tenant_id}/users"

@@ -74,7 +74,7 @@ class CliUseradm(BaseCli):
             [open_source, enterprise], self.service_name
         )
 
-    def create_user(self, username, password, tenant_id=""):
+    def create_user(self, username, password, tenant_id="", roles=[]):
         cmd = [
             self.service.bin_path,
             "create-user",
@@ -86,6 +86,9 @@ class CliUseradm(BaseCli):
 
         if tenant_id != "":
             cmd += ["--tenant-id", tenant_id]
+
+        if len(roles) > 0:
+            cmd += ["--roles", ",".join(roles)]
 
         uid = self.container_manager.execute(self.cid, cmd)
         return uid

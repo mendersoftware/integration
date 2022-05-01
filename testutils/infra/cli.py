@@ -138,7 +138,7 @@ class CliTenantadm(BaseCli):
         if isK8S():
             return
 
-        cmd = ["usr/bin/tenantadm", "migrate"]
+        cmd = ["/usr/bin/tenantadm", "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
 

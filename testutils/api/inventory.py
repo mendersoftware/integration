@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -24,3 +24,7 @@ URL_GROUP = "/devices/group/{name}/devices"
 URL_DEVICE_ATTRIBUTES = "/device/attributes"
 
 URL_FILTERS = "/filters"
+
+
+def dev_group(group):
+    return {"group": group}

@@ -67,11 +67,12 @@ def mongo_cleanup(mongo):
 
 
 class User:
-    def __init__(self, id, name, pwd):
+    def __init__(self, id, name, pwd, roles=[]):
         self.name = name
         self.pwd = pwd
         self.id = id
         self.token = None
+        self.roles = roles
 
 
 class Authset:
@@ -142,10 +143,14 @@ def create_authset(
 
 
 def create_user(
-    name: str, pwd: str, tid: str = "", containers_namespace: str = "backend-tests"
+    name: str,
+    pwd: str,
+    tid: str = "",
+    containers_namespace: str = "backend-tests",
+    roles: list = [],
 ) -> User:
     cli = CliUseradm(containers_namespace)
-    uid = cli.create_user(name, pwd, tid)
+    uid = cli.create_user(name, pwd, tid, roles=roles)
 
     return User(uid, name, pwd)
 
@@ -548,3 +553,49 @@ def create_user_test_setup() -> User:
 
 def useExistingTenant() -> bool:
     return bool(os.environ.get("USE_EXISTING_TENANT"))
+
+
+def setup_tenant_devices(tenant, device_groups):
+    """
+    setup_user_devices authenticates the user and creates devices
+    attached to (static) groups given by the proportion map from
+    the groups parameter.
+    :param users:     Users to setup devices for (list).
+    :param n_devices: Number of accepted devices created for each
+                      user (int).
+    :param groups:    Map of group names to device proportions, the
+                      sum of proportion must be less than or equal
+                      to 1 (dict[str] = float)
+    :return: Dict mapping group_name -> list(devices)
+    """
+    devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
+    devauth_MGMT = ApiClient(deviceauth.URL_MGMT)
+    invtry_MGMT = ApiClient(inventory.URL_MGMT)
+    user = tenant.users[0]
+    grouped_devices = {}
+    group = None
+
+    tenant.devices = []
+    for group, dev_cnt in device_groups.items():
+        grouped_devices[group] = []
+        for i in range(dev_cnt):
+            device = make_accepted_device(
+                devauth_DEV, devauth_MGMT, user.token, tenant.tenant_token
+            )
+            if group is not None:
+                rsp = invtry_MGMT.with_auth(user.token).call(
+                    "PUT",
+                    inventory.URL_DEVICE_GROUP.format(id=device.id),
+                    body={"group": group},
+                )
+                assert rsp.status_code == 204
+
+            device.group = group
+            grouped_devices[group].append(device)
+            tenant.devices.append(device)
+
+    # sleep a few seconds waiting for the data propagation to the reporting service
+    # and the Elasticsearch indexing to complete
+    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
+    return grouped_devices

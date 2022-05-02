@@ -18,9 +18,6 @@ import time
 import uuid
 
 import testutils.api.deployments as deployments
-import testutils.api.deviceauth as deviceauth
-import testutils.api.inventory as inventory
-import testutils.api.reporting as reporting
 import testutils.api.useradm as useradm
 import testutils.api.deviceconfig as deviceconfig
 

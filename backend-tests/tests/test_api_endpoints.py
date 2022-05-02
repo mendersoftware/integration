@@ -44,7 +44,6 @@ REPO_TO_ENV_VARIABLE = {
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
     "iot-manager": "IOT_MANAGER_REV",
-    "reporting": "REPORTING_REV",
     "tenantadm": "TENANTADM_REV",
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",
@@ -172,7 +171,6 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
         "deviceconnect",
         "inventory",
         "iot-manager",
-        "reporting",
         "useradm",
         "workflows",
     )
@@ -202,7 +200,6 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "devicemonitor",
         "inventory-enterprise",
         "iot-manager",
-        "reporting",
         "tenantadm",
         "useradm-enterprise",
         "workflows-enterprise",
@@ -218,8 +215,6 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
     def test_api_endpoints(
         self, kind, auth, method, scheme, host, path, get_endpoint_url
     ):
-        if "reporting" in path and isK8S():
-            pytest.skip("reporting not deployed to staging")
         self.do_test_api_endpoints(
             kind, auth, method, scheme, host, path, get_endpoint_url
         )

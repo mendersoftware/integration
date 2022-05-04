@@ -68,6 +68,9 @@ New changes in deployments since 3.0.0:
   ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
 * Listing devices in deployment sorts by statuses
   ([MEN-4847](https://tracker.mender.io/browse/MEN-4847))
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps alpine from 3.13.5 to 3.14.0.
 
@@ -159,6 +162,9 @@ New changes in deviceauth since 3.0.0:
   ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
 * Restrict access to monitor APIs to devices with monitor add-on
   ([MEN-5077](https://tracker.mender.io/browse/MEN-5077))
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps [go.mongodb.org/mongo-driver](https://github.com/mongodb/mongo-go-driver) from 1.5.3 to 1.5.4.
       - [Release notes](https://github.com/mongodb/mongo-go-driver/releases)
@@ -223,6 +229,9 @@ New changes in gui since 3.0.0:
 * fixed an issue that prevented filter selections from being persisted
 * fixed an issue that prevented changes in monitoring issues from being reflected in the devicelist
   ([MEN-5113](https://tracker.mender.io/browse/MEN-5113))
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps nginx from 1.21.0-alpine to 1.21.1-alpine.
 
@@ -1458,6 +1467,9 @@ New changes in inventory since 3.0.0:
 * improve device decommissioning and inventory data reset
   ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
 * internal endpoint for reindexing monitor data
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps [go.mongodb.org/mongo-driver](https://github.com/mongodb/mongo-go-driver) from 1.5.3 to 1.5.4.
       - [Release notes](https://github.com/mongodb/mongo-go-driver/releases)
@@ -1518,6 +1530,9 @@ New changes in useradm since 1.15.0:
   ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
 * require the current one when updating the user's password
   ([MEN-4922](https://tracker.mender.io/browse/MEN-4922))
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps [go.mongodb.org/mongo-driver](https://github.com/mongodb/mongo-go-driver) from 1.5.3 to 1.5.4.
       - [Release notes](https://github.com/mongodb/mongo-go-driver/releases)
@@ -1540,6 +1555,9 @@ New changes in workflows since 2.0.0:
   ([MEN-4998](https://tracker.mender.io/browse/MEN-4998))
 * use internal end-points to provision and decommission devices
   ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps [go.mongodb.org/mongo-driver](https://github.com/mongodb/mongo-go-driver) from 1.5.3 to 1.5.4.
       - [Release notes](https://github.com/mongodb/mongo-go-driver/releases)
@@ -1556,6 +1574,12 @@ New changes in workflows since 2.0.0:
 
 New changes in integration since 3.0.0:
 
+##### Bug Fixes
+
+* Traefik is proxying minio requests on (80,443) ports, not on 9000
+
+##### Other
+
 * update RBAC tests for configuration deployments
 
   With new, simplified RBAC we do not support any other actions than
@@ -1563,7 +1587,6 @@ New changes in integration since 3.0.0:
   If user can view the device then user is allowed to deploy to the
   device too.
 * [ENT] Enable Redis for JWT and tenant settings cache by default
-* Fix: Traefik is proxying minio requests on (80,443) ports, not on 9000
 * Bumped Traefik from 2.4 to 2.5
 * New demo certificate with Subject Alternative Names field
 * Updated keygen script, replaced env parameters
@@ -1588,6 +1611,9 @@ New changes in integration since 3.0.0:
 * Upgrade useradm to 1.16.0.
 * Upgrade workflows-enterprise to 2.1.0.
 * Upgrade workflows to 2.1.0.
+
+##### Dependabot bumps
+
 * Aggregated Dependabot Changelogs:
   * Bumps python from 3.9.5 to 3.9.6.
 

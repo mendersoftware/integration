@@ -20,7 +20,7 @@ services:
         image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
 
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:3.3.x
+        image: registry.mender.io/mendersoftware/tenantadm:3.4.x
 
     mender-useradm:
         image: registry.mender.io/mendersoftware/useradm-enterprise:1.18.x

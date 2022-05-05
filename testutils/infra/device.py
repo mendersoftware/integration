@@ -18,6 +18,7 @@ import traceback
 import os
 import socket
 import subprocess
+import redo
 from typing import Dict
 
 from fabric import Connection
@@ -110,7 +111,21 @@ class MenderDevice:
         Keyword arguments:
         wait - Timeout (in seconds)
         """
-        self.run("true", hide=True, wait=wait)
+        waited = -1
+        t0 = int(time.time())
+        raise_exception = None
+        for _ in redo.retrier(max_sleeptime=wait, attempts=wait, sleeptime=1):
+            try:
+                self.run("true", hide=True, wait=wait)
+                raise_exception = None
+                break
+            except Exception as e:
+                raise_exception = e
+            finally:
+                waited = int(time.time()) - t0
+        if raise_exception:
+            logger.error("Can't open ssh after %d s of waiting and trying" % waited)
+            raise (raise_exception)
 
     def yocto_id_installed_on_machine(self):
         cmd = "mender show-artifact"

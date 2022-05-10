@@ -1373,7 +1373,7 @@ class TestDeploymentsStatusUpdateBase:
             status_update="installing",
             device_deployment_status="does-not-matter",
             deployment_status="inprogress",
-            status_update_error_code=500,
+            status_update_error_code=404,
         )
 
         # wrong status

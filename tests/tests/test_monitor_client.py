@@ -461,7 +461,7 @@ class TestMonitorClientEnterprise:
             update_check_file_only=True,
         )
         time.sleep(2 * wait_for_alert_interval_s)
-        _, messages = get_and_parse_email_n(
+        mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, messages_count + 1
         )
         messages_count = len(messages)
@@ -470,6 +470,10 @@ class TestMonitorClientEnterprise:
             user_name,
             "OK: Monitor Alert for Log file contains " + log_pattern + " on " + devid,
         )
+        # in each CRITICAL and OK email we expect the pattern to be present at least 3 times
+        assert mail.count(log_pattern) >= 6
+        # in each CRITICAL and OK email we expect the log path to be present at least 1 time
+        assert mail.count(log_pattern) >= 2
         logger.info(
             "test_monitorclient_alert_email: got OK alert email after log pattern expiration."
         )

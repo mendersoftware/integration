@@ -56,6 +56,11 @@ PUSH = True
 # Whether this is a dry-run.
 DRY_RUN = False
 
+CONVENTIONAL_COMMIT_REGEX = (
+    r"^(?P<type>build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)"
+    r"(?:\(\w+\))?:.*"
+)
+
 
 class NotAVersionException(Exception):
     pass
@@ -2409,6 +2414,40 @@ def do_build(args):
     trigger_build(state, tag_avail)
 
 
+def determine_version_bump(state, repo, from_v, to_v):
+    revlist = execute_git(
+        state, repo.git(), ["rev-list", "%s..%s" % (from_v, to_v)], capture=True
+    ).split("\n")
+
+    (major, minor, patch, _) = version_components(from_v)
+    version_mask = [False, False, False]
+
+    for sha in revlist:
+        commit_message = execute_git(
+            state, repo.git(), ["log", "--format=%B", "-1", sha], capture=True
+        )
+        m = re.search(r"^BREAKING CHANGE:.+", commit_message, re.MULTILINE)
+        if m:
+            version_mask[0] = True
+            break
+        m = re.match(CONVENTIONAL_COMMIT_REGEX, commit_message)
+        if m:
+            groups = m.groupdict()
+            if groups["type"] == "feat":
+                version_mask[1] = True
+            elif groups["type"] == "fix":
+                version_mask[2] = True
+
+    if version_mask[0]:
+        return "%d.0.0" % (major + 1)
+    elif version_mask[1]:
+        return "%d.%d.0" % (major, minor + 1)
+    elif version_mask[2]:
+        return "%d.%d.%d" % (major, minor, patch + 1)
+    else:
+        return None
+
+
 def determine_version_to_include_in_release(state, repo):
     """Returns True if the user decided on the component, False if the user
     skips the decision for later"""
@@ -2451,10 +2490,12 @@ def determine_version_to_include_in_release(state, repo):
         version_list = sorted_final_version_list(
             os.path.join(state["repo_dir"], repo.git())
         )
+        follow_branch = "%s/master" % find_upstream_remote(state, repo.git())
         if len(version_list) > 0:
             prev_of_repo = version_list[0]
-            (major, minor, _, _) = version_components(prev_of_repo)
-            new_repo_version = "%d.%d.0" % (major, minor + 1)
+            new_repo_version = determine_version_bump(
+                state, repo, prev_of_repo, follow_branch
+            )
         else:
             # No previous version at all. Start at 1.0.0.
             prev_of_repo = None
@@ -2462,7 +2503,6 @@ def determine_version_to_include_in_release(state, repo):
         prev_of_repo_independent = prev_of_repo
         if overall_beta:
             new_repo_version += "b%d" % overall_beta
-        follow_branch = "%s/master" % find_upstream_remote(state, repo.git())
 
     if prev_of_repo:
         print_line()
@@ -2512,7 +2552,7 @@ double check this.
             print_line()
             return False
 
-    if not prev_of_repo or reply.lower().startswith("y"):
+    if not prev_of_repo or reply.lower().startswith("y") and new_repo_version:
         reply = ask(
             "Should the new release of %s be version %s? "
             % (repo.git(), new_repo_version)

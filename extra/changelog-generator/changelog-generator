@@ -28,7 +28,9 @@ DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
 
 
-def aggregate_dependabot_changelogs(entry_list: List[str]) -> List[str]:
+def aggregate_dependabot_changelogs(
+    entry_list: List[str], possible_problems: List[str]
+) -> List[str]:
     new_entry_list = []
     aggregated_dependabot_changelogs = ""
     for entry in entry_list:
@@ -47,8 +49,18 @@ def aggregate_dependabot_changelogs(entry_list: List[str]) -> List[str]:
                             )
                         ]
                     )
-                except IndexError:  # it may happen that only first line is available
-                    aggregated_dependabot_changelogs += f"\n* {entry}"
+                except:
+                    possible_problems.append(
+                        (
+                            "*** A changelog entry which was assumed by the script to be "
+                            + "derived from a dependabot commit could not be truncated "
+                            + "properly. Either a commit was wrongly assumed to be comitted "
+                            + "by dependabot or a dependabot commit does not, for unknown "
+                            + "reasons, follow its standard format. The changelog entry "
+                            + " that produced this fault was:\n\n%s"
+                        )
+                        % entry
+                    )
                 # Compress lines with only whitespace. Not really necessary, but
                 # looks better in editors.
                 aggregated_dependabot_changelogs = re.sub(
@@ -194,10 +206,12 @@ def extract_message_and_bucket(message, fixes, feats, others, dep_bumps):
     return stripped_message, bucket
 
 
-def print_category_entries(entry_list, category, print_category=True):
+def print_category_entries(
+    entry_list, category, possible_problems, print_category=True
+):
     if not entry_list:
         return
-    entry_list = aggregate_dependabot_changelogs(entry_list)
+    entry_list = aggregate_dependabot_changelogs(entry_list, possible_problems)
     if print_category:
         print("##### " + category + "\n")
     for entry in entry_list:
@@ -531,10 +545,10 @@ for repo in repos:
         )
         bucket.append(entry)
 
-    print_category_entries(fixes, "Bug Fixes")
-    print_category_entries(feats, "Features")
-    print_category_entries(others, "Other", fixes or feats)
-    print_category_entries(dep_bumps, "Dependabot bumps")
+    print_category_entries(fixes, "Bug Fixes", POSSIBLE_PROBLEMS)
+    print_category_entries(feats, "Features", POSSIBLE_PROBLEMS)
+    print_category_entries(others, "Other", POSSIBLE_PROBLEMS, fixes or feats)
+    print_category_entries(dep_bumps, "Dependabot bumps", POSSIBLE_PROBLEMS)
 
     for problem in POSSIBLE_PROBLEMS:
         if sys.stderr.isatty():

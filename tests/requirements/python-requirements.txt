@@ -1,7 +1,7 @@
 cryptography==37.0.2
 docker==5.0.3
 docker-compose==1.29.2
-fabric==2.6.0
+fabric==2.7.0
 filelock==3.6.0
 invoke==1.6.0
 msgpack==1.0.3

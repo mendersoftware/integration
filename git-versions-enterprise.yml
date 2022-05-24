@@ -11,7 +11,7 @@ services:
         image: registry.mender.io/mendersoftware/deployments-enterprise:4.2.x
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:4.1.x
+        image: registry.mender.io/mendersoftware/inventory-enterprise:4.2.x
 
     mender-workflows-server:
         image: registry.mender.io/mendersoftware/workflows-enterprise:2.2.x

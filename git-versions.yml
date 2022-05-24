@@ -20,7 +20,7 @@ services:
         image: mendersoftware/deviceauth:3.2.x
 
     mender-inventory:
-        image: mendersoftware/inventory:4.1.x
+        image: mendersoftware/inventory:4.2.x
 
     mender-useradm:
         image: mendersoftware/useradm:1.18.x

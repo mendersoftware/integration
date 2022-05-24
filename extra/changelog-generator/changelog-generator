@@ -9,6 +9,8 @@ import re
 import subprocess
 import sys
 
+from typing import List
+
 # Holds each changelog entry indexed by SHA
 ENTRIES = {}
 # Links SHAs together, if we have a "X cherry-picked from Y" situation, those
@@ -26,7 +28,7 @@ DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
 
 
-def aggregate_dependabot_changelogs(entry_list):
+def aggregate_dependabot_changelogs(entry_list: List[str]) -> List[str]:
     new_entry_list = []
     aggregated_dependabot_changelogs = ""
     for entry in entry_list:
@@ -36,14 +38,17 @@ def aggregate_dependabot_changelogs(entry_list):
                 # then strip start and end whitespace, but keep the rest of the
                 # whitespace intact for indentation and line separation
                 # purposes.
-                aggregated_dependabot_changelogs += "\n* " + "\n    ".join(
-                    [
-                        s
-                        for n, s in enumerate(
-                            entry.split("\n", 1)[1].strip().split("\n")
-                        )
-                    ]
-                )
+                try:
+                    aggregated_dependabot_changelogs += "\n* " + "\n    ".join(
+                        [
+                            s
+                            for n, s in enumerate(
+                                entry.split("\n", 1)[1].strip().split("\n")
+                            )
+                        ]
+                    )
+                except IndexError:  # it may happen that only first line is available
+                    aggregated_dependabot_changelogs += f"\n* {entry}"
                 # Compress lines with only whitespace. Not really necessary, but
                 # looks better in editors.
                 aggregated_dependabot_changelogs = re.sub(

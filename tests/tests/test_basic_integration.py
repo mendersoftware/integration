@@ -52,7 +52,9 @@ class DeviceAuthFailover(DeviceAuthV2):
 
 
 class BaseTestBasicIntegration(MenderTesting):
-    def do_test_double_update_rofs(self, env, valid_image_rofs_with_mender_conf):
+    def do_test_double_update_rofs(
+        self, env, valid_image_rofs_with_mender_conf, mender_client_version
+    ):
         """Upgrade a device with two consecutive R/O images using different compression algorithms"""
 
         mender_device = env.device
@@ -73,7 +75,7 @@ class BaseTestBasicIntegration(MenderTesting):
         # see: https://github.com/mendersoftware/mender-qa/pull/580/commits/a4c54e9ebf5879f0837789cbc7c74cb1102b2caa#diff-7031fcd5c934f225781febe446a34594a9a36b335c540379c0dd376a8f06ba28R263
         # so first we expect it to be set to master, as this is what we
         # have in the initial image, after update we expect it to change
-        expected_artifact_info = "artifact_name=mender-image-master\n"
+        expected_artifact_info = f"artifact_name=mender-image-{mender_client_version}\n"
         artifact_info = mender_device.run(
             "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
         )
@@ -374,10 +376,12 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         self,
         standard_setup_one_rofs_client_bootstrapped,
         valid_image_rofs_with_mender_conf,
+        mender_client_version,
     ):
         self.do_test_double_update_rofs(
             standard_setup_one_rofs_client_bootstrapped,
             valid_image_rofs_with_mender_conf,
+            mender_client_version,
         )
 
     @MenderTesting.fast
@@ -422,10 +426,15 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_double_update_rofs(
-        self, enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+        self,
+        enterprise_one_rofs_client_bootstrapped,
+        valid_image_rofs_with_mender_conf,
+        mender_client_version,
     ):
         self.do_test_double_update_rofs(
-            enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+            enterprise_one_rofs_client_bootstrapped,
+            valid_image_rofs_with_mender_conf,
+            mender_client_version,
         )
 
     @MenderTesting.fast

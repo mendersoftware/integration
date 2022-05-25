@@ -275,6 +275,15 @@ def min_mender_client_version(request):
         pytest.skip("Test requires Mender client %s or newer" % min_required_version)
 
 
+@pytest.fixture(autouse=True)
+def mender_client_version():
+    return (
+        subprocess.check_output([RELEASE_TOOL, "--version-of", "mender"])
+        .decode()
+        .strip()
+    )
+
+
 def version_is_minimum(version, min_version):
     try:
         if LooseVersion(min_version) > LooseVersion(version):

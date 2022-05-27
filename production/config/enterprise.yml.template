@@ -18,3 +18,7 @@ services:
     mender-deviceconnect:
         environment:
             DEVICECONNECT_ENABLE_AUDIT: "1"
+
+    mender-useradm:
+        volumes:
+            - ./production/keys-generated/keys/useradm/private.key:/etc/useradm-enterprise/rsa/private.pem:ro

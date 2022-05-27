@@ -131,7 +131,9 @@ class TestMenderClientKeepAlive:
 
         idle_connections_timeout_seconds = 15
         disable_keep_alive = False
-        output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        output = mender_device.run(
+            "netstat -4np | grep -v 127.0.0.1 | grep -F /mender | wc -l"
+        ).strip()
         assert int(output) > 0
 
         configure_connectivity(
@@ -142,14 +144,18 @@ class TestMenderClientKeepAlive:
             update_poll=3600,
         )
         time.sleep(1)
-        output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        output = mender_device.run(
+            "netstat -4np | grep -v 127.0.0.1 | grep -F /mender | wc -l"
+        ).strip()
         assert int(output) == 1
 
         logger.info(
             "test_keepalive_idle_connections: waiting for IdleConnTimeoutSeconds to elapse"
         )
         time.sleep(1.5 * idle_connections_timeout_seconds)
-        output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        output = mender_device.run(
+            "netstat -4np | grep -v 127.0.0.1 | grep -F /mender | wc -l"
+        ).strip()
         clean_config(mender_device)
         assert int(output) == 0
         logger.info("test_keepalive_idle_connections: ok, no connections to backend")
@@ -160,13 +166,17 @@ class TestMenderClientKeepAlive:
         mender_device = self.prepare_env(monitor_commercial_setup_no_client, user_name)
 
         disable_keep_alive = True
-        output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        output = mender_device.run(
+            "netstat -4np | grep -v 127.0.0.1 | grep -F /mender | wc -l"
+        ).strip()
         assert int(output) > 0
 
         configure_connectivity(mender_device, disable_keep_alive=disable_keep_alive)
         logger.info("test_keepalive_disable: waiting for client to restart")
         time.sleep(1)
-        output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        output = mender_device.run(
+            "netstat -4np | grep -v 127.0.0.1 | grep -F /mender | wc -l"
+        ).strip()
         clean_config(mender_device)
         assert int(output) == 0
         logger.info("test_keepalive_disable: ok, no connections to backend")

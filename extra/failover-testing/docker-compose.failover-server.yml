@@ -46,7 +46,8 @@ services:
             STORAGE_BACKEND_CERT: /etc/ssl/certs/docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
-            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io
+            DEPLOYMENTS_AWS_URI: http://minio:9000
+            DEPLOYMENTS_AWS_EXTERNAL_URI: https://s3.docker.mender.io
 
     #
     # mender-gui

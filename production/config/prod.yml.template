@@ -112,7 +112,8 @@ services:
             # storage-proxy using exactly the same name as devices will; if
             # devices will access storage using https://s3.acme.org, then
             # set this to https://s3.acme.org
-            DEPLOYMENTS_AWS_URI: https://set-my-alias-here.com
+            DEPLOYMENTS_AWS_EXTERNAL_URI: https://set-my-alias-here.com
+            DEPLOYMENTS_AWS_URI: http://minio:9000
         logging:
             options:
                 max-file: "10"

@@ -63,12 +63,20 @@ class BasicTestFaultTolerance(MenderTesting):
 
         if accessible:
             logger.info("Allowing network communication to %s" % host)
-            device.run("iptables -D INPUT -s %s -j DROP" % (gateway_ip), hide=True)
-            device.run("iptables -D OUTPUT -s %s -j DROP" % (gateway_ip), hide=True)
+            device.run(
+                "iptables -D INPUT ! -i lo -s %s -j DROP" % gateway_ip, hide=True
+            )
+            device.run(
+                "iptables -D OUTPUT ! -i lo -d %s -j DROP" % gateway_ip, hide=True
+            )
         else:
             logger.info("Disallowing network communication to %s" % host)
-            device.run("iptables -I INPUT 1 -s %s -j DROP" % gateway_ip, hide=True)
-            device.run("iptables -I OUTPUT 1 -s %s -j DROP" % gateway_ip, hide=True)
+            device.run(
+                "iptables -I INPUT ! -i lo 1 -s %s -j DROP" % gateway_ip, hide=True
+            )
+            device.run(
+                "iptables -I OUTPUT ! -i lo 1 -d %s -j DROP" % gateway_ip, hide=True
+            )
 
     def block_by_domain(self, device, accessible, host):
         """Some services shouldn't be blocked by ip, because they share it with other services.
@@ -83,23 +91,23 @@ class BasicTestFaultTolerance(MenderTesting):
         if accessible:
             logger.info("Allowing network communication to %s" % host)
             device.run(
-                "iptables -D INPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                "iptables -D INPUT ! -i lo -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
                 % host
             )
 
             device.run(
-                "iptables -D OUTPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                "iptables -D OUTPUT ! -i lo -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
                 % host
             )
         else:
             logger.info("Disallowing network communication to %s" % host)
             device.run(
-                "iptables -I INPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                "iptables -I INPUT ! -i lo -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
                 % host,
                 hide=True,
             )
             device.run(
-                "iptables -I OUTPUT -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
+                "iptables -I OUTPUT ! -i lo -p tcp -m string --algo bm --string %s -j REJECT --reject-with tcp-reset"
                 % host,
                 hide=True,
             )

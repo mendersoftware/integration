@@ -35,4 +35,5 @@ services:
     # 
     mender-deployments:
         environment:
-            DEPLOYMENTS_AWS_URI: https://s3.docker.mender.io:9000
+            DEPLOYMENTS_AWS_URI: http://minio:9000
+            DEPLOYMENTS_AWS_EXTERNAL_URI: https://s3.docker.mender.io:9000

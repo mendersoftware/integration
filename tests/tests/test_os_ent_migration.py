@@ -34,7 +34,7 @@ def initial_os_setup(request):
     """Start the minimum OS setup, create some uses and devices.
     Return {"os_devs": [...], "os_users": [...]}
     """
-    os_env = container_factory.getStandardSetup(num_clients=0)
+    os_env = container_factory.get_standard_setup(num_clients=0)
     # We will later re-create other environments, but this one (or any, really) will be
     # enough for the teardown if we keep using the same namespace.
     request.addfinalizer(os_env.teardown)
@@ -53,7 +53,7 @@ def initial_enterprise_setup(initial_os_setup):
     initial_os_setup.teardown_exclude(["mender-mongo"])
 
     # Create a new env reusing the same namespace
-    ent_no_tenant_env = container_factory.getEnterpriseSetup(
+    ent_no_tenant_env = container_factory.get_enterprise_setup(
         initial_os_setup.name, num_clients=0
     )
     ent_no_tenant_env.setup()
@@ -74,7 +74,7 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     initial_enterprise_setup.teardown_exclude(["mender-mongo"])
 
     # Create a new env reusing the same namespace
-    ent_with_tenant_env = container_factory.getEnterpriseSetup(
+    ent_with_tenant_env = container_factory.get_enterprise_setup(
         initial_enterprise_setup.name, num_clients=0
     )
     ent_with_tenant_env.setup(

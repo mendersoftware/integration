@@ -641,7 +641,7 @@ class TestFileTransfer(BaseTestFileTransfer):
 
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
-        self.env = container_factory.getMenderClient_2_5()
+        self.env = container_factory.get_mender_client_2_5()
         request.addfinalizer(self.env.teardown)
         self.env.setup()
 
@@ -696,7 +696,7 @@ class TestFileTransferEnterprise(BaseTestFileTransfer):
 
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
-        self.env = container_factory.getMenderClient_2_5(enterprise=True)
+        self.env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(self.env.teardown)
         self.env.setup()
         reset_mender_api(self.env)

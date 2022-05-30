@@ -105,7 +105,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
     def wait_for_download_retry_attempts(self, device, search_string):
-        """ Block until logs contain messages related to failed downlaod attempts """
+        """ Block until logs contain messages related to failed download attempts """
 
         timeout_time = int(time.time()) + (60 * 10)
 
@@ -128,7 +128,7 @@ class BasicTestFaultTolerance(MenderTesting):
         # make sure that retries happen after 2 minutes have passed
         assert (
             timeout_time - int(time.time()) >= 2 * 60
-        ), "Ooops, looks like the retry happend within less than 5 minutes"
+        ), "Ooops, looks like the retry happened within less than 5 minutes"
         logger.info("Waiting for system to finish download")
 
     def do_test_update_image_breaks_networking(

@@ -31,8 +31,10 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    # We use "pdate" to be able to match "Update" (2.4.x) and "update" (2.3.x and earlier)
-    {"blockAfterStart": False, "logMessageToLookFor": "pdate fetch failed:"},
+    {
+        "blockAfterStart": False,
+        "logMessageToLookFor": "[uU]pdate (check|fetch) failed:",
+    },
     {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
 ]
 
@@ -111,8 +113,8 @@ class BasicTestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u %s -l --no-pager | grep 'msg=\".*%s' | wc -l"
-                % (device.get_client_service_name(), re.escape(search_string)),
+                "journalctl -u %s -l --no-pager | egrep 'msg=\".*%s' | wc -l"
+                % (device.get_client_service_name(), search_string),
                 hide=True,
             )
             time.sleep(2)

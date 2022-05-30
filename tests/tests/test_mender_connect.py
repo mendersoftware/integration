@@ -292,7 +292,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5()
+        env = container_factory.get_mender_client_2_5()
         request.addfinalizer(env.teardown)
         env.setup()
 
@@ -372,7 +372,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5(enterprise=True)
+        env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(env.teardown)
         env.setup()
 

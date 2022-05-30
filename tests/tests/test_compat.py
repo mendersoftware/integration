@@ -38,7 +38,7 @@ TIMEOUT = timedelta(minutes=5)
 
 @pytest.fixture(scope="function")
 def setup_os_compat(request):
-    env = container_factory.getCompatibilitySetup()
+    env = container_factory.get_compatibility_setup()
     request.addfinalizer(env.teardown)
     env.setup()
 
@@ -60,7 +60,7 @@ def setup_os_compat(request):
 
 @pytest.fixture(scope="function")
 def setup_ent_compat(request):
-    env = container_factory.getCompatibilitySetup(enterprise=True)
+    env = container_factory.get_compatibility_setup(enterprise=True)
     request.addfinalizer(env.teardown)
     env.setup()
 

@@ -3,7 +3,7 @@ docker==5.0.3
 docker-compose==1.29.2
 fabric==2.7.0
 filelock==3.6.0
-invoke==1.6.0
+invoke==1.7.1
 msgpack==1.0.3
 paramiko==2.10.2
 py3dns==3.2.1

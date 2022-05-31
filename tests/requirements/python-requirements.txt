@@ -3,7 +3,7 @@ docker==5.0.3
 docker-compose==1.29.2
 fabric==2.7.0
 filelock==3.6.0
-invoke==1.6.0
+invoke==1.7.1
 msgpack==1.0.3
 paramiko==2.11.0
 py3dns==3.2.1
@@ -22,4 +22,4 @@ urllib3==1.26.8
 websocket-client==0.59.0
 websockets==10.3
 flaky==3.7.0
-stripe==3.1.0
+stripe==3.2.0

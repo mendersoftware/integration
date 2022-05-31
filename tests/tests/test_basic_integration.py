@@ -71,14 +71,12 @@ class BaseTestBasicIntegration(MenderTesting):
 
         # in the so-called clean image the artifact_info is "artifact_name=mender-image-clean\n"
         # see: https://github.com/mendersoftware/mender-qa/pull/580/commits/a4c54e9ebf5879f0837789cbc7c74cb1102b2caa#diff-7031fcd5c934f225781febe446a34594a9a36b335c540379c0dd376a8f06ba28R263
-        # so first we expect it to be set to master, as this is what we
-        # have in the initial image, after update we expect it to change
-        expected_artifact_info = "artifact_name=mender-image-master\n"
+        # so first we expect it to be different, after update we expect it to change to mender-image-clean
         artifact_info = mender_device.run(
             "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
         )
         logger.info("before update got %s" % artifact_info)
-        assert artifact_info == expected_artifact_info
+        assert artifact_info != "artifact_name=mender-image-clean\n"
 
         host_ip = env.get_virtual_network_host_ip()
         update_image(
@@ -167,14 +165,12 @@ class BaseTestBasicIntegration(MenderTesting):
 
         # in the so-called clean image the artifact_info is "artifact_name=mender-image-clean\n"
         # see: https://github.com/mendersoftware/mender-qa/pull/580/commits/a4c54e9ebf5879f0837789cbc7c74cb1102b2caa#diff-7031fcd5c934f225781febe446a34594a9a36b335c540379c0dd376a8f06ba28R263
-        # so first we expect it to be set to master, as this is what we
-        # have in the initial image, after update we expect it to change
-        expected_artifact_info = "artifact_name=mender-image-master\n"
+        # so first we expect it to be different, after update we expect it to change to mender-image-clean
         artifact_info = mender_device.run(
             "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
         )
         logger.info("before update got %s" % artifact_info)
-        assert artifact_info == expected_artifact_info
+        assert artifact_info != "artifact_name=mender-image-clean\n"
 
         update_image(
             env.device,
@@ -397,10 +393,10 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
     def test_update_no_compression(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
+        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
         self.do_test_update_no_compression(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
+            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
     def test_forced_update_check_from_client(
@@ -422,10 +418,12 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_double_update_rofs(
-        self, enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+        self,
+        enterprise_one_rofs_client_bootstrapped,
+        valid_image_rofs_with_mender_conf,
     ):
         self.do_test_double_update_rofs(
-            enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf
+            enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf,
         )
 
     @MenderTesting.fast
@@ -445,10 +443,10 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         )
 
     def test_update_no_compression(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
+        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
         self.do_test_update_no_compression(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
+            enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
     def test_forced_update_check_from_client(

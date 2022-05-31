@@ -1757,6 +1757,7 @@ DR = Disable automatic publishing of the release
                 set_param("BUILD_SERVERS", action)
                 set_param("BUILD_MENDER_DIST_PACKAGES", action)
                 set_param("BUILD_MENDER_CONVERT", action)
+                set_param("BUILD_BEAGLEBONEBLACK", action)
             else:
                 action = "false"
             set_param("PUBLISH_RELEASE_AUTOMATIC", action)

@@ -31,8 +31,10 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    # We use "pdate" to be able to match "Update" (2.4.x) and "update" (2.3.x and earlier)
-    {"blockAfterStart": False, "logMessageToLookFor": "pdate fetch failed:"},
+    {
+        "blockAfterStart": False,
+        "logMessageToLookFor": "[uU]pdate (check|fetch) failed:",
+    },
     {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
 ]
 
@@ -105,14 +107,14 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
     def wait_for_download_retry_attempts(self, device, search_string):
-        """ Block until logs contain messages related to failed downlaod attempts """
+        """ Block until logs contain messages related to failed download attempts """
 
         timeout_time = int(time.time()) + (60 * 10)
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u %s -l --no-pager | grep 'msg=\".*%s' | wc -l"
-                % (device.get_client_service_name(), re.escape(search_string)),
+                "journalctl -u %s -l --no-pager | egrep 'msg=\".*%s' | wc -l"
+                % (device.get_client_service_name(), search_string),
                 hide=True,
             )
             time.sleep(2)
@@ -128,7 +130,7 @@ class BasicTestFaultTolerance(MenderTesting):
         # make sure that retries happen after 2 minutes have passed
         assert (
             timeout_time - int(time.time()) >= 2 * 60
-        ), "Ooops, looks like the retry happend within less than 5 minutes"
+        ), "Ooops, looks like the retry happened within less than 5 minutes"
         logger.info("Waiting for system to finish download")
 
     def do_test_update_image_breaks_networking(

@@ -124,7 +124,19 @@ class TestMenderClientKeepAlive:
         logger.info("%s: env ready.", inspect.stack()[1].function)
         return mender_device
 
+    def bp(self):
+        if not self.DEBUG:
+            return
+        t = "/tmp/bp" + str(self.bpindex)
+        logger.info("bp: waiting on %s" % t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
+        logger.info("bp: released on %s" % t)
+        self.bpindex = self.bpindex + 1
+
     def test_keepalive_idle_connections(self, monitor_commercial_setup_no_client):
+        self.DEBUG=True
+        self.bpindex=1
         """Tests the closing of persistent connections on timeout"""
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         mender_device = self.prepare_env(monitor_commercial_setup_no_client, user_name)
@@ -132,6 +144,8 @@ class TestMenderClientKeepAlive:
         idle_connections_timeout_seconds = 15
         disable_keep_alive = False
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        logger.info("(1) got count: "+str(output))
+        self.bp()
         assert int(output) > 0
 
         configure_connectivity(
@@ -143,6 +157,8 @@ class TestMenderClientKeepAlive:
         )
         time.sleep(1)
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
+        logger.info("(2) got count: "+str(output))
+        self.bp()
         assert int(output) == 1
 
         logger.info(
@@ -151,6 +167,8 @@ class TestMenderClientKeepAlive:
         time.sleep(1.5 * idle_connections_timeout_seconds)
         output = mender_device.run("netstat -4np | grep -F /mender | wc -l")
         clean_config(mender_device)
+        logger.info("(3) got count: "+str(output))
+        self.bp()        
         assert int(output) == 0
         logger.info("test_keepalive_idle_connections: ok, no connections to backend")
 

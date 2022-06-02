@@ -5,6 +5,7 @@ Mender is an open source over-the-air (OTA) software updater for embedded Linux
 devices. Mender comprises a client running at the embedded device, as well as a
 server that manages deployments across many devices.
 
+
 This repository contains a Docker-based environment allowing to run all Mender
 backend services as a single system. Each service has a dedicated Dockerhub
 repository, where tagged Docker builds are stored. Images are pulled and started

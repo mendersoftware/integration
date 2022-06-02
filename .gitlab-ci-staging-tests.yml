@@ -1,6 +1,6 @@
 
 test:staging:backend-tests:
-  image: debian:bullseye
+  image: tiangolo/docker-with-compose
   stage: test
   timeout: 4h
 
@@ -20,19 +20,9 @@ test:staging:backend-tests:
     TESTS_IN_PARALLEL: "4"
 
   before_script:
-    - apt update
-    - apt install -yyq curl gnupg
-    # Install docker
-    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-    - apt-key fingerprint 0EBFCD88
-    - echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable" >> /etc/apt/sources.list
-    - apt update
-    - apt install -yyq docker-ce=5:19.03.15~3-0~debian-buster docker-ce-cli=5:19.03.15~3-0~debian-buster containerd.io
-    # Install docker-compose
-    - curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
-    - chmod 775 /usr/bin/docker-compose
+    - apk add --no-cache aws-cli bash curl python3 py3-pip
     # Install python dependencies
-    - apt install -yyq python3-yaml
+    - pip3 install pyyaml
     # Export AWS keys, as group takes precedence over yaml specified ones
     # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
     - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
@@ -80,7 +70,7 @@ test:staging:integration-tests:
     - unset DOCKER_TLS_VERIFY
     - unset DOCKER_CERT_PATH
     # Dependencies for post job status
-    - apk --update add curl jq
+    - apk add --no-cache curl jq python3 py3-pip
     # Start dockerd in the background
     - /usr/local/bin/dockerd &
     # Wait for dockerd to start
@@ -92,11 +82,10 @@ test:staging:integration-tests:
       done
     - docker version # Verify that the docker server is up and running
     # Get and install the integration test requirements
-    - apk add python3-dev py3-pip
     - apk add $(cat tests/requirements/apk-requirements.txt | grep -v py-pip)
     - CRYPTOGRAPHY_DONT_BUILD_RUST=1 pip3 install -r tests/requirements/python-requirements.txt
     # Install awscli, kubectl and aws-iam-authenticator
-    - pip3 install awscli
+    - apk add --no-cache aws-cli
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
     - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
@@ -124,7 +113,7 @@ test:staging:integration-tests:
       junit: tests/results_full_integration.xml
 
 trigger:staging:cleanup-tenants:
-  image: alpine:3.13
+  image: alpine:3.16
   stage: .post
   when: always
   variables:
@@ -132,9 +121,8 @@ trigger:staging:cleanup-tenants:
 
   before_script:
     # Install awscli, kubectl and aws-iam-authenticator
-    - apk add python3-dev py3-pip curl
-    - pip3 install awscli
-    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - apk add --no-cache aws-cli curl
+    - curl -LO "https://dl.k8s.io/release/v1.23.6/bin/linux/amd64/kubectl"
     - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
     - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
     - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator

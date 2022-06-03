@@ -16,6 +16,12 @@ services:
         environment:
             MINIO_HTTP_TRACE: /dev/stdout
         command: server /export
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+            interval: 60s
+            timeout: 5s
+            retries: 2
+            start_period: 10s
 
     mender-api-gateway:
       environment:

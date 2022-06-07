@@ -37,6 +37,7 @@ from .docker_compose_manager import (
 )
 from .kubernetes_manager import (
     KubernetesEnterpriseSetup,
+    KubernetesEnterpriseSetupWithGateway,
     KubernetesEnterpriseMonitorCommercialSetup,
     isK8S,
 )
@@ -198,6 +199,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 class KubernetesManagerFactory(ContainerManagerFactory):
     def get_enterprise_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
+
+    def get_enterprise_setup_with_gateway(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetupWithGateway(name, num_clients)
 
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseMonitorCommercialSetup(name, num_clients)

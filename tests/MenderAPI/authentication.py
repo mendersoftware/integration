@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import json
-import os
 import time
 from requests.auth import HTTPBasicAuth
 
@@ -23,6 +22,7 @@ from . import get_container_manager
 from .requests_helpers import requests_retry
 
 from testutils.infra.cli import CliUseradm, CliTenantadm
+from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
 class Authentication:
@@ -32,7 +32,9 @@ class Authentication:
     username = "admin@admin.net"
     password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
-    multitenancy = False
+    multitenancy = isK8S()
+    if isK8S():
+        plan = "enterprise"
     current_tenant = {}
 
     def __init__(self, name=org_name, username=username, password=password):

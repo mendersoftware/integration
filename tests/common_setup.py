@@ -472,7 +472,7 @@ def create_tenant(env):
     cli = CliTenantadm(containers_namespace=env.name)
     tid = cli.create_org(tname, u.name, u.pwd, plan="os")
 
-    tenant = cli.get_tenant(tid)
+    tenant = cli.get_tenant(tid.strip())
     tenant = json.loads(tenant)
     env.tenant = tenant
 

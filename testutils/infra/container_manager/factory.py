@@ -200,11 +200,23 @@ class KubernetesManagerFactory(ContainerManagerFactory):
     def get_enterprise_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
 
+    def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetup(name, num_clients)
+
     def get_enterprise_setup_with_gateway(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetupWithGateway(name, num_clients)
 
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseMonitorCommercialSetup(name, num_clients)
+
+    def get_enterprise_signed_artifact_client_setup(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetup(name, num_clients)
+
+    def get_enterprise_short_lived_token_setup(self, name=None, num_clients=0):
+        return KubernetesEnterpriseSetup(name, num_clients)
+
+    def get_mender_client_2_5(self, name=None, **kwargs):
+        return DockerComposeMenderClient_2_5(name, **kwargs)
 
 
 def get_factory():

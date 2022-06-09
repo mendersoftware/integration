@@ -224,7 +224,7 @@ class TestRBACv2DeploymentsEnterprise:
     )
     def test_deploy_to_devices(self, clean_mongo, test_case):
         """
-        Tests adding group restrinction to roles and checking that users
+        Tests adding group restriction to roles and checking that users
         are not allowed to deploy to devices by providing list of device IDs.
         The only exception is single device deployment.
         """
@@ -382,7 +382,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
     )
     def test_deploy_to_group(self, clean_mongo, test_case):
         """
-        Tests adding group restrinction to roles and checking that users
+        Tests adding group restriction to roles and checking that users
         are only allowed to deploy to their group.
         """
         self.logger.info("RUN: %s", test_case["name"])
@@ -532,7 +532,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
     )
     def test_set_and_deploy_configuration(self, clean_mongo, test_case):
         """
-        Tests adding group restrinction to roles and checking that users
+        Tests adding group restriction to roles and checking that users
         are not allowed to set and deploy configuration to devices outside the restricted
         groups.
         """
@@ -681,7 +681,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
     )
     def test_get_configuration(self, clean_mongo, test_case):
         """
-        Tests adding group restrinction to roles and checking that users
+        Tests adding group restriction to roles and checking that users
         are not allowed to set and deploy configuration to devices outside the restricted
         groups.
         """

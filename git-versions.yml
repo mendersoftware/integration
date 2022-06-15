@@ -50,7 +50,7 @@ services:
         image: mendersoftware/mender:3.3.0
 
     mender-connect:
-        image: mendersoftware/mender-connect:2.0.1
+        image: mendersoftware/mender-connect:2.0.2
 
     mender-configure-module:
         image: mendersoftware/mender-configure-module:1.0.3

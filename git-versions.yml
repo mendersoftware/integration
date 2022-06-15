@@ -47,7 +47,7 @@ services:
     # client repositories - container and image names are placeholders
     #
     mender:
-        image: mendersoftware/mender:3.2.1
+        image: mendersoftware/mender:3.3.0
 
     mender-connect:
         image: mendersoftware/mender-connect:2.0.1

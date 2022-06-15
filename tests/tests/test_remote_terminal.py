@@ -13,6 +13,7 @@
 #    limitations under the License.
 #
 
+from flaky import flaky
 import subprocess
 import time
 
@@ -23,6 +24,7 @@ from .common_connect import wait_for_connect
 from .mendertesting import MenderTesting
 
 
+@flaky(max_runs=3)
 class BaseTestRemoteTerminal(MenderTesting):
     """Tests the remote terminal functionality"""
 

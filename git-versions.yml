@@ -56,7 +56,7 @@ services:
         image: mendersoftware/mender-configure-module:1.0.3
 
     monitor-client:
-        image: mendersoftware/monitor-client:1.1.0
+        image: mendersoftware/monitor-client:1.2.0
 
     mender-gateway:
         image: mendersoftware/mender-gateway:1.0.0

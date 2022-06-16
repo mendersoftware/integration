@@ -5,7 +5,7 @@ test:staging:backend-tests:
   timeout: 4h
 
   services:
-    - docker:19.03.5-dind
+    - docker:dind
 
   variables:
     K8S: "staging"
@@ -55,7 +55,7 @@ test:staging:backend-tests:
 test:staging:integration-tests:
   # Integration tests depends on running ssh to containers, we're forced to
   # run dockerd on the same host.
-  image: docker:19.03.15-dind-alpine3.13
+  image: docker:dind
   stage: test
   timeout: 4h
   tags:

@@ -1,0 +1,154 @@
+
+test:staging:backend-tests:
+  image: debian:bullseye
+  stage: test
+  timeout: 4h
+
+  services:
+    - docker:dind
+
+  variables:
+    K8S: "staging"
+    AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
+    AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
+    AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
+    GATEWAY_HOSTNAME: "staging.hosted.mender.io"
+    GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
+    GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
+    DOCKER_HOST: tcp://docker:2375
+    TESTS_IN_PARALLEL: "4"
+
+  before_script:
+    - apt update
+    - apt install -yyq curl gnupg
+    # Install docker
+    - curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+    - apt-key fingerprint 0EBFCD88
+    - echo "deb [arch=amd64] https://download.docker.com/linux/debian buster stable" >> /etc/apt/sources.list
+    - apt update
+    - apt install -yyq docker-ce=5:19.03.15~3-0~debian-buster docker-ce-cli=5:19.03.15~3-0~debian-buster containerd.io
+    # Install docker-compose
+    - curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/bin/docker-compose
+    - chmod 775 /usr/bin/docker-compose
+    # Install python dependencies
+    - apt install -yyq python3-yaml
+    # Export AWS keys, as group takes precedence over yaml specified ones
+    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
+    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+
+  script:
+    - cd backend-tests
+    - ./run -s enterprise
+
+  artifacts:
+    expire_in: 2w
+    when: always
+    paths:
+      - backend-tests/acceptance.*
+      - backend-tests/results_backend_integration_*.xml
+      - backend-tests/report_backend_integration_*.html
+    reports:
+      junit: backend-tests/results_backend_integration_*.xml
+
+test:staging:integration-tests:
+  # Integration tests depends on running ssh to containers, we're forced to
+  # run dockerd on the same host.
+  image: docker:dind
+  stage: test
+  timeout: 4h
+  tags:
+    - mender-qa-slave-highmem
+
+  variables:
+    K8S: "staging"
+    AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
+    AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
+    AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
+    GATEWAY_HOSTNAME: "staging.hosted.mender.io"
+    GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
+    GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
+    DOCKER_CLIENT_TIMEOUT: 300
+    COMPOSE_HTTP_TIMEOUT: 300
+    SPECIFIC_INTEGRATION_TEST: "Enterprise"
+    TESTS_IN_PARALLEL: "2"
+
+  before_script:
+    - unset DOCKER_HOST
+    - unset DOCKER_TLS_VERIFY
+    - unset DOCKER_CERT_PATH
+    # Dependencies for post job status
+    - apk --update add curl jq
+    # Start dockerd in the background
+    - /usr/local/bin/dockerd &
+    # Wait for dockerd to start
+    - |-
+      MAX_WAIT=30
+      while [ ! -e "/var/run/docker.sock" ] && [ $MAX_WAIT -gt 0 ]; do
+        MAX_WAIT=$(($MAX_WAIT - 1))
+        sleep 1
+      done
+    - docker version # Verify that the docker server is up and running
+    # Get and install the integration test requirements
+    - apk add python3-dev py3-pip
+    - apk add $(cat tests/requirements/apk-requirements.txt | grep -v py-pip)
+    - CRYPTOGRAPHY_DONT_BUILD_RUST=1 pip3 install -r tests/requirements/python-requirements.txt
+    # Install awscli, kubectl and aws-iam-authenticator
+    - pip3 install awscli
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
+    - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
+    - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator
+    # Export AWS keys, as group takes precedence over yaml specified ones
+    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
+    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    # Login for private repos
+    - docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}
+    - docker login -u ${REGISTRY_MENDER_IO_USERNAME} -p ${REGISTRY_MENDER_IO_PASSWORD} registry.mender.io
+
+  script:
+    - cd tests
+    - ./run.sh
+
+  artifacts:
+    expire_in: 2w
+    when: always
+    paths:
+      - tests/mender_test_logs
+      - tests/results_full_integration.xml
+      - tests/report_full_integration.html
+    reports:
+      junit: tests/results_full_integration.xml
+
+trigger:staging:cleanup-tenants:
+  image: alpine:3.13
+  stage: .post
+  when: always
+  variables:
+    K8S: "staging"
+
+  before_script:
+    # Install awscli, kubectl and aws-iam-authenticator
+    - apk add python3-dev py3-pip curl
+    - pip3 install awscli
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
+    - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
+    - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator
+    # Export AWS keys, as group takes precedence over yaml specified ones
+    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
+    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    - export AWS_DEFAULT_REGION=$CI_JOBS_AWS_REGION
+    - export AWS_EKS_CLUSTER_NAME=$CI_JOBS_AWS_EKS_CLUSTER_NAME
+
+  script:
+    - export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
+    - aws eks update-kubeconfig --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
+    - kubectl config set-context --current --namespace=$K8S
+    - "kubectl exec -it mongodb-0 -- mongo tenantadm --eval 'db.tenants.update({name: {$regex: /^test.mender.io/}}, {$set: {\"status\": \"suspended\", \"cancelled_at\": ISODate(\"2021-01-01T00:00:00Z\")}}, {multi: true})'"
+    - kubectl delete job mender-drop-suspended-tenants-manual || true
+    - kubectl create job --from=cronjob/mender-drop-suspended-tenants mender-drop-suspended-tenants-manual

@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -345,8 +345,7 @@ def _put(device, file, local_path=".", remote_path="."):
     (scp, host, port) = _scp_prep_args(device)
 
     subprocess.check_call(
-        "%s -O %s %s/%s %s@%s:%s"
-        % (scp, port, local_path, file, device.user, host, remote_path),
+        f"{scp} -O {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
         shell=True,
     )
 

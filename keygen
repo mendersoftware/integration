@@ -97,7 +97,7 @@ do
 
     # convert to RSA private key format, otherwise services complain:"
     # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
-    openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY
+    openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY -traditional
   )
 done
 

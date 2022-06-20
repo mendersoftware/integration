@@ -115,6 +115,7 @@ class BaseTestPortForward(MenderTesting):
             p = subprocess.Popen(
                 [
                     "scp",
+                    "-O",
                     "-o",
                     "StrictHostKeyChecking=no",
                     "-o",
@@ -136,6 +137,7 @@ class BaseTestPortForward(MenderTesting):
             p = subprocess.Popen(
                 [
                     "scp",
+                    "-O",
                     "-o",
                     "StrictHostKeyChecking=no",
                     "-o",

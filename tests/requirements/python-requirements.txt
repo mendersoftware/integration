@@ -22,4 +22,4 @@ urllib3==1.26.8
 websocket-client==0.59.0
 websockets==10.3
 flaky==3.7.0
-stripe==3.2.0
+stripe==3.4.0

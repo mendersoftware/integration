@@ -32,8 +32,11 @@ docker_lock = filelock.FileLock("docker_lock")
 class KubernetesNamespace(DockerComposeBaseNamespace):
     namespace = "staging"
     KUBECONFIG = f"{os.getenv('HOME')}/kubeconfig.{namespace}"
-    config.load_kube_config(config_file=KUBECONFIG)
-    v1 = client.CoreV1Api()
+
+    def __init__(self, name=None, extra_files=[]):
+        DockerComposeBaseNamespace.__init__(self, name=name, extra_files=extra_files)
+        config.load_kube_config(config_file=self.KUBECONFIG)
+        self.v1 = client.CoreV1Api()
 
     def setup(self):
         pass

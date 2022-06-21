@@ -426,7 +426,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
         super().__init__(name, extra_files)
 
     def client_services(self):
-        services = self._docker_compose_cmd("ps --service").split()
+        services = self._docker_compose_cmd("ps --services").split()
         clients = []
         for service in services:
             if service.startswith("mender-client"):

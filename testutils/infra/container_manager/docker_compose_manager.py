@@ -477,10 +477,10 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         self._wait_for_containers()
 
     def start_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=1")
+        self._docker_compose_cmd("up -d --scale mender-api-gateway=1")
 
     def stop_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=0")
+        self._docker_compose_cmd("up -d --scale mender-api-gateway=0")
 
     def start_mtls_ambassador(self):
         self._docker_compose_cmd(

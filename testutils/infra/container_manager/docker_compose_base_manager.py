@@ -133,8 +133,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def restart_service(self, service):
         """Restarts a service."""
-        self._docker_compose_cmd("scale %s=0" % service)
-        self._docker_compose_cmd("scale %s=1" % service)
+        self._docker_compose_cmd("up -d --scale %s=0" % service)
+        self._docker_compose_cmd("up -d --scale %s=1" % service)
 
     def get_file(self, container_name, path):
         container_id = super().getid([container_name])

@@ -140,10 +140,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
 class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
-        if self.num_clients == 0:
-            DockerComposeNamespace.__init__(self, name)
-        else:
-            DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES)
+        super().__init__(name, self.QEMU_CLIENT_FILES)
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
@@ -153,12 +150,9 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
-        if self.num_clients == 0:
-            DockerComposeNamespace.__init__(self, name, self.MENDER_GATEWAY_FILES)
-        else:
-            DockerComposeNamespace.__init__(
-                self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
-            )
+        DockerComposeNamespace.__init__(
+            self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
+        )
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)

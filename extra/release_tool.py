@@ -1727,6 +1727,7 @@ DR = Disable automatic publishing of the release
                     if reply[1] == "T":
                         set_param("BUILD_MENDER_DIST_PACKAGES", action)
                         set_param("BUILD_MENDER_CONVERT", action)
+                set_param("RUN_BACKEND_INTEGRATION_TESTS", action)
                 set_param("RUN_INTEGRATION_TESTS", action)
 
             if reply[1] == "T" or reply[1] == "C":

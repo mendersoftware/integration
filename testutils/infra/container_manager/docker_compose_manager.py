@@ -294,18 +294,21 @@ class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
             )
         else:
             DockerComposeNamespace.__init__(
-                self, name, self.ENTERPRISE_FILES + self.MENDER_GATEWAY_FILES
+                self,
+                name,
+                self.ENTERPRISE_FILES
+                + self.MENDER_GATEWAY_FILES
+                + self.MENDER_GATEWAY_CLIENT_FILES,
             )
 
-    def setup(self):
+    def setup(self, mender_clients=0, mender_gateways=0):
+        """Bring up the Docker composition"""
         self._docker_compose_cmd(
-            "up -d --scale mender-gateway=0 --scale mender-client=0",
+            f"up -d --scale mender-gateway={mender_gateways} --scale mender-client={mender_clients}",
         )
         self._wait_for_containers()
 
     def new_tenant_client(self, name, tenant):
-        if not self.MENDER_GATEWAY_CLIENT_FILES[0] in self.docker_compose_files:
-            self.extra_files += self.MENDER_GATEWAY_CLIENT_FILES
         logger.info("creating client connected to tenant: " + tenant)
         self._docker_compose_cmd(
             "run -d --name=%s_%s mender-client" % (self.name, name),
@@ -315,8 +318,7 @@ class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
 
     def start_tenant_mender_gateway(self, tenant):
         self._docker_compose_cmd(
-            "up -d --scale mender-gateway=1  --scale mender-client=0",
-            env={"TENANT_TOKEN": "%s" % tenant},
+            "up -d mender-gateway", env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(45)
 

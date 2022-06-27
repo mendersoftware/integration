@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -118,8 +118,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def restart_service(self, service):
         """Restarts a service."""
-        self._docker_compose_cmd("scale %s=0" % service)
-        self._docker_compose_cmd("scale %s=1" % service)
+        self._docker_compose_cmd(f"up -d --scale {service}=0 {service}")
+        self._docker_compose_cmd(f"up -d --scale {service}=1 {service}")
 
     def get_file(self, container_name, path):
         container_id = super().getid([container_name])

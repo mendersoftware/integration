@@ -209,14 +209,18 @@ class _TestRemoteTerminalBase:
             shell.sendInput("echo 'now you see me'\n".encode())
             session_bytes += get_cmd(ws)
             # Disable echo
+            time.sleep(1)
             shell.sendInput("stty -echo\n".encode())
+            time.sleep(1)
             session_bytes += get_cmd(ws)
             shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
             session_bytes += get_cmd(ws)
             shell.sendInput("# Invisible comment\n".encode())
             session_bytes += get_cmd(ws)
             # Turn echo back on
+            time.sleep(1)
             shell.sendInput("stty echo\n".encode())
+            time.sleep(1)
             session_bytes += get_cmd(ws)
             shell.sendInput("echo 'and now echo is back on'\n".encode())
             session_bytes += get_cmd(ws)

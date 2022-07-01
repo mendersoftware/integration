@@ -330,7 +330,7 @@ def _put(device, file, local_path=".", remote_path="."):
     (scp, host, port) = _scp_prep_args(device)
 
     subprocess.check_call(
-        f"{scp} -O {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
+        f"{scp} {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
         shell=True,
     )
 

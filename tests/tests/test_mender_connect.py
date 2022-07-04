@@ -210,9 +210,15 @@ class _TestRemoteTerminalBase:
             shell.sendInput("echo 'now you see me'\n".encode())
             session_bytes += get_cmd(ws)
             # Disable echo
-            time.sleep(1)
+            # reset terminal first (QA-409)
+            terminal_reset_sleep_s = 8
+            shell.sendInput("echo;\n".encode())
+            time.sleep(terminal_reset_sleep_s)
+            shell.sendInput("reset;\n".encode())
+            time.sleep(terminal_reset_sleep_s)
             shell.sendInput("stty -echo\n".encode())
             time.sleep(1)
+
             session_bytes += get_cmd(ws)
             shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
             session_bytes += get_cmd(ws)

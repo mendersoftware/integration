@@ -13,9 +13,11 @@
 #    limitations under the License.
 
 import os
+import pytest
 import tempfile
 
 from collections import namedtuple
+from contextlib import contextmanager
 from typing import List
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
@@ -171,28 +173,48 @@ class CliDeviceauth(BaseCli):
 
         self.container_manager.execute(self.cid, cmd)
 
+    @contextmanager
     def add_default_tenant_token(self, tenant_token):
         """
         Stops the container, adds the default_tenant_token to the config file
         at '/etc/deviceauth/config.yaml, and starts the container back up.
+        NOTE: Changing the runtime state of a container is prone to errors.
+              The caller should ALWAYS wait for the deviceauth container to
+              become healthy after entering AND leaving the context.
 
         :param tenant_token - 'the default tenant token to set'
         """
 
-        # Append the default_tenant_token in the config ('/etc/deviceauth/config.yaml' or '/etc/deviceauth-enterprise/config.yaml')
+        # Append the default_tenant_token in the config
+        # ('/etc/deviceauth/config.yaml' or '/etc/deviceauth-enterprise/config.yaml')
         config_file = f"{self.service.data_path}/config.yaml"
         with tempfile.TemporaryDirectory() as tmp:
-            tmp_config = os.path.join(tmp, "config.yaml")
-            self.container_manager.download(self.cid, config_file, tmp_config)
-            tmp_config_content = open(tmp_config).read().strip()
+            tmp_config = os.path.join(tmp, "config.tmp.yaml")
+            container_config = os.path.join(tmp, "config.yaml")
+            self.container_manager.download(self.cid, config_file, container_config)
+            tmp_config_content = open(container_config).read().strip()
             tmp_config_content += "\ndefault_tenant_token: {}\n".format(tenant_token)
             open(tmp_config, "w").write(tmp_config_content)
             self.container_manager.upload(self.cid, tmp_config, config_file)
-            os.unlink(tmp_config)
+            # Restart the container, so that it is picked up by the device-auth service on startup
+            self.container_manager.cmd(self.cid, "stop")
+            self.container_manager.cmd(self.cid, "start")
+            try:
+                yield
+            finally:
+                try:
+                    # Restore the previous configuration state
+                    self.container_manager.upload(
+                        self.cid, container_config, config_file
+                    )
+                    self.container_manager.cmd(self.cid, "stop")
+                    self.container_manager.cmd(self.cid, "start")
+                except Exception as exc:
+                    pytest.exit(f"Failed to restore deviceauth container state: {exc}")
 
-        # Restart the container, so that it is picked up by the device-auth service on startup
-        self.container_manager.cmd(self.cid, "stop")
-        self.container_manager.cmd(self.cid, "start")
+                # Clear temp directory
+                os.unlink(tmp_config)
+                os.unlink(container_config)
 
     def propagate_inventory_statuses(self, tenant_id=None):
         if isK8S():

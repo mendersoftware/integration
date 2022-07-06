@@ -32,7 +32,8 @@ test:extra-tools:
     # Fetch master branch for tests using --in-integration-version
     - git fetch origin master:master
     - git fetch origin --tags
-    - git submodule update --init --recursive
+    - git submodule init
+    - git submodule update --remote --recursive
 
     # Fetch all Open Source release repositories for testing release_tool.
     - for repo in $(env TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY=1 extra/release_tool.py --list); do

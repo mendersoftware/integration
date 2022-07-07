@@ -233,7 +233,9 @@ class _TestRemoteTerminalBase:
             session_bytes += get_cmd(ws)
 
             body = shell.stopShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert (
+                shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            ), f"Body is: {body}"
             assert body is None
 
         # Sleep for a second to make sure the session log propagate to the DB.

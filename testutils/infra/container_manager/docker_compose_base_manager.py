@@ -165,7 +165,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 try:
                     return subprocess.check_output(
                         cmd, stderr=subprocess.STDOUT, shell=True, env=penv
-                    ).decode("utf-8")
+                    ).decode("utf-8", "ignore")
 
                 except subprocess.CalledProcessError as e:
                     logger.info(

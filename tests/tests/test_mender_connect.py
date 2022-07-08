@@ -56,7 +56,12 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = shell.recvOutput()
+            output = b""
+            for i in range(10):
+                output += shell.recvOutput()
+                if len(output) >= 2:
+                    break
+                time.sleep(1)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
@@ -212,24 +217,25 @@ class _TestRemoteTerminalBase:
             shell.sendInput("echo 'now you see me'\n".encode())
             session_bytes += get_cmd(ws)
             # Disable echo
-            # reset terminal first (QA-409)
-            terminal_reset_sleep_s = 8
-            shell.sendInput("echo;\n".encode())
-            time.sleep(terminal_reset_sleep_s)
-            shell.sendInput("reset;\n".encode())
-            time.sleep(terminal_reset_sleep_s)
             shell.sendInput("stty -echo\n".encode())
-            time.sleep(1)
-
-            session_bytes += get_cmd(ws)
+            shell.sendInput('echo "echo disabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo disabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
             session_bytes += get_cmd(ws)
             shell.sendInput("# Invisible comment\n".encode())
             session_bytes += get_cmd(ws)
             # Turn echo back on
-            time.sleep(1)
             shell.sendInput("stty echo\n".encode())
-            time.sleep(1)
+            shell.sendInput('echo "echo enabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo enabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             session_bytes += get_cmd(ws)
             shell.sendInput("echo 'and now echo is back on'\n".encode())
             session_bytes += get_cmd(ws)

@@ -164,6 +164,9 @@ def was_update_forced(mender_device):
     elif "Cannot check update or update inventory while in update-fetch state" in out:
         # race condition - check-update came while we were already updating
         return False
+    elif "/usr/share/mender/modules/v3/mender-configure" in out:
+        # deployment was processed too quickly
+        return False
     else:
         raise RuntimeError(
             "fatal: no expected evidence of an update was found in device logs"

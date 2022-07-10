@@ -16,9 +16,10 @@ import time
 import logging
 import traceback
 import os
+import redo
 import socket
 import subprocess
-import redo
+import time
 from typing import Dict
 
 from fabric import Connection
@@ -343,11 +344,21 @@ def _ssh_prep_args_impl(device, tool):
 
 def _put(device, file, local_path=".", remote_path="."):
     (scp, host, port) = _scp_prep_args(device)
-
-    subprocess.check_call(
-        f"{scp} -O {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
-        shell=True,
-    )
+    for i in range(3):
+        try:
+            subprocess.check_output(
+                f"{scp} -O {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
+                shell=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # we tried three times, give up
+            if i == 2:
+                logger.info("CalledProcessError.output = %v", e.output)
+                raise
+            # wait two seconds before trying again
+            time.sleep(2)
+        else:
+            break
 
 
 # Roughly the execution time of the slowest test (*) times 3

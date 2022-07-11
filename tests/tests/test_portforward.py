@@ -13,6 +13,7 @@
 #    limitations under the License.
 #
 
+from flaky import flaky
 import os
 import subprocess
 import time
@@ -30,6 +31,7 @@ from .common import md5sum
 from .mendertesting import MenderTesting
 
 
+@flaky(max_runs=3)
 class BaseTestPortForward(MenderTesting):
     """Tests the port forward functionality"""
 

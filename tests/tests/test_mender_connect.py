@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from flaky import flaky
 import json
 import pytest
 import time
@@ -41,6 +42,7 @@ from .common_connect import wait_for_connect
 container_factory = factory.get_factory()
 
 
+@flaky(max_runs=3)
 class _TestRemoteTerminalBase:
     def test_regular_protocol_commands(self, docker_env):
         self.assert_env(docker_env)
@@ -275,6 +277,7 @@ class _TestRemoteTerminalBase:
         ), "docker_env must have a set up 'devconnect' instance"
 
 
+@flaky(max_runs=3)
 class _TestRemoteTerminalBaseBogusProtoMessage:
     def test_bogus_proto_message(self, docker_env):
         with docker_env.devconnect.get_websocket() as ws:

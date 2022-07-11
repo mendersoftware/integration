@@ -13,7 +13,6 @@
 #    limitations under the License.
 #
 
-from flaky import flaky
 import json
 import io
 import os
@@ -103,7 +102,6 @@ def set_limits(mender_device, limits, auth, devid):
     logger.info("ls -al /etc/mender/:\n%s" % debugoutput)
 
 
-@flaky(max_runs=3)
 class BaseTestFileTransfer(MenderTesting):
     def test_filetransfer(
         self, devid, authtoken, path="/etc/mender/mender.conf", content_assertion=None

@@ -8,31 +8,31 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:master
+        image: registry.mender.io/mendersoftware/deployments-enterprise:staging
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:master
+        image: registry.mender.io/mendersoftware/inventory-enterprise:staging
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise:staging
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:staging
 
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:master
+        image: registry.mender.io/mendersoftware/tenantadm:staging
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:staging
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:master
+        image: registry.mender.io/mendersoftware/auditlogs:staging
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:master
+        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.0
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:master
+        image: registry.mender.io/mendersoftware/devicemonitor:staging
 
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:master
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging

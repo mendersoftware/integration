@@ -141,7 +141,10 @@ def update_image(
         reboot.verify_reboot_performed()
 
         try:
-            assert device.get_active_partition() == previous_inactive_part
+            # In the test_migrate_from_legacy_mender_v1_* tests, the storage
+            # device changes name from one image to the next, so only compare
+            # the index, not the device itself.
+            assert device.get_active_partition()[-1] == previous_inactive_part[-1]
         except AssertionError:
             logs = []
             for d in devauth.get_devices():

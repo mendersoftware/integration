@@ -13,6 +13,7 @@
 #    limitations under the License.
 #
 
+from flaky import flaky
 import json
 import io
 import os
@@ -102,6 +103,7 @@ def set_limits(mender_device, limits, auth, devid):
     logger.info("ls -al /etc/mender/:\n%s" % debugoutput)
 
 
+@flaky(max_runs=3)
 class BaseTestFileTransfer(MenderTesting):
     def test_filetransfer(
         self, devid, authtoken, path="/etc/mender/mender.conf", content_assertion=None
@@ -641,7 +643,7 @@ class TestFileTransfer(BaseTestFileTransfer):
 
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
-        self.env = container_factory.getMenderClient_2_5()
+        self.env = container_factory.get_mender_client_2_5()
         request.addfinalizer(self.env.teardown)
         self.env.setup()
 
@@ -696,7 +698,7 @@ class TestFileTransferEnterprise(BaseTestFileTransfer):
 
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
-        self.env = container_factory.getMenderClient_2_5(enterprise=True)
+        self.env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(self.env.teardown)
         self.env.setup()
         reset_mender_api(self.env)

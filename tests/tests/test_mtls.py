@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ container_factory = factory.get_factory()
 
 @pytest.fixture(scope="function")
 def setup_ent_mtls(request):
-    env = container_factory.getMTLSSetup()
+    env = container_factory.get_mtls_setup()
     request.addfinalizer(env.teardown)
     env.setup()
 

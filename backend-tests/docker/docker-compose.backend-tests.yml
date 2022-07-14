@@ -42,6 +42,7 @@ services:
             WORKFLOWS_ENTERPRISE_REV: ${WORKFLOWS_ENTERPRISE_REV}
 
     mender-iot-manager:
+        image: mendersoftware/iot-manager:mender-master
         environment:
           IOT_MANAGER_DOMAIN_WHITELIST: "*.azure-devices.net mender-backend-tests-runner"
 

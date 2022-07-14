@@ -30,7 +30,7 @@ container_factory = factory.get_factory()
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client(request):
-    env = container_factory.getStandardSetup(num_clients=1)
+    env = container_factory.get_standard_setup(num_clients=1)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -46,7 +46,7 @@ def standard_setup_one_client(request):
 
 @pytest.fixture(scope="function")
 def monitor_commercial_setup_no_client(request):
-    env = container_factory.getMonitorCommercialSetup(num_clients=0)
+    env = container_factory.get_monitor_commercial_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -56,7 +56,7 @@ def monitor_commercial_setup_no_client(request):
 
 
 def standard_setup_one_client_bootstrapped_impl(request):
-    env = container_factory.getStandardSetup(num_clients=1)
+    env = container_factory.get_standard_setup(num_clients=1)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -83,7 +83,7 @@ def class_persistent_standard_setup_one_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_client_bootstrapped_with_gateway(request):
-    env = container_factory.getStandardSetupWithGateway(num_clients=1)
+    env = container_factory.get_standard_setup_with_gateway(num_clients=1)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -103,7 +103,7 @@ def standard_setup_one_client_bootstrapped_with_gateway(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped_with_gateway(request):
-    env = container_factory.getStandardSetupWithGateway(num_clients=2)
+    env = container_factory.get_standard_setup_with_gateway(num_clients=2)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -124,7 +124,7 @@ def standard_setup_two_clients_bootstrapped_with_gateway(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_rofs_client_bootstrapped(request):
-    env = container_factory.getRofsClientSetup()
+    env = container_factory.get_rofs_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -141,7 +141,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_one_docker_client_bootstrapped(request):
-    env = container_factory.getDockerClientSetup()
+    env = container_factory.get_docker_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -158,7 +158,7 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_two_clients_bootstrapped(request):
-    env = container_factory.getStandardSetup(num_clients=2)
+    env = container_factory.get_standard_setup(num_clients=2)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -175,7 +175,7 @@ def standard_setup_two_clients_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_without_client(request):
-    env = container_factory.getStandardSetup(num_clients=0)
+    env = container_factory.get_standard_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -193,7 +193,7 @@ def setup_with_legacy_client(request):
             "Test only works with qemux86-64, and this is %s" % conftest.machine_name
         )
 
-    env = container_factory.getLegacyClientSetup()
+    env = container_factory.get_legacy_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -210,7 +210,7 @@ def setup_with_legacy_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_with_signed_artifact_client(request):
-    env = container_factory.getSignedArtifactClientSetup()
+    env = container_factory.get_signed_artifact_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -228,7 +228,7 @@ def standard_setup_with_signed_artifact_client(request):
 
 @pytest.fixture(scope="function")
 def standard_setup_with_short_lived_token(request):
-    env = container_factory.getShortLivedTokenSetup()
+    env = container_factory.get_short_lived_token_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -246,7 +246,7 @@ def standard_setup_with_short_lived_token(request):
 
 @pytest.fixture(scope="function")
 def setup_failover(request):
-    env = container_factory.getFailoverServerSetup()
+    env = container_factory.get_failover_server_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -265,7 +265,7 @@ def setup_failover(request):
 def running_custom_production_setup(request):
     conftest.production_setup_lock.acquire()
 
-    env = container_factory.getCustomSetup()
+    env = container_factory.get_custom_setup()
 
     def fin():
         env.teardown()
@@ -280,7 +280,7 @@ def running_custom_production_setup(request):
 
 @pytest.fixture(scope="function")
 def enterprise_no_client(request):
-    env = container_factory.getEnterpriseSetup(num_clients=0)
+    env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -291,7 +291,7 @@ def enterprise_no_client(request):
 
 @pytest.fixture(scope="function")
 def enterprise_one_client(request):
-    env = container_factory.getEnterpriseSetup(num_clients=0)
+    env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -305,7 +305,7 @@ def enterprise_one_client(request):
 
 
 def enterprise_one_client_bootstrapped_impl(request):
-    env = container_factory.getEnterpriseSetup(num_clients=0)
+    env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -335,7 +335,7 @@ def class_persistent_enterprise_one_client_bootstrapped(request):
 
 @pytest.fixture(scope="class")
 def enterprise_one_client_bootstrapped_with_gateway(request):
-    env = container_factory.getEnterpriseSetupWithGateway(num_clients=0)
+    env = container_factory.get_enterprise_setup_with_gateway(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -363,7 +363,7 @@ def enterprise_one_client_bootstrapped_with_gateway(request):
 
 @pytest.fixture(scope="class")
 def enterprise_two_clients_bootstrapped_with_gateway(request):
-    env = container_factory.getEnterpriseSetupWithGateway(num_clients=0)
+    env = container_factory.get_enterprise_setup_with_gateway(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -394,7 +394,7 @@ def enterprise_two_clients_bootstrapped_with_gateway(request):
 
 @pytest.fixture(scope="function")
 def enterprise_two_clients_bootstrapped(request):
-    env = container_factory.getEnterpriseSetup(num_clients=0)
+    env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -415,7 +415,7 @@ def enterprise_two_clients_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def enterprise_one_docker_client_bootstrapped(request):
-    env = container_factory.getEnterpriseDockerClientSetup(num_clients=0)
+    env = container_factory.get_enterprise_docker_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -435,7 +435,7 @@ def enterprise_one_docker_client_bootstrapped(request):
 
 @pytest.fixture(scope="function")
 def enterprise_one_rofs_client_bootstrapped(request):
-    env = container_factory.getEnterpriseRofsClientSetup(num_clients=0)
+    env = container_factory.get_enterprise_rofs_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -455,7 +455,7 @@ def enterprise_one_rofs_client_bootstrapped(request):
 
 @pytest.fixture(scope="class")
 def enterprise_no_client_class(request):
-    env = container_factory.getEnterpriseSetup(num_clients=0)
+    env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -472,7 +472,7 @@ def create_tenant(env):
     cli = CliTenantadm(containers_namespace=env.name)
     tid = cli.create_org(tname, u.name, u.pwd, plan="os")
 
-    tenant = cli.get_tenant(tid)
+    tenant = cli.get_tenant(tid.strip())
     tenant = json.loads(tenant)
     env.tenant = tenant
 
@@ -488,7 +488,7 @@ def create_tenant(env):
 
 @pytest.fixture(scope="function")
 def enterprise_with_signed_artifact_client(request):
-    env = container_factory.getEnterpriseSignedArtifactClientSetup()
+    env = container_factory.get_enterprise_signed_artifact_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -508,7 +508,7 @@ def enterprise_with_signed_artifact_client(request):
 
 @pytest.fixture(scope="function")
 def enterprise_with_short_lived_token(request):
-    env = container_factory.getEnterpriseShortLivedTokenSetup()
+    env = container_factory.get_enterprise_short_lived_token_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -528,7 +528,7 @@ def enterprise_with_short_lived_token(request):
 
 @pytest.fixture(scope="function")
 def enterprise_with_legacy_client(request):
-    env = container_factory.getEnterpriseLegacyClientSetup(num_clients=0)
+    env = container_factory.get_enterprise_legacy_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()

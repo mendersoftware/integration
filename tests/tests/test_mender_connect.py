@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+from flaky import flaky
 import json
 import pytest
 import time
@@ -41,6 +42,7 @@ from .common_connect import wait_for_connect
 container_factory = factory.get_factory()
 
 
+@flaky(max_runs=3)
 class _TestRemoteTerminalBase:
     def test_regular_protocol_commands(self, docker_env):
         self.assert_env(docker_env)
@@ -54,7 +56,12 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = shell.recvOutput()
+            output = b""
+            for i in range(10):
+                output += shell.recvOutput()
+                if len(output) >= 2:
+                    break
+                time.sleep(1)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
@@ -211,19 +218,32 @@ class _TestRemoteTerminalBase:
             session_bytes += get_cmd(ws)
             # Disable echo
             shell.sendInput("stty -echo\n".encode())
-            session_bytes += get_cmd(ws)
+            shell.sendInput('echo "echo disabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo disabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
             session_bytes += get_cmd(ws)
             shell.sendInput("# Invisible comment\n".encode())
             session_bytes += get_cmd(ws)
             # Turn echo back on
             shell.sendInput("stty echo\n".encode())
+            shell.sendInput('echo "echo enabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo enabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             session_bytes += get_cmd(ws)
             shell.sendInput("echo 'and now echo is back on'\n".encode())
             session_bytes += get_cmd(ws)
 
             body = shell.stopShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert (
+                shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            ), f"Body is: {body}"
             assert body is None
 
         # Sleep for a second to make sure the session log propagate to the DB.
@@ -257,6 +277,7 @@ class _TestRemoteTerminalBase:
         ), "docker_env must have a set up 'devconnect' instance"
 
 
+@flaky(max_runs=3)
 class _TestRemoteTerminalBaseBogusProtoMessage:
     def test_bogus_proto_message(self, docker_env):
         with docker_env.devconnect.get_websocket() as ws:
@@ -292,7 +313,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5()
+        env = container_factory.get_mender_client_2_5()
         request.addfinalizer(env.teardown)
         env.setup()
 
@@ -372,7 +393,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5(enterprise=True)
+        env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(env.teardown)
         env.setup()
 

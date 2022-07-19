@@ -5,7 +5,7 @@ services:
     # mender-deviceconfig
     #
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:mender-3.0.x
+        image: mendersoftware/deviceconfig:mender-3.0.3-build3
         extends:
             file: common.yml
             service: mender-base

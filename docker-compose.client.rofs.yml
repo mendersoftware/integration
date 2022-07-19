@@ -5,4 +5,4 @@ services:
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu-rofs:3.0.x
+        image: mendersoftware/mender-client-qemu-rofs:3.0.3-build3

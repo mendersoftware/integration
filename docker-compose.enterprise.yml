@@ -3,20 +3,20 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-3.0.x
+        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-3.0.3-build3
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-3.0.x
+        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-3.0.3-build3
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-3.0.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-3.0.3-build3
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-3.0.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-3.0.3-build3
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:mender-3.0.x
+        image: registry.mender.io/mendersoftware/tenantadm:mender-3.0.3-build3
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -34,7 +34,7 @@ services:
             DEVICEAUTH_HAVE_ADDONS: 1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-3.0.x
+        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-3.0.3-build3
         environment:
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             USERADM_HAVE_ADDONS: 1

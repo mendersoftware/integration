@@ -5,7 +5,7 @@ services:
     # auditlogs
     #
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:mender-3.0.x
+        image: registry.mender.io/mendersoftware/auditlogs:mender-3.0.3-build3
         extends:
             file: common.yml
             service: mender-base

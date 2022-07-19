@@ -39,8 +39,11 @@ from testutils.api.client import ApiClient
 def login(user, use_personal_access_token: bool = False):
     """
     login authenticates the user and saves the user token
-    with user object
-    in case of use_personal_access_token===True it saves the personal access token
+    within user object.
+    in case of use_personal_access_token===True we first
+    login with username and password, and then we request
+    a personal access token which in turn is saved within
+    the user object.
     """
     useradm_MGMT = ApiClient(useradm.URL_MGMT)
     rsp = useradm_MGMT.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))

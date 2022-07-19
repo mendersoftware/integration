@@ -353,7 +353,7 @@ def _put(device, file, local_path=".", remote_path="."):
         except subprocess.CalledProcessError as e:
             # we tried three times, give up
             if i == 2:
-                logger.info("CalledProcessError.output = %v", e.output)
+                logger.info("CalledProcessError.output = %r", e.output)
                 raise
             # wait two seconds before trying again
             time.sleep(2)

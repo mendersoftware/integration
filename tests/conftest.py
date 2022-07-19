@@ -234,10 +234,8 @@ def pytest_exception_interact(node, call, report):
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter
-        output = subprocess.check_output(
-            'docker ps --filter "status=exited"', shell=True
-        ).decode()
-        logger.info("Containers that exited during the test:")
+        output = subprocess.check_output("docker ps", shell=True).decode()
+        logger.info("Containers at the end of the test:")
         for line in output.split("\n"):
             logger.info(line)
 

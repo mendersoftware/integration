@@ -29,7 +29,7 @@ http:
     signup-redirect:
       redirectregex:
         regex: "^(https://[^/]+)/signup"
-        replacement: "${1}/ui/#/signup"
+        replacement: "${1}/ui/signup"
   
     sec-headers:
       headers:

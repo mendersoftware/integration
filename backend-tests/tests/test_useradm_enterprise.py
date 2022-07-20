@@ -162,7 +162,7 @@ class Test2FAEnterprise:
         assert message.data != ""
         # extract the secret hash from the link
         match = re.search(
-            r"https://hosted.mender.io/ui/#/activate/([a-z0-9\-]+)",
+            r"https://hosted.mender.io/ui/activate/([a-z0-9\-]+)",
             message.data.decode("utf-8"),
         )
         secret_hash = match.group(1)

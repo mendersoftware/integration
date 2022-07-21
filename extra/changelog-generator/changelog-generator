@@ -108,6 +108,14 @@ parser.add_argument(
     help=argparse.SUPPRESS,
 )
 parser.add_argument(
+    "--append-commit-sha",
+    dest="append_commit_sha",
+    action="store_true",
+    help="Append to every entry the SHA that it came from. "
+    + "This can help when tidying up history with Cancel-changelog "
+    + "after a long release cycle.",
+)
+parser.add_argument(
     "range", metavar="<commit-range> [--]", help="Range of commits to generate log for"
 )
 parser.add_argument(
@@ -486,6 +494,10 @@ for repo in repos:
                 else:
                     entry += " "
                 entry += tracker
+
+            if args.append_commit_sha:
+                entry += " (Git SHA: %s)" % sha_entry
+
             entry_list.append(entry)
 
     if args.sort_changelog:

@@ -421,7 +421,7 @@ Should not be included N78'
 
 ################################################################################
 
-git commit --allow-empty -m 'fix: Fix type N79
+git commit --allow-empty -m 'fix:Fix type N79
 
 Should not be included N80
 

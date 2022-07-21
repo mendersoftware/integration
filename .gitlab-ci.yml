@@ -77,11 +77,19 @@ test:docs:
     - apk add bash git openssl pwgen python3 jq
     - git config --global user.name "user"
     - git config --global user.email "user@example.com"
-    - git clone --depth=1 https://github.com/mendersoftware/mender-docs.git mender-docs
+    - git clone --depth=1 -b 3.0.x https://github.com/mendersoftware/mender-docs.git mender-docs
 
   script:
     - cd mender-docs
-    - ./run-tests.sh
+    - ./test_autoversion.py
+    - ./autoversion.py --check
+    - env TEST_OPEN_SOURCE=1 ./test_docs.py 07.Server-installation/03.Installation-with-docker-compose/docs.md
+    - if [ -n "$REGISTRY_MENDER_IO_PASSWORD" ]; then
+    -   docker login -u ntadm_menderci -p "$REGISTRY_MENDER_IO_PASSWORD" registry.mender.io
+    -   env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Installation-with-docker-compose/docs.md
+    -   env TEST_ENTERPRISE=1 ./test_docs.py 07.Server-installation/03.Installation-with-docker-compose/02.Upgrading-from-OS-to-Enterprise/docs.md
+    -   env TEST_ENTERPRISE=1 ./test_docs.py 08.Server-integration/03.Mutual-TLS-authentication/docs.md
+    - fi
 
 test:staging:backend-tests:
   image: debian:buster

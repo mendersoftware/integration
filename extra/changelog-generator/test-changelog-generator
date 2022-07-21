@@ -15,6 +15,10 @@ git init
 echo dummy > dummy
 git add dummy
 git commit -m 'Dummy commit'
+git branch prev_branch
+# This is due to upstream rename from master to main: Find out which is the
+# default in this installation.
+main=$(git symbolic-ref --short HEAD)
 
 # The numbers that are sprinkled about below are just to make it easier to
 # pinpoint where a particular line came from.
@@ -523,7 +527,19 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 
 ################################################################################
 
-"$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
+git commit --allow-empty -m 'fix:cherry-picked fix N102
+
+Should not appear, since it appears in prev_branch too.
+
+Changelog: Title
+Ticket:None'
+git checkout prev_branch
+git cherry-pick -x --allow-empty $main
+git checkout $main
+
+################################################################################
+
+"$SRC_DIR/changelog-generator" --repo --sort-changelog prev_branch..$main > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
     echo "result.txt:"
@@ -536,7 +552,9 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 cat > expected.txt <<EOF
 ### Changelogs
 
-#### test-changelog-generator.$$ (HEAD)
+#### test-changelog-generator.$$ ($main)
+
+New changes in test-changelog-generator.$$ since prev_branch:
 
 ##### Bug Fixes
 

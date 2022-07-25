@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class ProtoShell:
         msg = self.protomsg.encode(data)
         self.ws.send(msg)
 
-    def recvOutput(self, timeout=1):
+    def recvOutput(self, timeout=5):
         body = b""
         try:
             while True:

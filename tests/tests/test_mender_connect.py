@@ -54,12 +54,7 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = b""
-            for i in range(10):
-                output += shell.recvOutput()
-                if len(output) >= 2:
-                    break
-                time.sleep(1)
+            output = shell.recvOutput()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",

@@ -18,6 +18,8 @@ import shutil
 import subprocess
 import tempfile
 
+from flaky import flaky
+
 from .. import conftest
 from ..common_setup import (
     standard_setup_one_client_bootstrapped_with_gateway,
@@ -31,6 +33,9 @@ from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 from testutils.infra.device import MenderDeviceGroup
+
+
+REBOOT_MAX_WAIT = 600
 
 
 @pytest.fixture(scope="function")
@@ -242,8 +247,8 @@ class BaseTestMenderGateway(MenderTesting):
             deployment_id_2, expected_image_id_2 = common_update_procedure(
                 valid_image, devices=[device_id_2], devauth=devauth, deploy=deploy,
             )
-            reboot[mender_device_1].verify_reboot_performed()
-            reboot[mender_device_2].verify_reboot_performed()
+            reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)
+            reboot[mender_device_2].verify_reboot_performed(REBOOT_MAX_WAIT)
 
         deploy.check_expected_statistics(deployment_id_1, "success", 1)
         deploy.get_logs(device_id_1, deployment_id_1, expected_status=404)
@@ -260,8 +265,6 @@ class BaseTestMenderGateway(MenderTesting):
     def do_test_deployment_two_devices_parallel_updates_one_failure(
         self, env, valid_image_with_mender_conf
     ):
-        pytest.skip("Disabled due to MEN-5567.")
-
         device_group = env.device_group
         mender_device_1 = device_group[0]
         mender_device_2 = device_group[1]
@@ -290,8 +293,10 @@ class BaseTestMenderGateway(MenderTesting):
                 devauth=devauth,
                 deploy=deploy,
             )
-            reboot[mender_device_1].verify_reboot_performed()
-            reboot[mender_device_2].verify_reboot_performed(number_of_reboots=2)
+            reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)
+            reboot[mender_device_2].verify_reboot_performed(
+                REBOOT_MAX_WAIT, number_of_reboots=2
+            )
 
         assert mender_device_1.yocto_id_installed_on_machine() == expected_image_id_1
         assert mender_device_2.yocto_id_installed_on_machine() != expected_image_id_2
@@ -339,8 +344,8 @@ class BaseTestMenderGateway(MenderTesting):
             deploy.check_expected_statistics(deployment_id_2, "rebooting", 1)
             deploy.abort(deployment_id_2)
 
-            reboot[mender_device_1].verify_reboot_performed()
-            reboot[mender_device_2].verify_reboot_performed()
+            reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)
+            reboot[mender_device_2].verify_reboot_performed(REBOOT_MAX_WAIT)
 
         deploy.check_expected_statistics(deployment_id_1, "success", 1)
         deploy.get_logs(device_id_1, deployment_id_1, expected_status=404)
@@ -399,8 +404,8 @@ class BaseTestMenderGateway(MenderTesting):
                     name="script 2", artifact_name=artifact_name, devices=[device_id_2],
                 )
 
-            reboot[mender_device_1].verify_reboot_performed()
-            reboot[mender_device_2].verify_reboot_not_performed(300)
+            reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)
+            reboot[mender_device_2].verify_reboot_not_performed(REBOOT_MAX_WAIT / 2)
 
         deploy.check_expected_statistics(deployment_id_1, "success", 1)
         deploy.get_logs(device_id_1, deployment_id_1, expected_status=404)
@@ -419,6 +424,7 @@ class BaseTestMenderGateway(MenderTesting):
 
 
 class TestMenderGatewayOpenSource(BaseTestMenderGateway):
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_one_device(
         self,
@@ -430,6 +436,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_gateway_and_one_device(
         self,
@@ -443,6 +450,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             image_with_mender_conf_and_mender_gateway_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_update_both(
         self,
@@ -454,6 +462,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_update_one(
         self,
@@ -465,6 +474,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates(
         self,
@@ -476,6 +486,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_one_failure(
         self,
@@ -487,6 +498,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_one_aborted(
         self,
@@ -498,6 +510,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(
         self,
@@ -511,6 +524,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
 
 
 class TestMenderGatewayEnterprise(BaseTestMenderGateway):
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_one_device(
         self,
@@ -522,6 +536,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_gateway_and_one_device(
         self,
@@ -535,6 +550,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             image_with_mender_conf_and_mender_gateway_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_update_both(
         self,
@@ -546,6 +562,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_update_one(
         self,
@@ -557,6 +574,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates(
         self,
@@ -568,6 +586,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_one_failure(
         self,
@@ -579,6 +598,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_one_aborted(
         self,
@@ -590,6 +610,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(
         self,

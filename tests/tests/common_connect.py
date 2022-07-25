@@ -76,6 +76,7 @@ def wait_for_connect(auth, devid):
         base_url=deviceconnect.URL_MGMT,
     )
 
+    connected = 0
     for _ in redo.retrier(attempts=12, sleeptime=5):
         logger.info("waiting for device in deviceconnect")
         res = devconn.call(
@@ -84,7 +85,11 @@ def wait_for_connect(auth, devid):
             headers=auth.get_auth_token(),
             path_params={"id": devid},
         )
-        if res.status_code == 200 and res.json()["status"] == "connected":
+        if not (res.status_code == 200 and res.json()["status"] == "connected"):
+            connected = 0
+            continue
+        connected += 1
+        if connected >= 2:
             break
     else:
         assert False, "timed out waiting for /connect"

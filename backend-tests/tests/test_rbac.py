@@ -170,6 +170,7 @@ class TestRBACDeploymentsEnterprise:
         # Add user to deployment group
         role = UserRole("RBAC_DEVGRP", test_case["permissions"])
         add_user_to_role(test_user, tenant, role)
+        login_tenant_users(tenant)
 
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
@@ -253,6 +254,7 @@ class TestRBACDeploymentsToGroupEnterprise:
         # Add user to deployment group
         role = UserRole("RBAC_DEVGRP", test_case["permissions"])
         add_user_to_role(test_user, tenant, role)
+        login_tenant_users(tenant)
 
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
@@ -333,8 +335,8 @@ class TestRBACDeploymentsToGroupEnterprise:
         add_user_to_role(test_user, tenant, role)
 
         deviceconf_MGMT = ApiClient(deviceconfig.URL_MGMT)
-
         device_id = grouped_devices[test_case["deploy_group"]][0].id
+        login_tenant_users(tenant)
 
         # Attempt to set configuration
         rsp = deviceconf_MGMT.with_auth(test_user.token).call(
@@ -417,6 +419,8 @@ class TestRBACDeploymentsToGroupEnterprise:
             body={"foo": "bar"},
         )
         assert rsp.status_code == 204, rsp.text
+
+        login_tenant_users(tenant)
 
         # Attempt to get configuration
         rsp = deviceconf_MGMT.with_auth(test_user.token).call(

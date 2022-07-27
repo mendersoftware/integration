@@ -1,7 +1,7 @@
 bash
 curl
 git
-openssh
+openssh-client
 device-mapper
 py-pip
 iptables

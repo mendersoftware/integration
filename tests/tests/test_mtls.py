@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ container_factory = factory.get_factory()
 
 @pytest.fixture(scope="function")
 def setup_ent_mtls(request):
-    env = container_factory.getMTLSSetup()
+    env = container_factory.get_mtls_setup()
     request.addfinalizer(env.teardown)
     env.setup()
 
@@ -65,8 +65,6 @@ def setup_ent_mtls(request):
     env.new_mtls_client("mender-client", env.tenant.tenant_token)
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
-
-    env.start_api_gateway()
 
     return env
 
@@ -149,9 +147,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
-        # stop the api gateway
-        env.stop_api_gateway()
-
         # upload the certificates
         basedir = os.path.join(os.path.dirname(__file__), "..", "..",)
         certs = os.path.join(basedir, "extra", "mtls", "certs",)
@@ -232,12 +227,12 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         finally:
             shutil.rmtree(tmpdir)
 
-        env.device.run("systemctl daemon-reload")
         # start the api gateway
         env.start_api_gateway()
 
-        logger.info("starting the client.")
         # start the Mender client
+        logger.info("starting the client.")
+        env.device.run("systemctl daemon-reload")
         env.device.run("systemctl start %s" % client_service_name)
 
     @MenderTesting.fast
@@ -287,7 +282,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
-
         # Check if the client has has SoftHSM (from yocto dunfell forward)
         output = setup_ent_mtls.device.run(
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True

@@ -23,12 +23,12 @@ publish:versions:
   variables:
     GITHUB_TOKEN: $GITHUB_BOT_TOKEN
   before_script:
-    - apt-get update && apt-get install -y curl hub unzip
+    - apt-get update && apt-get install -qqy curl hub unzip
     - pip3 install pyyaml
     - git config --global user.name mender-test-bot
     - git config --global user.email user@example.com
     - curl -fsSL https://deno.land/x/install/install.sh | sh
-    - curl https://docs.mender.io/releases/versions.json
+    - curl -sLO https://docs.mender.io/releases/versions.json
   script:
     - git for-each-ref --shell --format="tag:%(refname:short) datetime:%(creatordate:format:%s)" "refs/tags/*" | sort -V -r > tags
     - python extra/release_info_generator.py

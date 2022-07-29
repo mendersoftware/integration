@@ -47,7 +47,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.demo.yml",
+        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.testing.yml",
     ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
@@ -140,10 +140,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
 class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
-        if self.num_clients == 0:
-            DockerComposeNamespace.__init__(self, name)
-        else:
-            DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_FILES)
+        super().__init__(name, self.QEMU_CLIENT_FILES)
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
@@ -153,12 +150,9 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
 class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
-        if self.num_clients == 0:
-            DockerComposeNamespace.__init__(self, name, self.MENDER_GATEWAY_FILES)
-        else:
-            DockerComposeNamespace.__init__(
-                self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
-            )
+        DockerComposeNamespace.__init__(
+            self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
+        )
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
@@ -300,18 +294,21 @@ class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
             )
         else:
             DockerComposeNamespace.__init__(
-                self, name, self.ENTERPRISE_FILES + self.MENDER_GATEWAY_FILES
+                self,
+                name,
+                self.ENTERPRISE_FILES
+                + self.MENDER_GATEWAY_FILES
+                + self.MENDER_GATEWAY_CLIENT_FILES,
             )
 
-    def setup(self):
+    def setup(self, mender_clients=0, mender_gateways=0):
+        """Bring up the Docker composition"""
         self._docker_compose_cmd(
-            "up -d --scale mender-gateway=0 --scale mender-client=0",
+            f"up -d --scale mender-gateway={mender_gateways} --scale mender-client={mender_clients}",
         )
         self._wait_for_containers()
 
     def new_tenant_client(self, name, tenant):
-        if not self.MENDER_GATEWAY_CLIENT_FILES[0] in self.docker_compose_files:
-            self.extra_files += self.MENDER_GATEWAY_CLIENT_FILES
         logger.info("creating client connected to tenant: " + tenant)
         self._docker_compose_cmd(
             "run -d --name=%s_%s mender-client" % (self.name, name),
@@ -321,8 +318,7 @@ class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
 
     def start_tenant_mender_gateway(self, tenant):
         self._docker_compose_cmd(
-            "up -d --scale mender-gateway=1  --scale mender-client=0",
-            env={"TENANT_TOKEN": "%s" % tenant},
+            "up -d mender-gateway", env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(45)
 
@@ -413,7 +409,10 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
         super().__init__(name, extra_files)
 
     def client_services(self):
-        services = self._docker_compose_cmd("ps --service").split()
+        # In order for `ps --services` to return the services, the must have
+        # been created, but they don't need to be running.
+        self._docker_compose_cmd("create")
+        services = self._docker_compose_cmd("ps --services").split()
         clients = []
         for service in services:
             if service.startswith("mender-client"):
@@ -477,15 +476,13 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         self._wait_for_containers()
 
     def start_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=1")
+        self._docker_compose_cmd("start mender-api-gateway")
 
     def stop_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=0")
+        self._docker_compose_cmd("stop mender-api-gateway")
 
     def start_mtls_ambassador(self):
-        self._docker_compose_cmd(
-            "up -d --scale mtls-ambassador=1 --scale mender-client=0"
-        )
+        self._docker_compose_cmd("up -d --scale mtls-ambassador=1 mtls-ambassador")
         self._wait_for_containers()
 
     def new_mtls_client(self, name, tenant):

@@ -133,8 +133,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def restart_service(self, service):
         """Restarts a service."""
-        self._docker_compose_cmd("scale %s=0" % service)
-        self._docker_compose_cmd("scale %s=1" % service)
+        self._docker_compose_cmd("up -d --scale %s=0" % service)
+        self._docker_compose_cmd("up -d --scale %s=1" % service)
 
     def get_file(self, container_name, path):
         container_id = super().getid([container_name])
@@ -165,7 +165,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 try:
                     return subprocess.check_output(
                         cmd, stderr=subprocess.STDOUT, shell=True, env=penv
-                    ).decode("utf-8")
+                    ).decode("utf-8", "ignore")
 
                 except subprocess.CalledProcessError as e:
                     logger.info(

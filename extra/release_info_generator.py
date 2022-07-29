@@ -148,6 +148,16 @@ for release in releases:
         release.version
     ] = collect_release_info(release, releaseInformation["releases"][currentMinor])
 
+releaseInformation["releases"] = dict(
+    sorted(releaseInformation["releases"].items(), reverse=True)
+)
+releaseInformation["releases"] = {
+    currentMinor: dict(
+        sorted(releaseInformation["releases"][currentMinor].items(), reverse=True)
+    )
+    for currentMinor in releaseInformation["releases"].keys()
+}
+
 releaseInformation["lts"] = ltsReleases
 with open("versions.json", "w") as result:
     json.dump(releaseInformation, result)

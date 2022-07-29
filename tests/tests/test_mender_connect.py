@@ -211,19 +211,32 @@ class _TestRemoteTerminalBase:
             session_bytes += get_cmd(ws)
             # Disable echo
             shell.sendInput("stty -echo\n".encode())
-            session_bytes += get_cmd(ws)
+            shell.sendInput('echo "echo disabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo disabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             shell.sendInput('echo "now you don\'t" > /dev/null\n'.encode())
             session_bytes += get_cmd(ws)
             shell.sendInput("# Invisible comment\n".encode())
             session_bytes += get_cmd(ws)
             # Turn echo back on
             shell.sendInput("stty echo\n".encode())
+            shell.sendInput('echo "echo enabled $?"\n'.encode())
+            for i in range(10):
+                session_bytes += get_cmd(ws)
+                if b"echo enabled 0" in session_bytes:
+                    break
+                time.sleep(1)
             session_bytes += get_cmd(ws)
             shell.sendInput("echo 'and now echo is back on'\n".encode())
             session_bytes += get_cmd(ws)
 
             body = shell.stopShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert (
+                shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            ), f"Body is: {body}"
             assert body is None
 
         # Sleep for a second to make sure the session log propagate to the DB.
@@ -292,7 +305,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5()
+        env = container_factory.get_mender_client_2_5()
         request.addfinalizer(env.teardown)
         env.setup()
 
@@ -372,7 +385,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.getMenderClient_2_5(enterprise=True)
+        env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(env.teardown)
         env.setup()
 

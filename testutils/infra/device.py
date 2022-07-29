@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@ import time
 import logging
 import traceback
 import os
+import redo
 import socket
 import subprocess
+import time
 from typing import Dict
 
 from fabric import Connection
@@ -110,7 +112,21 @@ class MenderDevice:
         Keyword arguments:
         wait - Timeout (in seconds)
         """
-        self.run("true", hide=True, wait=wait)
+        waited = -1
+        t0 = int(time.time())
+        raise_exception = None
+        for _ in redo.retrier(max_sleeptime=wait, attempts=wait, sleeptime=1):
+            try:
+                self.run("true", hide=True, wait=wait)
+                raise_exception = None
+                break
+            except Exception as e:
+                raise_exception = e
+            finally:
+                waited = int(time.time()) - t0
+        if raise_exception:
+            logger.error("Can't open ssh after %d s of waiting and trying" % waited)
+            raise (raise_exception)
 
     def yocto_id_installed_on_machine(self):
         cmd = "mender show-artifact"
@@ -328,12 +344,21 @@ def _ssh_prep_args_impl(device, tool):
 
 def _put(device, file, local_path=".", remote_path="."):
     (scp, host, port) = _scp_prep_args(device)
-
-    subprocess.check_call(
-        "%s %s %s/%s %s@%s:%s"
-        % (scp, port, local_path, file, device.user, host, remote_path),
-        shell=True,
-    )
+    for i in range(3):
+        try:
+            subprocess.check_output(
+                f"{scp} -O {port} {local_path}/{file} {device.user}@{host}:{remote_path}",
+                shell=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # we tried three times, give up
+            if i == 2:
+                logger.info("CalledProcessError.output = %r", e.output)
+                raise
+            # wait two seconds before trying again
+            time.sleep(2)
+        else:
+            break
 
 
 # Roughly the execution time of the slowest test (*) times 3

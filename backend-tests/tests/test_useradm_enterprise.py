@@ -49,8 +49,8 @@ def clean_migrated_mongo(clean_mongo):
     yield clean_mongo
 
 
-@pytest.fixture(scope="function")
-def tenants_users(clean_migrated_mongo):
+@pytest.fixture(scope="function", params=["os", "professional", "enterprise"])
+def tenants_users(request, clean_migrated_mongo):
     tenants = []
     for _ in range(2):
         uuidv4 = str(uuid.uuid4())
@@ -60,7 +60,7 @@ def tenants_users(clean_migrated_mongo):
             "secretsecret",
         )
         # Create tenant with two users
-        tenant = create_org(tenant, username, password, "enterprise")
+        tenant = create_org(tenant, username, password, request.param)
         tenant.users.append(
             create_user(
                 "ci.email.tests+" + uuidv4 + "-user2@mender.io", password, tenant.id
@@ -162,7 +162,7 @@ class Test2FAEnterprise:
         assert message.data != ""
         # extract the secret hash from the link
         match = re.search(
-            r"https://hosted.mender.io/ui/#/activate/([a-z0-9\-]+)",
+            r"https://hosted.mender.io/ui/activate/([a-z0-9\-]+)",
             message.data.decode("utf-8"),
         )
         secret_hash = match.group(1)

@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from flaky import flaky
 import json
 import pytest
 import time
@@ -42,7 +41,6 @@ from .common_connect import wait_for_connect
 container_factory = factory.get_factory()
 
 
-@flaky(max_runs=3)
 class _TestRemoteTerminalBase:
     def test_regular_protocol_commands(self, docker_env):
         self.assert_env(docker_env)
@@ -56,12 +54,7 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = b""
-            for i in range(10):
-                output += shell.recvOutput()
-                if len(output) >= 2:
-                    break
-                time.sleep(1)
+            output = shell.recvOutput()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
@@ -277,7 +270,6 @@ class _TestRemoteTerminalBase:
         ), "docker_env must have a set up 'devconnect' instance"
 
 
-@flaky(max_runs=3)
 class _TestRemoteTerminalBaseBogusProtoMessage:
     def test_bogus_proto_message(self, docker_env):
         with docker_env.devconnect.get_websocket() as ws:

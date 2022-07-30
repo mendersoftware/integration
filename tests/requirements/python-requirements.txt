@@ -1,13 +1,13 @@
 cryptography==37.0.2
 docker==5.0.3
 docker-compose==1.29.2
-fabric==2.6.0
-filelock==3.6.0
-invoke==1.6.0
+fabric==2.7.0
+filelock==3.7.0
+invoke==1.7.1
 msgpack==1.0.3
 paramiko==2.10.2
 py3dns==3.2.1
-pymongo==4.0.2
+pymongo==4.1.1
 PyNaCl==1.5.0
 pyrsistent==0.18.1
 pytest==7.1.0
@@ -20,6 +20,6 @@ redo==2.0.4
 requests==2.27.1
 urllib3==1.26.8
 websocket-client==0.59.0
-websockets==10.2
+websockets==10.3
 flaky==3.7.0
-stripe==2.67.0
+stripe==3.2.0

@@ -198,7 +198,7 @@ http:
         - sec-headers
         - compression
         - json-error-responder4
-      rule: "Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(oauth2|auth/password-reset|auth/verify-email|auth/plan-verify)}`)"
+      rule: "Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(oauth2|auth/password-reset|auth/verify-email|auth/plan-verify|auth/sso)}`)"
       service: useradm
       tls: true
 

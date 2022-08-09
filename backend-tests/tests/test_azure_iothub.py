@@ -76,7 +76,7 @@ def httpserver_ssl_context(localhost_cert) -> ssl.SSLContext:
     return context
 
 
-class _TestAzureBase:
+class _TestAzureIoTHubBase:
     azure_api = ApiClient(base_url=iot.URL_MGMT, host=iot.HOST, schema="http://")
 
     @property
@@ -133,7 +133,7 @@ class _TestAzureBase:
             assert part in actual
 
 
-class TestAzureIntegrations(_TestAzureBase):
+class TestAzureIoTHubIntegrations(_TestAzureIoTHubBase):
     @pytest.mark.parametrize(
         "expected_integration",
         [
@@ -162,7 +162,7 @@ class TestAzureIntegrations(_TestAzureBase):
         self.check_integrations(user, expected_integration)
 
 
-class TestAzureIntegrationsEnterprise(_TestAzureBase):
+class TestAzureIoTHubIntegrationsEnterprise(_TestAzureIoTHubBase):
     @pytest.mark.parametrize(
         "expected_integration",
         [
@@ -261,7 +261,7 @@ def get_azure_client():
     return IoTHubRegistryManager.from_connection_string(connection_string)
 
 
-class _TestAzureDeviceLifecycleBase:
+class _TestAzureIoTHubDeviceLifecycleBase:
     """Test device lifecycle in real or mocked Azure IoT Hub. Real Azure is used by default in CI.
 
     Note: Following code needs to be placed in azure-iot-manager's router.go to enable insecure HTTPS requests when mocked Azure is used
@@ -582,9 +582,9 @@ class _TestAzureDeviceLifecycleBase:
         assert state["desired"]["key"] == "value"
 
 
-class TestAzureDeviceLifecycle(_TestAzureDeviceLifecycleBase):
+class TestAzureIoTHubDeviceLifecycle(_TestAzureIoTHubDeviceLifecycleBase):
     pass
 
 
-class TestAzureDeviceLifecycleEnterprise(_TestAzureDeviceLifecycleBase):
+class TestAzureIoTHubDeviceLifecycleEnterprise(_TestAzureIoTHubDeviceLifecycleBase):
     pass

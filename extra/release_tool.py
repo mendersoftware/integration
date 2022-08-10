@@ -2841,6 +2841,11 @@ def do_set_version_to(args):
             set_component_version_to(integration_dir(), assoc, args.version)
             # Update extra files used in integration tests
             set_component_version_to(
+                os.path.join(integration_dir(), "backend-tests", "docker"),
+                assoc,
+                args.version,
+            )
+            set_component_version_to(
                 os.path.join(integration_dir(), "extra", "mtls"), assoc, args.version,
             )
             set_component_version_to(
@@ -2862,6 +2867,11 @@ def do_set_version_to(args):
         component = Component.get_component_of_type("docker_image", args.set_version_of)
         set_component_version_to(integration_dir(), component, args.version)
         # Update extra files used in integration tests
+        set_component_version_to(
+            os.path.join(integration_dir(), "backend-tests", "docker"),
+            component,
+            args.version,
+        )
         set_component_version_to(
             os.path.join(integration_dir(), "extra", "mtls"), component, args.version,
         )

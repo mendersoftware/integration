@@ -216,7 +216,7 @@ def get_connection_string():
 @pytest.fixture(scope="function")
 def azure_user(clean_mongo) -> Optional[User]:
     """Create Mender user and create an Azure IoT Hub integration in iot-manager using the connection string."""
-    api_azure = ApiClient(base_url=iot.URL_MGMT)
+    api_iot = ApiClient(base_url=iot.URL_MGMT)
     uuidv4 = str(uuid.uuid4())
     try:
         tenant = create_org(
@@ -240,7 +240,7 @@ def azure_user(clean_mongo) -> Optional[User]:
         "credentials": {"connection_string": connection_string, "type": "sas"},
     }
     # create the integration in iot-manager
-    rsp = api_azure.with_auth(user.token).call(
+    rsp = api_iot.with_auth(user.token).call(
         "POST", iot.URL_INTEGRATIONS, body=integration
     )
     assert rsp.status_code == 201
@@ -280,8 +280,8 @@ class _TestAzureIoTHubDeviceLifecycleBase:
 
         cls.api_devauth_devices = ApiClient(base_url=deviceauth.URL_DEVICES)
         cls.api_devauth_mgmt = ApiClient(base_url=deviceauth.URL_MGMT)
-        cls.api_azure = ApiClient(base_url=iot.URL_MGMT)
         cls.api_deviceconfig = ApiClient(base_url=deviceconfig.URL_MGMT)
+        cls.api_iot = ApiClient(base_url=iot.URL_MGMT)
 
         cls.devices = list()
         cls.logger = logging.getLogger(cls.__class__.__name__)
@@ -363,8 +363,8 @@ class _TestAzureIoTHubDeviceLifecycleBase:
                     method="GET",
                     query_string="api-version=2021-04-12",
                 ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
-            rsp = self.api_azure.with_auth(azure_user.token).call(
-                "GET", iot.URL_DEVICE(dev.id)
+            rsp = self.api_iot.with_auth(azure_user.token).call(
+                "GET", iot.URL_DEVICE_STATE(dev.id)
             )
             if rsp.status_code == 200:
                 break
@@ -395,7 +395,7 @@ class _TestAzureIoTHubDeviceLifecycleBase:
                 self._prepare_iot_hub_upsert_device_response(status=status)
             )
         # device exists in iot-manager
-        rsp = self.api_azure.with_auth(azure_user.token).call(
+        rsp = self.api_iot.with_auth(azure_user.token).call(
             "GET", iot.URL_DEVICE_STATE(device_id)
         )
         assert rsp.status_code == 200
@@ -496,7 +496,7 @@ class _TestAzureIoTHubDeviceLifecycleBase:
                     query_string="api-version=2021-04-12",
                 ).respond_with_data(status=404)
 
-            rsp = self.api_azure.with_auth(azure_user.token).call(
+            rsp = self.api_iot.with_auth(azure_user.token).call(
                 "GET", iot.URL_DEVICE_STATE(dev.id)
             )
             assert rsp.status_code == 404
@@ -529,7 +529,7 @@ class _TestAzureIoTHubDeviceLifecycleBase:
                 method="GET",
                 query_string="api-version=2021-04-12",
             ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
-        rsp = self.api_azure.with_auth(azure_user.token).call(
+        rsp = self.api_iot.with_auth(azure_user.token).call(
             "GET", iot.URL_DEVICE_STATE(dev.id)
         )
         assert rsp.status_code == 200
@@ -555,7 +555,7 @@ class _TestAzureIoTHubDeviceLifecycleBase:
             "desired": {"key": "value"},
         }
         rsp = (
-            self.api_azure.with_auth(azure_user.token)
+            self.api_iot.with_auth(azure_user.token)
             .with_header("Content-Type", "application/json")
             .call("PUT", iot.URL_DEVICE_STATE(dev.id) + "/" + integration_id, twin)
         )
@@ -572,7 +572,7 @@ class _TestAzureIoTHubDeviceLifecycleBase:
                 method="GET",
                 query_string="api-version=2021-04-12",
             ).respond_with_json(self._prepare_iot_hub_upsert_device_response())
-        rsp = self.api_azure.with_auth(azure_user.token).call(
+        rsp = self.api_iot.with_auth(azure_user.token).call(
             "GET", iot.URL_DEVICE_STATE(dev.id) + "/" + integration_id
         )
         assert rsp.status_code == 200

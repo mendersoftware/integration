@@ -20,6 +20,9 @@ services:
             AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
             AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
             AWS_EKS_CLUSTER_NAME: ${AWS_EKS_CLUSTER_NAME}
+            AWS_IOTCORE_ACCESS_KEY_ID: ${AWS_IOTCORE_ACCESS_KEY_ID}
+            AWS_IOTCORE_SECRET_ACCESS_KEY: ${AWS_IOTCORE_SECRET_ACCESS_KEY}
+            AWS_IOTCORE_ENDPOINT_URL: ${AWS_IOTCORE_ENDPOINT_URL}
             AZURE_IOTHUB_CONNECTIONSTRING_B64: ${AZURE_IOTHUB_CONNECTIONSTRING_B64}
             AZURE_IOTHUB_MOCK: ${AZURE_IOTHUB_MOCK}
             GMAIL_ADDRESS: ${GMAIL_ADDRESS}
@@ -44,7 +47,7 @@ services:
     mender-iot-manager:
         image: mendersoftware/iot-manager:mender-master
         environment:
-          IOT_MANAGER_DOMAIN_WHITELIST: "*.azure-devices.net mender-backend-tests-runner"
+          IOT_MANAGER_DOMAIN_WHITELIST: "*.azure-devices.net *.iot.*.amazonaws.com mender-backend-tests-runner"
 
 networks:
     mender:

@@ -277,7 +277,7 @@ def make_accepted_device(
     test_type: str = "regular",
 ) -> Device:
     """Create one device with "accepted" status."""
-    test_types = ["regular", "azure"]
+    test_types = ["regular", "azure", "aws"]
     if test_type not in test_types:
         raise RuntimeError("Given test type is not allowed")
     dev = make_pending_device(dauthd1, dauthm, utoken, tenant_token=tenant_token)

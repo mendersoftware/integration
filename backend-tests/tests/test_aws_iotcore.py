@@ -49,40 +49,8 @@ from testutils.common import (
 
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_IOTCORE_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_IOTCORE_SECRET_ACCESS_KEY")
-AWS_ENDPOINT_URL = os.environ.get("AWS_IOTCORE_ENDPOINT_URL")
-AWS_POLICY = """{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iot:Publish",
-                "iot:Receive"
-            ],
-            "Resource": [
-                "arn:aws:iot:us-east-1:304194462000:topic/sdk/test/Python"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iot:Subscribe"
-            ],
-            "Resource": [
-                "arn:aws:iot:us-east-1:304194462000:topicfilter/sdk/test/Python"
-            ]
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iot:Connect"
-            ],
-            "Resource": [
-                "arn:aws:iot:us-east-1:304194462000:client/basicPubSub"
-            ]
-        }
-    ]
-}"""
+AWS_REGION = os.environ.get("AWS_IOTCORE_REGION")
+AWS_DEVICE_POLICY_NAME = os.environ.get("AWS_IOTCORE_DEVICE_POLICY_NAME")
 
 
 @dataclass
@@ -98,12 +66,11 @@ class DeviceShadow:
 
 
 def get_boto3_client(service: str):
-    region = AWS_ENDPOINT_URL.split(".")[2]
     return boto3.client(
         service,
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        region_name=region,
+        region_name=AWS_REGION,
     )
 
 
@@ -182,15 +149,23 @@ class _TestAWSIoTCoreBase:
         integrations = response.json()
         assert len(integrations) > 0
         assert "credentials" in integrations[0].keys()
-        assert "access_key_id" in integrations[0]["credentials"].keys()
-        assert integrations[0]["credentials"]["access_key_id"] == AWS_ACCESS_KEY_ID
-        assert "secret_access_key" in integrations[0]["credentials"].keys()
+        assert "aws" in integrations[0]["credentials"].keys()
+        assert "access_key_id" in integrations[0]["credentials"]["aws"].keys()
         assert (
-            integrations[0]["credentials"]["secret_access_key"] == AWS_SECRET_ACCESS_KEY
+            integrations[0]["credentials"]["aws"]["access_key_id"] == AWS_ACCESS_KEY_ID
         )
-        assert "endpoint_url" in integrations[0]["credentials"].keys()
-        assert integrations[0]["credentials"]["endpoint_url"] == AWS_ENDPOINT_URL
-        assert "device_policy_document" in integrations[0]["credentials"].keys()
+        assert "secret_access_key" in integrations[0]["credentials"]["aws"].keys()
+        assert (
+            integrations[0]["credentials"]["aws"]["secret_access_key"]
+            == AWS_SECRET_ACCESS_KEY
+        )
+        assert "region" in integrations[0]["credentials"]["aws"].keys()
+        assert integrations[0]["credentials"]["aws"]["region"] == AWS_REGION
+        assert "device_policy_name" in integrations[0]["credentials"]["aws"].keys()
+        assert (
+            integrations[0]["credentials"]["aws"]["device_policy_name"]
+            == AWS_DEVICE_POLICY_NAME
+        )
 
 
 class TestAWSIoTCoreIntegrations(_TestAWSIoTCoreBase):
@@ -200,11 +175,13 @@ class TestAWSIoTCoreIntegrations(_TestAWSIoTCoreBase):
             {
                 "provider": "iot-core",
                 "credentials": {
-                    "access_key_id": AWS_ACCESS_KEY_ID,
-                    "secret_access_key": AWS_SECRET_ACCESS_KEY,
-                    "endpoint_url": AWS_ENDPOINT_URL,
-                    "device_policy_document": AWS_POLICY,
                     "type": "aws",
+                    "aws": {
+                        "access_key_id": AWS_ACCESS_KEY_ID,
+                        "secret_access_key": AWS_SECRET_ACCESS_KEY,
+                        "region": AWS_REGION,
+                        "device_policy_name": AWS_DEVICE_POLICY_NAME,
+                    },
                 },
             },
         ],
@@ -225,11 +202,13 @@ class TestAWSIoTCoreIntegrationsEnterprise(_TestAWSIoTCoreBase):
             {
                 "provider": "iot-core",
                 "credentials": {
-                    "access_key_id": AWS_ACCESS_KEY_ID,
-                    "secret_access_key": AWS_SECRET_ACCESS_KEY,
-                    "endpoint_url": AWS_ENDPOINT_URL,
-                    "device_policy_document": AWS_POLICY,
                     "type": "aws",
+                    "aws": {
+                        "access_key_id": AWS_ACCESS_KEY_ID,
+                        "secret_access_key": AWS_SECRET_ACCESS_KEY,
+                        "region": AWS_REGION,
+                        "device_policy_name": AWS_DEVICE_POLICY_NAME,
+                    },
                 },
             },
         ],
@@ -268,11 +247,13 @@ def user(clean_mongo) -> Optional[User]:
     integration = {
         "provider": "iot-core",
         "credentials": {
-            "access_key_id": AWS_ACCESS_KEY_ID,
-            "secret_access_key": AWS_SECRET_ACCESS_KEY,
-            "endpoint_url": AWS_ENDPOINT_URL,
-            "device_policy_document": AWS_POLICY,
             "type": "aws",
+            "aws": {
+                "access_key_id": AWS_ACCESS_KEY_ID,
+                "secret_access_key": AWS_SECRET_ACCESS_KEY,
+                "region": AWS_REGION,
+                "device_policy_name": AWS_DEVICE_POLICY_NAME,
+            },
         },
     }
     # create the integration in iot-manager

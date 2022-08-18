@@ -154,10 +154,11 @@ class _TestAWSIoTCoreBase:
         assert (
             integrations[0]["credentials"]["aws"]["access_key_id"] == AWS_ACCESS_KEY_ID
         )
+        # the service will mask the AWS secret access key
         assert "secret_access_key" in integrations[0]["credentials"]["aws"].keys()
         assert (
             integrations[0]["credentials"]["aws"]["secret_access_key"]
-            == AWS_SECRET_ACCESS_KEY
+            != AWS_SECRET_ACCESS_KEY
         )
         assert "region" in integrations[0]["credentials"]["aws"].keys()
         assert integrations[0]["credentials"]["aws"]["region"] == AWS_REGION

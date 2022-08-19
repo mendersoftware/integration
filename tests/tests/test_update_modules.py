@@ -60,7 +60,8 @@ class BaseTestUpdateModules(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
             output = mender_device.run("mender --no-syslog show-artifact").strip()
-            assert output == "original"
+            # The update failed but the database got initialized with artifact-name "unknown"
+            assert output == "unknown"
 
             output = env.get_logs_of_service("mender-client")
             assert (

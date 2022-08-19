@@ -76,6 +76,11 @@ expected_from = (
 )
 
 
+# mender-monitor paths
+MONITOR_AVAILABLE_DIR = "/etc/mender-monitor/monitor.d/available"
+MONITOR_ENABLED_DIR = "/etc/mender-monitor/monitor.d/enabled"
+
+
 @retriable(sleeptime=60, attempts=5)
 def get_and_parse_email_n(env, address, n):
     mail, messages = get_and_parse_email(env, address)
@@ -140,6 +145,10 @@ def assert_valid_alert(message, bcc, subject):
     assert message["Subject"].startswith(subject)
 
 
+def disable_all_checks(mender_device):
+    mender_device.run(f"rm -f {MONITOR_ENABLED_DIR}/*")
+
+
 def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
     if use_ctl:
         mender_device.run(
@@ -148,10 +157,8 @@ def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
         mender_device.run('mender-monitorctl enable service "%s"' % (service_name))
     else:
         try:
-            monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
-            monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
-            mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-            mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+            mender_device.run(f"mkdir -p '{MONITOR_AVAILABLE_DIR}'")
+            mender_device.run(f"mkdir -p '{MONITOR_ENABLED_DIR}'")
             mender_device.run("systemctl restart %s" % service_name)
             tmpdir = tempfile.mkdtemp()
             service_check_file = os.path.join(tmpdir, "service_" + service_name + ".sh")
@@ -161,14 +168,14 @@ def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
             mender_device.put(
                 os.path.basename(service_check_file),
                 local_path=os.path.dirname(service_check_file),
-                remote_path=monitor_available_dir,
+                remote_path=MONITOR_AVAILABLE_DIR,
             )
             mender_device.run(
                 "ln -s '%s/service_%s.sh' '%s/service_%s.sh'"
                 % (
-                    monitor_available_dir,
+                    MONITOR_AVAILABLE_DIR,
                     service_name,
-                    monitor_enabled_dir,
+                    MONITOR_ENABLED_DIR,
                     service_name,
                 )
             )
@@ -194,11 +201,9 @@ def prepare_log_monitoring(
         mender_device.run('mender-monitorctl enable log "%s"' % (service_name))
     else:
         try:
-            monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
-            monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
             if not update_check_file_only:
-                mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-                mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+                mender_device.run(f"mkdir -p '{MONITOR_AVAILABLE_DIR}'")
+                mender_device.run(f"mkdir -p '{MONITOR_ENABLED_DIR}'")
             tmpdir = tempfile.mkdtemp()
             service_check_file = os.path.join(tmpdir, "log_" + service_name + ".sh")
             f = open(service_check_file, "w")
@@ -212,15 +217,15 @@ def prepare_log_monitoring(
             mender_device.put(
                 os.path.basename(service_check_file),
                 local_path=os.path.dirname(service_check_file),
-                remote_path=monitor_available_dir,
+                remote_path=MONITOR_AVAILABLE_DIR,
             )
             if not update_check_file_only:
                 mender_device.run(
                     "ln -s '%s/log_%s.sh' '%s/log_%s.sh'"
                     % (
-                        monitor_available_dir,
+                        MONITOR_AVAILABLE_DIR,
                         service_name,
-                        monitor_enabled_dir,
+                        MONITOR_ENABLED_DIR,
                         service_name,
                     )
                 )
@@ -232,10 +237,8 @@ def prepare_dbus_monitoring(
     mender_device, dbus_name, log_pattern=None, dbus_pattern=None
 ):
     try:
-        monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
-        monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
-        mender_device.run("mkdir -p '%s'" % monitor_available_dir)
-        mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
+        mender_device.run(f"mkdir -p '{MONITOR_AVAILABLE_DIR}'")
+        mender_device.run(f"mkdir -p '{MONITOR_ENABLED_DIR}'")
         tmpdir = tempfile.mkdtemp()
         dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
         f = open(dbus_check_file, "w")
@@ -248,11 +251,11 @@ def prepare_dbus_monitoring(
         mender_device.put(
             os.path.basename(dbus_check_file),
             local_path=os.path.dirname(dbus_check_file),
-            remote_path=monitor_available_dir,
+            remote_path=MONITOR_AVAILABLE_DIR,
         )
         mender_device.run(
             "ln -s '%s/dbus_test.sh' '%s/dbus_test.sh'"
-            % (monitor_available_dir, monitor_enabled_dir)
+            % (MONITOR_AVAILABLE_DIR, MONITOR_ENABLED_DIR)
         )
     finally:
         shutil.rmtree(tmpdir)
@@ -404,6 +407,7 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_alert_email: got OK alert email.")
 
+        disable_all_checks(mender_device)
         logger.info(
             "test_monitorclient_alert_email: email alert on log file containing a pattern scenario."
         )
@@ -521,6 +525,7 @@ class TestMonitorClientEnterprise:
             % alerts[1]["subject"]["details"]["lines_after"][0]["data"]
         )
 
+        disable_all_checks(mender_device)
         logger.info(
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
         )
@@ -544,6 +549,7 @@ class TestMonitorClientEnterprise:
         )
         assert "${workflow.input" not in mail
 
+        disable_all_checks(mender_device)
         logger.info(
             "test_monitorclient_alert_email: email alert on streaming logs pattern expiration scenario."
         )
@@ -553,7 +559,6 @@ class TestMonitorClientEnterprise:
             "@tail -f " + log_file,
             log_pattern,
             log_pattern_expiration=pattern_expiration_seconds,
-            update_check_file_only=True,
         )
         mender_device.run("systemctl restart mender-monitor")
         mender_device.run(

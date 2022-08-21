@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -303,8 +303,8 @@ class DockerComposeNamespace(DockerNamespace):
 
     def restart_service(self, service):
         """Restarts a service."""
-        self._docker_compose_cmd("scale %s=0" % service)
-        self._docker_compose_cmd("scale %s=1" % service)
+        self._docker_compose_cmd("up -d --scale %s=0" % service)
+        self._docker_compose_cmd("up -d --scale %s=1" % service)
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):
@@ -492,10 +492,10 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         self._wait_for_containers(self.NUM_SERVICES_ENTERPRISE)
 
     def start_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=1")
+        self._docker_compose_cmd("up -d --scale mender-api-gateway=1")
 
     def stop_api_gateway(self):
-        self._docker_compose_cmd("scale mender-api-gateway=0")
+        self._docker_compose_cmd("up -d --scale mender-api-gateway=0")
 
     def start_mtls_ambassador(self):
         self._docker_compose_cmd(

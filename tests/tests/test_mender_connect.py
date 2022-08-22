@@ -29,7 +29,6 @@ from ..common_setup import (
 )
 from ..MenderAPI import (
     devconnect,
-    auth,
     devauth,
     reset_mender_api,
     DeviceAuthV2,
@@ -37,7 +36,7 @@ from ..MenderAPI import (
     DeviceConnect,
     get_container_manager,
 )
-from testutils.common import create_user, Tenant, User, update_tenant
+from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
 
 container_factory = factory.get_factory()
@@ -118,7 +117,7 @@ class _TestRemoteTerminalBase:
     def test_dbus_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -141,14 +140,14 @@ class _TestRemoteTerminalBase:
             f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
         )
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
     def test_websocket_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -157,7 +156,7 @@ class _TestRemoteTerminalBase:
 
         time.sleep(10)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env.devconnect.get_websocket():
             # Nothing to do, just connecting successfully is enough.
             pass
 
@@ -173,7 +172,7 @@ class _TestRemoteTerminalBase:
             ws.send(msg)
 
             msg = ws.recv()
-            body = prot.decode(msg)
+            prot.decode(msg)
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
@@ -274,6 +273,12 @@ class TestRemoteTerminal(_TestRemoteTerminalBase):
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
         env = class_persistent_standard_setup_one_client_bootstrapped
         env.devconnect = devconnect
+
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+
+        wait_for_connect(devconnect.auth, devices[0]["id"])
+
         yield env
 
     def test_bogus_proto_message(self, docker_env):
@@ -314,6 +319,11 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         reset_mender_api(env)
         devauth.accept_devices(1)
 
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+
+        wait_for_connect(devconnect.auth, devices[0]["id"])
+
         env.devconnect = devconnect
         yield env
 
@@ -327,7 +337,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
             ws.send(msg)
 
             msg = ws.recv()
-            body = prot.decode(msg)
+            prot.decode(msg)
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == 12345
             assert prot.typ == proto_shell.MSG_TYPE_SPAWN_SHELL
@@ -354,12 +364,10 @@ class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
         device = MenderDevice(env.get_mender_clients()[0])
         devauth.accept_devices(1)
 
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
+        devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
 
-        wait_for_connect(auth, devices[0])
+        wait_for_connect(auth, devices[0]["id"])
 
         devconn = DeviceConnect(auth, devauth)
 

@@ -23,7 +23,7 @@ SHA_TO_TRACKER = {}
 
 JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
-CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: "
+CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
 
@@ -63,15 +63,15 @@ def aggregate_dependabot_changelogs(entry_list: List[str]) -> List[str]:
     return new_entry_list
 
 
-def add_entry(sha, msg):
+def add_entry(entries, sha, msg):
     if msg.lower().strip() == "none":
         return
 
-    sha_list = ENTRIES.get(sha)
+    sha_list = entries.get(sha)
     if sha_list is None:
         sha_list = []
     sha_list.append(msg)
-    ENTRIES[sha] = sha_list
+    entries[sha] = sha_list
 
 
 parser = argparse.ArgumentParser(
@@ -106,6 +106,14 @@ parser.add_argument(
     action="store_true",
     # Not used except in the test.
     help=argparse.SUPPRESS,
+)
+parser.add_argument(
+    "--append-commit-sha",
+    dest="append_commit_sha",
+    action="store_true",
+    help="Append to every entry the SHA that it came from. "
+    + "This can help when tidying up history with Cancel-changelog "
+    + "after a long release cycle.",
 )
 parser.add_argument(
     "range", metavar="<commit-range> [--]", help="Range of commits to generate log for"
@@ -200,42 +208,26 @@ def print_category_entries(entry_list, category, print_category=True):
     print()
 
 
-print("### Changelogs\n")
-
-for repo in repos:
-    ENTRIES = {}
-    LINKED_SHAS = {}
-    SHA_TO_TRACKER = {}
-    POSSIBLE_PROBLEMS = []
-
-    try:
-        os.chdir(repo)
-    except FileNotFoundError:
-        print(
-            (
-                "Could not find %s. Maybe use --base-dir option and point to a "
-                + "directory containing all repositories"
-            )
-            % repo
+def gather_entries(range, gitargs, remove_cherry_picks=True):
+    # If removing cherry-picks, then invert the range, and gather all entries
+    # from there. Use this to remove entries from the results.
+    exclude_entries = set()
+    if remove_cherry_picks and range.find("..") >= 0:
+        split = range.split("..", 1)
+        inverted_range = split[1] + ".." + split[0]
+        exclude_entries_map = gather_entries(
+            inverted_range, gitargs, remove_cherry_picks=False
         )
-        raise
-    if args.all and not repo.endswith("integration"):
-        range = get_range_for_repo(os.path.basename(repo), args.range)
-        if args.range.find("..") >= 0 and range.find("..") < 0:
-            POSSIBLE_PROBLEMS.append(
-                (
-                    "*** The changelog for the %s repository contains the entire history. "
-                    + "This can happen for repositories that are new in this release. "
-                    + "Please double check that this is not a mistake, and consider a "
-                    + "simpler changelog if appropriate."
-                )
-                % repo
-            )
-    else:
-        range = args.range
+        for _, values in exclude_entries_map.items():
+            for msg in values:
+                exclude_entries.add(msg)
+
+    entries = {}
+
     sha_list = subprocess.Popen(
-        ["git", "rev-list", "--reverse", range] + args.gitargs, stdout=subprocess.PIPE
+        ["git", "rev-list", "--reverse", range] + gitargs, stdout=subprocess.PIPE
     )
+
     for sha in sha_list.stdout:
         sha = sha.decode().rstrip("\n")
         blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)
@@ -256,7 +248,7 @@ for repo in repos:
                     continue
 
                 if log_entry:
-                    add_entry(sha, log_entry.strip())
+                    add_entry(entries, sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
@@ -283,14 +275,16 @@ for repo in repos:
             )
             if match_changelog:
                 if log_entry:
-                    add_entry(sha, log_entry.strip())
+                    add_entry(entries, sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
                 type_keyword = match_changelog.group(1)
                 if type_keyword:
                     add_entry(
-                        sha, type_keyword.lower() + ": " + match_changelog.group(2)
+                        entries,
+                        sha,
+                        type_keyword.lower() + ": " + match_changelog.group(2),
                     )
                     continue
 
@@ -350,7 +344,7 @@ for repo in repos:
                 match = re.match(cancel_expr, line, re.IGNORECASE)
                 if match:
                     if log_entry:
-                        add_entry(sha, log_entry.strip())
+                        add_entry(entries, sha, log_entry.strip())
                         log_entry = ""
                     log_entry_local = False
 
@@ -361,8 +355,8 @@ for repo in repos:
                     for linked_sha in linked_shas:
                         if LINKED_SHAS.get(linked_sha):
                             del LINKED_SHAS[linked_sha]
-                        if ENTRIES.get(linked_sha):
-                            del ENTRIES[linked_sha]
+                        if entries.get(linked_sha):
+                            del entries[linked_sha]
                     continue
 
             match = re.match(
@@ -370,7 +364,7 @@ for repo in repos:
             )
             if match:
                 if log_entry:
-                    add_entry(sha, log_entry.strip())
+                    add_entry(entries, sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
 
@@ -405,11 +399,64 @@ for repo in repos:
         blob.wait()
 
         if log_entry_commit:
-            add_entry(sha, commit_msg.strip())
+            add_entry(entries, sha, commit_msg.strip())
         if log_entry:
-            add_entry(sha, log_entry.strip())
+            add_entry(entries, sha, log_entry.strip())
 
     sha_list.wait()
+
+    # Remove entries we don't want.
+    remove_shas = []
+    for sha, values in entries.items():
+        index = 0
+        while index < len(values):
+            if values[index] in exclude_entries:
+                del values[index]
+                index -= 1
+            index += 1
+        if len(values) == 0:
+            remove_shas.append(sha)
+    for sha in remove_shas:
+        del entries[sha]
+
+    return entries
+
+
+print("### Changelogs\n")
+
+for repo in repos:
+    ENTRIES = {}
+    LINKED_SHAS = {}
+    SHA_TO_TRACKER = {}
+    POSSIBLE_PROBLEMS = []
+
+    try:
+        os.chdir(repo)
+    except FileNotFoundError:
+        print(
+            (
+                "Could not find %s. Maybe use --base-dir option and point to a "
+                + "directory containing all repositories"
+            )
+            % repo
+        )
+        raise
+    if args.all and not repo.endswith("integration"):
+        range = get_range_for_repo(os.path.basename(repo), args.range)
+        if args.range.find("..") >= 0 and range.find("..") < 0:
+            POSSIBLE_PROBLEMS.append(
+                (
+                    "*** The changelog for the %s repository contains the entire history. "
+                    + "This can happen for repositories that are new in this release. "
+                    + "Please double check that this is not a mistake, and consider a "
+                    + "simpler changelog if appropriate."
+                )
+                % repo
+            )
+    else:
+        range = args.range
+
+    ENTRIES = gather_entries(range, args.gitargs)
 
     entry_list = []
     for sha_entry in ENTRIES:
@@ -447,6 +494,10 @@ for repo in repos:
                 else:
                     entry += " "
                 entry += tracker
+
+            if args.append_commit_sha:
+                entry += " (Git SHA: %s)" % sha_entry
+
             entry_list.append(entry)
 
     if args.sort_changelog:

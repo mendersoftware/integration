@@ -6,8 +6,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
     jq libssl-dev libglib2.0-dev curl
 
-ARG MENDER_CLIENT_REV=master
+# TODO - This cannot be hardcoded to anything else but master later
+ARG MENDER_CLIENT_REV=automatic_bootstrap_artifact
 ARG MENDER_CONNECT_REV=master
+ARG MENDER_ARTIFACT_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
@@ -25,7 +27,17 @@ WORKDIR /src/mender
 RUN make prefix=/mender-install install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
-RUN echo artifact_name=original > /mender-install/etc/mender/artifact_info
+
+# Install mender-artifact
+RUN git clone https://github.com/mendersoftware/mender-artifact /src/mender-artifact
+RUN (cd /src/mender-artifact && git fetch origin $MENDER_ARTIFACT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_ARTIFACT_REV)
+WORKDIR /src/mender-artifact
+RUN GOBIN=/usr/bin make install
+RUN mender-artifact write bootstrap-artifact \
+        --artifact-name original \
+        --device-type docker-client \
+        --provides "rootfs-image.version:original" \
+        --output-path /bootstrap.mender
 
 WORKDIR /src/mender-connect
 RUN make prefix=/mender-install install
@@ -59,6 +71,7 @@ COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
 COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
 COPY --from=build /mender-install/var/lib/mender /var/lib/mender
+COPY --from=build /bootstrap.mender /var/lib/mender/bootstrap.mender
 
 # Install the demo server certificate(s). See:
 # https://github.com/mendersoftware/meta-mender/blob/master/meta-mender-core/recipes-mender/mender-server-certificate/mender-server-certificate.bb

@@ -25,7 +25,6 @@ from . import artifact_lock
 
 def common_update_procedure(
     install_image=None,
-    regenerate_image_id=True,
     device_type=conftest.machine_name,
     verify_status=True,
     signed=False,
@@ -42,11 +41,8 @@ def common_update_procedure(
 ):
 
     with artifact_lock:
-        if regenerate_image_id:
-            artifact_name = "mender-%s" % str(random.randint(0, 99999999))
-            logger.debug("randomized image id: " + artifact_name)
-        else:
-            artifact_name = Helpers.yocto_id_from_ext4(install_image)
+        artifact_name = "mender-%s" % str(random.randint(0, 99999999))
+        logger.debug("randomized image id: " + artifact_name)
 
         # create artifact
         with tempfile.NamedTemporaryFile() as artifact_file:
@@ -100,7 +96,6 @@ def update_image(
     host_ip,
     expected_mender_clients=1,
     install_image=None,
-    regenerate_image_id=True,
     signed=False,
     devices=None,
     scripts=[],
@@ -125,7 +120,6 @@ def update_image(
     with device.get_reboot_detector(host_ip) as reboot:
         deployment_id, expected_image_id = common_update_procedure(
             install_image,
-            regenerate_image_id,
             signed=signed,
             devices=devices,
             scripts=scripts,

@@ -578,6 +578,84 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_email: got OK alert email after log pattern expiration in case of streaming log file."
         )
 
+    def test_monitorclient_alert_email_with_group(
+        self, monitor_commercial_setup_no_client
+    ):
+        """Tests the monitor client email alerting with device in a static group"""
+        service_name = "crond"
+        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
+        devid, _, auth, mender_device = self.prepare_env(
+            monitor_commercial_setup_no_client, user_name
+        )
+        device_static_group = "localGroup0"
+        inventory = Inventory(auth)
+        inventory.put_device_in_group(devid, device_static_group)
+
+        logger.info(
+            "test_monitorclient_alert_email_with_group: email alert on systemd service not running scenario."
+        )
+        prepare_service_monitoring(mender_device, service_name)
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        mender_device.run("systemctl stop %s" % service_name)
+        logger.info(
+            "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (True, 1) == (alerts, alert_count)
+
+        mail, messages = get_and_parse_email_n(
+            monitor_commercial_setup_no_client, user_name, 1
+        )
+        assert len(messages) > 0
+        assert_valid_alert(
+            messages[0],
+            user_name,
+            "CRITICAL: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+            + " in group: "
+            + device_static_group,
+        )
+        assert "${workflow.input." not in mail
+        logger.info(
+            "test_monitorclient_alert_email_with_group: got CRITICAL alert email."
+        )
+
+        mender_device.run("systemctl start %s" % service_name)
+        logger.info(
+            "Started %s, sleeping %ds" % (service_name, wait_for_alert_interval_s)
+        )
+        time.sleep(2 * wait_for_alert_interval_s)
+
+        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+            inventory, devid
+        )
+        assert (False, 0) == (alerts, alert_count)
+
+        mail, messages = get_and_parse_email_n(
+            monitor_commercial_setup_no_client, user_name, 2
+        )
+        messages_count = len(messages)
+        assert messages_count >= 2
+        assert_valid_alert(
+            messages[1],
+            user_name,
+            "OK: Monitor Alert for Service "
+            + service_name
+            + " not running on "
+            + devid
+            + " in group: "
+            + device_static_group,
+        )
+        assert "${workflow.input" not in mail
+        logger.info("test_monitorclient_alert_email_with_group: got OK alert email.")
+
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
         wait_for_alert_interval_s = 120 if not isK8S() else 240

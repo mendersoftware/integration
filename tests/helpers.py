@@ -25,30 +25,6 @@ logger = logging.getLogger()
 
 
 class Helpers:
-    artifact_info_file = "/etc/mender/artifact_info"
-    artifact_prefix = "artifact_name"
-
-    @classmethod
-    def yocto_id_from_ext4(self, filename):
-        try:
-            cmd = "debugfs -R 'cat %s' %s| sed -n 's/^%s=//p'" % (
-                self.artifact_info_file,
-                filename,
-                self.artifact_prefix,
-            )
-            output = subprocess.check_output(cmd, shell=True).decode().strip()
-            logger.info("Running: " + cmd + " returned: " + output)
-            return output
-
-        except subprocess.CalledProcessError:
-            pytest.fail("Unable to read: %s, is it a broken image?" % (filename))
-
-        except Exception as e:
-            pytest.fail(
-                "Unexpected error trying to read ext4 image: %s, error: %s"
-                % (filename, str(e))
-            )
-
     @staticmethod
     def identity_script_to_identity_string(output):
         data_dict = {}

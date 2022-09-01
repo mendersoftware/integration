@@ -439,13 +439,13 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "user": {
                     "name": "test1-UUID@example.com",
                     "pwd": "password",
-                    "roles": ["RBAC_ROLE_PERMIT_ALL"]
+                    "roles": ["RBAC_ROLE_PERMIT_ALL"],
                 },
                 "roles": "",
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "test",
                 "set_configuration_status_code": 204,
-                "deploy_configuration_status_code": 200
+                "deploy_configuration_status_code": 200,
             },
             {
                 "name": "Test RBAC deploy configuration to device belonging to a given group with pat",
@@ -453,13 +453,13 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "user": {
                     "name": "test1-UUID@example.com",
                     "pwd": "password",
-                    "roles": ["RBAC_ROLE_PERMIT_ALL"]
+                    "roles": ["RBAC_ROLE_PERMIT_ALL"],
                 },
                 "roles": "",
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "test",
                 "set_configuration_status_code": 204,
-                "deploy_configuration_status_code": 200
+                "deploy_configuration_status_code": 200,
             },
             {
                 "name": "Test RBAC configuration deployment forbidden",
@@ -475,15 +475,15 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                         "permission_sets_with_scope": [
                             {
                                 "name": "DeployToDevices",
-                                "scope": {"type": "DeviceGroups", "value": ["test"]}
+                                "scope": {"type": "DeviceGroups", "value": ["test"]},
                             }
-                        ]
+                        ],
                     }
                 ],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "production",
                 "set_configuration_status_code": 403,
-                "deploy_configuration_status_code": 403
+                "deploy_configuration_status_code": 403,
             },
             {
                 "name": "Test RBAC configuration deployment forbidden pat",
@@ -491,7 +491,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "user": {
                     "name": "test1-UUID@example.com",
                     "pwd": "password",
-                    "roles": ["test"]
+                    "roles": ["test"],
                 },
                 "roles": [
                     {
@@ -499,16 +499,16 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                         "permission_sets_with_scope": [
                             {
                                 "name": "DeployToDevices",
-                                "scope": {"type": "DeviceGroups", "value": ["test"]}
+                                "scope": {"type": "DeviceGroups", "value": ["test"]},
                             },
-                            {"name": "ManageTokens"}
-                        ]
+                            {"name": "ManageTokens"},
+                        ],
                     }
                 ],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "production",
                 "set_configuration_status_code": 403,
-                "deploy_configuration_status_code": 403
+                "deploy_configuration_status_code": 403,
             },
             {
                 "name": "Test RBAC configuration deployment forbidden",
@@ -524,17 +524,17 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                         "permission_sets_with_scope": [
                             {
                                 "name": "DeployToDevices",
-                                "scope": {"type": "DeviceGroups", "value": ["test"]}
+                                "scope": {"type": "DeviceGroups", "value": ["test"]},
                             }
-                        ]
+                        ],
                     }
                 ],
                 "device_groups": {"test": 1, "production": 1},
                 "deploy_group": "test",
                 "set_configuration_status_code": 403,
-                "deploy_configuration_status_code": 403
-            }
-        ]
+                "deploy_configuration_status_code": 403,
+            },
+        ],
     )
     def test_set_and_deploy_configuration(self, clean_mongo, test_case):
         """
@@ -556,7 +556,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
         login(tenant.users[0], test_case["use_personal_access_token"])
 
         test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
-        if test_case['roles'] != "":
+        if test_case["roles"] != "":
             create_roles(tenant.users[0].token, test_case["roles"])
         test_user = create_user(tid=tenant.id, **test_case["user"])
         login(test_user, test_case["use_personal_access_token"])
@@ -685,7 +685,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
 
         admin_user = tenant.users[0]
         test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
-        if test_case['roles'] != "":
+        if test_case["roles"] != "":
             create_roles(tenant.users[0].token, test_case["roles"])
         test_user = create_user(tid=tenant.id, **test_case["user"])
         login(test_user, test_case["use_personal_access_token"])

@@ -734,7 +734,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                     },
                 ],
                 "device_groups": {"test": 1, "production": 1},
-                "view_group": "production",
+                "view_group": "test",
                 "get_configuration_status_code": 200,
             },
         ],

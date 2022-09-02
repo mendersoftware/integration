@@ -69,6 +69,73 @@ class TestRBACv2DeploymentsEnterprise:
         "test_case",
         [
             {
+                "name": "Test RBAC artifact download: RBAC_ROLE_DEPLOYMENTS_MANAGER should not be able to download artifact",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["RBAC_ROLE_DEPLOYMENTS_MANAGER"],
+                },
+                "roles": [],
+                "deploy_groups": ["test"],
+                "status_code": 403,
+            },
+        ]
+    )
+    def test_download_artifact(self, clean_mongo, test_case):
+        """Tests whether given role / custom role with permission sets can download an artifact."""
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(tenant.users[0].token, test_case["roles"])
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+
+        # Create admin user so artifact can be uploaded
+        admin_user_data = {
+            "name": "admin-UUID@example.com",
+            "pwd": "password",
+            "roles": ["RBAC_ROLE_PERMIT_ALL"],
+        }
+        admin_user = create_user(tid=tenant.id, **admin_user_data)
+        login(admin_user, test_case["use_personal_access_token"])
+
+        # Upload a bogus artifact
+        artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
+
+        dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
+        rsp = dplmnt_MGMT.with_auth(admin_user.token).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS,
+            files=(
+                (
+                    "artifact",
+                    ("artifact.mender", artifact.make(), "application/octet-stream"),
+                ),
+            ),
+        )
+        assert rsp.status_code == 201, rsp.text
+
+        # Attempt to download artifact with test user
+        artifact_id = rsp.headers["Location"].split("/")[-1]
+        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD.format(id=artifact_id)
+        )
+        assert rsp.status_code == test_case["status_code"], rsp.text
+        self.logger.info("PASS: %s" % test_case["name"])
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
                 "name": "Test RBAC: single device deployment",
                 "user": {
                     "name": "test1-UUID@example.com",

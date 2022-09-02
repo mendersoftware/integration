@@ -11,10 +11,8 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import json
 import logging
 import pytest
-import time
 import uuid
 
 import testutils.api.deployments as deployments
@@ -22,6 +20,7 @@ import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
 import testutils.api.useradm as useradm
 import testutils.api.deviceconfig as deviceconfig
+from testutils.api import iot_manager
 
 from testutils.common import (
     create_org,
@@ -74,6 +73,55 @@ def create_roles(token, roles):
         assert rsp.status_code == 201
 
 
+class TestRBACIoTManagerEnterprise:
+    api_iot = ApiClient(base_url=iot_manager.URL_MGMT)
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "Test RBAC IoT manager events: RBAC_ROLE_PERMIT_ALL should be the only role to access webhook events",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "admin-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["RBAC_ROLE_PERMIT_ALL"],
+                },
+                "roles": [],
+                "status_code": 200,
+            },
+            {
+                "name": "Test RBAC IoT manager events: RBAC_ROLE_DEPLOYMENTS_MANAGER should not be able to get webhook events",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["RBAC_ROLE_DEPLOYMENTS_MANAGER"],
+                },
+                "roles": [],
+                "status_code": 403,
+            },
+        ],
+    )
+    def test_events_endpoint(self, clean_mongo, test_case):
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(tenant.users[0].token, test_case["roles"])
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+
+        rsp = self.api_iot.with_auth(test_user.token).call(
+            "GET", iot_manager.URL_EVENTS
+        )
+        assert rsp.status_code == test_case["status_code"]
+
+
 class TestRBACv2DeploymentsEnterprise:
     @property
     def logger(self):
@@ -91,10 +139,9 @@ class TestRBACv2DeploymentsEnterprise:
                     "roles": ["RBAC_ROLE_DEPLOYMENTS_MANAGER"],
                 },
                 "roles": [],
-                "deploy_groups": ["test"],
                 "status_code": 403,
             },
-        ]
+        ],
     )
     def test_download_artifact(self, clean_mongo, test_case):
         """Tests whether given role / custom role with permission sets can download an artifact."""
@@ -140,8 +187,7 @@ class TestRBACv2DeploymentsEnterprise:
         # Attempt to download artifact with test user
         artifact_id = rsp.headers["Location"].split("/")[-1]
         rsp = dplmnt_MGMT.with_auth(test_user.token).call(
-            "GET",
-            deployments.URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD.format(id=artifact_id)
+            "GET", deployments.URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD.format(id=artifact_id)
         )
         assert rsp.status_code == test_case["status_code"], rsp.text
         self.logger.info("PASS: %s" % test_case["name"])
@@ -315,11 +361,20 @@ class TestRBACv2DeploymentsEnterprise:
         # Initialize tenant's devices
         grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
 
+        # Create admin user so artifact can be uploaded
+        admin_user_data = {
+            "name": "admin-UUID@example.com",
+            "pwd": "password",
+            "roles": ["RBAC_ROLE_PERMIT_ALL"],
+        }
+        admin_user = create_user(tid=tenant.id, **admin_user_data)
+        login(admin_user, test_case["use_personal_access_token"])
+
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
 
         dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
-        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+        rsp = dplmnt_MGMT.with_auth(admin_user.token).call(
             "POST",
             deployments.URL_DEPLOYMENTS_ARTIFACTS,
             files=(
@@ -548,7 +603,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                     }
                 ],
                 "device_groups": {"test": 1, "production": 1},
-                "deploy_group": "production",
+                "deploy_group": "test",
                 "set_configuration_status_code": 403,
                 "deploy_configuration_status_code": 403,
             },
@@ -567,7 +622,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "deploy_configuration_status_code": 403,
             },
             {
-                "name": "Test RBAC configuration deployment forbidden for ConfigureDevices permission set",
+                "name": "Test RBAC configuration deployment forbidden for ConfigureDevices permission set (different deploy group)",
                 "use_personal_access_token": False,
                 "user": {
                     "name": "test1-UUID@example.com",
@@ -589,6 +644,30 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "deploy_group": "production",
                 "set_configuration_status_code": 403,
                 "deploy_configuration_status_code": 403,
+            },
+            {
+                "name": "Test RBAC configuration deployment allowed for ConfigureDevices permission set (same deploy group)",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ConfigureDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"]},
+                            },
+                        ],
+                    }
+                ],
+                "device_groups": {"test": 1, "production": 1},
+                "deploy_group": "test",
+                "set_configuration_status_code": 204,
+                "deploy_configuration_status_code": 200,
             },
             {
                 "name": "Test RBAC configuration deployment forbidden pat",
@@ -782,7 +861,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "get_configuration_status_code": 403,
             },
             {
-                "name": "Test RBAC GET deployment configuration forbidden with ConfigureDevices permission set",
+                "name": "Test RBAC GET deployment configuration allowed with ConfigureDevices permission set",
                 "use_personal_access_token": False,
                 "user": {
                     "name": "test1-UUID@example.com",

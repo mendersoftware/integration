@@ -66,19 +66,6 @@ A total of 588 lines added, 396 removed (delta 192)
 
 New changes in mender since 3.0.0:
 
-* Fix a bug which could sometimes lead the client to do a
-  rollback after it had already committed. This could happen if the
-  client happened to spontaneously reboot or fail during the status
-  update to the server. Doing this is not correct according to the state
-  flow, and can have unexpected consequences depending on the
-  combination of Update Modules and State Scripts.
-  ([MEN-4830](https://tracker.mender.io/browse/MEN-4830))
-* mender-inventory-network: Fix incompatibility with busybox,
-  by using short command line options in grep command.
-  ([MEN-4851](https://tracker.mender.io/browse/MEN-4851))
-* Do not put useless and sometimes even incorrect zero values
-  in the configuration file when running `mender setup`.
-  ([MEN-4857](https://tracker.mender.io/browse/MEN-4857))
 * Extend logs for docker module
 * Add artifact_name to device provides if not found in store
 * Support passing docker run CLI arguments when deploying

@@ -1859,14 +1859,29 @@ def do_license_generation(state, tag_avail):
                 query_execute_list(
                     [
                         [
+                            "DOCKER_BUILDKIT=1",
+                            "docker",
+                            "build",
+                            "-t",
+                            "mendersoftware/gui:base",
+                            "-f",
+                            os.path.join(tmpdir, "Dockerfile"),
+                            "--target",
+                            "base",
+                            tmpdir,
+                        ],
+                        [
+                            "DOCKER_BUILDKIT=1",
                             "docker",
                             "build",
                             "-t",
                             gui_tag,
                             "-f",
-                            os.path.join(tmpdir, "Dockerfile.disclaimer"),
+                            os.path.join(tmpdir, "Dockerfile"),
+                            "--target",
+                            "disclaim",
                             tmpdir,
-                        ]
+                        ],
                     ]
                 )
                 break
@@ -1876,21 +1891,15 @@ def do_license_generation(state, tag_avail):
                 [
                     "docker",
                     "run",
-                    "-d",
-                    "--name",
-                    "release_tool_gui_licenses",
-                    gui_tag,
+                    "--rm",
+                    "--entrypoint",
                     "/bin/sh",
+                    "-v",
+                    os.getcwd() + ":/extract",
+                    gui_tag,
                     "-c",
-                    "while true; do sleep 1; done",
+                    "mv disclaimer.txt /extract/gui-licenses.txt",
                 ],
-                [
-                    "docker",
-                    "cp",
-                    "release_tool_gui_licenses:/usr/src/app/disclaimer.txt",
-                    "gui-licenses.txt",
-                ],
-                ["docker", "rm", "-f", "release_tool_gui_licenses"],
             ]
         )
         if not executed:

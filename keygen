@@ -17,13 +17,13 @@ EOF
 }
 
 while [ $# -gt 0 ]; do
-    case $1 in
+    case ${1} in
     --help)
         show_help
         exit 0
         break;;
     *)
-        echo 'Unrecognized commandline argument "'$1'"'
+        echo 'Unrecognized commandline argument "'${1}'"'
         show_help
         exit 1
         break;;
@@ -32,30 +32,30 @@ while [ $# -gt 0 ]; do
 done
 
 # Verify dependencies
-command -v sed >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the sed utility to generate key configuration."; exit 1; }
+CLI_COMMANDS="cut sed sort head"
+for cmd in ${CLI_COMMANDS}; do
+  command -v ${cmd} &>/dev/null || { echo >&2 "ERROR: Please install the '${cmd}' utility to generate key configuration."; exit 1; }
+done
 
-# verify openssl is present and sufficiently recent (genpkey seems to require openssl 1.0+)
-command -v openssl >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the openssl utility version 1.0.0 or newer to generate keys."; exit 1; }
-OPENSSL_VERSION_REGEX_MAJOR_BACKREF="(Open|Libre)SSL ([0-9]+).*"
-OPENSSL_VERSION_STRING=$(openssl version)
-OPENSSL_VERSION_MAJOR=$(echo "$OPENSSL_VERSION_STRING" | sed -En "s/$OPENSSL_VERSION_REGEX_MAJOR_BACKREF/\2/p")
-
-if [ "$OPENSSL_VERSION_MAJOR" -lt 1 ]; then
-  echo "ERROR: openssl is too old, need version 1.0.0 or newer"
-  echo "ERROR: OPENSSL_VERSION_STRING=$OPENSSL_VERSION_STRING"
+# verify openssl is present and sufficiently recent (genpkey seems to require openssl 1.1.1+)
+OPENSSL_VERSION_MINIMAL="1.1.1"
+command -v openssl >/dev/null 2>&1 || { echo >&2 "ERROR: Please install the openssl utility version ${OPENSSL_VERSION_MINIMAL} or newer to generate keys."; exit 1; }
+OPENSSL_VERSION=$(openssl version | cut -d' ' -f2 | sed 's~[a-z]~~g')
+if [[ "${OPENSSL_VERSION_MINIMAL}" != "$(printf "${OPENSSL_VERSION_MINIMAL}\n${OPENSSL_VERSION}" | sort -V | head -n 1)" ]]; then
+  echo "ERROR: openssl version '${OPENSSL_VERSION}' is too old, need version ${OPENSSL_VERSION_MINIMAL} or newer"
   exit 1
 fi
 
-if [ -z "$CERT_CN" ]; then
+if [ -z "${CERT_CN}" ]; then
     echo "Common name (CERT_CN) not set."
     echo -n "Enter a certificate common name [docker.mender.io]:"
     IFS='' read -r CERT_CN
-    if [ -z "$CERT_CN" ]; then
+    if [ -z "${CERT_CN}" ]; then
         CERT_CN="docker.mender.io"
     fi
 fi
 
-if [ -z "$CERT_SAN" ]; then
+if [ -z "${CERT_SAN}" ]; then
     CERT_SAN="DNS:${CERT_CN},DNS:*.${CERT_CN}"
     echo "Subject alternative name (CERT_SAN) not set, using default:"
     echo "    CERT_SAN=\"${CERT_SAN}\""
@@ -67,40 +67,40 @@ FILE_NAME_CERT="cert.crt"
 
 ROOTDIR=$(pwd)/keys-generated
 
-CERTDIR=$ROOTDIR/cert
-KEYDIR=$ROOTDIR/keys
+CERTDIR=${ROOTDIR}/cert
+KEYDIR=${ROOTDIR}/keys
 
 
 # generate web cert and corresponding private key
-mkdir -p "$CERTDIR"
-cd "$CERTDIR"
+mkdir -p "${CERTDIR}"
+cd "${CERTDIR}"
 
 openssl req -x509 -sha256 -nodes \
-    -days $CERT_VALID_DAYS \
+    -days ${CERT_VALID_DAYS} \
     -newkey ec:<(openssl ecparam -name prime256v1) \
-    -keyout $FILE_NAME_PRIVATE_KEY \
-    -out $FILE_NAME_CERT \
+    -keyout ${FILE_NAME_PRIVATE_KEY} \
+    -out ${FILE_NAME_CERT} \
     -subj "/CN=${CERT_CN}" \
     -addext "extendedKeyUsage = serverAuth" \
     -addext "subjectAltName = ${CERT_SAN}"
 
 # generate keys for signing JSON Web Tokens
-mkdir -p "$KEYDIR"
-cd "$KEYDIR"
+mkdir -p "${KEYDIR}"
+cd "${KEYDIR}"
 
 for DIR in deviceauth useradm
 do
-  mkdir -p $DIR
+  mkdir -p ${DIR}
   (
-    cd $DIR
-    openssl genpkey -algorithm RSA -out $FILE_NAME_PRIVATE_KEY -pkeyopt rsa_keygen_bits:3072
+    cd ${DIR}
+    openssl genpkey -algorithm RSA -out ${FILE_NAME_PRIVATE_KEY} -pkeyopt rsa_keygen_bits:3072
 
     # convert to RSA private key format, otherwise services complain:"
     # level=fatal msg="failed to read rsa private key: jwt: can't open key - not an rsa private key" file=proc.go func=runtime.main line=183
-    openssl rsa -in $FILE_NAME_PRIVATE_KEY -out $FILE_NAME_PRIVATE_KEY
+    openssl rsa -in ${FILE_NAME_PRIVATE_KEY} -out ${FILE_NAME_PRIVATE_KEY}
   )
 done
 
-echo "All Mender Server keys and certificates have been generated in directory $ROOTDIR."
+echo "All Mender Server keys and certificates have been generated in directory ${ROOTDIR}."
 echo "Please include them in your docker compose and device builds."
 echo "For more information, please refer to https://docs.mender.io/"

@@ -107,7 +107,7 @@ function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
 
-    curl --fail "https://d1b0l86ne08fsf.cloudfront.net/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
+    curl --fail "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact
 

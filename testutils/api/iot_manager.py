@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,3 +18,4 @@ URL_MGMT = "/api/management/v1/iot-manager"
 URL_INTEGRATIONS = "/integrations"
 URL_DEVICE = lambda id: f"/devices/{id}"
 URL_DEVICE_STATE = lambda id: f"/devices/{id}/state"
+URL_EVENTS = "/events"

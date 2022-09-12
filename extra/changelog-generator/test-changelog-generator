@@ -539,6 +539,17 @@ git checkout $main
 
 ################################################################################
 
+git commit --allow-empty -m 'fix: Ending with a code example N103
+
+```
+code example
+```
+
+Changelog: Commit
+Ticket:MEN-1234'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog prev_branch..$main > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
@@ -563,6 +574,12 @@ New changes in test-changelog-generator.$$ since prev_branch:
 
   Should be included N82
 * Custom changelog with keyword, should be fix N99
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+* Ending with a code example N103
+
+  \`\`\`
+  code example
+  \`\`\`
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
 * Fix type N79
 * Aggregated Dependabot Changelogs:

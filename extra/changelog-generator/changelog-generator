@@ -503,7 +503,10 @@ for repo in repos:
                 )
             entry = entry.strip("\n")
             if tracker:
-                if len(entry) - entry.rfind("\n") + len(tracker) >= 70:
+                if (
+                    entry.endswith("```")
+                    or len(entry) - entry.rfind("\n") + len(tracker) >= 70
+                ):
                     entry += "\n"
                 else:
                     entry += " "

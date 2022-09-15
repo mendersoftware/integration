@@ -965,7 +965,7 @@ def query_execute_git_list(execute_git_list):
     return True
 
 
-def query_execute_list(execute_list):
+def query_execute_list(execute_list, env=None):
     """Executes the list of commands after asking first. The argument is a list of
     lists, where the inner list is the argument to subprocess.check_call.
 
@@ -988,7 +988,7 @@ def query_execute_list(execute_list):
             print("Would have executed: %s" % " ".join(cmd))
             continue
 
-        subprocess.check_call(cmd)
+        subprocess.check_call(cmd, env=env)
 
     return True
 
@@ -1864,7 +1864,6 @@ def do_license_generation(state, tag_avail):
                 query_execute_list(
                     [
                         [
-                            "DOCKER_BUILDKIT=1",
                             "docker",
                             "build",
                             "-t",
@@ -1876,7 +1875,6 @@ def do_license_generation(state, tag_avail):
                             tmpdir,
                         ],
                         [
-                            "DOCKER_BUILDKIT=1",
                             "docker",
                             "build",
                             "-t",
@@ -1887,7 +1885,8 @@ def do_license_generation(state, tag_avail):
                             "disclaim",
                             tmpdir,
                         ],
-                    ]
+                    ],
+                    env={"DOCKER_BUILDKIT": "1"},
                 )
                 break
 

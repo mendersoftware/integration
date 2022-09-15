@@ -261,7 +261,7 @@ git:
     docker_container:
     - mender-reporting
     - mender-reporting-indexer
-    release_component: true
+    release_component: false
 
   meta-mender:
     docker_image: []
@@ -515,7 +515,7 @@ docker_image:
     docker_container:
     - mender-reporting
     - mender-reporting-indexer
-    release_component: true
+    release_component: false
 
 docker_container:
 
@@ -685,14 +685,14 @@ docker_container:
     - reporting
     docker_image:
     - reporting
-    release_component: true
+    release_component: false
 
   mender-reporting-indexer:
     git:
     - reporting
     docker_image:
     - reporting
-    release_component: true
+    release_component: false
 
   mender-gateway:
     git:

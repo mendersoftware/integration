@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import time
+import random
 import socket
 import subprocess
 import logging
@@ -460,6 +461,52 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
                 addrs.append(ip + ":8822")
 
         return addrs
+
+    def get_mender_clients_ids(self, network="mender"):
+        cmd = [
+            "docker",
+            "ps",
+            "--filter=label=com.docker.compose.project=" + self.name,
+            '--format={{ .ID }}:{{.Label "com.docker.compose.service"}}',
+        ]
+
+        services = subprocess.check_output(cmd).decode().split()
+        clients = []
+        client_ids = []
+        for service in services:
+            ids_label = service.split(":")
+            if ids_label[1].startswith("mender-client"):
+                clients.append(ids_label[1])
+                client_ids.append(ids_label[0])
+
+        addrs = []
+        ids = []
+        for i in range(len(clients)):
+            client = clients[i]
+            client_id = client_ids[i]
+            for ip in self.get_ip_of_service(client, network=network):
+                addrs.append(ip + ":8822")
+                ids.append(client_id)
+
+        return addrs, ids
+
+    def restart_mender_clients(self, base_sleep_s=24):
+        cmd = [
+            "docker",
+            "ps",
+            "--filter=label=com.docker.compose.project=" + self.name,
+            "--format={{ .ID }}",
+        ]
+
+        sleep_between_restarts_s = base_sleep_s + random.randint(0, 16)
+        services = subprocess.check_output(cmd).decode().split()
+        for service in services:
+            if service.startswith("mender-client"):
+                subprocess.check_output(["docker", "restart", service])
+                time.sleep(sleep_between_restarts_s)
+
+    def restart_by_id(self, id):
+        subprocess.check_output(["docker", "restart", id])
 
 
 class DockerComposeMTLSSetup(DockerComposeNamespace):

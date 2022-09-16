@@ -11,11 +11,11 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
 import pytest
 import queue
 import threading
 import time
+import random
 import subprocess
 from tempfile import NamedTemporaryFile
 from os import path
@@ -29,6 +29,8 @@ from testutils.common import create_org, create_user
 from testutils.api.client import ApiClient
 from testutils.api import deviceauth, useradm, inventory, deployments
 
+from ..MenderAPI import logger
+
 from .. import conftest
 
 container_factory = factory.get_factory()
@@ -38,6 +40,7 @@ TIMEOUT = timedelta(minutes=5)
 
 @pytest.fixture(scope="function")
 def setup_os_compat(request):
+    logger.info("starting setup_os_compat")
     env = container_factory.get_compatibility_setup()
     request.addfinalizer(env.teardown)
     env.setup()
@@ -47,12 +50,32 @@ def setup_os_compat(request):
     )
     env.populate_clients()
 
-    clients = env.get_mender_clients()
+    clients, ids = env.get_mender_clients_ids()
     assert len(clients) > 0, "Failed to setup clients"
+    max_wait_before_restart_s = 8
+    restart_wait_s = 32
+    logger.info("setup_os_compat is probing ssh to devices")
     env.devices = []
-    for client in clients:
+    for i in range(len(clients)):
+        client = clients[i]
+        client_id = ids[i]
         dev = MenderDevice(client)
-        dev.ssh_is_opened()
+        max_start_attempts = 4
+        while max_start_attempts > 0:
+            logger.info(
+                f"setup_os_compat trying ssh to {client_id}/{client} attempts left {max_start_attempts}"
+            )
+            try:
+                dev.ssh_is_opened(max_wait_before_restart_s)
+                logger.info(f"setup_os_compat ssh is open: {client_id}/{client}")
+                break
+            except:
+                restart_sleep_s = restart_wait_s + random.randint(0, restart_wait_s)
+                logger.info(
+                    f"setup_os_compat failed to connect to ssh after waiting and retrying. restarting: {client_id}/{client} and sleeping {restart_sleep_s}s"
+                )
+                env.restart_by_id(client_id)
+                time.sleep(restart_sleep_s)
         env.devices.append(dev)
 
     return env
@@ -60,6 +83,7 @@ def setup_os_compat(request):
 
 @pytest.fixture(scope="function")
 def setup_ent_compat(request):
+    logger.info("starting setup_ent_compat")
     env = container_factory.get_compatibility_setup(enterprise=True)
     request.addfinalizer(env.teardown)
     env.setup()
@@ -75,12 +99,32 @@ def setup_ent_compat(request):
 
     env.populate_clients(tenant_token=env.tenant.tenant_token)
 
-    clients = env.get_mender_clients()
+    clients, ids = env.get_mender_clients_ids()
     assert len(clients) > 0, "Failed to setup clients"
+    max_wait_before_restart_s = 8
+    restart_wait_s = 32
+    logger.info("setup_ent_compat is probing ssh to devices")
     env.devices = []
-    for client in clients:
+    for i in range(len(clients)):
+        client = clients[i]
+        client_id = ids[i]
         dev = MenderDevice(client)
-        dev.ssh_is_opened()
+        max_start_attempts = 4
+        while max_start_attempts > 0:
+            logger.info(
+                f"setup_ent_compat trying ssh to {client_id}/{client} attempts left {max_start_attempts}"
+            )
+            try:
+                dev.ssh_is_opened(max_wait_before_restart_s)
+                logger.info(f"setup_ent_compat ssh is open: {client_id}/{client}")
+                break
+            except:
+                restart_sleep_s = restart_wait_s + random.randint(0, restart_wait_s)
+                logger.info(
+                    f"setup_ent_compat failed to connect to ssh after waiting and retrying. restarting: {client_id}/{client} and sleeping {restart_sleep_s}s"
+                )
+                env.restart_by_id(client_id)
+                time.sleep(restart_sleep_s)
         env.devices.append(dev)
 
     return env

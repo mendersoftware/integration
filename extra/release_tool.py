@@ -256,6 +256,7 @@ BACKEND_SERVICES_ENT = {
     "auditlogs",
     "mtls-ambassador",
     "devicemonitor",
+    "mender-conductor-enterprise",
 }
 BACKEND_SERVICES_OPEN_ENT = {
     "deployments",

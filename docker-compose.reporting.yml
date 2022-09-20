@@ -4,7 +4,7 @@ services:
     # mender-reporting
     #
     mender-reporting:
-        image: mendersoftware/reporting:staging
+        image: mendersoftware/reporting:mender-master
         command: server --automigrate
         extends:
             file: common.yml

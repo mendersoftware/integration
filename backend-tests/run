@@ -203,8 +203,9 @@ script_failed=0
 for suite in "${TEST_SUITES[@]}"; do
     case "$suite" in
         open)
-            echo "Skipping Open Source test suite for staging testing"
-            continue
+            COMPOSE_CMD="$COMPOSE_CMD_OPEN"
+            PYTEST_FILTER="$PYTEST_FILTER_OPEN"
+            PYTEST_REPORT="$PYTEST_REPORT_OPEN"
             ;;
         enterprise)
             COMPOSE_CMD="$COMPOSE_CMD_ENTERPRISE"

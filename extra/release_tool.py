@@ -49,7 +49,7 @@ GITLAB_CREDS_MISSING_ERR = """GitLab credentials not found. Possible locations:
 - 'pass' password management storage, under "token" label."""
 
 # What we use in commits messages when bumping versions.
-VERSION_BUMP_STRING = "Bump versions for Mender"
+VERSION_BUMP_STRING = "chore: Bump versions for Mender"
 
 # Whether or not pushes should really happen.
 PUSH = True

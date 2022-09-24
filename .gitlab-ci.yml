@@ -20,21 +20,26 @@ variables:
 publish:versions:
   stage: publish
   image: python:slim
-  variables:
-    GITHUB_TOKEN: $GITHUB_BOT_TOKEN
   before_script:
     - apt-get update && apt-get install -qqy curl hub unzip
     - pip3 install pyyaml
-    - git config --global user.name mender-test-bot
-    - git config --global user.email user@example.com
     - curl -fsSL https://deno.land/x/install/install.sh | sh
     - curl -sLO https://docs.mender.io/releases/versions.json
+    # Prepare SSH key
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    # Configure git
+    - git config --global user.email "mender@northern.tech"
+    - git config --global user.name "Mender Test Bot"
   script:
     - git for-each-ref --shell --format="tag:%(refname:short) datetime:%(creatordate:format:%s)" "refs/tags/*" | sort -V -r > tags
     - python extra/release_info_generator.py
     - /root/.deno/bin/deno fmt versions.json
     - hub clone mendersoftware/mender-docs-site && mv versions.json mender-docs-site/versions.json && cd mender-docs-site
-    - "git add versions.json && git commit --signoff -m 'chore: Version information update' -m 'Changelog: None'"
+    - "git add versions.json && git commit --signoff -m 'chore: Version information update'"
     - hub pull-request --push --draft --base mendersoftware/mender-docs-site --message "Version information update" --message "keeping up with the versions"
   artifacts:
     expire_in: 2w

@@ -74,11 +74,11 @@ def user(clean_migrated_mongo):
 
 @pytest.fixture(scope="function")
 def devices(clean_migrated_mongo, user):
-    uc = ApiClient(useradm.URL_MGMT)
+    useradm_mgmt_v1 = ApiClient(useradm.URL_MGMT)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
-    r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+    r = useradm_mgmt_v1.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
     assert r.status_code == 200
     utoken = r.text
 
@@ -109,13 +109,13 @@ def tenants_users(clean_migrated_mongo_mt):
 
 @pytest.fixture(scope="function")
 def tenants_users_devices(clean_migrated_mongo_mt, tenants_users):
-    uc = ApiClient(useradm.URL_MGMT)
+    useradm_mgmt_v1 = ApiClient(useradm.URL_MGMT)
     devauthm = ApiClient(deviceauth.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
 
     for t in tenants_users:
         user = t.users[0]
-        r = uc.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
+        r = useradm_mgmt_v1.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
         assert r.status_code == 200
         utoken = r.text
 
@@ -1410,9 +1410,9 @@ def compare_aset(authset, api_authset):
 @pytest.mark.skipif(
     isK8S(), reason="not testable in a staging or production environment"
 )
-class TestDefaultTenantTokenEnterprise(object):
+class TestDefaultTenantTokenEnterprise:
 
-    uc = ApiClient(useradm.URL_MGMT)
+    useradm_mgmt_v1 = ApiClient(useradm.URL_MGMT)
     devauthd = ApiClient(deviceauth.URL_DEVICES)
     devauthm = ApiClient(deviceauth.URL_MGMT)
 
@@ -1435,7 +1435,7 @@ class TestDefaultTenantTokenEnterprise(object):
             wait_until_healthy("backend-tests")
 
             # Retrieve user token for management API
-            r = self.uc.call(
+            r = self.useradm_mgmt_v1.call(
                 "POST",
                 useradm.URL_LOGIN,
                 auth=(default_tenant_user.name, default_tenant_user.pwd),
@@ -1480,7 +1480,7 @@ class TestDefaultTenantTokenEnterprise(object):
             wait_until_healthy("backend-tests")
 
             # Get default user token for management api
-            r = self.uc.call(
+            r = self.useradm_mgmt_v1.call(
                 "POST",
                 useradm.URL_LOGIN,
                 auth=(default_tenant_user.name, default_tenant_user.pwd),
@@ -1492,7 +1492,7 @@ class TestDefaultTenantTokenEnterprise(object):
             tenant1 = create_org("tenant1", "foo@bar.com", "foobarbaz")
             tenant1_user = tenant1.users[0]
 
-            r = self.uc.call(
+            r = self.useradm_mgmt_v1.call(
                 "POST", useradm.URL_LOGIN, auth=(tenant1_user.name, tenant1_user.pwd)
             )
             assert r.status_code == 200
@@ -1543,7 +1543,7 @@ class TestDefaultTenantTokenEnterprise(object):
             wait_until_healthy("backend-tests")
 
             # Get default user auth token for management api
-            r = self.uc.call(
+            r = self.useradm_mgmt_v1.call(
                 "POST",
                 useradm.URL_LOGIN,
                 auth=(default_tenant_user.name, default_tenant_user.pwd),
@@ -1560,7 +1560,7 @@ class TestDefaultTenantTokenEnterprise(object):
             )
             tenant1 = create_org(tenant, username, password)
             tenant1_user = tenant1.users[0]
-            r = self.uc.call(
+            r = self.useradm_mgmt_v1.call(
                 "POST", useradm.URL_LOGIN, auth=(tenant1_user.name, tenant1_user.pwd)
             )
             assert r.status_code == 200

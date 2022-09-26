@@ -112,10 +112,14 @@ class CliTenantadm(BaseCli):
         BaseCli.__init__(
             self, "mender-tenantadm", containers_namespace, container_manager
         )
+        self.service_name = "mender-tenantadm"
 
-    def create_org(self, name, username, password, plan="os"):
+        enterprise = Microservice("/usr/bin/tenantadm", "/etc/tenantadm")
+        self.choose_binary_and_config_paths([enterprise], self.service_name)
+
+    def create_org(self, name, username, password, plan="os") -> str:
         cmd = [
-            "/usr/bin/tenantadm",
+            self.service.bin_path,
             "create-org",
             "--name",
             name,
@@ -130,8 +134,8 @@ class CliTenantadm(BaseCli):
         tid = self.container_manager.execute(self.cid, cmd)
         return tid
 
-    def get_tenant(self, tid):
-        cmd = ["/usr/bin/tenantadm", "get-tenant", "--id", tid]
+    def get_tenant(self, tid: str):
+        cmd = [self.service.bin_path, "get-tenant", "--id", tid]
 
         tenant = self.container_manager.execute(self.cid, cmd)
         return tenant
@@ -140,7 +144,7 @@ class CliTenantadm(BaseCli):
         if isK8S():
             return
 
-        cmd = ["/usr/bin/tenantadm", "migrate"]
+        cmd = [self.service.bin_path, "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
 

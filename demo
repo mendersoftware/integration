@@ -165,7 +165,7 @@ env_setup() {
     # Parse the Mender-Artifact version used from the other-components.yml file's image tag
     export MENDER_ARTIFACT_VERSION=$(awk -F':' '/mendersoftware\/mender-artifact/ {print $3}' other-components.yml)
     # Parse the mender version from docker-compose.yml mender image's tag
-    export MENDER_VERSION=$(awk -F':mender-' '/mendersoftware\/mender-client/ {print $3}' docker-compose.client.yml | sed 's/mender-//')
+    export MENDER_VERSION=$(awk -F':'mender- '/mendersoftware\/mender-client/ {print $2}' docker-compose.client.yml)
     export MENDER_DEB_PACKAGE_VERSION=$MENDER_VERSION
 
     MENDER_SERVER_URI="https://localhost"

@@ -26,6 +26,8 @@ import docker
 import redo
 import requests
 
+from redo import retrier
+
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
 import testutils.api.reporting as reporting
@@ -175,18 +177,17 @@ def create_org(
         host = container_manager.get_mender_gateway()
     api = ApiClient(useradm.URL_MGMT, host=host)
 
-    # Try log in every second for 3 minutes.
+    # Try log in every second for 2 minutes.
     # - There usually is a slight delay (in order of ms) for propagating
     #   the created user to the db.
-    for i in range(3 * 60):
+    for _ in retrier(attempts=120, sleepscale=1, sleeptime=1):
         rsp = api.call("POST", useradm.URL_LOGIN, auth=(username, password))
         if rsp.status_code == 200:
             break
-        time.sleep(1)
 
     assert (
         rsp.status_code == 200
-    ), "User could not log in within three minutes after organization has been created."
+    ), "User could not log in within two minutes after organization has been created."
 
     user_token = rsp.text
     rsp = api.with_auth(user_token).call("GET", useradm.URL_USERS)

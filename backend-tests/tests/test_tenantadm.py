@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ import subprocess
 import time
 import uuid
 
+from redo import retrier
+
 from testutils.infra import cli
 from testutils import api
 from testutils.common import (
@@ -30,8 +32,10 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope="function")
 def clean_mongo_tenant_migration(mongo):
     mongo_cleanup(mongo)
-    tenant_cli = cli.CliTenantadm()
-    tenant_cli.migrate()
+    useradm_cli = cli.CliUseradm()
+    useradm_cli.migrate()
+    tenantadm_cli = cli.CliTenantadm()
+    tenantadm_cli.migrate()
     yield mongo
     mongo_cleanup(mongo)
 
@@ -92,8 +96,8 @@ class TestCreateOrganizationCLIEnterprise:
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
-        # Retry login every second for 3 min
-        for i in range(60 * 3):
+        # Retry login every second for 2 min
+        for i in range(60 * 2):
             rsp = self.api_mgmt_useradm.call(
                 "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
@@ -105,7 +109,7 @@ class TestCreateOrganizationCLIEnterprise:
 
         try:
             self.logger.debug("Second tenant creation call")
-            tenant_id = tenantadm_cli.create_org(
+            tenantadm_cli.create_org(
                 name=name, username=username, password="321password"
             )
             pytest.fail("Multiple users with the same username is not allowed")
@@ -133,15 +137,14 @@ class TestCreateOrganizationCLIEnterprise:
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
-        # Retry login every second for 3 min
-        for i in range(60 * 3):
+        # Retry login every second for 2 min
+        for _ in retrier(attempts=120, sleepscale=1, sleeptime=1):
             rsp = self.api_mgmt_useradm.call(
                 "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 self.logger.debug("Successfully logged into account")
                 break
-            time.sleep(1)
 
         assert rsp.status_code == 200
 
@@ -155,14 +158,13 @@ class TestCreateOrganizationCLIEnterprise:
         )
         self.logger.debug("Tenant id: %s" % tenant_id)
 
-        # Retry login every second for 3 min
-        for i in range(60 * 3):
+        # Retry login every second for 2 min
+        for _ in retrier(attempts=120, sleepscale=1, sleeptime=1):
             rsp = self.api_mgmt_useradm.call(
                 "POST", api.useradm.URL_LOGIN, auth=(username, password)
             )
             if rsp.status_code == 200:
                 break
-            time.sleep(1)
         assert rsp.status_code == 200
 
         self.logger.info("`test_duplicate_username` finished successfully.")

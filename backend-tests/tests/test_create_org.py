@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -25,11 +25,14 @@ import testutils.api.useradm as useradm
 import testutils.api.tenantadm as tenantadm
 import testutils.api.deviceauth as deviceauth_v1
 import testutils.integration.stripe as stripeutils
-from testutils.infra.cli import CliTenantadm
+from testutils.infra.cli import CliTenantadm, CliUseradm
 
 
 @pytest.fixture(scope="function")
 def clean_migrated_mongo(clean_mongo):
+    useradm_cli = CliUseradm()
+    useradm_cli.migrate()
+
     tenantadm_cli = CliTenantadm()
     tenantadm_cli.migrate()
     yield clean_mongo
@@ -171,7 +174,7 @@ class TestCreateOrganizationEnterprise:
 
         uuidv4 = str(uuid.uuid4())
         tenant = "test.mender.io-" + uuidv4
-        email = "some.user@{}.com".format(tenant)
+        email = f"some.user@{tenant}.com"
 
         payload = {
             "request_id": "123456",
@@ -184,7 +187,7 @@ class TestCreateOrganizationEnterprise:
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 202
 
-        email2 = "some.user1@{}.com".format(tenant)
+        email2 = f"some.user1@{tenant}.com"
         payload = {
             "request_id": "123457",
             "organization": tenant,
@@ -229,6 +232,7 @@ class TestCreateOrganizationEnterprise:
             "g-recaptcha-response": "foobar",
             "token": "tok_visa",
         }
+
         rsp = tc.post(tenantadm.URL_MGMT_TENANTS, data=payload)
         assert rsp.status_code == 409
 

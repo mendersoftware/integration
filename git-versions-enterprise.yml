@@ -29,7 +29,7 @@ services:
         image: registry.mender.io/mendersoftware/auditlogs:staging
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.0
+        image: registry.mender.io/mendersoftware/mtls-ambassador:1.1.0
 
     mender-devicemonitor:
         image: registry.mender.io/mendersoftware/devicemonitor:staging

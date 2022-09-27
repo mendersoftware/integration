@@ -22,7 +22,7 @@ LINKED_SHAS = {}
 SHA_TO_TRACKER = {}
 
 JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|ME|QA|MC)(?:-| )[0-9]+)\]?"
-TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
+TRACKER_REGEX = f"^[Tt]icket: *{JIRA_REGEX} *"
 CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
@@ -269,15 +269,14 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
             if not msg_started:
                 continue
 
-            # Tracker reference, remove from string.
-            for match in re.finditer(TRACKER_REGEX, line, re.IGNORECASE):
+            if re.match("^ticket: *none *$", line, re.IGNORECASE):
+                continue
+
+            tracker_match = re.match(TRACKER_REGEX, line, re.IGNORECASE)
+            if tracker_match:
                 if not SHA_TO_TRACKER.get(sha):
                     SHA_TO_TRACKER[sha] = set()
-                SHA_TO_TRACKER[sha].add("".join(match.groups("")))
-                tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
-                line = tracker_removed.strip(" ")
-
-            if re.match("^ticket: *none *$", line, re.IGNORECASE):
+                SHA_TO_TRACKER[sha].add("".join(tracker_match.groups("")))
                 continue
 
             if not title_fetched:

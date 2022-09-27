@@ -551,7 +551,7 @@ for repo in repos:
     print_category_entries(fixes, "Bug Fixes", POSSIBLE_PROBLEMS)
     print_category_entries(feats, "Features", POSSIBLE_PROBLEMS)
     print_category_entries(others, "Other", POSSIBLE_PROBLEMS, fixes or feats)
-    print_category_entries(dep_bumps, "Dependabot bumps", POSSIBLE_PROBLEMS)
+    print_category_entries(dep_bumps, "Dependency updates", POSSIBLE_PROBLEMS)
 
     for problem in POSSIBLE_PROBLEMS:
         if sys.stderr.isatty():

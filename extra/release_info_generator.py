@@ -116,13 +116,8 @@ taggedReleases = get_releases()
 releases = taggedReleases["tags"]
 releaseInformation = {"lts": [], "releases": {}, "saas": taggedReleases["saasTags"]}
 
-existingReleaseInformation = {}
-try:
-    with open("versions.json", "r") as current:
-        existingReleaseInformation = json.load(current)
-except:
-    pass
-if existingReleaseInformation["releases"]:
+with open("versions.json", "r") as current:
+    existingReleaseInformation = json.load(current)
     releaseInformation["releases"] = existingReleaseInformation["releases"]
 
 ltsReleases = []

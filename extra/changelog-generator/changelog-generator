@@ -21,7 +21,7 @@ LINKED_SHAS = {}
 # messages.
 SHA_TO_TRACKER = {}
 
-JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|QA|MC)(?:-| )[0-9]+)\]?"
+JIRA_REGEX = r"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:INF|ARCHIVE|MEN|ME|QA|MC)(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
 CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"

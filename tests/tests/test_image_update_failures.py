@@ -29,7 +29,7 @@ class BaseTestFailures(MenderTesting):
     def do_test_update_image_id_already_installed(
         self, env, valid_image_with_mender_conf,
     ):
-        """Uploading an image with an incorrect name set results in failure and rollback."""
+        """Test that an image with the same ID as the already installed image does not install anew"""
 
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)

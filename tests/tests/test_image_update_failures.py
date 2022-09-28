@@ -40,7 +40,7 @@ class BaseTestFailures(MenderTesting):
             mender_conf = mender_device.run("cat /etc/mender/mender.conf")
             deployment_id, expected_image_id = common_update_procedure(
                 valid_image_with_mender_conf(mender_conf),
-                True,
+                verify_status=True,
                 devauth=devauth,
                 deploy=deploy,
             )

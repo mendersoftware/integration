@@ -307,6 +307,7 @@ class TestClientCompatibilityBase:
             assert_successful_deployment(api_deployments, deployment_id)
 
 
+@pytest.mark.skip(reason="See QA-443")
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
     def test_compatibility(self, setup_os_compat):
         self.compatibility_test_impl(setup_os_compat)
@@ -315,6 +316,7 @@ class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
+@pytest.mark.skip(reason="See QA-443")
 class TestClientCompatibilityEnterprise(TestClientCompatibilityBase):
     def test_enterprise_compatibility(self, setup_ent_compat):
         self.compatibility_test_impl(setup_ent_compat)

@@ -36,6 +36,13 @@ git:
     release_component: true
     independent_component: true
 
+  generate-delta-worker:
+    docker_image:
+    - generate-delta-worker
+    docker_container:
+    - mender-generate-delta-worker
+    release_component: true
+
   iot-manager:
     docker_image:
     - iot-manager
@@ -306,6 +313,13 @@ docker_image:
     - mender-device-auth
     release_component: true
 
+  generate-delta-worker:
+    git:
+    - generate-delta-worker
+    docker_container:
+    - mender-generate-delta-worker
+    release_component: true
+
   gui:
     git:
     - gui
@@ -542,6 +556,13 @@ docker_container:
     docker_image:
     - deviceauth
     - deviceauth-enterprise
+    release_component: true
+
+  mender-generate-delta-worker:
+    git:
+    - generate-delta-worker
+    docker_image:
+    - generate-delta-worker
     release_component: true
 
   mender-gui:

@@ -257,6 +257,7 @@ BACKEND_SERVICES_ENT = {
     "mtls-ambassador",
     "devicemonitor",
     "mender-conductor-enterprise",
+    "generate-delta-worker",
 }
 BACKEND_SERVICES_OPEN_ENT = {
     "deployments",

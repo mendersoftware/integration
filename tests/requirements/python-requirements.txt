@@ -1,5 +1,5 @@
 cryptography==38.0.1
-docker==5.0.3
+docker==6.0.0
 docker-compose==1.29.2
 fabric==2.7.1
 filelock==3.8.0

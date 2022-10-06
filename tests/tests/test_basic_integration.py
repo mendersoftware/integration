@@ -125,7 +125,7 @@ class BaseTestBasicIntegration(MenderTesting):
         )
 
     def do_test_update_no_compression(self, env, valid_image_with_mender_conf):
-        """Uploads an uncompressed artifact, and runs the whole udpate process."""
+        """Uploads an uncompressed artifact, and runs the whole update process."""
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 

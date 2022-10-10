@@ -36,6 +36,7 @@ from testutils.common import (
 )
 
 
+@pytest.mark.storage_test
 class TestUploadArtifactBase:
     def get_auth_token(self, username, password):
         r = ApiClient(useradm.URL_MGMT).call(
@@ -205,6 +206,7 @@ class TestUploadArtifactBase:
             os.unlink(f.name)
 
 
+@pytest.mark.storage_test
 class TestUploadArtifactEnterprise(TestUploadArtifactBase):
     def get_tenant_username_and_password(self, plan):
         uuidv4 = str(uuid.uuid4())

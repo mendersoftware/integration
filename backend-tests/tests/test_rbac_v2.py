@@ -143,6 +143,7 @@ class TestRBACv2DeploymentsEnterprise:
             },
         ],
     )
+    @pytest.mark.storage_test
     def test_download_artifact(self, clean_mongo, test_case):
         """Tests whether given role / custom role with permission sets can download an artifact."""
         self.logger.info("RUN: %s", test_case["name"])
@@ -338,6 +339,7 @@ class TestRBACv2DeploymentsEnterprise:
             },
         ],
     )
+    @pytest.mark.storage_test
     def test_deploy_to_devices(self, clean_mongo, test_case):
         """
         Tests adding group restriction to roles and checking that users
@@ -505,6 +507,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
             },
         ],
     )
+    @pytest.mark.storage_test
     def test_deploy_to_group(self, clean_mongo, test_case):
         """
         Tests adding group restriction to roles and checking that users

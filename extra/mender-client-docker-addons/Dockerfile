@@ -6,8 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
     jq libssl-dev libglib2.0-dev curl
 
-# TODO - This cannot be hardcoded to anything else but master later
-ARG MENDER_CLIENT_REV=automatic_bootstrap_artifact
+ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
 ARG MENDER_ARTIFACT_REV=master
 

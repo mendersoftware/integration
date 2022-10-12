@@ -107,7 +107,6 @@ http:
     gui:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-        - signup-redirect
         - sec-headers
         - compression
         - json-error-responder1

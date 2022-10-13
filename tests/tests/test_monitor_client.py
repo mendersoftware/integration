@@ -524,15 +524,16 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_email: email alert a pattern found in the journalctl output scenario."
         )
-        service_name = "mender-client"
+        service_name = "crond"
         prepare_log_monitoring(
             mender_device,
             service_name,
             "@journalctl -f -u " + service_name,
-            "State transition: .*",
+            ": Started .*",
         )
+        mender_device.run("echo -ne > /tmp/mylog.log")
         mender_device.run("systemctl restart mender-monitor")
-        time.sleep(2 * wait_for_alert_interval_s)
+        time.sleep(wait_for_alert_interval_s)
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, messages_count + 1
         )
@@ -540,7 +541,7 @@ class TestMonitorClientEnterprise:
         assert_valid_alert(
             messages[-1],
             user_name,
-            "CRITICAL: Monitor Alert for Log file contains State transition:",
+            "CRITICAL: Monitor Alert for Log file contains : Started",
         )
         assert "${workflow.input" not in mail
 

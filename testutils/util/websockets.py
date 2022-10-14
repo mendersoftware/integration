@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -16,9 +16,12 @@
 # synchronous API.
 
 import asyncio
+import logging
 import ssl
 import time
 import websockets
+
+logger = logging.getLogger()
 
 
 class Websocket:
@@ -39,7 +42,8 @@ class Websocket:
                 self.url, extra_headers=self.headers, ssl=ssl_context
             )
 
-        attempts = 5
+        attempts = 15
+        sleep_seconds = 15
         while True:
             try:
                 asyncio.get_event_loop().run_until_complete(connect())
@@ -47,8 +51,12 @@ class Websocket:
             except websockets.InvalidStatusCode:
                 if self.retry_connect and attempts > 0:
                     attempts -= 1
-                    time.sleep(5)
+                    logger.info(
+                        "websockets: %d retrying on InvalidStatusCode" % attempts
+                    )
+                    time.sleep(sleep_seconds)
                 else:
+                    logger.info("websockets: out of retries on InvalidStatusCode")
                     raise
 
         return self

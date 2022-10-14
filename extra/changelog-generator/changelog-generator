@@ -167,7 +167,6 @@ if args.all:
         .strip()
     )
     repos += [os.path.join(base_dir, repo) for repo in repo_list.split()]
-    repos.append(os.path.join(base_dir, "integration"))
 else:
     repos.append(".")
 

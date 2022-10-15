@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import time
+import random
 import json
 import pytest
 import uuid
@@ -544,3 +546,12 @@ def enterprise_with_legacy_client(request):
     assert 1 == len(devices)
 
     return env
+
+
+@pytest.fixture(autouse=True)
+def slow_down_tests():
+    yield
+    sleep_min_s = 64
+    sleep_max_s = 512
+    sleep_s = random.randint(sleep_min_s, sleep_max_s)
+    time.sleep(sleep_s)

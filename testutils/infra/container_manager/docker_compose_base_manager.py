@@ -183,7 +183,38 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def _stop_docker_compose(self):
         with docker_lock:
+            stop_sleep_seconds = 15
+            retry_attempts = 8
+
             # Take down all docker instances in this namespace.
+            while retry_attempts > 0:
+                logger.info(
+                    "(attempts left: %d) trying to stop all containers in %s"
+                    % (retry_attempts, self.name)
+                )
+                cmd = "docker ps -q -f name=%s | xargs -r docker stop" % self.name
+                logger.info("running %s" % cmd)
+                subprocess.run(cmd, check=False, shell=True)
+                time.sleep(stop_sleep_seconds)
+                output = subprocess.check_output(
+                    "docker ps -q -f name=%s | wc -l" % self.name, shell=True
+                ).decode()
+                output = output.rstrip()
+                if int(output) == 0:
+                    logger.info(
+                        "(attempts left: %d) stopped all containers in %s"
+                        % (retry_attempts, self.name)
+                    )
+                    break
+                remaining = subprocess.check_output(
+                    "docker ps -f name=%s" % self.name, check=False, shell=True
+                ).decode()
+                logger.info(
+                    "(attempts left: %d) %d containers remained in %s are: %s"
+                    % (retry_attempts, int(output), self.name, remaining)
+                )
+                retry_attempts = retry_attempts - 1
+
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)

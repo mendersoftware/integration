@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import time
+import random
 import socket
 import subprocess
 import logging
@@ -99,8 +100,16 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
 
     def setup(self):
+        self._jitter_sleep()
         self._docker_compose_cmd("up -d")
         self._wait_for_containers()
+
+    def _jitter_sleep(self):
+        sleep_min_s=32
+        sleep_max_s=255
+        sleep_s=random.randint(sleep_min_s, sleep_max_s)
+        logger.info("jitter_sleep: %s is sleeping %ds" % (self.name,sleep_s))
+        time.sleep(sleep_s)
 
     def _wait_for_containers(self):
         wait_until_healthy(self.name, timeout=60 * 5)
@@ -143,6 +152,7 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
         super().__init__(name, self.QEMU_CLIENT_FILES)
 
     def setup(self):
+        self._jitter_sleep()
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
         self._wait_for_containers()
 
@@ -172,6 +182,7 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
             )
 
     def setup(self, recreate=True, env=None):
+        self._jitter_sleep()
         cmd = "up -d"
         if not recreate:
             cmd += " --no-recreate"
@@ -258,6 +269,7 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES)
 
     def setup(self, recreate=True, env=None):
+        self._jitter_sleep()
         cmd = "up -d"
         if not recreate:
             cmd += " --no-recreate"
@@ -388,6 +400,7 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
             )
 
     def setup(self):
+        self._jitter_sleep()
         compose_args = "up -d --scale mender-client=0"
         self._docker_compose_cmd(compose_args)
         self._wait_for_containers()

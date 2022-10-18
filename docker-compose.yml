@@ -228,7 +228,7 @@ services:
             mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
 
     mender-mongo:
-        image: mongo:4.4
+        image: mongo:6.0
         extends:
             file: common.yml
             service: mender-base

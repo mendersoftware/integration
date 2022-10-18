@@ -15,6 +15,10 @@ git init
 echo dummy > dummy
 git add dummy
 git commit -m 'Dummy commit'
+git branch prev_branch
+# This is due to upstream rename from master to main: Find out which is the
+# default in this installation.
+main=$(git symbolic-ref --short HEAD)
 
 # The numbers that are sprinkled about below are just to make it easier to
 # pinpoint where a particular line came from.
@@ -421,7 +425,7 @@ Should not be included N78'
 
 ################################################################################
 
-git commit --allow-empty -m 'fix: Fix type N79
+git commit --allow-empty -m 'fix:Fix type N79
 
 Should not be included N80
 
@@ -523,7 +527,30 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 
 ################################################################################
 
-"$SRC_DIR/changelog-generator" --repo --sort-changelog HEAD > result.txt 2>stderr.txt || {
+git commit --allow-empty -m 'fix:cherry-picked fix N102
+
+Should not appear, since it appears in prev_branch too.
+
+Changelog: Title
+Ticket:None'
+git checkout prev_branch
+git cherry-pick -x --allow-empty $main
+git checkout $main
+
+################################################################################
+
+git commit --allow-empty -m 'fix: Ending with a code example N103
+
+```
+code example
+```
+
+Changelog: Commit
+Ticket:MEN-1234'
+
+################################################################################
+
+"$SRC_DIR/changelog-generator" --repo --sort-changelog prev_branch..$main > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
     echo "result.txt:"
@@ -536,7 +563,9 @@ Signed-off-by: dependabot[bot] <support@github.com>'
 cat > expected.txt <<EOF
 ### Changelogs
 
-#### test-changelog-generator.$$ (HEAD)
+#### test-changelog-generator.$$ ($main)
+
+New changes in test-changelog-generator.$$ since prev_branch:
 
 ##### Bug Fixes
 
@@ -545,6 +574,12 @@ cat > expected.txt <<EOF
 
   Should be included N82
 * Custom changelog with keyword, should be fix N99
+  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+* Ending with a code example N103
+
+  \`\`\`
+  code example
+  \`\`\`
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
 * Fix type N79
 * Aggregated Dependabot Changelogs:

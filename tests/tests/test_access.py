@@ -18,6 +18,7 @@ import os
 
 from testutils.common import Tenant, User, update_tenant, new_tenant_client
 from testutils.infra.cli import CliTenantadm
+from testutils.infra.container_manager.base import BaseContainerManagerNamespace
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.api.client import ApiClient
 import testutils.api.deviceconnect as deviceconnect
@@ -238,7 +239,7 @@ class TestAccessEnterprise(_TestAccessBase):
         not bool(os.environ.get("STRIPE_API_KEY")),
         reason="STRIPE_API_KEY not provided",
     )
-    def test_upgrades(self, docker_env):
+    def test_upgrades(self, docker_env: BaseContainerManagerNamespace):
         """Test that plan/addon upgrades take effect on feature availability.
         Special case is the trial tenant upgrade to a paid plan.
         """

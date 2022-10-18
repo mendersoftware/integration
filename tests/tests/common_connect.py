@@ -70,7 +70,7 @@ def prepare_env_for_connect(env):
     return devid, authtoken, auth, mender_device
 
 
-def wait_for_connect(auth, devid):
+def wait_for_connect(auth: authentication.Authentication, devid: str):
     devconn = ApiClient(
         host=get_container_manager().get_mender_gateway(),
         base_url=deviceconnect.URL_MGMT,

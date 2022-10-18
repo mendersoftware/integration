@@ -239,6 +239,7 @@ class TestAccessEnterprise(_TestAccessBase):
         not bool(os.environ.get("STRIPE_API_KEY")),
         reason="STRIPE_API_KEY not provided",
     )
+    @pytest.mark.xfail(reason="QA-451")
     def test_upgrades(self, docker_env: BaseContainerManagerNamespace):
         """Test that plan/addon upgrades take effect on feature availability.
         Special case is the trial tenant upgrade to a paid plan.

@@ -34,6 +34,7 @@ from ..MenderAPI import (
     Authentication,
     DeviceConnect,
     get_container_manager,
+    logger,
 )
 from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
@@ -78,6 +79,47 @@ class _TestRemoteTerminalBase:
             output = shell.recvOutput()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             output = output.decode()
+            if not "usr" in output:
+                found = False
+                retries = 15
+                sleep_retry_s = 15
+                while retries:
+                    logger.info(
+                        "test_regular_protocol_commands: retry: output: '%s'; retries: %d; retrying only recvOutput"
+                        % (output, retries)
+                    )
+                    retries = retries - 1
+                    time.sleep(sleep_retry_s)
+                    output = shell.recvOutput()
+                    if "usr" in output:
+                        found = True
+                        logger.info("test_regular_protocol_commands: retry: found.")
+                        break
+
+                retries = 15
+                sleep_retry_s = 15
+                if not found:
+                    while retries:
+                        logger.info(
+                            "test_regular_protocol_commands: retry: output: '%s'; retries: %d; retrying send-and-receive"
+                            % (output, retries)
+                        )
+                        retries = retries - 1
+                        time.sleep(sleep_retry_s)
+                        shell.sendInput("ls /\n".encode())
+                        output = shell.recvOutput()
+                        assert (
+                            shell.protomsg.props["status"]
+                            == protomsg.PROP_STATUS_NORMAL
+                        )
+                        output = output.decode()
+                        if "usr" in output:
+                            found = True
+                            logger.info(
+                                "test_regular_protocol_commands: retry: found on full retry."
+                            )
+                            break
+
             assert "usr" in output
             assert "etc" in output
 

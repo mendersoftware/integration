@@ -34,6 +34,7 @@ from ..MenderAPI import (
     Authentication,
     DeviceConnect,
     get_container_manager,
+    logger,
 )
 from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
@@ -47,6 +48,7 @@ class _TestRemoteTerminalBase:
 
         with docker_env.devconnect.get_websocket() as ws:
             # Start shell.
+            receive_timeout_s = 16
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
@@ -54,7 +56,7 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = shell.recvOutput()
+            output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
@@ -68,14 +70,14 @@ class _TestRemoteTerminalBase:
             assert body == b"failed to start shell: shell is already running"
 
             # Make sure we do not get any new output, it should be the same shell as before.
-            output = shell.recvOutput()
+            output = shell.recvOutput(receive_timeout_s)
             assert (
                 output == b""
             ), "Unexpected output received when relauncing already launched shell."
 
             # Test if a simple command works.
             shell.sendInput("ls /\n".encode())
-            output = shell.recvOutput()
+            output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             output = output.decode()
             assert "usr" in output
@@ -93,7 +95,7 @@ class _TestRemoteTerminalBase:
 
             # Make sure we can not send anything to the shell.
             shell.sendInput("ls /\n".encode())
-            output = shell.recvOutput()
+            output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_ERROR
             output = output.decode()
             assert "usr" not in output
@@ -106,7 +108,7 @@ class _TestRemoteTerminalBase:
 
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
-            output = shell.recvOutput()
+            output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             assert output[-2:].decode() in [
                 "# ",
@@ -268,6 +270,18 @@ class _TestRemoteTerminalBase:
         assert (
             docker_env.devconnect is not None
         ), "docker_env must have a set up 'devconnect' instance"
+        proxy_connected_timeout_s = 15 * 60
+        docker_env.device.run(
+            """dbus-send --print-reply --system \\
+              --dest=io.mender.AuthenticationManager \\
+              /io/mender/AuthenticationManager \\
+              io.mender.Authentication1.FetchJwtToken""",
+            wait=proxy_connected_timeout_s,
+        )
+        output = docker_env.device.run(
+            "dbus-send --system --dest=io.mender.AuthenticationManager --print-reply /io/mender/AuthenticationManager io.mender.Authentication1.GetJwtToken"
+        )
+        logger.info("assert_env: GetJWT: returns: '%s'" % (output))
 
 
 class _TestRemoteTerminalBaseBogusProtoMessage:

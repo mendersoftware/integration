@@ -276,6 +276,13 @@ git:
     release_component: false
     independent_component: true
 
+  mender-ci-workflows:
+    docker_image:
+    - mender-ci-tools
+    docker_container:
+    - mender-ci-workflows
+    release_component: true
+
 docker_image:
 
   iot-manager:
@@ -531,6 +538,13 @@ docker_image:
     - mender-reporting-indexer
     release_component: true
 
+  mender-ci-tools:
+    git:
+    - mender-ci-workflows
+    docker_container:
+    - mender-ci-workflows
+    release_component: true
+
 docker_container:
 
   mender-iot-manager:
@@ -721,4 +735,11 @@ docker_container:
     - mender-gateway
     docker_image:
     - mender-gateway-qemu-commercial
+    release_component: true
+
+  mender-ci-workflows:
+    git:
+    - mender-ci-workflows
+    docker_image:
+    - mender-ci-tools
     release_component: true

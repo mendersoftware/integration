@@ -4,3 +4,5 @@
 services:
     mtls-ambassador:
         image: registry.mender.io/mendersoftware/mtls-ambassador:mender-master
+    mender-ci-workflows:
+        image: mendersoftware/mender-ci-tools:mender-master

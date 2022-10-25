@@ -196,6 +196,27 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 logger.info("running %s" % cmd)
                 subprocess.run(cmd, check=False, shell=True)
                 time.sleep(stop_sleep_seconds)
+                cmd = (
+                    "docker ps -aq -f name=%s | xargs -n1 -r docker network disconnect -f `docker network list -q -f name=%s` "
+                    % (self.name, self.name)
+                )
+                logger.info("running %s" % cmd)
+                output = subprocess.run(
+                    cmd,
+                    check=False,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                logger.info(
+                    "%s disconnecting containers: %s/%s"
+                    % (
+                        self.name,
+                        output.stdout.decode("utf-8").strip(),
+                        output.stderr.decode("utf-8").strip(),
+                    )
+                )
+
                 output = subprocess.check_output(
                     "docker ps -q -f name=%s | wc -l" % self.name, shell=True
                 ).decode()
@@ -207,13 +228,22 @@ class DockerComposeBaseNamespace(DockerNamespace):
                     )
                     break
                 remaining = subprocess.check_output(
-                    "docker ps -f name=%s" % self.name, check=False, shell=True
+                    "docker ps -f name=%s" % self.name, shell=True
                 ).decode()
                 logger.info(
                     "(attempts left: %d) %d containers remained in %s are: %s"
                     % (retry_attempts, int(output), self.name, remaining)
                 )
                 retry_attempts = retry_attempts - 1
+
+            output = subprocess.check_output(
+                "docker ps -aq -f name=%s" % self.name, shell=True
+            ).decode()
+            logger.info("%s containers to remove: '%s'" % (self.name, output))
+            output = subprocess.check_output(
+                "docker network list -q -f name=%s" % self.name, shell=True
+            ).decode()
+            logger.info("%s networks to remove: '%s'" % (self.name, output))
 
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logger.info("running %s" % cmd)

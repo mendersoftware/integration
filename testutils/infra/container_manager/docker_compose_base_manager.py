@@ -181,10 +181,34 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def _stop_docker_compose(self):
         with docker_lock:
+            output = subprocess.check_output(
+                "docker ps -f name=%s" % self.name, shell=True
+            ).decode()
+            logger.info("%s: stopping all:\n%s\n" % (self.name, output))
+
             stop_sleep_seconds = 15
             retry_attempts = 8
 
             # Take down all docker instances in this namespace.
+            # QA-455 special treatment for redis
+            while retry_attempts > 0:
+                logger.info("qa-455: %s: attempting to shutdown redis" % self.name)
+                cmd = (
+                    "docker ps -f name=%s | grep -F redis | awk '{print($1);}' | xargs -n1 -I{} docker exec {} redis-cli shutdown"
+                    % self.name
+                )
+                subprocess.run(cmd, check=False, shell=True)
+                time.sleep(stop_sleep_seconds)
+                output = subprocess.check_output(
+                    "docker ps -f name=%s | grep -F redis | wc -l" % self.name,
+                    shell=True,
+                ).decode()
+                output = output.rstrip()
+                if int(output) == 0:
+                    logger.info("qa-455: %s: stopped redis." % self.name)
+                    break
+
+            retry_attempts = 8
             while retry_attempts > 0:
                 logger.info(
                     "(attempts left: %d) trying to stop all containers in %s"
@@ -235,13 +259,13 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 retry_attempts = retry_attempts - 1
 
             output = subprocess.check_output(
-                "docker ps -aq -f name=%s" % self.name, shell=True
+                "docker ps -a -f name=%s" % self.name, shell=True
             ).decode()
             logger.info("%s containers to remove: '%s'" % (self.name, output))
             output = subprocess.check_output(
-                "docker network list -q -f name=%s" % self.name, shell=True
+                "docker network list -q -f name=%s | xargs -n1 -r docker network inspect" % self.name, shell=True
             ).decode()
-            logger.info("%s networks to remove: '%s'" % (self.name, output))
+            logger.info("qa-455 %s networks to remove: '\n%s\n'" % (self.name, output))
 
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logger.info("running %s" % cmd)

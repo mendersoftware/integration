@@ -33,6 +33,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
         os.path.join(os.path.dirname(__file__), "..", "..", "..")
     )
     BASE_FILES = []
+    DEBUG = True
+    bpindex = 0
 
     def __init__(self, name=None, extra_files=[]):
         DockerNamespace.__init__(self, name)
@@ -179,6 +181,16 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
         raise Exception("failed to start docker-compose (called: %s)" % cmd)
 
+    def bp(self):
+        if not self.DEBUG:
+            return
+        t = "/tmp/bp" + str(self.bpindex)
+        logger.info("bp: waiting on %s" % t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
+        logger.info("bp: released on %s" % t)
+        self.bpindex = self.bpindex + 1
+
     def _stop_docker_compose(self):
         with docker_lock:
             stop_sleep_seconds = 15
@@ -245,6 +257,25 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logger.info("running %s" % cmd)
+            output = subprocess.run(
+                cmd,
+                check=False,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            if output.returncode != 0:
+                logger.info(
+                    "qa-455 dbg: '%s' rc:%d out/err %s/%s"
+                    % (
+                        cmd,
+                        output.returncode,
+                        output.stdout.decode("utf-8").strip(),
+                        output.stderr.decode("utf-8").strip(),
+                    )
+                )
+                self.bp()
+
             subprocess.check_call(cmd, shell=True)
             cmd = (
                 "docker network list -q -f name=%s | xargs -r docker network rm"

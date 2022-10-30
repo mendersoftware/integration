@@ -219,7 +219,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 subprocess.run(cmd, check=False, shell=True)
                 time.sleep(stop_sleep_seconds)
                 cmd = (
-                    "docker ps -aq -f name=%s | xargs -n1 -r docker network disconnect -f `docker network list -q -f name=%s` "
+                    "docker ps -aq -f name=%s | while read -r; do docker network list -q -f name=%s | xargs -n1 -I{} -r docker network disconnect -f {} $REPLY; done"
                     % (self.name, self.name)
                 )
                 logger.info("running %s" % cmd)
@@ -263,13 +263,113 @@ class DockerComposeBaseNamespace(DockerNamespace):
             ).decode()
             logger.info("%s containers to remove: '%s'" % (self.name, output))
             output = subprocess.check_output(
-                "docker network list -q -f name=%s | xargs -n1 -r docker network inspect" % self.name, shell=True
+                "docker network list -q -f name=%s | xargs -n1 -r docker network inspect"
+                % self.name,
+                shell=True,
             ).decode()
             logger.info("qa-455 %s networks to remove: '\n%s\n'" % (self.name, output))
 
             cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
             logger.info("running %s" % cmd)
             subprocess.check_call(cmd, shell=True)
+
+            cmd = (
+                "docker network list -q -f name=%s | xargs -r docker network rm"
+                % self.name
+            )
+            logger.info("running %s" % cmd)
+            output = subprocess.run(
+                cmd,
+                check=False,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            if output.returncode != 0:
+                logger.info(
+                    "qa-455 dbg: '%s' rc:%d out/err %s/%s"
+                    % (
+                        cmd,
+                        output.returncode,
+                        output.stdout.decode("utf-8").strip(),
+                        output.stderr.decode("utf-8").strip(),
+                    )
+                )
+                output = subprocess.check_output(
+                    "docker network list -q -f name=%s | xargs -n1 -r docker network inspect"
+                    % self.name,
+                    shell=True,
+                ).decode()
+                logger.info(
+                    "qa-455 %s networks existing on error rm: '\n%s\n'"
+                    % (self.name, output)
+                )
+                output = subprocess.check_output(
+                    "docker ps -aq -f name=%s | xargs -r -n1 docker inspect"
+                    % self.name,
+                    shell=True,
+                ).decode()
+                logger.info(
+                    "qa-455 %s all containers on error rm: '\n%s\n'"
+                    % (self.name, output)
+                )
+
+            max_tries = 255
+            try_number = 0
+            while try_number < max_tries:
+                time.sleep(stop_sleep_seconds)
+                try_number = try_number + 1
+                cmd = (
+                    "docker network list -q -f name=%s | xargs -r docker network rm"
+                    % self.name
+                )
+                logger.info(
+                    "%s qa-455 dbg: try %d running %s" % (self.name, try_number, cmd)
+                )
+                output = subprocess.run(
+                    cmd,
+                    check=False,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                if output.returncode == 0:
+                    logger.info(
+                        "%s qa-455 dbg: try %d rc:%d"
+                        % (self.name, try_number, output.returncode)
+                    )
+                    break
+                if output.returncode != 0:
+                    logger.info(
+                        "%s qa-455 dbg: try %d '%s' rc:%d out/err %s/%s"
+                        % (
+                            self.name,
+                            try_number,
+                            cmd,
+                            output.returncode,
+                            output.stdout.decode("utf-8").strip(),
+                            output.stderr.decode("utf-8").strip(),
+                        )
+                    )
+                output = subprocess.check_output(
+                    "docker network list -q -f name=%s | xargs -n1 -r docker network inspect"
+                    % self.name,
+                    shell=True,
+                ).decode()
+                logger.info(
+                    "qa-455 %s try %d networks existing on error rm: '\n%s\n'"
+                    % (self.name, try_number, output)
+                )
+                output = subprocess.check_output(
+                    "docker ps -aq | xargs -r -n1 docker inspect",
+                    shell=True,
+                ).decode()
+                logger.info(
+                    "qa-455 %s try %d _all_ containers on error rm: '\n%s\n'"
+                    % (self.name, try_number, output)
+                )
+
+
             cmd = (
                 "docker network list -q -f name=%s | xargs -r docker network rm"
                 % self.name

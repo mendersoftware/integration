@@ -181,12 +181,17 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def _stop_docker_compose(self):
         with docker_lock:
+            # QA-455 first lets stop the composition.
+            stop_sleep_seconds = 15
+            logger.info("qa-455 bringing the composition down {{{")
+            self._docker_compose_cmd("down")
+            time.sleep(stop_sleep_seconds)
+            logger.info("qa-455 }}} bringing the composition down")
             output = subprocess.check_output(
                 "docker ps -f name=%s" % self.name, shell=True
             ).decode()
             logger.info("%s: stopping all:\n%s\n" % (self.name, output))
 
-            stop_sleep_seconds = 15
             retry_attempts = 8
 
             # Take down all docker instances in this namespace.
@@ -361,14 +366,12 @@ class DockerComposeBaseNamespace(DockerNamespace):
                     % (self.name, try_number, output)
                 )
                 output = subprocess.check_output(
-                    "docker ps -aq | xargs -r -n1 docker inspect",
-                    shell=True,
+                    "docker ps -aq | xargs -r -n1 docker inspect", shell=True,
                 ).decode()
                 logger.info(
                     "qa-455 %s try %d _all_ containers on error rm: '\n%s\n'"
                     % (self.name, try_number, output)
                 )
-
 
             cmd = (
                 "docker network list -q -f name=%s | xargs -r docker network rm"

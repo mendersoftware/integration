@@ -1,6 +1,6 @@
 # Creates a container which acts as a bare bones non-VM based Mender
 # installation, for use in tests.
-FROM ubuntu:20.04 AS build
+FROM ubuntu:22.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
@@ -48,7 +48,7 @@ RUN make DESTDIR=/mender-install install
 
 RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN mkdir -p /run/dbus && apt-get update && apt-get install -y liblzma5 dbus openssh-server
 

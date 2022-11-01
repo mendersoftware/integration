@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y make git build-essential golang liblzma
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
-ARG MENDER_ARTIFACT_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
@@ -27,11 +26,11 @@ RUN make prefix=/mender-install install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
 
-# Install mender-artifact
-RUN git clone https://github.com/mendersoftware/mender-artifact /src/mender-artifact
-RUN (cd /src/mender-artifact && git fetch origin $MENDER_ARTIFACT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_ARTIFACT_REV)
-WORKDIR /src/mender-artifact
-RUN GOBIN=/usr/bin make install
+# Install mender-artifact from upstream
+RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.gpg.d/mender.asc && \
+    echo "deb [arch=$(dpkg --print-architecture)] https://downloads.mender.io/repos/debian ubuntu/$(. /etc/lsb-release && echo $DISTRIB_CODENAME)/experimental main" > \
+        /etc/apt/sources.list.d/mender.list && \
+    apt-get update && apt-get install mender-artifact
 RUN mender-artifact write bootstrap-artifact \
         --artifact-name original \
         --device-type docker-client \

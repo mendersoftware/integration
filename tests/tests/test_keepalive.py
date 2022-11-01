@@ -131,6 +131,13 @@ class TestMenderClientKeepAlive:
 
         idle_connections_timeout_seconds = 15
         disable_keep_alive = False
+        # Make sure the device opens a connection
+        mender_device.run(
+            """dbus-send --print-reply --system \\
+              --dest=io.mender.AuthenticationManager \\
+              /io/mender/AuthenticationManager \\
+              io.mender.Authentication1.FetchJwtToken"""
+        )
         output = mender_device.run(
             "cat /proc/`pidof mender`/net/tcp | grep -E '[^:]+: [^ ]+ [^ ]+:01BB' | wc -l"
         )
@@ -143,7 +150,13 @@ class TestMenderClientKeepAlive:
             inventory_poll=3600,
             update_poll=3600,
         )
-        time.sleep(1)
+        # Make sure the device opens a connection
+        mender_device.run(
+            """dbus-send --print-reply --system \\
+              --dest=io.mender.AuthenticationManager \\
+              /io/mender/AuthenticationManager \\
+              io.mender.Authentication1.FetchJwtToken"""
+        )
         output = mender_device.run(
             "cat /proc/`pidof mender`/net/tcp | grep -E '[^:]+: [^ ]+ [^ ]+:01BB' | wc -l"
         )

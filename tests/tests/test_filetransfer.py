@@ -27,6 +27,8 @@ import urllib.parse
 
 from tempfile import NamedTemporaryFile
 
+from redo import retry
+
 from ..common_setup import standard_setup_one_client, enterprise_no_client
 
 from ..MenderAPI import (
@@ -427,7 +429,13 @@ class BaseTestFileTransfer(MenderTesting):
         assert r.status_code == 201
 
     def test_filetransfer_limits_download(self, mender_device, devid, auth):
+        """Tests the file transfer features with limits"""
+
         not_implemented_error = False
+        authtoken = auth.get_auth_token()
+
+        class TimeoutException(Exception):
+            pass
 
         def assert_forbidden(rsp, message):
             global not_implemented_error
@@ -435,175 +443,131 @@ class BaseTestFileTransfer(MenderTesting):
                 assert rsp.status_code == 403
                 assert rsp.json().get("error") == message
             except AssertionError as e:
-                if r.status_code == 500:
+                if rsp.status_code == 500:
                     # Expected (current) behavior
                     not_implemented_error = True
+                if rsp.status_code == 408:
+                    raise TimeoutException
                 else:
                     raise e
 
-        authtoken = auth.get_auth_token()
-        """Tests the file transfer features with limits"""
-        set_limits(
-            mender_device,
+        def enforce_limits(limit):
+            return set_limits(mender_device, limit, auth, devid)
+
+        tests = [
             {
-                "Enabled": True,
-                "FileTransfer": {"Chroot": "/var/lib/mender/filetransfer"},
+                "name": "File Transfer limits: file outside chroot; download forbidden",
+                "limits": {
+                    "Enabled": True,
+                    "FileTransfer": {"Chroot": "/var/lib/mender/filetransfer"},
+                },
+                "path": "/etc/profile",
+                "errmsg": "access denied: the target file path is outside chroot",
             },
-            auth,
-            devid,
-        )
+            {
+                "name": "File Transfer limits: file over the max file size limit; download forbidden",
+                "limits": {"Enabled": True, "FileTransfer": {"MaxFileSize": 2}},
+                "path": "/etc/profile",
+                "errmsg": "access denied: the file size is over the limit",
+            },
+            {
+                "name": "File Transfer limits: not allowed to follow a link; download forbidden",
+                "setup": lambda: mender_device.run("ln -s /etc/profile " + path),
+                "limits": {
+                    "Enabled": True,
+                    "FileTransfer": {"Chroot": "/var/lib/mender/filetransfer"},
+                },
+                "path": "/tmp/profile-link",
+                "errmsg": "access denied: forbidden to follow the link",
+            },
+            {
+                "name": "File Transfer limits: not allowed to follow a link on path part; download forbidden",
+                "setup": lambda: mender_device.run(
+                    "cd /tmp && mkdir level0 && cd level0 && ln -s /etc"
+                ),
+                "limits": {"Enabled": True, "FileTransfer": {"FollowSymLinks": True}},
+                "path": "/tmp/level0/etc/profile",
+                "errmsg": "access denied: forbidden to follow the link",
+            },
+            {
+                "name": "File Transfer limits: not allowed to follow a link; download forbidden",
+                "path": "/tmp/profile-link",
+                # present already after the previous test case
+                "setup": lambda: mender_device.run("ln -s /etc/profile " + path),
+                "assertion": lambda r: all(
+                    (r.status_code == 200, "PATH" in str(r.content))
+                ),
+            },
+            {
+                "name": "File Transfer limits: file owner do not match; download forbidden",
+                "limits": {
+                    "Enabled": True,
+                    "FileTransfer": {"OwnerGet": ["someotheruser"]},
+                },
+                "path": "/etc/profile",
+                "errmsg": "access denied: the file owner does not match",
+            },
+            {
+                "name": "File Transfer limits: file group do not match; download forbidden",
+                "limits": {
+                    "Enabled": True,
+                    "FileTransfer": {"GroupGet": ["someothergroup"]},
+                },
+                "path": "/etc/profile",
+                "errmsg": "access denied: the file group does not match",
+            },
+            {
+                "name": "File Transfer limits: file owner do not match; download forbidden",
+                "limits": {"Enabled": True, "FileTransfer": {"RegularFilesOnly": True}},
+                "path": "/tmp/f0.fifo",
+                "setup": lambda: mender_device.run("mkfifo " + path),
+                "assertion": lambda r: all(
+                    [
+                        r.status_code == 400,
+                        (
+                            r.json().get("error")
+                            == "file transfer failed: path is not a regular file"
+                        ),
+                    ]
+                ),
+            },
+            {
+                "name": "File Transfer limits: file owner match; download allowed",
+                "limits": {
+                    "Enabled": True,
+                    "FileTransfer": {"OwnerGet": ["someotheruser", "root"]},
+                },
+                "path": "/etc/profile",
+                "assertion": lambda r: all(
+                    [r.status_code == 200, "PATH" in str(r.content)]
+                ),
+            },
+        ]
 
-        path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        def run_test(name="", limits={}, path="", assertion=False, errmsg=""):
 
-        logger.info(
-            "-- testcase: File Transfer limits: file outside chroot; download forbidden"
-        )
+            logger.info("-- testcase: %s", test.get("name"))
 
-        assert_forbidden(r, "access denied: the target file path is outside chroot")
+            enforce_limits(test.get("limit"))
 
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"MaxFileSize": 2}},
-            auth,
-            devid,
-        )
+            if test.get("setup"):
+                test.get("setup")()
 
-        logger.info(
-            "-- testcase: File Transfer limits: file over the max file size limit; download forbidden"
-        )
+            r = download_file(test.get("path"), devid, authtoken)
 
-        path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+            assert_forbidden(r, test.get("errmsg"))
 
-        assert_forbidden(r, "access denied: the file size is over the limit")
+            if test.get("assertion"):
+                assert test.get("assertion")(r)
 
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link; download forbidden"
-        )
-
-        path = "/tmp/profile-link"
-        mender_device.run("ln -s /etc/profile " + path)
-        r = download_file(path, devid, authtoken)
-
-        assert_forbidden(r, "access denied: forbidden to follow the link")
-
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link on path part; download forbidden"
-        )
-
-        mender_device.run("cd /tmp && mkdir level0 && cd level0 && ln -s /etc")
-        # now we have a link to the etc directory under /tmp/level0/etc
-        path = "/tmp/level0/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert_forbidden(r, "access denied: forbidden to follow the link")
-
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"FollowSymLinks": True}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link; download forbidden"
-        )
-
-        path = "/tmp/profile-link"
-        # mender_device.run("ln -s /etc/profile " + path) # present already after the previous test case
-        # download a file and check its content
-        r = download_file(path, devid, authtoken)
-
-        assert r.status_code == 200, r.json()
-        assert "PATH" in str(r.content)
-
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link on path part; download forbidden"
-        )
-
-        # we have a link to the etc directory under /tmp/level0/etc from the previous run
-        path = "/tmp/level0/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert r.status_code == 200, r.json()
-        assert "PATH" in str(r.content)
-
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file owner do not match; download forbidden"
-        )
-
-        path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert_forbidden(r, "access denied: the file owner does not match")
-
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"GroupGet": ["someothergroup"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file group do not match; download forbidden"
-        )
-
-        path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert_forbidden(r, "access denied: the file group does not match")
-
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"RegularFilesOnly": True}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file owner do not match; download forbidden"
-        )
-
-        path = "/tmp/f0.fifo"
-        mender_device.run("mkfifo " + path)
-        r = download_file(path, devid, authtoken)
-
-        assert r.status_code == 400, r.json()
-        assert (
-            r.json().get("error") == "file transfer failed: path is not a regular file"
-        )
-
-        set_limits(
-            mender_device,
-            {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser", "root"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file owner match; download allowed"
-        )
-
-        path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert r.status_code == 200, r.json()
-        assert "PATH" in str(r.content)
+        for test in tests:
+            retry(
+                run_test,
+                kwargs=test,
+                retry_exceptions=(TimeoutException),
+                attempts=3,
+                max_sleeptime=15,
+            )
 
         if not_implemented_error:
             raise NotImplementedError(

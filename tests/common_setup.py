@@ -278,8 +278,7 @@ def running_custom_production_setup(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def enterprise_no_client(request):
+def enterprise_no_client_impl(request):
     env = container_factory.get_enterprise_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
@@ -287,6 +286,16 @@ def enterprise_no_client(request):
     reset_mender_api(env)
 
     return env
+
+
+@pytest.fixture(scope="function")
+def enterprise_no_client(request):
+    return enterprise_no_client_impl(request)
+
+
+@pytest.fixture(scope="class")
+def enterprise_no_client_class(request):
+    return enterprise_no_client_impl(request)
 
 
 @pytest.fixture(scope="function")

@@ -582,9 +582,11 @@ class _TestAzureDeviceLifecycleBase:
         assert state["desired"]["key"] == "value"
 
 
+@pytest.mark.skip(reason="See QA-481")
 class TestAzureDeviceLifecycle(_TestAzureDeviceLifecycleBase):
     pass
 
 
+@pytest.mark.skip(reason="See QA-481")
 class TestAzureDeviceLifecycleEnterprise(_TestAzureDeviceLifecycleBase):
     pass

@@ -4,7 +4,6 @@ services:
       image: alpine
       command: "true"
     mender-deployments:
-        image: mendersoftware/deployments:azblob
         # HACK: Changing minio dependency condiditon to service_started allows
         #       us to scale the service to 0.
         depends_on:

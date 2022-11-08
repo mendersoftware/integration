@@ -151,14 +151,14 @@ class Test2FAEnterprise:
         assert r.status_code == 400
 
     def test_2fa_qr_available_only_in_unverified_state(self, setup_user_2fa):
-        """2faqr available only in 'unverified' state """
+        """2faqr available only in 'unverified' state"""
         r = uadm.with_auth(setup_user_2fa.token).call("GET", useradm.URL_2FAQR)
         assert r.status_code == 400
 
     def test_2fa_verify_endpoint_available_only_in_unverified_state(
         self, setup_user_2fa
     ):
-        """/verify available only in 'unverified' state """
+        """/verify available only in 'unverified' state"""
         r = uadm.with_auth(setup_user_2fa.token).call("GET", useradm.URL_2FAQR)
         assert r.status_code == 400
 
@@ -275,6 +275,97 @@ class Test2FAEnterprise:
             "POST", useradm.URL_SETTINGS, signore
         )
         assert r.status_code == 201
+
+        # get the user info and verify 2fa status
+        user = self._get_user(setup_user_2fa.token)
+        assert user["tfa_status"] == TFA_DISABLED
+
+    @pytest.mark.parametrize(
+        "tenants_users", ["enterprise"], indirect=["tenants_users"]
+    )
+    def test_change_email_disables(
+        self, clean_migrated_mongo, setup_user_2fa, setup_user_no_2fa, smtp_server
+    ):
+        # verify user email address
+        r = uadm.post(
+            useradm.URL_VERIFY_EMAIL_START, body={"email": setup_user_2fa.name}
+        )
+        assert r.status_code == 202
+
+        # wait for the verification email
+        message = None
+        for _ in retrier(attempts=15, sleepscale=1, sleeptime=1):
+            messages = smtp_server.filtered_messages(setup_user_2fa.name)
+            if len(messages) > 0:
+                message = messages[0]
+                break
+
+        # be sure we received the email
+        assert message is not None
+        assert message.data != ""
+        # extract the secret hash from the link
+        match = re.search(
+            r"https://hosted.mender.io/ui/activate/([a-z0-9\-]+)",
+            message.data.decode("utf-8"),
+        )
+        secret_hash = match.group(1)
+        assert secret_hash != ""
+        # complete the email address
+        r = uadm.post(
+            useradm.URL_VERIFY_EMAIL_COMPLETE, body={"secret_hash": secret_hash}
+        )
+        assert r.status_code == 204
+
+        # enable tfa for 1 user, straight login still works, token is not verified
+        r = self._toggle_tfa(setup_user_2fa.token, setup_user_2fa.id, on=True)
+        assert r.status_code == 200
+
+        r = self._login(setup_user_2fa)
+        assert r.status_code == 200
+
+        # get the user info and verify 2fa status
+        user = self._get_user(setup_user_2fa.token)
+        assert user["tfa_status"] == TFA_UNVERIFIED
+
+        # grab qr code, extract token, calc TOTP
+        r = uadm.with_auth(setup_user_2fa.token).call("GET", useradm.URL_2FAQR)
+
+        assert r.status_code == 200
+
+        secret = self._qr_dec(r.json()["qr"])
+        totp = pyotp.TOTP(secret)
+        tok = totp.now()
+
+        # verify token
+        r = self._verify(setup_user_2fa.token, tok)
+        assert r.status_code == 202
+
+        # get the user info and verify 2fa status
+        user = self._get_user(setup_user_2fa.token)
+        assert user["tfa_status"] == TFA_ENABLED
+
+        # login with totp succeeds
+        r = self._login(setup_user_2fa, totp=tok)
+        assert r.status_code == 200
+
+        # get the user info and verify 2fa status
+        user = self._get_user(setup_user_2fa.token)
+        assert user["tfa_status"] == TFA_ENABLED
+
+        uuidv4 = str(uuid.uuid4())
+        new_email = f"ci.email.tests+{uuidv4}@mender.io"
+        # Changing the user email should disable two-factor authentication
+        r = uadm.with_auth(setup_user_2fa.token).call(
+            "PUT",
+            useradm.URL_USERS_ID.format(id="me"),
+            body={"email": new_email, "current_password": "secretsecret"},
+        )
+        assert r.status_code == 204, f"failed to update status code: {r.text}"
+        setup_user_2fa.name = new_email
+
+        # after disabling - straight login works again
+        r = self._login(setup_user_2fa)
+        assert r.status_code == 200
 
         # get the user info and verify 2fa status
         user = self._get_user(setup_user_2fa.token)

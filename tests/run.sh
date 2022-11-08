@@ -217,6 +217,7 @@ python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \
+    --dist=loadscope \
     $HTML_REPORT \
     "$@" \
     $SPECIFIC_INTEGRATION_TEST_FLAG ${SPECIFIC_INTEGRATION_TEST:+"$SPECIFIC_INTEGRATION_TEST"}

@@ -21,8 +21,10 @@ git:
     independent_component: true
 
   mender-binary-delta:
-    docker_image: []
-    docker_container: []
+    docker_image:
+      - mender-qemu-rofs-commercial
+    docker_container:
+      - mender-client
     release_component: true
     independent_component: true
 
@@ -116,6 +118,7 @@ git:
     docker_image:
     - mender-client-qemu
     - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
     - mender-client-docker
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
@@ -240,6 +243,7 @@ git:
     docker_image:
     - mender-client-qemu
     - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
     docker_container:
@@ -380,6 +384,16 @@ docker_image:
     git:
     - mender
     - mender-connect
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: false
+
+  mender-qemu-rofs-commercial:
+    git:
+    - mender
+    - mender-connect
+    - mender-binary-delta
     docker_container:
     - mender-client
     release_component: true
@@ -601,12 +615,14 @@ docker_container:
     - mender
     - monitor-client
     - mender-connect
+    - mender-binary-delta
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons
     - mender-client-qemu
     - mender-client-qemu-rofs
     - mender-monitor-qemu-commercial
+    - mender-qemu-rofs-commercial
     release_component: true
 
   mender-api-gateway:

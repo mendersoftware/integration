@@ -33,6 +33,7 @@ services:
 
     mender-useradm:
         command: server --automigrate
+        user: "${UID}:${GID}"
         volumes:
             - ./production/keys-generated/keys/useradm/private.key:/etc/useradm/rsa/private.pem:ro
         logging:
@@ -42,6 +43,7 @@ services:
 
     mender-device-auth:
         command: server --automigrate
+        user: "${UID}:${GID}"
         volumes:
             - ./production/keys-generated/keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem:ro
         environment:

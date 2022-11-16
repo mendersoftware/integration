@@ -24,17 +24,25 @@ import tempfile
 import pytest
 import time
 import urllib.parse
+import random
+
+from flaky import flaky
 
 from tempfile import NamedTemporaryFile
 
-from ..common_setup import standard_setup_one_client, enterprise_no_client
+from ..common_setup import (
+    standard_setup_one_client,
+    enterprise_no_client_class,
+    class_persistent_standard_setup_one_client_bootstrapped,
+)
 
 from ..MenderAPI import (
+    auth,
     authentication,
     get_container_manager,
     reset_mender_api,
-    DeviceAuthV2,
     logger,
+    devauth,
 )
 from .common_connect import prepare_env_for_connect, wait_for_connect
 from .common import md5sum
@@ -45,6 +53,10 @@ from testutils.infra.device import MenderDevice
 
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"
+
+
+def random_filename():
+    return "".join(random.choices([chr(c) for c in range(97, 123)], k=8))
 
 
 def download_file(path, devid, authtoken):
@@ -102,12 +114,11 @@ def set_limits(mender_device, limits, auth, devid):
     logger.info("ls -al /etc/mender/:\n%s" % debugoutput)
 
 
-class BaseTestFileTransfer(MenderTesting):
-    def test_filetransfer(
-        self, devid, authtoken, path="/etc/mender/mender.conf", content_assertion=None
-    ):
+class BaseTestFileTransferDownload(MenderTesting):
+    def test_download_ok(self, mender_device_setup, content_assertion=None):
         # download a file and check its content
-        r = download_file(path, devid, authtoken)
+        path = "/etc/mender/mender.conf"
+        r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 200, r.json()
         if content_assertion:
@@ -123,17 +134,22 @@ class BaseTestFileTransfer(MenderTesting):
         assert r.headers.get("X-Men-File-Path") == "/etc/mender/mender.conf"
         assert r.headers.get("X-Men-File-Size") != ""
 
+    def test_download_error_relative_path(self, mender_device_setup):
+
         # wrong request, path is relative
-        path = "relative/path"
-        r = download_file(path, devid, authtoken)
+        r = download_file("relative/path", self.devid, self.auth_token)
         assert r.status_code == 400, r.json()
         assert r.json().get("error") == "bad request: path: must be absolute."
 
+    def test_upload_error_no_such_file_or_directory(self, mender_device_setup):
+
         # wrong request, no such file or directory
         path = "/does/not/exist"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
         assert r.status_code == 400, r.json()
         assert "/does/not/exist: no such file or directory" in r.json().get("error")
+
+    def test_upload_and_download_ok(self, mender_device_setup):
 
         try:
             # create a 40MB random file
@@ -142,16 +158,16 @@ class BaseTestFileTransfer(MenderTesting):
                 f.write(os.urandom(1024))
             f.close()
 
-            # random uid and gid
             uid = random.randint(100, 200)
             gid = random.randint(100, 200)
 
-            # upload the file
+            fname = random_filename()
+            path = f"/tmp/{fname}"
             r = upload_file(
-                "/tmp/random.bin",
+                path,
                 open(f.name, "rb"),
-                devid,
-                authtoken,
+                self.devid,
+                self.auth_token,
                 mode="600",
                 uid=str(uid),
                 gid=str(gid),
@@ -159,18 +175,17 @@ class BaseTestFileTransfer(MenderTesting):
             assert r.status_code == 201, r.json()
 
             # download the file
-            path = "/tmp/random.bin"
-            r = download_file(path, devid, authtoken)
+            r = download_file(path, self.devid, self.auth_token)
             assert r.status_code == 200, r.json()
             assert (
                 r.headers.get("Content-Disposition")
-                == 'attachment; filename="random.bin"'
+                == f'attachment; filename="{fname}"'
             )
             assert r.headers.get("Content-Type") == "application/octet-stream"
             assert r.headers.get("X-Men-File-Mode") == "600"
             assert r.headers.get("X-Men-File-Uid") == str(uid)
             assert r.headers.get("X-Men-File-Gid") == str(gid)
-            assert r.headers.get("X-Men-File-Path") == "/tmp/random.bin"
+            assert r.headers.get("X-Men-File-Path") == f"/tmp/{fname}"
             assert r.headers.get("X-Men-File-Size") == str(40 * 1024 * 1024)
 
             filename_download = f.name + ".download"
@@ -184,12 +199,16 @@ class BaseTestFileTransfer(MenderTesting):
             if os.path.isfile(f.name + ".download"):
                 os.unlink(f.name + ".download")
 
+    def test_upload_error_path_is_relative(
+        self, mender_device_setup,
+    ):
+
         # wrong request, path is relative
         r = upload_file(
             "relative/path/dummy.txt",
             io.StringIO("dummy"),
-            devid,
-            authtoken,
+            self.devid,
+            self.auth_token,
             mode="600",
             uid="0",
             gid="0",
@@ -197,12 +216,13 @@ class BaseTestFileTransfer(MenderTesting):
         assert r.status_code == 400, r.json()
         assert r.json().get("error") == "bad request: path: must be absolute."
 
-        # wrong request, cannot write the file
+    def test_upload_error_file_does_not_exist(self, mender_device_setup):
+
         r = upload_file(
             "/does/not/exist/dummy.txt",
             io.StringIO("dummy"),
-            devid,
-            authtoken,
+            self.devid,
+            self.auth_token,
             mode="600",
             uid="0",
             gid="0",
@@ -210,28 +230,31 @@ class BaseTestFileTransfer(MenderTesting):
         assert r.status_code == 400, r.json()
         assert "failed to create target file" in r.json().get("error")
 
-    def test_filetransfer_limits_upload(self, mender_device, devid, auth):
-        authtoken = auth.get_auth_token()
-        """Tests the file transfer features with limits"""
+
+class BaseTestFileTransferLimits(MenderTesting):
+    def test_upload_limits_err_file_outside_chroot(self, mender_device_setup):
+        "File Transfer limits: file outside chroot; upload forbidden"
+
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {"Chroot": "/var/lib/mender/filetransfer"},
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
-        mender_device.run("mkdir -p /var/lib/mender/filetransfer")
+        self.mender_device.run("mkdir -p /var/lib/mender/filetransfer")
 
-        logger.info(
-            "-- testcase: File Transfer limits: file outside chroot; upload forbidden"
-        )
         f = NamedTemporaryFile(delete=False)
         for i in range(40 * 1024):
             f.write(os.urandom(1024))
         f.close()
-        r = upload_file("/usr/random.bin", open(f.name, "rb"), devid, authtoken,)
+
+        fname = random_filename()
+        r = upload_file(
+            f"/usr/{fname}", open(f.name, "rb"), self.devid, self.auth_token,
+        )
 
         assert r.status_code == 400, r.json()
         assert (
@@ -239,8 +262,11 @@ class BaseTestFileTransfer(MenderTesting):
             == "access denied: the target file path is outside chroot"
         )
 
+    def test_upload_limits_ok(self, mender_device_setup):
+        "File Transfer limits: file inside chroot; upload allowed"
+
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {
@@ -248,44 +274,46 @@ class BaseTestFileTransfer(MenderTesting):
                     "FollowSymLinks": True,  # in the image /var/lib/mender is a symlink
                 },
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
+        self.mender_device.run("mkdir -p /var/lib/mender/filetransfer")
 
-        logger.info(
-            "-- testcase: File Transfer limits: file inside chroot; upload allowed"
-        )
         f = NamedTemporaryFile(delete=False)
         f.write(os.urandom(16))
         f.close()
-        # upload a file
+
+        fname = random_filename()
         r = upload_file(
-            "/var/lib/mender/filetransfer/random.bin",
+            f"/var/lib/mender/filetransfer/{fname}",
             open(f.name, "rb"),
-            devid,
-            authtoken,
+            self.devid,
+            self.auth_token,
         )
 
         assert r.status_code == 201
 
+    def test_upload_limits_err_file_too_big(self, mender_device_setup):
+        "File Transfer limits: file size over the limit; upload forbidden"
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
-                "FileTransfer": {"MaxFileSize": 16378, "FollowSymLinks": True},
+                "FileTransfer": {"MaxFileSize": 15 * 1024, "FollowSymLinks": True},
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
-        logger.info(
-            "-- testcase: File Transfer limits: file size over the limit; upload forbidden"
-        )
         f = NamedTemporaryFile(delete=False)
         for i in range(128 * 1024):
             f.write(b"ok")
         f.close()
-        r = upload_file("/tmp/random.bin", open(f.name, "rb"), devid, authtoken,)
+
+        fname = random_filename()
+        r = upload_file(
+            f"/tmp/{fname}", open(f.name, "rb"), self.devid, self.auth_token,
+        )
 
         assert r.status_code == 400, r.json()
         assert (
@@ -293,40 +321,43 @@ class BaseTestFileTransfer(MenderTesting):
             == "failed to write file chunk: transmitted bytes limit exhausted"
         )
 
+    def test_upload_limits_err_max_bytes_per_minute_exceeded(self, mender_device_setup):
+        "File Transfer limits: transfers during last minute over the limit; upload forbidden"
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {
                     "FollowSymLinks": True,
-                    "Counters": {"MaxBytesRxPerMinute": 16784},
+                    "Counters": {"MaxBytesRxPerMinute": 16 * 1024},
                 },
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
-        logger.info(
-            "-- testcase: File Transfer limits: transfers during last minute over the limit; upload forbidden"
-        )
         f = NamedTemporaryFile(delete=False)
-        for i in range(128 * 1024):
+        for i in range(256 * 1024):
             f.write(b"ok")
         f.close()
+
+        fname = random_filename()
         upload_file(
-            "/tmp/random-0.bin", open(f.name, "rb"), devid, authtoken,
+            f"/tmp/{fname}-0.bin", open(f.name, "rb"), self.devid, self.auth_token,
         )
         upload_file(
-            "/tmp/random-1.bin", open(f.name, "rb"), devid, authtoken,
+            f"/tmp/{fname}-1.bin", open(f.name, "rb"), self.devid, self.auth_token,
         )
         logger.info("-- testcase: File Transfer limits: sleeping to gather the avg")
 
-        time.sleep(32)  # wait for mender-connect to calculate the 1m exp moving avg
-        mender_device.run(
+        time.sleep(60)  # wait for mender-connect to calculate the 1m exp moving avg
+        self.mender_device.run(
             "kill -USR1 `pidof mender-connect`"
         )  # USR1 makes mender-connect print status
 
-        r = upload_file("/tmp/random-2.bin", open(f.name, "rb"), devid, authtoken,)
+        r = upload_file(
+            f"/tmp/{fname}-2.bin", open(f.name, "rb"), self.devid, self.auth_token
+        )
 
         assert r.status_code == 400, r.json()
         assert r.json().get("error") == "transmitted bytes limit exhausted"
@@ -336,7 +367,7 @@ class BaseTestFileTransfer(MenderTesting):
         )
         # let's rest some more and increase the limit and try again
         time.sleep(64)
-        mender_device.run(
+        self.mender_device.run(
             "kill -USR1 `pidof mender-connect`"
         )  # USR1 makes mender-connect print status
 
@@ -348,15 +379,20 @@ class BaseTestFileTransfer(MenderTesting):
             f.write(b"ok")
         f.close()
         # upload a file
-        r = upload_file("/tmp/random-a.bin", open(f.name, "rb"), devid, authtoken,)
-        mender_device.run(
+        r = upload_file(
+            f"/tmp/{fname}-a.bin", open(f.name, "rb"), self.devid, self.auth_token,
+        )
+        self.mender_device.run(
             "kill -USR1 `pidof mender-connect`"
         )  # USR1 makes mender-connect print status
 
         assert r.status_code == 201
 
+    def test_upload_limits_err_preserve_modes(self, mender_device_setup):
+        "File Transfer limits: preserve modes;"
+
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {
@@ -365,32 +401,39 @@ class BaseTestFileTransfer(MenderTesting):
                     "PreserveMode": True,
                 },
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
+        self.mender_device.run("mkdir -p /var/lib/mender/filetransfer")
 
-        logger.info("-- testcase: File Transfer limits: preserve modes;")
         f = NamedTemporaryFile(delete=False)
         f.write(os.urandom(16))
         f.close()
+
+        fname = random_filename()
         r = upload_file(
-            "/var/lib/mender/filetransfer/modes.bin",
+            f"/var/lib/mender/filetransfer/{fname}.bin",
             open(f.name, "rb"),
-            devid,
-            authtoken,
+            self.devid,
+            self.auth_token,
             mode="4711",
         )
-        modes_ls = mender_device.run("ls -al /var/lib/mender/filetransfer/modes.bin")
+        modes_ls = self.mender_device.run(
+            f"ls -al /var/lib/mender/filetransfer/{fname}.bin"
+        )
         logger.info(
-            "test_filetransfer_limits_upload ls -al /var/lib/mender/filetransfer/modes.bin:\n%s"
+            f"test_filetransfer_limits_upload ls -al /var/lib/mender/filetransfer/{fname}.bin:\n%s"
             % modes_ls
         )
 
         assert modes_ls.startswith("-rws--x--x")
         assert r.status_code == 201
 
+    def test_upload_limits_preserve_owner_and_group(self, mender_device_setup):
+        "File Transfer limits: preserve owner and group;"
+
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {
@@ -400,245 +443,312 @@ class BaseTestFileTransfer(MenderTesting):
                     "PreserveGroup": True,
                 },
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
+        self.mender_device.run("mkdir -p /var/lib/mender/filetransfer")
 
-        logger.info("-- testcase: File Transfer limits: preserve owner and group;")
         f = NamedTemporaryFile(delete=False)
         f.write(os.urandom(16))
         f.close()
-        gid = int(mender_device.run("cat /etc/group | tail -1| cut -f3 -d:"))
-        uid = int(mender_device.run("cat /etc/passwd | tail -1| cut -f3 -d:"))
+        gid = int(self.mender_device.run("cat /etc/group  | tail -1 | cut -f3 -d:"))
+        uid = int(self.mender_device.run("cat /etc/passwd | tail -1 | cut -f3 -d:"))
         logger.info("test_filetransfer_limits_upload gid/uid %d/%d", gid, uid)
+        fname = random_filename()
         r = upload_file(
-            "/var/lib/mender/filetransfer/ownergroup.bin",
+            f"/var/lib/mender/filetransfer/{fname}.bin",
             open(f.name, "rb"),
-            devid,
-            authtoken,
+            self.devid,
+            self.auth_token,
             uid=str(uid),
             gid=str(gid),
         )
-        owner_group = mender_device.run(
-            "ls -aln /var/lib/mender/filetransfer/ownergroup.bin | cut -f 3,4 -d' '"
+
+        owner_group = self.mender_device.run(
+            f"ls -aln /var/lib/mender/filetransfer/{fname}.bin | cut -f 3,4 -d' '"
         )
 
         assert owner_group == str(uid) + " " + str(gid) + "\n"
         assert r.status_code == 201
 
-    def test_filetransfer_limits_download(self, mender_device, devid, auth):
-        not_implemented_error = False
+    def assert_forbidden(self, rsp, message):
+        try:
+            assert rsp.status_code == 403
+            assert rsp.json().get("error") == message
+        except AssertionError as e:
+            if rsp.status_code == 500:
+                raise NotImplementedError(
+                    "[MEN-4659] Deviceconnect should not respond with 5xx errors "
+                    + "on user restriction errors"
+                )
+                pass
+            else:
+                raise e
 
-        def assert_forbidden(rsp, message):
-            global not_implemented_error
-            try:
-                assert rsp.status_code == 403
-                assert rsp.json().get("error") == message
-            except AssertionError as e:
-                if r.status_code == 500:
-                    # Expected (current) behavior
-                    not_implemented_error = True
-                else:
-                    raise e
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_outside_chroot(self, mender_device_setup):
+        "File Transfer limits: file outside chroot; download forbidden"
 
-        authtoken = auth.get_auth_token()
-        """Tests the file transfer features with limits"""
         set_limits(
-            mender_device,
+            self.mender_device,
             {
                 "Enabled": True,
                 "FileTransfer": {"Chroot": "/var/lib/mender/filetransfer"},
             },
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
         path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
-        logger.info(
-            "-- testcase: File Transfer limits: file outside chroot; download forbidden"
+        self.assert_forbidden(
+            r, "access denied: the target file path is outside chroot"
         )
 
-        assert_forbidden(r, "access denied: the target file path is outside chroot")
-
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_max_file_size(self, mender_device_setup):
+        "File Transfer limits: file over the max file size limit; download forbidden"
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"MaxFileSize": 2}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file over the max file size limit; download forbidden"
+            self.auth,
+            self.devid,
         )
 
         path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
-        assert_forbidden(r, "access denied: the file size is over the limit")
+        self.assert_forbidden(r, "access denied: the file size is over the limit")
 
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_not_allowed_to_follow_link(
+        self, mender_device_setup,
+    ):
+        "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link; download forbidden"
-        )
+        fname = random_filename()
+        path = f"/tmp/{fname}-profile-link"
+        self.mender_device.run("ln -s /etc/profile " + path)
+        r = download_file(path, self.devid, self.auth_token)
 
-        path = "/tmp/profile-link"
-        mender_device.run("ln -s /etc/profile " + path)
-        r = download_file(path, devid, authtoken)
+        self.assert_forbidden(r, "access denied: forbidden to follow the link")
 
-        assert_forbidden(r, "access denied: forbidden to follow the link")
-
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link on path part; download forbidden"
-        )
-
-        mender_device.run("cd /tmp && mkdir level0 && cd level0 && ln -s /etc")
-        # now we have a link to the etc directory under /tmp/level0/etc
-        path = "/tmp/level0/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert_forbidden(r, "access denied: forbidden to follow the link")
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_not_allowed_to_follow_link_on_path_part(
+        self, mender_device_setup,
+    ):
+        "File Transfer limits: not allowed to follow a link on path part; download forbidden"
 
         set_limits(
-            mender_device,
+            self.mender_device,
+            {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
+            self.auth,
+            self.devid,
+        )
+
+        fname = random_filename()
+        self.mender_device.run(f"cd /tmp && mkdir {fname} && cd {fname} && ln -s /etc")
+        # now we have a link to the etc directory under /tmp/{fname}/etc
+        path = f"/tmp/{fname}/etc/profile"
+        r = download_file(path, self.devid, self.auth_token)
+
+        self.assert_forbidden(r, "access denied: forbidden to follow the link")
+
+    def test_filetransfer_limits_download_ok_allowed_to_follow_symlink(
+        self, mender_device_setup,
+    ):
+        "File Transfer limits: not allowed to follow a link; download forbidden"
+        set_limits(
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": True}},
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link; download forbidden"
-        )
+        fname = random_filename() + ".symlink"
+        path = f"/tmp/{fname}"
+        self.mender_device.run("ln -s /etc/profile " + path)
 
-        path = "/tmp/profile-link"
-        # mender_device.run("ln -s /etc/profile " + path) # present already after the previous test case
-        # download a file and check its content
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 200, r.json()
         assert "PATH" in str(r.content)
 
-        logger.info(
-            "-- testcase: File Transfer limits: not allowed to follow a link on path part; download forbidden"
-        )
-
-        # we have a link to the etc directory under /tmp/level0/etc from the previous run
-        path = "/tmp/level0/etc/profile"
-        r = download_file(path, devid, authtoken)
-
-        assert r.status_code == 200, r.json()
-        assert "PATH" in str(r.content)
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_owner_mismatch(self, mender_device_setup):
+        "File Transfer limits: file owner do not match; download forbidden"
 
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file owner do not match; download forbidden"
+            self.auth,
+            self.devid,
         )
 
         path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
-        assert_forbidden(r, "access denied: the file owner does not match")
+        self.assert_forbidden(r, "access denied: the file owner does not match")
+
+    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
+    def test_filetransfer_limits_download_err_group_mismatch(self, mender_device_setup):
+        "File Transfer limits: file group do not match; download forbidden"
 
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"GroupGet": ["someothergroup"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file group do not match; download forbidden"
+            self.auth,
+            self.devid,
         )
 
         path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
-        assert_forbidden(r, "access denied: the file group does not match")
+        self.assert_forbidden(r, "access denied: the file group does not match")
 
+    def test_filetransfer_limits_download_err_not_a_regular_file(
+        self, mender_device_setup
+    ):
+        "File Transfer limits: file not a regular file; download forbidden"
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"RegularFilesOnly": True}},
-            auth,
-            devid,
+            self.auth,
+            self.devid,
         )
 
-        logger.info(
-            "-- testcase: File Transfer limits: file owner do not match; download forbidden"
-        )
-
-        path = "/tmp/f0.fifo"
-        mender_device.run("mkfifo " + path)
-        r = download_file(path, devid, authtoken)
+        fname = random_filename()
+        path = f"/tmp/{fname}.fifo"
+        self.mender_device.run("mkfifo " + path)
+        r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 400, r.json()
         assert (
             r.json().get("error") == "file transfer failed: path is not a regular file"
         )
 
+    def test_filetransfer_limits_download_ok_file_owner_match(
+        self, mender_device_setup
+    ):
+        "File Transfer limits: file owner match; download allowed"
         set_limits(
-            mender_device,
+            self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser", "root"]}},
-            auth,
-            devid,
-        )
-
-        logger.info(
-            "-- testcase: File Transfer limits: file owner match; download allowed"
+            self.auth,
+            self.devid,
         )
 
         path = "/etc/profile"
-        r = download_file(path, devid, authtoken)
+        r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 200, r.json()
         assert "PATH" in str(r.content)
 
-        if not_implemented_error:
-            raise NotImplementedError(
-                "[MEN-4659] Deviceconnect should not respond with 5xx errors "
-                + "on user restriction errors"
-            )
+
+def rerun_on_timeouts(err, *args):
+    if not issubclass(err[0], AssertionError):
+        return False
+    return "408" in str(err[1])
 
 
-class TestFileTransfer(BaseTestFileTransfer):
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
     """Tests the file transfer functionality"""
 
-    def prepare_env(self, auth):
-        # accept the device
-        devauth = DeviceAuthV2(auth)
-        devauth.accept_devices(1)
+    @pytest.fixture(scope="class")
+    def mender_device_setup(
+        self, request, class_persistent_standard_setup_one_client_bootstrapped
+    ):
 
-        # list of devices
+        env = class_persistent_standard_setup_one_client_bootstrapped
+
+        request.cls.auth = env.auth
+        request.cls.mender_device = env.device
+        request.cls.auth_token = env.auth.get_auth_token()
+
         devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
+        request.cls.devid = devices[0]["id"]
 
-        # device ID and auth token
-        devid = devices[0]["id"]
-        authtoken = auth.get_auth_token()
+        wait_for_connect(env.auth, request.cls.devid)
 
-        # wait for the device to connect via websocket
-        wait_for_connect(auth, devid)
+    def test_download_ok(self, mender_device_setup, content_assertion=None):
+        super().test_download_ok(mender_device_setup, content_assertion="ServerURL")
 
-        return devid, authtoken
 
-    def test_filetransfer(self, standard_setup_one_client):
-        """Tests the file transfer features"""
-        auth = authentication.Authentication()
-        devid, authtoken = self.prepare_env(auth)
-        super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
+    """Tests the file transfer functionality for enterprise setup"""
 
+    @pytest.fixture(scope="class")
+    def mender_device_setup(self, request, enterprise_no_client_class):
+        devid, auth_token, auth, mender_device = prepare_env_for_connect(
+            enterprise_no_client_class
+        )
+        request.cls.devid = devid
+        request.cls.auth_token = auth_token
+        request.cls.auth = auth
+        request.cls.mender_device = mender_device
+
+
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
+    """Tests the file transfer functionality"""
+
+    @pytest.fixture(scope="class")
+    def mender_device_setup(
+        self, request, class_persistent_standard_setup_one_client_bootstrapped
+    ):
+
+        env = class_persistent_standard_setup_one_client_bootstrapped
+
+        request.cls.auth = env.auth
+        request.cls.mender_device = env.device
+        request.cls.auth_token = env.auth.get_auth_token()
+
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+        request.cls.devid = devices[0]["id"]
+
+        wait_for_connect(env.auth, request.cls.devid)
+
+
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
+    """Tests the file transfer functionality for enterprise setup"""
+
+    @pytest.fixture(scope="class")
+    def mender_device_setup(self, request, enterprise_no_client_class):
+        devid, auth_token, auth, mender_device = prepare_env_for_connect(
+            enterprise_no_client_class
+        )
+        request.cls.devid = devid
+        request.cls.auth_token = auth_token
+        request.cls.auth = auth
+        request.cls.mender_device = mender_device
+
+
+class BaseFileTransferLegacyClient(MenderTesting):
+    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
+        """Tests the file transfer is not implemented with mender-connect 1.0"""
+
+        env = setup_mender_connect_1_0
+
+        rsp = upload_file("/foo/bar", io.StringIO("foobar"), env.devid, env.auth_token)
+        assert rsp.status_code == 502
+        rsp = download_file("/foo/bar", env.devid, env.auth_token)
+        assert rsp.status_code == 502
+
+
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferLegacyClientOS(BaseFileTransferLegacyClient):
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
         self.env = container_factory.get_mender_client_2_5()
@@ -654,72 +764,31 @@ class TestFileTransfer(BaseTestFileTransfer):
 
         reset_mender_api(self.env)
 
+        self.env.auth_token = auth.get_auth_token()
+
+        devauth.accept_devices(1)
+
+        devices = devauth.get_devices_status("accepted")
+        assert 1 == len(devices)
+        self.env.devid = devices[0]["id"]
+
+        wait_for_connect(auth, self.env.devid)
+
         yield self.env
 
-    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
-        """Tests the file transfer is not implemented with mender-connect 1.0"""
-        auth = authentication.Authentication()
-        devid, authtoken = self.prepare_env(auth)
 
-        rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
-        assert rsp.status_code == 502
-        rsp = download_file("/foo/bar", devid, authtoken)
-        assert rsp.status_code == 502
-
-    @pytest.mark.min_mender_client_version("2.7.0")
-    def test_filetransfer_limits_upload(self, standard_setup_one_client):
-        """Tests the file transfer upload limits"""
-        auth = authentication.Authentication()
-        devid, _ = self.prepare_env(auth)
-        super().test_filetransfer_limits_upload(
-            standard_setup_one_client.device, devid, auth
-        )
-
-    @pytest.mark.min_mender_client_version("2.7.0")
-    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
-    def test_filetransfer_limits_download(self, standard_setup_one_client):
-        """Tests the file transfer download limits"""
-        auth = authentication.Authentication()
-        devid, _ = self.prepare_env(auth)
-        super().test_filetransfer_limits_download(
-            standard_setup_one_client.device, devid, auth
-        )
-
-
-class TestFileTransferEnterprise(BaseTestFileTransfer):
-    """Tests the file transfer functionality for enterprise setup"""
-
-    def test_filetransfer(self, enterprise_no_client):
-        """Tests the file transfer features"""
-        devid, authtoken, _, _ = prepare_env_for_connect(enterprise_no_client)
-        super().test_filetransfer(devid, authtoken, content_assertion="ServerURL")
-
+@flaky(rerun_filter=rerun_on_timeouts)
+class TestFileTransferLegacyClientEnterprise(BaseFileTransferLegacyClient):
     @pytest.fixture(scope="function")
     def setup_mender_connect_1_0(self, request):
         self.env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(self.env.teardown)
         self.env.setup()
         reset_mender_api(self.env)
+
+        devid, auth_token, _, _ = prepare_env_for_connect(self.env)
+
+        self.env.auth_token = auth_token
+        self.env.devid = devid
+
         yield self.env
-
-    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
-        """Tests the file transfer is not implemented with mender-connect 1.0"""
-        devid, authtoken, _, _ = prepare_env_for_connect(setup_mender_connect_1_0)
-
-        rsp = upload_file("/foo/bar", io.StringIO("foobar"), devid, authtoken)
-        assert rsp.status_code == 502
-        rsp = download_file("/foo/bar", devid, authtoken)
-        assert rsp.status_code == 502
-
-    @pytest.mark.min_mender_client_version("2.7.0")
-    def test_filetransfer_limits_upload(self, enterprise_no_client):
-        """Tests the file transfer upload limits"""
-        devid, _, auth, mender_device = prepare_env_for_connect(enterprise_no_client)
-        super().test_filetransfer_limits_upload(mender_device, devid, auth)
-
-    @pytest.mark.min_mender_client_version("2.7.0")
-    @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
-    def test_filetransfer_limits_download(self, enterprise_no_client):
-        """Tests the file transfer download limits"""
-        devid, _, auth, mender_device = prepare_env_for_connect(enterprise_no_client)
-        super().test_filetransfer_limits_download(mender_device, devid, auth)

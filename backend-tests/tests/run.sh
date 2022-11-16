@@ -24,7 +24,7 @@ if [ -n "$K8S" ]; then
     if ! python3 -m pip show pytest-xdist >/dev/null; then
         echo "WARNING: install pytest-xdist for running tests in parallel"
     else
-        PYTEST_EXTRA_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
+        PYTEST_EXTRA_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL_BACKEND_INTEGRATION:-auto}}"
     fi
 fi
 

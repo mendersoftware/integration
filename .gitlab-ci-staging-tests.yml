@@ -49,7 +49,7 @@ test:staging:integration-tests:
   stage: test
   timeout: 4h
   tags:
-    - mender-qa-slave-highmem
+    - mender-qa-worker-integration-tests
 
   variables:
     K8S: "staging"

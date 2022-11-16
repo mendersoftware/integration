@@ -52,9 +52,9 @@ test:docs:
   services:
     - docker:dind
   tags:
-    - mender-qa-slave
+    - mender-qa-worker-generic
   variables:
-    # DinD setup in mender-qa-slave
+    # DinD setup in Mender CI runners
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_CERT_PATH: "/certs/client"
     DOCKER_TLS_VERIFY: "1"

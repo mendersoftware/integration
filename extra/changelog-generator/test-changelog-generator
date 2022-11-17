@@ -550,6 +550,14 @@ Ticket:MEN-1234'
 
 ################################################################################
 
+
+git commit --allow-empty -m 'fix: Something enterprise N104
+
+Changelog: Title
+Ticket: ME-1234'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog prev_branch..$main > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
@@ -581,6 +589,8 @@ New changes in test-changelog-generator.$$ since prev_branch:
   code example
   \`\`\`
   ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+* Something enterprise N104
+  ([ME-1234](https://tracker.mender.io/browse/ME-1234))
 * Fix type N79
 * Aggregated Dependabot Changelogs:
   * Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.

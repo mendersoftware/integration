@@ -252,8 +252,8 @@ class TestAccessEnterprise(_TestAccessBase):
             self.check_access_rbac(tenant.auth)
 
     @pytest.mark.skipif(
-        not bool(os.environ.get("STRIPE_API_KEY")),
-        reason="STRIPE_API_KEY not provided",
+        not bool(os.environ.get("TENANTADM_STRIPE_API_KEY")),
+        reason="TENANTADM_STRIPE_API_KEY not provided",
     )
     def test_upgrades(self, mongo, mt_env):
         """Test that plan/addon upgrades take effect on feature availability.

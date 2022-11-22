@@ -41,6 +41,9 @@ logger = logging.getLogger("testAccess")
 
 def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconnect"]["devices"]
+    devices_collection.delete_one(
+        {"_id": device_id, "tenant_id": tenant_id,}
+    )
     devices_collection.insert_one(
         {
             "_id": device_id,
@@ -54,6 +57,9 @@ def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"
 
 def device_config_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconfig"]["devices"]
+    devices_collection.delete_one(
+        {"_id": device_id, "tenant_id": tenant_id,}
+    )
     devices_collection.insert_one(
         {
             "_id": device_id,

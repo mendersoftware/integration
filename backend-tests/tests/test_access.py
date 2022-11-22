@@ -353,6 +353,12 @@ def _make_tenant(plan):
     )
     assert r.status_code == 200
     tenant.auth = r.text
+    logger.info(f"qa-469 _make_tenant: got auth: {r.text}")
+    devconn = ApiClient(deviceconnect.URL_MGMT)
+    res = devconn.with_auth(r.text).call(
+        "GET", deviceconnect.URL_MGMT_DEVICE, path_params={"id": "someid"},
+    )
+    logger.info(f"qa-469 _make_tenant: GET to deviceconnect: {res}")
     tenant.device_id = str(uuid.uuid4())
     return tenant
 

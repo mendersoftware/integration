@@ -261,9 +261,9 @@ for suite in "${TEST_SUITES[@]}"; do
     fi
 
     if [ $run_tests_retcode -ne 0 ]; then
-        tmppath=$(mktemp ${HERE}/acceptance.XXXXXX)
+        tmppath=$(mktemp -p . acceptance.XXXXXX)
         echo "-- tests failed, dumping logs to $tmppath"
-        compose_cmd logs > $tmppath
+        compose_cmd logs > "$tmppath" 2>&1
     fi
 
     copy_test_reports_if_args $PYTEST_REPORT

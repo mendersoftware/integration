@@ -62,6 +62,17 @@ def is_staging():
         return not any(c in non_staging_components for c in content["services"])
 
 
+@pytest.fixture(scope="session")
+def is_master():
+    """Fixture to figure out if we are running the tests in master branch
+    """
+
+    with open(os.path.join(INTEGRATION_DIR, "docker-compose.yml")) as fd:
+        content = fd.read()
+        assert "mendersoftware/gui:" in content
+        return re.search("mendersoftware/gui:.*master", content)
+
+
 def run_main_assert_result(capsys, args, expect=None):
     testargs = [RELEASE_TOOL] + args
     with patch.object(sys, "argv", testargs):
@@ -76,13 +87,9 @@ def run_main_assert_result(capsys, args, expect=None):
     return captured
 
 
-def test_version_of(capsys):
-    with open(os.path.join(INTEGRATION_DIR, "docker-compose.yml")) as fd:
-        content = fd.read()
-        assert "mendersoftware/gui:" in content
-        if re.search("mendersoftware/gui:.*master", content) is None:
-            # Skip this test for non-master branches.
-            pytest.skip("This test requires master tags in the docker-compose files.")
+def test_version_of(capsys, is_master):
+    if not is_master:
+        pytest.skip("This test requires master tags in the docker-compose files.")
 
     # On a clean checkout, both will be master
     run_main_assert_result(capsys, ["--version-of", "gui"], "master")
@@ -913,7 +920,10 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
-def test_generate_release_notes_from_master(request, capsys):
+def test_generate_release_notes_from_master(request, capsys, is_master):
+    if not is_master:
+        pytest.skip("This test requires master tags in the docker-compose files.")
+
     try:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)
 

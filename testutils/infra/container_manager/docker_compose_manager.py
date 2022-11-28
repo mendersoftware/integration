@@ -11,6 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+from os import walk
 import time
 import socket
 import subprocess
@@ -84,9 +85,8 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
     ]
-    COMPAT_FILES = [
-        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.compat.yml"
-    ]
+    COMPAT_FILES_ROOT = COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat"
+    COMPAT_FILES_TEMPLATE = [COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"]
     MENDER_2_5_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
@@ -401,9 +401,10 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
 
 
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):
-    def __init__(self, name, enterprise=False):
+    def __init__(self, name, tag, enterprise=False):
         self._enterprise = enterprise
-        extra_files = self.COMPAT_FILES
+        self.COMPAT_FILES_TEMPLATE[0] = self.COMPAT_FILES_TEMPLATE[0].format(tag=tag)
+        extra_files = self.COMPAT_FILES_TEMPLATE
         if self._enterprise:
             extra_files += self.ENTERPRISE_FILES
         super().__init__(name, extra_files)
@@ -460,6 +461,21 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
                 addrs.append(ip + ":8822")
 
         return addrs
+
+    @staticmethod
+    def get_versions():
+        compose_file_prefix = "docker-compose.compat-"
+        compose_file_suffix = ".yml"
+        files = []
+        for (dirpath, dirnames, filenames) in walk(
+            DockerComposeNamespace.COMPAT_FILES_ROOT
+        ):
+            for f in filenames:
+                f = f[len(compose_file_prefix) :]
+                f = f[: -len(compose_file_suffix)]
+                files.append(f)
+            break
+        return files
 
 
 class DockerComposeMTLSSetup(DockerComposeNamespace):

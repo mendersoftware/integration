@@ -1,0 +1,12 @@
+version: '2.1'
+services:
+  mender-client-3-2:
+    image: mendersoftware/mender-client-qemu:mender-3.2
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+

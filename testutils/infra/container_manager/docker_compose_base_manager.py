@@ -147,7 +147,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
         for line in logs.split("\n"):
             logger.debug(self._re_newlines_sub("", line))
 
-    def _docker_compose_cmd(self, arg_list, env=None):
+    def _docker_compose_cmd(self, arg_list, env=None, fail_early=True):
         """Run docker-compose command using self.docker_compose_files
 
         It will retry a few times due to https://github.com/opencontainers/runc/issues/1326
@@ -173,7 +173,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
                     logger.info(
                         'failed to run "%s": error follows:\n%s' % (cmd, e.output)
                     )
-                    self._stop_docker_compose()
+                    if fail_early:
+                        self._stop_docker_compose()
 
             if count < 5:
                 logger.info("sleeping %d seconds and retrying" % (count * 30))
@@ -192,65 +193,12 @@ class DockerComposeBaseNamespace(DockerNamespace):
                     "(attempts left: %d) trying to stop all containers in %s"
                     % (retry_attempts, self.name)
                 )
-                cmd = "docker ps -q -f name=%s | xargs -r docker stop" % self.name
-                logger.info("running %s" % cmd)
-                subprocess.run(cmd, check=False, shell=True)
-                time.sleep(stop_sleep_seconds)
-                cmd = (
-                    "docker ps -aq -f name=%s | xargs -n1 -r docker network disconnect -f `docker network list -q -f name=%s` "
-                    % (self.name, self.name)
-                )
-                logger.info("running %s" % cmd)
-                output = subprocess.run(
-                    cmd,
-                    check=False,
-                    shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                logger.info(
-                    "%s disconnecting containers: %s/%s"
-                    % (
-                        self.name,
-                        output.stdout.decode("utf-8").strip(),
-                        output.stderr.decode("utf-8").strip(),
-                    )
-                )
-
-                output = subprocess.check_output(
-                    "docker ps -q -f name=%s | wc -l" % self.name, shell=True
-                ).decode()
-                output = output.rstrip()
-                if int(output) == 0:
-                    logger.info(
-                        "(attempts left: %d) stopped all containers in %s"
-                        % (retry_attempts, self.name)
+                try:
+                    self._docker_compose_cmd(
+                        "down -v --remove-orphans", fail_early=False
                     )
                     break
-                remaining = subprocess.check_output(
-                    "docker ps -f name=%s" % self.name, shell=True
-                ).decode()
-                logger.info(
-                    "(attempts left: %d) %d containers remained in %s are: %s"
-                    % (retry_attempts, int(output), self.name, remaining)
-                )
-                retry_attempts = retry_attempts - 1
-
-            output = subprocess.check_output(
-                "docker ps -aq -f name=%s" % self.name, shell=True
-            ).decode()
-            logger.info("%s containers to remove: '%s'" % (self.name, output))
-            output = subprocess.check_output(
-                "docker network list -q -f name=%s" % self.name, shell=True
-            ).decode()
-            logger.info("%s networks to remove: '%s'" % (self.name, output))
-
-            cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
-            cmd = (
-                "docker network list -q -f name=%s | xargs -r docker network rm"
-                % self.name
-            )
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
+                except Exception as e:
+                    time.sleep(stop_sleep_seconds)
+                    logger.error(e)
+                    retry_attempts = retry_attempts - 1

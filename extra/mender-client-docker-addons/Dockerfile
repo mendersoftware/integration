@@ -59,16 +59,10 @@ PermitRootLogin yes\n\
 Port 22\n\
 Port 8822\n' >> /etc/ssh/sshd_config
 
-COPY --from=build /mender-install/usr/bin/mender /usr/bin/mender
-COPY --from=build /mender-install/usr/bin/mender-connect /usr/bin/mender-connect
-COPY --from=build /mender-install/etc/mender /etc/mender
-COPY --from=build /mender-install/usr/share/mender /usr/share/mender
-COPY --from=build /mender-install/usr/share/doc/mender-client /usr/share/doc/mender-client
-COPY --from=build /mender-install/lib/systemd/system/mender-client.service /lib/systemd/system/mender-client.service
-COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib/systemd/system/mender-connect.service
-COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
-COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
-COPY --from=build /mender-install/var/lib/mender /var/lib/mender
+COPY --from=build /mender-install/usr/ /usr/
+COPY --from=build /mender-install/etc/ /etc/
+COPY --from=build /mender-install/lib/ /lib/
+COPY --from=build /mender-install/var/ /var/
 COPY --from=build /bootstrap.mender /var/lib/mender/bootstrap.mender
 
 # Install the demo server certificate(s). See:

@@ -18,6 +18,7 @@ import uuid
 import os
 import os.path
 import time
+from datetime import datetime
 
 from testutils.common import Tenant, User, update_tenant, create_user
 from testutils.infra.cli import CliTenantadm
@@ -41,6 +42,9 @@ logger = logging.getLogger("testAccess")
 
 def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconnect"]["devices"]
+    devices_collection.delete_one(
+        {"_id": device_id, "tenant_id": tenant_id,}
+    )
     devices_collection.insert_one(
         {
             "_id": device_id,
@@ -54,6 +58,9 @@ def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"
 
 def device_config_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconfig"]["devices"]
+    devices_collection.delete_one(
+        {"_id": device_id, "tenant_id": tenant_id,}
+    )
     devices_collection.insert_one(
         {
             "_id": device_id,
@@ -75,8 +82,12 @@ class _TestAccessBase:
 
     # troubleshoot
     def check_access_remote_term(self, auth, devid, forbid=False):
+
         devconn = ApiClient(deviceconnect.URL_MGMT)
 
+        logger.info(
+            f"using {auth} to call {deviceconnect.URL_MGMT_DEVICE} with devid={devid}"
+        )
         res = devconn.with_auth(auth).call(
             "GET", deviceconnect.URL_MGMT_DEVICE, path_params={"id": devid},
         )
@@ -84,7 +95,7 @@ class _TestAccessBase:
         if forbid:
             assert res.status_code == 403
         else:
-            assert res.ok
+            assert res.status_code == 200
 
     def check_access_file_transfer(self, auth, devid, forbid=False):
         devconn = ApiClient(deviceconnect.URL_MGMT)
@@ -99,7 +110,7 @@ class _TestAccessBase:
         if forbid:
             assert res.status_code == 403
         else:
-            assert res.status_code == 408
+            assert res.status_code == 408 or res.status_code == 404
 
         res = devconn.with_auth(auth).call(
             "PUT",
@@ -121,7 +132,7 @@ class _TestAccessBase:
         if forbid:
             assert res.status_code == 403
         else:
-            assert res.ok
+            assert res.status_code == 200
 
     def check_access_sessionlogs(self, auth, forbid=False):
         devconn = ApiClient(deviceconnect.URL_MGMT)
@@ -147,7 +158,7 @@ class _TestAccessBase:
         if forbid:
             assert res.status_code == 403
         else:
-            assert res.ok
+            assert res.status_code == 200
 
     # rbac (no addon)
     def check_access_rbac(self, auth, forbid=False):
@@ -157,7 +168,7 @@ class _TestAccessBase:
         if forbid:
             assert res.status_code == 403
         else:
-            assert res.ok
+            assert res.status_code == 200
 
 
 class TestAccess(_TestAccessBase):
@@ -200,9 +211,11 @@ class TestAccessEnterprise(_TestAccessBase):
         env = {"tenants": {}}
 
         for p in ["os", "professional", "enterprise"]:
-            env["tenants"][p] = _make_tenant(p)
+            t = _make_tenant(p)
+            env["tenants"][p] = t
 
-        env["tenants"]["trial"] = _make_trial_tenant()
+        t = _make_trial_tenant()
+        env["tenants"]["trial"] = t
 
         yield env
 
@@ -257,6 +270,17 @@ class TestAccessEnterprise(_TestAccessBase):
         device_connect_insert_device(mongo, tenant.device_id, tenant_id=tenant.id)
         device_config_insert_device(mongo, tenant.device_id, tenant_id=tenant.id)
 
+        r = ApiClient(useradm.URL_MGMT).call(
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(
+                mt_env["tenants"]["os"].users[0].name,
+                mt_env["tenants"]["os"].users[0].pwd,
+            ),
+        )
+        assert r.status_code == 200
+
+        tenant.auth = r.text
         self.check_access_remote_term(tenant.auth, tenant.device_id)
         self.check_access_file_transfer(tenant.auth, tenant.device_id)
         self.check_access_auditlogs(tenant.auth, forbid=True)
@@ -270,6 +294,17 @@ class TestAccessEnterprise(_TestAccessBase):
             tenant.id, addons=["troubleshoot", "configure"],
         )
 
+        r = ApiClient(useradm.URL_MGMT).call(
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(
+                mt_env["tenants"]["os"].users[0].name,
+                mt_env["tenants"]["os"].users[0].pwd,
+            ),
+        )
+        assert r.status_code == 200
+        tenant.auth = r.text
+
         self.check_access_remote_term(tenant.auth, tenant.device_id)
         self.check_access_file_transfer(tenant.auth, tenant.device_id)
         self.check_access_deviceconfig(tenant.auth, tenant.device_id)
@@ -280,6 +315,16 @@ class TestAccessEnterprise(_TestAccessBase):
         update_tenant(
             tenant.id, plan="enterprise",
         )
+        r = ApiClient(useradm.URL_MGMT).call(
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(
+                mt_env["tenants"]["os"].users[0].name,
+                mt_env["tenants"]["os"].users[0].pwd,
+            ),
+        )
+        assert r.status_code == 200
+        tenant.auth = r.text
 
         self.check_access_remote_term(tenant.auth, tenant.device_id)
         self.check_access_file_transfer(tenant.auth, tenant.device_id)
@@ -290,6 +335,8 @@ class TestAccessEnterprise(_TestAccessBase):
 
         # upgrade trial tenant - straight to enterprise
         tenant = mt_env["tenants"]["trial"]
+        device_connect_insert_device(mongo, tenant.device_id, tenant_id=tenant.id)
+        device_config_insert_device(mongo, tenant.device_id, tenant_id=tenant.id)
 
         tadmm = ApiClient(tenantadm_v2.URL_MGMT)
 
@@ -319,6 +366,16 @@ class TestAccessEnterprise(_TestAccessBase):
         update_tenant(
             tenant.id, addons=["troubleshoot", "configure"],
         )
+        r = ApiClient(useradm.URL_MGMT).call(
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(
+                mt_env["tenants"]["trial"].users[0].name,
+                mt_env["tenants"]["trial"].users[0].pwd,
+            ),
+        )
+        assert r.status_code == 200
+        tenant.auth = r.text
 
         self.check_access_remote_term(tenant.auth, tenant.device_id)
         self.check_access_file_transfer(tenant.auth, tenant.device_id)
@@ -335,16 +392,20 @@ def _make_tenant(plan):
         "ci.email.tests+" + uuidv4 + "@mender.io",
         "secretsecret",
     )
-    email = "ci.email.tests+" + uuidv4 + "-user2@mender.io"
 
     # Create tenant with two users
     tenant = create_org(tenant, username, password, plan=plan)
-    tenant.users.append(create_user(email, password, tenant.id))
+    uuidv4 = str(uuid.uuid4())
+    username, password = (
+        "ci.email.tests+" + uuidv4 + "@mender.io",
+        "secretsecret",
+    )
+    tenant.users.append(create_user(username, password, tenant.id))
     update_tenant(
         tenant.id, addons=[],
     )
     r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(email, password),
+        "POST", useradm.URL_LOGIN, auth=(username, password),
     )
     assert r.status_code == 200
     tenant.auth = r.text

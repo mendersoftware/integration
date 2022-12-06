@@ -115,6 +115,9 @@ def get_api_endpoints(repo):
                     or path.rstrip("/").endswith("/verify")  # JWT token verifications
                     or path.rstrip("/").endswith("/2faqr")  # 2FA QR code
                     or path.rstrip("/").endswith("/2faverify")  # 2FA code verification
+                    or path.rstrip("/").endswith(
+                        "/auth/magic/{id}"
+                    )  # token authentication
                 )
                 yield {
                     "auth": requires_auth,

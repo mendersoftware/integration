@@ -94,3 +94,8 @@ services:
         command: --automigrate
         environment:
             - CREATE_ARTIFACT_SKIPVERIFY=1
+
+    mender-generate-delta-worker:
+        volumes:
+            - ./cert/cert.crt:/etc/ssl/certs/docker.mender.io.crt
+

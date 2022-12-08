@@ -6,5 +6,5 @@ py-pip
 iptables
 make
 python3
-openssl
+openssl1.1-compat
 jq

@@ -86,7 +86,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
     ]
     COMPAT_FILES_ROOT = COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat"
-    COMPAT_FILES_TEMPLATE = [COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"]
+    COMPAT_FILES_TEMPLATE = COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"
     MENDER_2_5_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
@@ -403,8 +403,7 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):
     def __init__(self, name, tag, enterprise=False):
         self._enterprise = enterprise
-        self.COMPAT_FILES_TEMPLATE[0] = self.COMPAT_FILES_TEMPLATE[0].format(tag=tag)
-        extra_files = self.COMPAT_FILES_TEMPLATE
+        extra_files = [self.COMPAT_FILES_TEMPLATE.format(tag=tag)]
         if self._enterprise:
             extra_files += self.ENTERPRISE_FILES
         super().__init__(name, extra_files)

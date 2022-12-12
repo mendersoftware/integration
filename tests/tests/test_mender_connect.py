@@ -12,10 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import pdb
 import json
 import pytest
 import time
 import uuid
+import os
 
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
@@ -43,7 +45,20 @@ container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
+    def bp(self):
+     if not self.DEBUG:
+         return
+     t = "/tmp/bp" + str(self.bpindex)
+     logger.info("bp: waiting on %s" % t)
+     while not os.path.exists(t):
+         time.sleep(0.1)
+     os.remove(t)
+     logger.info("bp: released on %s" % t)
+     self.bpindex = self.bpindex + 1
+
     def test_regular_protocol_commands(self, docker_env):
+        self.DEBUG=True
+        self.bpindex=0
         self.assert_env(docker_env)
 
         with docker_env.devconnect.get_websocket() as ws:
@@ -58,6 +73,9 @@ class _TestRemoteTerminalBase:
             # (root) or "$ " (user).
             output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            if not output[-2:].decode() in ["# ", "$ "]:
+                self.bp()
+                pdb.set_trace()
             assert output[-2:].decode() in [
                 "# ",
                 "$ ",
@@ -80,6 +98,9 @@ class _TestRemoteTerminalBase:
             output = shell.recvOutput(receive_timeout_s)
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             output = output.decode()
+            if not "usr" in output:
+                self.bp()
+                pdb.set_trace()
             assert "usr" in output
             assert "etc" in output
 

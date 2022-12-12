@@ -10,3 +10,8 @@ services:
     mender-tenantadm:
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+
+    mender-generate-delta-worker:
+        command: --automigrate
+        environment:
+            - GENERATE_DELTA_SKIPVERIFY=1

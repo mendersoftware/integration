@@ -212,7 +212,7 @@ args = parser.parse_args()
 if args.all and args.repo:
     print("--repo and --all are mutually exclusive!")
     sys.exit(1)
-elif not args.all and not args.repo:
+elif not any([args.all, args.repo]):
     args.all = True
 
 repos = []
@@ -239,7 +239,7 @@ if args.all:
 else:
     repos.append(os.path.basename(os.path.realpath(".")))
 
-if not args.base_dir and not args.repo and not args.query_github:
+if not any([args.base_dir, args.repo, args.query_github]):
     print("Need at least one of --base-dir, --repo or --query-github")
     sys.exit(1)
 

@@ -285,7 +285,7 @@ git:
     - mender-ci-tools
     docker_container:
     - mender-ci-workflows
-    release_component: true
+    release_component: false
     independent_component: true
 
 docker_image:
@@ -558,7 +558,7 @@ docker_image:
     - mender-ci-workflows
     docker_container:
     - mender-ci-workflows
-    release_component: true
+    release_component: false
     independent_component: true
 
 docker_container:

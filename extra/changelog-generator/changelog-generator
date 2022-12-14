@@ -169,7 +169,7 @@ class GitQuerier:
 
     def show_commit_without_diff(self, repo, sha):
         output = subprocess.check_output(
-            ["git", "show", "-s", sha] + self.gitargs,
+            ["git", "show", "--no-patch", sha] + self.gitargs,
             cwd=os.path.join(self.base_dir, repo),
         )
         return output.decode()

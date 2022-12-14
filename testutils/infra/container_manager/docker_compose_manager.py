@@ -11,11 +11,14 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from os import walk
-import time
+
+import logging
 import socket
 import subprocess
-import logging
+import time
+
+from os import walk
+
 from testutils.common import wait_until_healthy
 
 from .docker_compose_base_manager import DockerComposeBaseNamespace, docker_lock
@@ -111,30 +114,19 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         'exclude' doesn't need exact names, it's a verbatim grep regex.
         """
         with docker_lock:
-            cmd = "docker ps -aq -f name=%s  | xargs -r docker rm -fv" % self.name
+            cmd = "down --remove-orphans"
+            if len(exclude) > 0:
+                # Filter exclude from all services in composition
+                services = self._docker_compose_cmd("config --services").split()
+                rm_services = list(filter(lambda svc: svc not in exclude, services))
+                svc_args = " ".join(rm_services)
 
-            # exclude containers by crude grep -v and awk'ing out the id
-            # that's because docker -f allows only simple comparisons, no negations/logical ops
-            if len(exclude) != 0:
-                cmd_excl = 'grep -vE "(' + " | ".join(exclude) + ')"'
-                cmd_id = "awk 'NR>1 {print $1}'"
-                cmd = "docker ps -a -f name=%s | %s | %s | xargs -r docker rm -fv" % (
-                    self.name,
-                    cmd_excl,
-                    cmd_id,
-                )
+                if svc_args != "":
+                    # Only if we're excluding services do we use 'rm'
+                    # Otherwise default to 'down --remove-orphans'
+                    cmd = f"rm -sf {svc_args}"
 
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
-
-            # if we're preserving some containers, don't destroy the network (will error out on exit)
-            if len(exclude) == 0:
-                cmd = (
-                    "docker network list -q -f name=%s | xargs -r docker network rm"
-                    % self.name
-                )
-                logger.info("running %s" % cmd)
-                subprocess.check_call(cmd, shell=True)
+            self._docker_compose_cmd(cmd)
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):

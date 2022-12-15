@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import pdb
+# import pdb
 import json
 import pytest
 import time
@@ -75,7 +75,7 @@ class _TestRemoteTerminalBase:
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             if not output[-2:].decode() in ["# ", "$ "]:
                 self.bp()
-                pdb.set_trace()
+# pdb.set_trace()
             assert output[-2:].decode() in [
                 "# ",
                 "$ ",
@@ -100,7 +100,7 @@ class _TestRemoteTerminalBase:
             output = output.decode()
             if not "usr" in output:
                 self.bp()
-                pdb.set_trace()
+#                 pdb.set_trace()
             assert "usr" in output
             assert "etc" in output
 

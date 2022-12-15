@@ -23,8 +23,8 @@ from testutils.infra.container_manager import factory
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 from ..common_setup import (
-    class_persistent_standard_setup_one_client_bootstrapped,
-    enterprise_no_client_class,
+    standard_setup_one_client_bootstrapped,
+    enterprise_no_client,
 )
 from ..MenderAPI import (
     devconnect,
@@ -305,9 +305,9 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
 class TestRemoteTerminal(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
-    @pytest.fixture(autouse=True, scope="class")
-    def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
-        env = class_persistent_standard_setup_one_client_bootstrapped
+    @pytest.fixture(autouse=True, scope="function")
+    def docker_env(self, standard_setup_one_client_bootstrapped):
+        env = standard_setup_one_client_bootstrapped
         env.devconnect = devconnect
         yield env
 
@@ -317,7 +317,7 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
     This set of tests uses mender-connect v1.0
     """
 
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(autouse=True, scope="function")
     def docker_env(self, request):
         env = container_factory.get_mender_client_2_5()
         request.addfinalizer(env.teardown)
@@ -373,8 +373,8 @@ def connected_device(env):
 class TestRemoteTerminalEnterprise(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
-    @pytest.fixture(scope="class")
-    def docker_env(self, enterprise_no_client_class):
+    @pytest.fixture(scope="function")
+    def docker_env(self, enterprise_no_client):
         """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
 
         The min. plan for most RT features is 'os', but we're also
@@ -382,7 +382,7 @@ class TestRemoteTerminalEnterprise(
         common denominator.
         """
 
-        env = enterprise_no_client_class
+        env = enterprise_no_client
 
         device, devconn = connected_device(env)
 
@@ -397,7 +397,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
     This set of tests uses mender-connect v1.0
     """
 
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(autouse=True, scope="function")
     def docker_env(self, request):
         env = container_factory.get_mender_client_2_5(enterprise=True)
         request.addfinalizer(env.teardown)

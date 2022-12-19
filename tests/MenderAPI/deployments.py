@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -70,7 +70,13 @@ class Deployments:
         return r.headers["location"]
 
     def trigger_deployment(
-        self, name, artifact_name, devices, retries=0, update_control_map=None
+        self,
+        name,
+        artifact_name,
+        devices,
+        retries=0,
+        update_control_map=None,
+        autogenerate_delta=False,
     ):
         deployments_path_url = self.get_deployments_base_path() + "deployments"
 
@@ -79,7 +85,7 @@ class Deployments:
             "artifact_name": artifact_name,
             "devices": devices,
             "retries": retries,
-            "autogenerate_delta": True,
+            "autogenerate_delta": autogenerate_delta,
         }
         if update_control_map:
             trigger_data["update_control_map"] = update_control_map

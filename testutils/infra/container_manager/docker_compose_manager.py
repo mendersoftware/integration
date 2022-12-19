@@ -44,6 +44,10 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.client.rofs.yml",
     ]
+    QEMU_CLIENT_ROFS_COMMERCIAL_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.client.rofs.commercial.yml",
+    ]
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
     ]
@@ -364,6 +368,21 @@ class DockerComposeEnterpriseRofsClientSetup(DockerComposeEnterpriseSetup):
         else:
             DockerComposeNamespace.__init__(
                 self, name, self.ENTERPRISE_FILES + self.QEMU_CLIENT_ROFS_FILES
+            )
+
+
+class DockerComposeEnterpriseRofsCommercialClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self,
+                name,
+                self.ENTERPRISE_FILES + self.QEMU_CLIENT_ROFS_COMMERCIAL_FILES,
             )
 
 

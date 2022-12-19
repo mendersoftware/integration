@@ -79,6 +79,7 @@ class Deployments:
             "artifact_name": artifact_name,
             "devices": devices,
             "retries": retries,
+            "autogenerate_delta": True,
         }
         if update_control_map:
             trigger_data["update_control_map"] = update_control_map

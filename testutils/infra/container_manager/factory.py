@@ -183,8 +183,8 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_enterprise_rofs_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseRofsClientSetup(name, num_clients)
 
-    def get_compatibility_setup(self, name=None, **kwargs):
-        return DockerComposeCompatibilitySetup(name, **kwargs)
+    def get_compatibility_setup(self, tag, name=None, **kwargs):
+        return DockerComposeCompatibilitySetup(name, tag, **kwargs)
 
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)

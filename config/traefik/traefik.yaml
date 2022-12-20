@@ -107,9 +107,6 @@ http:
     gui:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
-        - ensure-ui-path
-        - signup-redirect
-        - ui-stripprefix
         - sec-headers
         - compression
         - json-error-responder1
@@ -198,7 +195,7 @@ http:
         - sec-headers
         - compression
         - json-error-responder4
-      rule: "Path(`/api/management/{ver:v[0-9]+}/useradm/auth/login`)||PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(oauth2|auth/password-reset|auth/verify-email|auth/plan-verify|auth/sso)}`)"
+      rule: '!Path(`/api/management/{ver:v[0-9]+}/useradm/auth/logout`)&&PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(auth|oauth2)}`)'
       service: useradm
       tls: true
 

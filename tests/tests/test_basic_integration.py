@@ -69,15 +69,6 @@ class BaseTestBasicIntegration(MenderTesting):
         # Verify that partition is read-only as expected
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        # in the so-called clean image the artifact_info is "artifact_name=mender-image-clean\n"
-        # see: https://github.com/mendersoftware/mender-qa/pull/580/commits/a4c54e9ebf5879f0837789cbc7c74cb1102b2caa#diff-7031fcd5c934f225781febe446a34594a9a36b335c540379c0dd376a8f06ba28R263
-        # so first we expect it to be different, after update we expect it to change to mender-image-clean
-        artifact_info = mender_device.run(
-            "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
-        )
-        logger.info("before update got %s" % artifact_info)
-        assert artifact_info != "artifact_name=mender-image-clean\n"
-
         host_ip = env.get_virtual_network_host_ip()
         update_image(
             mender_device,
@@ -89,17 +80,6 @@ class BaseTestBasicIntegration(MenderTesting):
         )
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
-        # after the update we expect the artifact info to be different
-        # ("artifact_name=mender-image-clean\n")
-        # since this is what is in the embedded image decompressed
-        # in the tests/run.sh
-        expected_artifact_info = "artifact_name=mender-image-clean\n"
-        artifact_info = mender_device.run(
-            "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
-        )
-        logger.info("after update got %s" % artifact_info)
-        assert expected_artifact_info == artifact_info
-
         update_image(
             mender_device,
             host_ip,
@@ -109,17 +89,6 @@ class BaseTestBasicIntegration(MenderTesting):
             deploy=deploy,
         )
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
-
-        # after the update we expect the artifact info to be different
-        # ("artifact_name=mender-image-clean\n")
-        # since this is what is in the embedded image decompressed
-        # in the tests/run.sh
-        expected_artifact_info = "artifact_name=mender-image-clean\n"
-        artifact_info = mender_device.run(
-            "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
-        )
-        logger.info("after update got %s" % artifact_info)
-        assert expected_artifact_info == artifact_info
 
     def do_test_update_jwt_expired(self, env, valid_image_with_mender_conf):
         """Update a device with a short lived JWT token"""
@@ -163,15 +132,6 @@ class BaseTestBasicIntegration(MenderTesting):
         mender_device = env.device
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")
 
-        # in the so-called clean image the artifact_info is "artifact_name=mender-image-clean\n"
-        # see: https://github.com/mendersoftware/mender-qa/pull/580/commits/a4c54e9ebf5879f0837789cbc7c74cb1102b2caa#diff-7031fcd5c934f225781febe446a34594a9a36b335c540379c0dd376a8f06ba28R263
-        # so first we expect it to be different, after update we expect it to change to mender-image-clean
-        artifact_info = mender_device.run(
-            "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
-        )
-        logger.info("before update got %s" % artifact_info)
-        assert artifact_info != "artifact_name=mender-image-clean\n"
-
         update_image(
             env.device,
             env.get_virtual_network_host_ip(),
@@ -180,17 +140,6 @@ class BaseTestBasicIntegration(MenderTesting):
             devauth=devauth,
             deploy=deploy,
         )
-
-        # after the update we expect the artifact info to be different
-        # ("artifact_name=mender-image-clean\n")
-        # since this is what is in the embedded image decompressed
-        # in the tests/run.sh
-        expected_artifact_info = "artifact_name=mender-image-clean\n"
-        artifact_info = mender_device.run(
-            "cat /etc/mender/artifact_info | sed -e '/artifact_name/q'"
-        )
-        logger.info("after update got %s" % artifact_info)
-        assert artifact_info == expected_artifact_info
 
     def do_test_forced_update_check_from_client(
         self, env, valid_image_with_mender_conf

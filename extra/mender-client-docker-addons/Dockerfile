@@ -1,6 +1,6 @@
 # Creates a container which acts as a bare bones non-VM based Mender
 # installation, for use in tests.
-FROM ubuntu:20.04 AS build
+FROM ubuntu:22.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
@@ -25,7 +25,17 @@ WORKDIR /src/mender
 RUN make prefix=/mender-install install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
-RUN echo artifact_name=original > /mender-install/etc/mender/artifact_info
+
+# Install mender-artifact from upstream
+RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.gpg.d/mender.asc && \
+    echo "deb [arch=$(dpkg --print-architecture)] https://downloads.mender.io/repos/debian ubuntu/$(. /etc/lsb-release && echo $DISTRIB_CODENAME)/experimental main" > \
+        /etc/apt/sources.list.d/mender.list && \
+    apt-get update && apt-get install mender-artifact
+RUN mender-artifact write bootstrap-artifact \
+        --artifact-name original \
+        --device-type docker-client \
+        --provides "rootfs-image.version:original" \
+        --output-path /bootstrap.mender
 
 WORKDIR /src/mender-connect
 RUN make prefix=/mender-install install
@@ -37,7 +47,7 @@ RUN make DESTDIR=/mender-install install
 
 RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 RUN mkdir -p /run/dbus && apt-get update && apt-get install -y liblzma5 dbus openssh-server
 
@@ -49,16 +59,11 @@ PermitRootLogin yes\n\
 Port 22\n\
 Port 8822\n' >> /etc/ssh/sshd_config
 
-COPY --from=build /mender-install/usr/bin/mender /usr/bin/mender
-COPY --from=build /mender-install/usr/bin/mender-connect /usr/bin/mender-connect
-COPY --from=build /mender-install/etc/mender /etc/mender
-COPY --from=build /mender-install/usr/share/mender /usr/share/mender
-COPY --from=build /mender-install/usr/share/doc/mender-client /usr/share/doc/mender-client
-COPY --from=build /mender-install/lib/systemd/system/mender-client.service /lib/systemd/system/mender-client.service
-COPY --from=build /mender-install/lib/systemd/system/mender-connect.service /lib/systemd/system/mender-connect.service
-COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf
-COPY --from=build /mender-install/usr/share/dbus-1/system.d/io.mender.UpdateManager.conf /usr/share/dbus-1/system.d/io.mender.UpdateManager.conf
-COPY --from=build /mender-install/var/lib/mender /var/lib/mender
+COPY --from=build /mender-install/usr/ /usr/
+COPY --from=build /mender-install/etc/ /etc/
+COPY --from=build /mender-install/lib/ /lib/
+COPY --from=build /mender-install/var/ /var/
+COPY --from=build /bootstrap.mender /var/lib/mender/bootstrap.mender
 
 # Install the demo server certificate(s). See:
 # https://github.com/mendersoftware/meta-mender/blob/master/meta-mender-core/recipes-mender/mender-server-certificate/mender-server-certificate.bb

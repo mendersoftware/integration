@@ -12,9 +12,9 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-elasticsearch
+            - mender-opensearch
         environment:
-            REPORTING_ELASTICSEARCH_ADDRESSES: "http://mender-elasticsearch:9200"
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
 
     #
     # mender-reporting-indexer
@@ -28,9 +28,9 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-elasticsearch
+            - mender-opensearch
         environment:
-            REPORTING_ELASTICSEARCH_ADDRESSES: "http://mender-elasticsearch:9200"
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
 
     #
     # mender-api-gateway
@@ -40,17 +40,16 @@ services:
         - ./config/traefik/traefik.reporting.yaml:/etc/traefik/config/traefik.reporting.yaml:ro
 
     #
-    # elasticsearch
+    # opensearch
     #
-    mender-elasticsearch:
-        image: elasticsearch:7.16.3
+    mender-opensearch:
+        image: opensearchproject/opensearch:2.4.0
         environment:
-          - "network.host=0.0.0.0"
           - "discovery.type=single-node"
+          - "plugins.security.disabled=true"
           - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
         ports:
             - 9200:9200
-            - 9300:9300
         networks:
             - mender
 

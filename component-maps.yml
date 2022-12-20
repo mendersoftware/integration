@@ -21,8 +21,10 @@ git:
     independent_component: true
 
   mender-binary-delta:
-    docker_image: []
-    docker_container: []
+    docker_image:
+      - mender-qemu-rofs-commercial
+    docker_container:
+      - mender-client
     release_component: true
     independent_component: true
 
@@ -35,6 +37,13 @@ git:
     docker_container: []
     release_component: true
     independent_component: true
+
+  generate-delta-worker:
+    docker_image:
+    - generate-delta-worker
+    docker_container:
+    - mender-generate-delta-worker
+    release_component: true
 
   iot-manager:
     docker_image:
@@ -109,6 +118,7 @@ git:
     docker_image:
     - mender-client-qemu
     - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
     - mender-client-docker
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
@@ -233,6 +243,7 @@ git:
     docker_image:
     - mender-client-qemu
     - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
     docker_container:
@@ -266,6 +277,14 @@ git:
   meta-mender:
     docker_image: []
     docker_container: []
+    release_component: false
+    independent_component: true
+
+  mender-ci-workflows:
+    docker_image:
+    - mender-ci-tools
+    docker_container:
+    - mender-ci-workflows
     release_component: false
     independent_component: true
 
@@ -304,6 +323,13 @@ docker_image:
     - deviceauth-enterprise
     docker_container:
     - mender-device-auth
+    release_component: true
+
+  generate-delta-worker:
+    git:
+    - generate-delta-worker
+    docker_container:
+    - mender-generate-delta-worker
     release_component: true
 
   gui:
@@ -359,6 +385,16 @@ docker_image:
     git:
     - mender
     - mender-connect
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: false
+
+  mender-qemu-rofs-commercial:
+    git:
+    - mender
+    - mender-connect
+    - mender-binary-delta
     docker_container:
     - mender-client
     release_component: true
@@ -517,6 +553,14 @@ docker_image:
     - mender-reporting-indexer
     release_component: true
 
+  mender-ci-tools:
+    git:
+    - mender-ci-workflows
+    docker_container:
+    - mender-ci-workflows
+    release_component: false
+    independent_component: true
+
 docker_container:
 
   mender-iot-manager:
@@ -540,6 +584,13 @@ docker_container:
     - deviceauth-enterprise
     release_component: true
 
+  mender-generate-delta-worker:
+    git:
+    - generate-delta-worker
+    docker_image:
+    - generate-delta-worker
+    release_component: true
+
   mender-gui:
     git:
     - gui
@@ -560,12 +611,14 @@ docker_container:
     - mender
     - monitor-client
     - mender-connect
+    - mender-binary-delta
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons
     - mender-client-qemu
     - mender-client-qemu-rofs
     - mender-monitor-qemu-commercial
+    - mender-qemu-rofs-commercial
     release_component: true
 
   mender-api-gateway:
@@ -688,4 +741,11 @@ docker_container:
     - mender-gateway
     docker_image:
     - mender-gateway-qemu-commercial
+    release_component: true
+
+  mender-ci-workflows:
+    git:
+    - mender-ci-workflows
+    docker_image:
+    - mender-ci-tools
     release_component: true

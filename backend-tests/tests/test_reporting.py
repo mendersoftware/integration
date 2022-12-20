@@ -238,7 +238,6 @@ def tenant_os(clean_mongo):
     isK8S(),
     reason="reporting service not deployed to staging or production environment",
 )
-@pytest.mark.skip(reason="reporting is not part of the release")
 class TestReportingSearchEnterprise:
     @property
     def logger(self):
@@ -738,7 +737,6 @@ class TestReportingSearchEnterprise:
                     assert_device_attributes(dev, body[i])
 
 
-@pytest.mark.skip(reason="reporting is not part of the release")
 class TestReportingSearch:
     @property
     def logger(self):

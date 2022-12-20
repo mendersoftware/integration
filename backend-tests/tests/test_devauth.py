@@ -681,9 +681,16 @@ class TestDeviceMgmtBase:
         assert r.status_code == 204
 
         # only verify the device is gone
-        r = devapim.with_auth(utoken).call(
-            "GET", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
-        )
+        count = 5
+        while count > 0:
+            r = devapim.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
+            )
+            if r.status_code == 404:
+                break
+            # need to wait while workflows worker executes the job
+            time.sleep(1)
+            count -= 1
         assert r.status_code == 404
 
         # log in an accepted device

@@ -882,6 +882,7 @@ def test_git_to_buildparam():
         assert git_to_buildparam(k) == v
 
 
+@pytest.mark.skip(reason="don't run in staging")
 def test_generate_release_notes(request, capsys):
     try:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)
@@ -920,10 +921,10 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
+@pytest.mark.skip(reason="don't run in staging")
 def test_generate_release_notes_from_master(request, capsys, is_master):
     if not is_master:
         pytest.skip("This test requires master tags in the docker-compose files.")
-
     try:
         subprocess.check_call("rm -f release_notes*.txt", shell=True)
 

@@ -17,6 +17,8 @@ import pytest
 import time
 import uuid
 
+from flaky import flaky
+
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.container_manager import factory
@@ -42,6 +44,15 @@ container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
+    """
+    Ticket: QA-504
+    Reason: The test fails due to the fact that the websocket connection is broken,
+            and the mender-connect can't recover from situation when shell could not
+            be stopped, and the session is left as empty with non-existent process
+            (see MEN-6137) while many other things timeout.
+    """
+
+    @flaky(max_runs=3)
     def test_regular_protocol_commands(self, docker_env):
         self.assert_env(docker_env)
 

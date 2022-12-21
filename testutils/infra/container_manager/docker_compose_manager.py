@@ -31,6 +31,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.reporting.yml",
         COMPOSE_FILES_PATH + "/docker-compose.testing.yml",
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.yml",
     ]

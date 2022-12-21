@@ -16,21 +16,6 @@ http:
           ResponseCodeRatio(500, 600, 0, 600) > 0.25 ||
           NetworkErrorRatio() > 0.10
   
-    ui-stripprefix:
-      stripprefix:
-        prefixes: "/ui"
-  
-    ensure-ui-path:
-      redirectregex:
-        regex: "^(https?://[^/]+)(/[a-z]*)?$"
-        replacement: "${1}/ui/"
-        permanent: true
-  
-    signup-redirect:
-      redirectregex:
-        regex: "^(https://[^/]+)/signup"
-        replacement: "${1}/ui/signup"
-  
     sec-headers:
       headers:
         referrerPolicy: "no-referrer" # {{- if (env "MENDER_DEMO") }}

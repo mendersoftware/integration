@@ -132,6 +132,7 @@ def setup_deployments_enterprise_test(
     return tenant1, tenant2
 
 
+@pytest.mark.storage_test
 class TestDeploymentsEndpointEnterprise(object):
     #
     # The test_cases array consists of test tuples of the form:
@@ -698,7 +699,7 @@ def try_update(
     return resp.status_code
 
 
-class TestDeploymentsBase(object):
+class _TestDeploymentsBase(object):
     def do_test_regular_deployment(self, clean_mongo, user_token, devs):
         api_mgmt_dep = ApiClient(deployments.URL_MGMT)
 
@@ -740,18 +741,21 @@ class TestDeploymentsBase(object):
             assert status_code == 204
 
 
-class TestDeploymentOpenSource(TestDeploymentsBase):
+@pytest.mark.storage_test
+class TestDeploymentOpenSource(_TestDeploymentsBase):
     def test_regular_deployment(self, clean_mongo):
         _user, user_token, devs = setup_devices_and_management_st(5)
         self.do_test_regular_deployment(clean_mongo, user_token, devs)
 
 
-class TestDeploymentEnterprise(TestDeploymentsBase):
+@pytest.mark.storage_test
+class TestDeploymentEnterprise(_TestDeploymentsBase):
     def test_regular_deployment(self, clean_mongo):
         _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
         self.do_test_regular_deployment(clean_mongo, user_token, devs)
 
 
+@pytest.mark.storage_test
 class TestPhasedRolloutDeploymentsEnterprise:
     def try_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
@@ -1050,6 +1054,7 @@ def calculate_phase_sizes(deployment_request):
     return batch_sizes
 
 
+@pytest.mark.storage_test
 class TestPhasedRolloutConcurrencyEnterprise:
     def try_concurrent_phased_updates(
         self, deployment, devices, user_token, expected_update_status=200
@@ -1256,7 +1261,7 @@ class StatusVerifier:
             assert resp.json()[0]["status"] == deployment_status
 
 
-class TestDeploymentsStatusUpdateBase:
+class _TestDeploymentsStatusUpdateBase:
     def do_test_deployment_status_update(
         self, clean_mongo, user_token, devs, deploy_to_group=None
     ):
@@ -1488,19 +1493,22 @@ class TestDeploymentsStatusUpdateBase:
         )
 
 
-class TestDeploymentsStatusUpdate(TestDeploymentsStatusUpdateBase):
+@pytest.mark.storage_test
+class TestDeploymentsStatusUpdate(_TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, user_token, devs = setup_devices_and_management_st(5)
         self.do_test_deployment_status_update(clean_mongo, user_token, devs)
 
 
-class TestDeploymentsStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
+@pytest.mark.storage_test
+class TestDeploymentsStatusUpdateEnterprise(_TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, _tenant, user_token, devs = setup_devices_and_management_mt(5)
         self.do_test_deployment_status_update(clean_mongo, user_token, devs)
 
 
-class TestDeploymentsToGroupStatusUpdate(TestDeploymentsStatusUpdateBase):
+@pytest.mark.storage_test
+class TestDeploymentsToGroupStatusUpdate(_TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, user_token, devs = setup_devices_and_management_st(
             5, deploy_to_group="g0"
@@ -1510,7 +1518,8 @@ class TestDeploymentsToGroupStatusUpdate(TestDeploymentsStatusUpdateBase):
         )
 
 
-class TestDeploymentsToGroupStatusUpdateEnterprise(TestDeploymentsStatusUpdateBase):
+@pytest.mark.storage_test
+class TestDeploymentsToGroupStatusUpdateEnterprise(_TestDeploymentsStatusUpdateBase):
     def test_deployment_status_update(self, clean_mongo):
         _user, _tenant, user_token, devs = setup_devices_and_management_mt(
             5, deploy_to_group="g0"
@@ -1683,6 +1692,7 @@ def verify_stats(stats, expected):
             assert stats[k] == 0
 
 
+@pytest.mark.storage_test
 class TestDynamicDeploymentsEnterprise:
     @pytest.mark.parametrize(
         "tc",

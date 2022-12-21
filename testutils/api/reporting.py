@@ -22,6 +22,6 @@ URL_MGMT_DEVICES_SEARCH = "/devices/search"
 
 REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS = 4.0
 
-ELASTICSEARCH_DELETE_URL = (
-    "http://mender-elasticsearch:9200/devices/_delete_by_query?conflicts=proceed"
+OPENSEARCH_DELETE_URL = (
+    "http://mender-opensearch:9200/devices/_delete_by_query?conflicts=proceed"
 )

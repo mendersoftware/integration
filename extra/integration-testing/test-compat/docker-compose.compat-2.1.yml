@@ -1,0 +1,17 @@
+version: '2.1'
+services:
+  mender-client-2-1:
+    image: mendersoftware/mender-client-qemu:2.1
+    networks:
+       - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      TENANT_TOKEN: ""
+    volumes:
+      # Provision demo certificate
+      - ./cert/cert.crt:/mnt/config/server.crt
+      # Add updated setup that puts the new demo certificate in the global ca trust store
+      - ./extra/integration-testing/setup-mender-configuration.py:/setup-mender-configuration.py
+

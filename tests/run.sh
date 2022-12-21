@@ -35,7 +35,7 @@ usage() {
     echo
     echo "Recognized Environment Variables:"
     echo
-    echo "TESTS_IN_PARALLEL                    The number of parallel jobs for pytest-xdist"
+    echo "TESTS_IN_PARALLEL_INTEGRATION        The number of parallel jobs for pytest-xdist"
     echo "SPECIFIC_INTEGRATION_TEST            The ability to pass <testname-regexp> to pytest -k"
     exit 0
 }
@@ -168,17 +168,13 @@ if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
 fi
 
 # Extract file system images from Docker images
-# the argument for the /extract_fs is the prefix of the image name
-# as per QA-387 now we are explicitly extracting a clean image
-# that is: an image which is crafted to be the one we update to.
-IMG_PREFIX="clean-"
 mkdir -p output
-docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker) "${IMG_PREFIX}"
-docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
-        mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker) "${IMG_PREFIX}"
-docker run --rm --privileged --entrypoint /extract_fs -v "${PWD}"/output:/output \
-        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker) "${IMG_PREFIX}"
+docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker)
+docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+        mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
+docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
+        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker)
 mv output/* .
 rmdir output
 
@@ -198,7 +194,7 @@ if ! python3 -m pip show pytest-xdist >/dev/null; then
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
     # run all tests when running in parallel
-    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL:-auto}}"
+    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL_INTEGRATION:-auto}}"
 fi
 
 if ! python3 -m pip show pytest-html >/dev/null; then
@@ -209,8 +205,6 @@ fi
 if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
     SPECIFIC_INTEGRATION_TEST_FLAG="-k"
 fi
-
-export TENANTADM_STRIPE_API_KEY=$STRIPE_API_KEY
 
 if [ -n "$K8S" ]; then
     export KUBECONFIG="${HOME}/kubeconfig.${K8S}"

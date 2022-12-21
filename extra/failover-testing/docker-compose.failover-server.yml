@@ -208,7 +208,7 @@ services:
     #
     mender-workflows-worker-2:
         image: registry.mender.io/mendersoftware/workflows-enterprise-worker:staging
-        command: worker --automigrate --excluded-workflows generate_artifact
+        command: worker --automigrate --excluded-workflows generate_artifact,generate_delta_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:

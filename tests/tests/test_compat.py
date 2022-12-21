@@ -34,56 +34,65 @@ from .. import conftest
 container_factory = factory.get_factory()
 
 TIMEOUT = timedelta(minutes=5)
+"""
+ COMPAT_MENDER_VERSIONS array stores the versions of the virtual device images we test against.
+ In order to add a new client: add a new a composition file in
+extra/integration-testing/test-compat/docker-compose.compat-VERSION.yml
+where VERSION is the version string.
+"""
+COMPAT_MENDER_VERSIONS = factory.DockerComposeCompatibilitySetup.get_versions()
 
 
 @pytest.fixture(scope="function")
-def setup_os_compat(request):
-    env = container_factory.get_compatibility_setup()
-    request.addfinalizer(env.teardown)
-    env.setup()
+def setup_os_compat():
+    def create(tag):
+        env = container_factory.get_compatibility_setup(tag=tag)
+        env.setup()
 
-    env.user = create_user(
-        "test@mender.io", "correcthorse", containers_namespace=env.name
-    )
-    env.populate_clients()
+        env.user = create_user(
+            "test@mender.io", "correcthorse", containers_namespace=env.name
+        )
+        env.populate_clients()
 
-    clients = env.get_mender_clients()
-    assert len(clients) > 0, "Failed to setup clients"
-    env.devices = []
-    for client in clients:
-        dev = MenderDevice(client)
+        clients = env.get_mender_clients()
+        assert len(clients) == 1, "Failed to setup clients: expecting exactly one."
+        env.devices = []
+        dev = MenderDevice(clients[0])
         dev.ssh_is_opened()
         env.devices.append(dev)
 
-    return env
+        return env
+
+    return create
 
 
 @pytest.fixture(scope="function")
-def setup_ent_compat(request):
-    env = container_factory.get_compatibility_setup(enterprise=True)
-    request.addfinalizer(env.teardown)
-    env.setup()
+def setup_ent_compat():
+    def create(tag):
+        env = container_factory.get_compatibility_setup(tag=tag, enterprise=True)
+        env.setup()
 
-    env.tenant = create_org(
-        "Mender",
-        "test@mender.io",
-        "correcthorse",
-        containers_namespace=env.name,
-        container_manager=env,
-    )
-    env.user = env.tenant.users[0]
+        env.tenant = create_org(
+            "Mender",
+            "test@mender.io",
+            "correcthorse",
+            containers_namespace=env.name,
+            container_manager=env,
+        )
+        env.user = env.tenant.users[0]
 
-    env.populate_clients(tenant_token=env.tenant.tenant_token)
+        env.populate_clients(tenant_token=env.tenant.tenant_token)
 
-    clients = env.get_mender_clients()
-    assert len(clients) > 0, "Failed to setup clients"
-    env.devices = []
-    for client in clients:
-        dev = MenderDevice(client)
+        clients = env.get_mender_clients()
+        assert len(clients) == 1, "Failed to setup clients: expecting exactly one."
+        env.devices = []
+        dev = MenderDevice(clients[0])
         dev.ssh_is_opened()
         env.devices.append(dev)
 
-    return env
+        return env
+
+    return create
 
 
 def accept_devices(api_deviceauth, devices=None):
@@ -309,7 +318,10 @@ class TestClientCompatibilityBase:
 
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
     def test_compatibility(self, setup_os_compat):
-        self.compatibility_test_impl(setup_os_compat)
+        for version in COMPAT_MENDER_VERSIONS:
+            env = setup_os_compat(tag=version)
+            self.compatibility_test_impl(env)
+            env.teardown()
 
 
 @pytest.mark.skipif(
@@ -317,4 +329,7 @@ class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
 )
 class TestClientCompatibilityEnterprise(TestClientCompatibilityBase):
     def test_enterprise_compatibility(self, setup_ent_compat):
-        self.compatibility_test_impl(setup_ent_compat)
+        for version in COMPAT_MENDER_VERSIONS:
+            env = setup_ent_compat(tag=version)
+            self.compatibility_test_impl(env)
+            env.teardown()

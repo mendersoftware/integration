@@ -36,3 +36,6 @@ services:
 
     mender-device-auth:
         image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging
+
+    mender-generate-delta-worker:
+        image: registry.mender.io/mendersoftware/generate-delta-worker:staging

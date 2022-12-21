@@ -462,6 +462,26 @@ def enterprise_one_rofs_client_bootstrapped(request):
     return env
 
 
+@pytest.fixture(scope="function")
+def enterprise_one_rofs_commercial_client_bootstrapped(request):
+    env = container_factory.get_enterprise_rofs_commercial_client_setup(num_clients=0)
+    request.addfinalizer(env.teardown)
+
+    env.setup()
+    reset_mender_api(env)
+
+    tenant = create_tenant(env)
+    new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    env.device_group.ssh_is_opened()
+
+    devauth_tenant = DeviceAuthV2(env.auth)
+    devauth_tenant.accept_devices(1)
+    devices = devauth_tenant.get_devices_status("accepted")
+    assert 1 == len(devices)
+
+    return env
+
+
 @pytest.fixture(scope="class")
 def enterprise_no_client_class(request):
     env = container_factory.get_enterprise_setup(num_clients=0)

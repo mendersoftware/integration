@@ -422,7 +422,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
     def client_services(self):
         # In order for `ps --services` to return the services, the must have
         # been created, but they don't need to be running.
-        self._docker_compose_cmd("create")
+        self._docker_compose_cmd("up --no-start")
         services = self._docker_compose_cmd("ps --services").split()
         clients = []
         for service in services:

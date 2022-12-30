@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 
+from abc import ABC, abstractmethod
 from typing import List
 
 # Holds each changelog entry indexed by SHA
@@ -147,7 +148,21 @@ parser.add_argument(
 )
 
 
-class GitQuerier:
+class GitQueryInterface(ABC):
+    @abstractmethod
+    def get_commits_for_range(self, repo, range):
+        pass
+
+    @abstractmethod
+    def get_raw_commit_message(self, repo, sha):
+        pass
+
+    @abstractmethod
+    def show_commit_without_diff(self, repo, sha):
+        pass
+
+
+class GitQuerier(GitQueryInterface):
     def __init__(self, gitargs, base_dir):
         self.gitargs = gitargs
         self.base_dir = base_dir
@@ -175,7 +190,7 @@ class GitQuerier:
         return output.decode()
 
 
-class GitHubQuerier:
+class GitHubQuerier(GitQueryInterface):
     def __init__(self):
         # Avoid importing this unless we have to, which is only when using this
         # class.

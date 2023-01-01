@@ -1,4 +1,4 @@
-cryptography==38.0.3
+cryptography==38.0.4
 docker==6.0.1
 docker-compose==1.29.2
 fabric==2.7.1

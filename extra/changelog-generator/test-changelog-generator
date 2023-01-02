@@ -809,6 +809,43 @@ fi
 
 ################################################################################
 
+"$SRC_DIR/changelog-generator" --repo --sort-changelog --query-github --github-repo mender-artifact 3.8.0..3.8.1 > result.txt 2>stderr.txt || {
+    echo "Script failed with $?"
+    echo "--------"
+    echo "result.txt:"
+    cat result.txt
+    echo "--------"
+    echo "stderr.txt:"
+    cat stderr.txt
+    exit 1
+}
+
+cat > expected.txt <<'EOF'
+### Changelogs
+
+#### mender-artifact (3.8.1)
+
+New changes in mender-artifact since 3.8.0:
+
+##### Bug Fixes
+
+* fixed an issue that prevented running mender-artifact in a
+  container
+* fixed an issue that prevented the makefile from working
+  with newer docker versions
+
+EOF
+diff -u expected.txt result.txt
+
+# There should be no errors.
+if [ "$(cat stderr.txt)" != "" ]; then
+    echo "Unexpected stderr output after querying GitHub:"
+    cat stderr.txt
+    exit 1
+fi
+
+################################################################################
+
 rm -rf /tmp/test-changelog-generator.$$
 
 echo PASS

@@ -122,6 +122,13 @@ parser.add_argument(
     + "Set GITHUB_TOKEN if you want authorized access.",
 )
 parser.add_argument(
+    "--github-repo",
+    dest="github_repo",
+    metavar="NAME",
+    help="Name the Github repository to use, instead of deducing it from "
+    + "the current directory. Requires --query-github.",
+)
+parser.add_argument(
     "--sort-changelog",
     dest="sort_changelog",
     action="store_true",
@@ -230,6 +237,14 @@ if args.all and args.repo:
 elif not any([args.all, args.repo]):
     args.all = True
 
+if not any([args.base_dir, args.repo, args.query_github]):
+    print("Need at least one of --base-dir, --repo or --query-github")
+    sys.exit(1)
+
+if args.github_repo and not args.query_github:
+    print("--github-repo requires --query-github")
+    sys.exit(1)
+
 repos = []
 if args.base_dir:
     base_dir = args.base_dir
@@ -251,12 +266,10 @@ if args.all:
         .strip()
     )
     repos += repo_list.split()
+elif args.github_repo:
+    repos.append(args.github_repo)
 else:
     repos.append(os.path.basename(os.path.realpath(".")))
-
-if not any([args.base_dir, args.repo, args.query_github]):
-    print("Need at least one of --base-dir, --repo or --query-github")
-    sys.exit(1)
 
 if args.query_github:
     git_query = GitHubQuerier()
@@ -579,10 +592,7 @@ for repo in repos:
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
-        if args.all:
-            service_header = "#### %s" % os.path.basename(repo)
-        else:
-            service_header = "#### %s" % os.path.basename(os.path.realpath("."))
+        service_header = "#### %s" % os.path.basename(repo)
         if range.find("..") >= 0:
             v_from, v_to = range.split("..", 1)
             service_header += " (%s)\n\nNew changes in %s since %s:\n" % (

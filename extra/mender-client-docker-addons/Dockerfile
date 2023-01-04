@@ -4,13 +4,14 @@ FROM ubuntu:22.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
-    jq libssl-dev libglib2.0-dev curl
+    jq libssl-dev libglib2.0-dev curl cmake liblmdb++-dev
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
+RUN cd /src/mender && git submodule update --init
 
 RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
 RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CONNECT_REV)
@@ -21,8 +22,11 @@ RUN (cd /src/mender-configure-module && \
     latest=$(git tag | egrep ^[0-9]+\.[0-9]+\.[0-9]+*$ | sort | tail -n1) && \
     git checkout $latest)
 
+RUN mkdir --parents /mender-install/etc/mender
+
 WORKDIR /src/mender
-RUN make prefix=/mender-install install
+RUN test -f CMakeLists.txt && cmake -S . || true
+RUN DESTDIR=/mender-install make prefix=/usr install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
 

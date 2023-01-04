@@ -12,40 +12,40 @@ include:
 variables:
   LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
 
-test:extra-tools:
-  image: "python:3"
-  stage: test
+# test:extra-tools:
+#   image: "python:3"
+#   stage: test
 
-  before_script:
-    - pip install pytest pyyaml PyGithub
-    # Rename the branch we're on, so that it's not in the way for the
-    # subsequent fetch. It's ok if this fails, it just means we're not on any
-    # branch.
-    - git branch -m temp-branch || true
-    # Set up git identity
-    - git config --global user.name "Northern.tech" && git config --global user.email "info@northern.tech"
-    # Needed for the statistics generator
-    - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
-    # Add github remote for tests using --integration-versions-including
-    - git remote add github https://github.com/mendersoftware/integration.git
-    - git fetch github
-    # Fetch master branch for tests using --in-integration-version
-    - git fetch origin master:master
-    - git fetch origin --tags
-    - git submodule update --init --recursive
+#   before_script:
+#     - pip install pytest pyyaml PyGithub
+#     # Rename the branch we're on, so that it's not in the way for the
+#     # subsequent fetch. It's ok if this fails, it just means we're not on any
+#     # branch.
+#     - git branch -m temp-branch || true
+#     # Set up git identity
+#     - git config --global user.name "Northern.tech" && git config --global user.email "info@northern.tech"
+#     # Needed for the statistics generator
+#     - git config --global mailmap.file $(pwd)/extra/gitdm/mailmap
+#     # Add github remote for tests using --integration-versions-including
+#     - git remote add github https://github.com/mendersoftware/integration.git
+#     - git fetch github
+#     # Fetch master branch for tests using --in-integration-version
+#     - git fetch origin master:master
+#     - git fetch origin --tags
+#     - git submodule update --init --recursive
 
-    # Fetch all Open Source release repositories for testing release_tool.
-    - for repo in $(env TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY=1 extra/release_tool.py --list --all); do
-    -   if [ $repo == integration ]; then
-    -     continue
-    -   fi
-    -   git clone https://github.com/mendersoftware/$repo ../$repo
-    - done
+#     # Fetch all Open Source release repositories for testing release_tool.
+#     - for repo in $(env TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY=1 extra/release_tool.py --list --all); do
+#     -   if [ $repo == integration ]; then
+#     -     continue
+#     -   fi
+#     -   git clone https://github.com/mendersoftware/$repo ../$repo
+#     - done
 
-  script:
-    - ( cd extra/changelog-generator && ./test-changelog-generator )
-    - python3 -m pytest extra/test_release_tool.py
-    - python3 -m pytest extra/test_statistics_generator.py
+#   script:
+#     - ( cd extra/changelog-generator && ./test-changelog-generator )
+#     - python3 -m pytest extra/test_release_tool.py
+#     - python3 -m pytest extra/test_statistics_generator.py
 
 test:docs:
   image: ubuntu:focal

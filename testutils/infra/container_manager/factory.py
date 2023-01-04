@@ -30,6 +30,7 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyClientSetup,
     DockerComposeEnterpriseRofsClientSetup,
+    DockerComposeEnterpriseRofsCommercialClientSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
@@ -121,6 +122,10 @@ class ContainerManagerFactory:
         """Enterprise setup with one Mender QEMU Read-Only FS client"""
         pass
 
+    def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender QEMU Read-Only FS commercial client"""
+        pass
+
     def get_enterprise_smtp_setup(self, name=None):
         """Enterprise setup with SMTP enabled"""
         pass
@@ -183,8 +188,11 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_enterprise_rofs_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseRofsClientSetup(name, num_clients)
 
-    def get_compatibility_setup(self, tag, name=None, **kwargs):
-        return DockerComposeCompatibilitySetup(name, tag, **kwargs)
+    def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseRofsCommercialClientSetup(name, num_clients)
+
+    def get_compatibility_setup(self, name=None, **kwargs):
+        return DockerComposeCompatibilitySetup(name, **kwargs)
 
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)

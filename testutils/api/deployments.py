@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 URL_MGMT = "/api/management/v1/deployments"
+URL_INTERNAL = "/api/internal/v1/deployments"
 URL_DEVICES = "/api/devices/v1/deployments"
 
 URL_NEXT = "/device/deployments/next"
@@ -27,3 +28,4 @@ URL_DEPLOYMENTS_ARTIFACTS = "/artifacts"
 URL_DEPLOYMENTS_ARTIFACTS_GET = "/artifacts/{id}"
 URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD = "/artifacts/{id}/download"
 URL_DEPLOYMENTS_ARTIFACTS_GENERATE = "/artifacts/generate"
+URL_INTERNAL_CONFIG = "/tenants/{tenant_id}/config"

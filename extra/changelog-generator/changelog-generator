@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Used to generate changelogs from the repository.
 
@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 
+from abc import ABC, abstractmethod
 from typing import List
 
 # Holds each changelog entry indexed by SHA
@@ -114,6 +115,20 @@ parser.add_argument(
     + "Ignored if using --repo",
 )
 parser.add_argument(
+    "--query-github",
+    dest="query_github",
+    action="store_true",
+    help="Query Github for commit messages instead of local repositories. "
+    + "Set GITHUB_TOKEN if you want authorized access.",
+)
+parser.add_argument(
+    "--github-repo",
+    dest="github_repo",
+    metavar="NAME",
+    help="Name the Github repository to use, instead of deducing it from "
+    + "the current directory. Requires --query-github.",
+)
+parser.add_argument(
     "--sort-changelog",
     dest="sort_changelog",
     action="store_true",
@@ -139,19 +154,102 @@ parser.add_argument(
     + "Note that for technical reasons these must come last.",
 )
 
+
+class GitQueryInterface(ABC):
+    @abstractmethod
+    def get_commits_for_range(self, repo, range):
+        pass
+
+    @abstractmethod
+    def get_raw_commit_message(self, repo, sha):
+        pass
+
+    @abstractmethod
+    def show_commit_without_diff(self, repo, sha):
+        pass
+
+
+class GitQuerier(GitQueryInterface):
+    def __init__(self, gitargs, base_dir):
+        self.gitargs = gitargs
+        self.base_dir = base_dir
+
+    def get_commits_for_range(self, repo, range):
+        output = subprocess.check_output(
+            ["git", "rev-list", "--reverse", range] + self.gitargs,
+            cwd=os.path.join(self.base_dir, repo),
+        )
+        return output.decode().split()
+
+    def get_raw_commit_message(self, repo, sha):
+        output = subprocess.check_output(
+            ["git", "cat-file", "-p", sha] + self.gitargs,
+            cwd=os.path.join(self.base_dir, repo),
+        )
+        # Return only the part after headers (double newline).
+        return output.decode().split("\n\n", 1)[1]
+
+    def show_commit_without_diff(self, repo, sha):
+        output = subprocess.check_output(
+            ["git", "show", "--no-patch", sha] + self.gitargs,
+            cwd=os.path.join(self.base_dir, repo),
+        )
+        return output.decode()
+
+
+class GitHubQuerier(GitQueryInterface):
+    def __init__(self):
+        # Avoid importing this unless we have to, which is only when using this
+        # class.
+        import github
+
+        if os.getenv("GITHUB_TOKEN"):
+            self.github = github.Github(os.getenv("GITHUB_TOKEN"))
+        else:
+            self.github = github.Github()
+
+    def get_commits_for_range(self, repo, range):
+        base, head = range.split("..", 1)
+        # Cache the list, which has a lot of information, otherwise we need to
+        # query every commit later.
+        self.cached_result = self.github.get_repo(f"mendersoftware/{repo}").compare(
+            base, head
+        )
+        return [commit.sha for commit in self.cached_result.commits]
+
+    def get_raw_commit_message(self, repo, sha):
+        for commit in self.cached_result.commits:
+            if commit.sha == sha:
+                return commit.commit.message
+        raise Exception(f"Could not find {sha} in the cache")
+
+    def show_commit_without_diff(self, repo, sha):
+        # No way to return it exactly as Git does without manual piecing
+        # together. This is only used for information, so return this instead.
+        return self.get_raw_commit_message(repo, sha)
+
+
 args = parser.parse_args()
 
 if args.all and args.repo:
     print("--repo and --all are mutually exclusive!")
     sys.exit(1)
-elif not args.all and not args.repo:
+elif not any([args.all, args.repo]):
     args.all = True
+
+if not any([args.base_dir, args.repo, args.query_github]):
+    print("Need at least one of --base-dir, --repo or --query-github")
+    sys.exit(1)
+
+if args.github_repo and not args.query_github:
+    print("--github-repo requires --query-github")
+    sys.exit(1)
 
 repos = []
 if args.base_dir:
     base_dir = args.base_dir
 else:
-    base_dir = os.path.realpath(os.path.join(os.path.dirname(sys.argv[0]), "../../.."))
+    base_dir = os.path.realpath("..")
 
 if args.all:
     repo_list = (
@@ -167,9 +265,16 @@ if args.all:
         .decode()
         .strip()
     )
-    repos += [os.path.join(base_dir, repo) for repo in repo_list.split()]
+    repos += repo_list.split()
+elif args.github_repo:
+    repos.append(args.github_repo)
 else:
-    repos.append(".")
+    repos.append(os.path.basename(os.path.realpath(".")))
+
+if args.query_github:
+    git_query = GitHubQuerier()
+else:
+    git_query = GitQuerier(args.gitargs, base_dir)
 
 
 def get_range_for_repo(repo, range):
@@ -222,7 +327,7 @@ def print_category_entries(
     print()
 
 
-def gather_entries(range, gitargs, remove_cherry_picks=True):
+def gather_entries(repo, range, remove_cherry_picks=True):
     # If removing cherry-picks, then invert the range, and gather all entries
     # from there. Use this to remove entries from the results.
     exclude_entries = set()
@@ -230,7 +335,7 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
         split = range.split("..", 1)
         inverted_range = split[1] + ".." + split[0]
         exclude_entries_map = gather_entries(
-            inverted_range, gitargs, remove_cherry_picks=False
+            repo, inverted_range, remove_cherry_picks=False
         )
         for _, values in exclude_entries_map.items():
             for msg in values:
@@ -238,15 +343,11 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
 
     entries = {}
 
-    sha_list = subprocess.Popen(
-        ["git", "rev-list", "--reverse", range] + gitargs, stdout=subprocess.PIPE
-    )
+    sha_list = git_query.get_commits_for_range(repo, range)
 
-    for sha in sha_list.stdout:
-        sha = sha.decode().rstrip("\n")
-        blob = subprocess.Popen(["git", "cat-file", "-p", sha], stdout=subprocess.PIPE)
+    for sha in sha_list:
+        blob = git_query.get_raw_commit_message(repo, sha)
 
-        msg_started = False
         title_fetched = False
         title = ""
         commit_msg = ""
@@ -254,20 +355,13 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
         log_entry_local = False
         log_entry = ""
         exclusive_tag_seen = False
-        for line in blob.stdout:
-            line = line.decode().rstrip("\r\n")
+        for line in blob.split("\n"):
+            line = line.rstrip("\r")
             if line == "":
-                if not msg_started:
-                    msg_started = True
-                    continue
-
                 if log_entry:
                     add_entry(entries, sha, log_entry.strip())
                     log_entry = ""
                 log_entry_local = False
-
-            if not msg_started:
-                continue
 
             # Tracker reference, remove from string.
             for match in re.finditer(TRACKER_REGEX, line, re.IGNORECASE):
@@ -322,12 +416,7 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
                             "This might be a squashed commit which will not work correctly with changelogs. "
                             "Should be manually checked."
                             "\n---\n%s---"
-                            % (
-                                sha,
-                                subprocess.check_output(
-                                    ["git", "show", "-s", sha]
-                                ).decode(),
-                            )
+                            % (sha, git_query.show_commit_without_diff(repo, sha),)
                         )
                     exclusive_tag_seen = True
 
@@ -410,14 +499,10 @@ def gather_entries(range, gitargs, remove_cherry_picks=True):
                     commit_msg += "\n"
                 commit_msg += line
 
-        blob.wait()
-
         if log_entry_commit:
             add_entry(entries, sha, commit_msg.strip())
         if log_entry:
             add_entry(entries, sha, log_entry.strip())
-
-    sha_list.wait()
 
     # Remove entries we don't want.
     remove_shas = []
@@ -444,17 +529,6 @@ for repo in repos:
     SHA_TO_TRACKER = {}
     POSSIBLE_PROBLEMS = []
 
-    try:
-        os.chdir(repo)
-    except FileNotFoundError:
-        print(
-            (
-                "Could not find %s. Maybe use --base-dir option and point to a "
-                + "directory containing all repositories"
-            )
-            % repo
-        )
-        raise
     if args.all and not repo.endswith("integration"):
         range = get_range_for_repo(os.path.basename(repo), args.range)
         if args.range.find("..") >= 0 and range.find("..") < 0:
@@ -470,7 +544,7 @@ for repo in repos:
     else:
         range = args.range
 
-    ENTRIES = gather_entries(range, args.gitargs)
+    ENTRIES = gather_entries(repo, range)
 
     entry_list = []
     for sha_entry in ENTRIES:
@@ -496,9 +570,7 @@ for repo in repos:
                     % (
                         sha_entry,
                         match.group(0),
-                        subprocess.check_output(
-                            ["git", "show", "-s", sha_entry]
-                        ).decode(),
+                        git_query.show_commit_without_diff(repo, sha_entry),
                     )
                 )
             entry = entry.strip("\n")
@@ -520,14 +592,7 @@ for repo in repos:
     if args.sort_changelog:
         entry_list.sort()
     if len(entry_list) > 0:
-        if args.all:
-            service_header = "#### %s" % os.path.basename(repo)
-        else:
-            service_header = "#### %s" % os.path.basename(
-                subprocess.check_output(["git", "rev-parse", "--show-toplevel"])
-                .decode()
-                .strip()
-            )
+        service_header = "#### %s" % os.path.basename(repo)
         if range.find("..") >= 0:
             v_from, v_to = range.split("..", 1)
             service_header += " (%s)\n\nNew changes in %s since %s:\n" % (

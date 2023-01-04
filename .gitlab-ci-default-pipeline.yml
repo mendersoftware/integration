@@ -17,7 +17,7 @@ test:extra-tools:
   stage: test
 
   before_script:
-    - pip install pytest pyyaml
+    - pip install pytest pyyaml PyGithub
     # Rename the branch we're on, so that it's not in the way for the
     # subsequent fetch. It's ok if this fails, it just means we're not on any
     # branch.

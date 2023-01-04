@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -238,7 +238,6 @@ def tenant_os(clean_mongo):
     isK8S(),
     reason="reporting service not deployed to staging or production environment",
 )
-@pytest.mark.skip(reason="reporting is not part of the release")
 class TestReportingSearchEnterprise:
     @property
     def logger(self):
@@ -692,7 +691,7 @@ class TestReportingSearchEnterprise:
         self, tenant_os, tenant_pro, tenant_ent, test_case
     ):
         """
-        Tests the internal /inventory/tenants/{tenant_id}/search endpoint.
+        Tests the internal /tenants/{tenant_id}/devices/search endpoint.
         This test along with the former covers all allowed operation
         types.
         """
@@ -738,7 +737,6 @@ class TestReportingSearchEnterprise:
                     assert_device_attributes(dev, body[i])
 
 
-@pytest.mark.skip(reason="reporting is not part of the release")
 class TestReportingSearch:
     @property
     def logger(self):
@@ -1182,7 +1180,7 @@ class TestReportingSearch:
     )
     def test_reporting_search_internal(self, user_reporting, test_case):
         """
-        Tests the internal /inventory/tenants/{tenant_id}/search endpoint.
+        Tests the internal /tenants/{tenant_id}/devices/search endpoint.
         This test along with the former covers all allowed operation
         types.
         """

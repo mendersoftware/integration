@@ -11,11 +11,14 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-from os import walk
-import time
+
+import logging
 import socket
 import subprocess
-import logging
+import time
+
+from os import walk
+
 from testutils.common import wait_until_healthy
 
 from .docker_compose_base_manager import DockerComposeBaseNamespace, docker_lock
@@ -40,6 +43,10 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     QEMU_CLIENT_ROFS_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.client.rofs.yml",
+    ]
+    QEMU_CLIENT_ROFS_COMMERCIAL_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.client.rofs.commercial.yml",
     ]
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
@@ -86,7 +93,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
     ]
     COMPAT_FILES_ROOT = COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat"
-    COMPAT_FILES_TEMPLATE = [COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"]
+    COMPAT_FILES_TEMPLATE = COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"
     MENDER_2_5_FILES = [
         COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.mender.2.5.yml"
     ]
@@ -111,30 +118,19 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         'exclude' doesn't need exact names, it's a verbatim grep regex.
         """
         with docker_lock:
-            cmd = "docker ps -aq -f name=%s  | xargs -r docker rm -fv" % self.name
+            cmd = "down --remove-orphans"
+            if len(exclude) > 0:
+                # Filter exclude from all services in composition
+                services = self._docker_compose_cmd("config --services").split()
+                rm_services = list(filter(lambda svc: svc not in exclude, services))
+                svc_args = " ".join(rm_services)
 
-            # exclude containers by crude grep -v and awk'ing out the id
-            # that's because docker -f allows only simple comparisons, no negations/logical ops
-            if len(exclude) != 0:
-                cmd_excl = 'grep -vE "(' + " | ".join(exclude) + ')"'
-                cmd_id = "awk 'NR>1 {print $1}'"
-                cmd = "docker ps -a -f name=%s | %s | %s | xargs -r docker rm -fv" % (
-                    self.name,
-                    cmd_excl,
-                    cmd_id,
-                )
+                if svc_args != "":
+                    # Only if we're excluding services do we use 'rm'
+                    # Otherwise default to 'down --remove-orphans'
+                    cmd = f"rm -sf {svc_args}"
 
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
-
-            # if we're preserving some containers, don't destroy the network (will error out on exit)
-            if len(exclude) == 0:
-                cmd = (
-                    "docker network list -q -f name=%s | xargs -r docker network rm"
-                    % self.name
-                )
-                logger.info("running %s" % cmd)
-                subprocess.check_call(cmd, shell=True)
+            self._docker_compose_cmd(cmd)
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):
@@ -375,6 +371,21 @@ class DockerComposeEnterpriseRofsClientSetup(DockerComposeEnterpriseSetup):
             )
 
 
+class DockerComposeEnterpriseRofsCommercialClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(
+                self,
+                name,
+                self.ENTERPRISE_FILES + self.QEMU_CLIENT_ROFS_COMMERCIAL_FILES,
+            )
+
+
 class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
@@ -403,8 +414,7 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):
     def __init__(self, name, tag, enterprise=False):
         self._enterprise = enterprise
-        self.COMPAT_FILES_TEMPLATE[0] = self.COMPAT_FILES_TEMPLATE[0].format(tag=tag)
-        extra_files = self.COMPAT_FILES_TEMPLATE
+        extra_files = [self.COMPAT_FILES_TEMPLATE.format(tag=tag)]
         if self._enterprise:
             extra_files += self.ENTERPRISE_FILES
         super().__init__(name, extra_files)
@@ -412,7 +422,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
     def client_services(self):
         # In order for `ps --services` to return the services, the must have
         # been created, but they don't need to be running.
-        self._docker_compose_cmd("create")
+        self._docker_compose_cmd("up --no-start")
         services = self._docker_compose_cmd("ps --services").split()
         clients = []
         for service in services:

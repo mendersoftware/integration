@@ -50,15 +50,15 @@ def mongo():
 def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""
-    elasticsearch_cleanup()
+    opensearch_cleanup()
     mongo_cleanup(mongo)
     yield mongo.client
 
 
-def elasticsearch_cleanup():
+def opensearch_cleanup():
     try:
         requests.post(
-            reporting.ELASTICSEARCH_DELETE_URL, json={"query": {"match_all": {}}}
+            reporting.OPENSEARCH_DELETE_URL, json={"query": {"match_all": {}}}
         )
     except requests.RequestException:
         pass

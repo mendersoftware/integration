@@ -126,6 +126,22 @@ def valid_image_rofs_with_mender_conf(request):
         yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
+@pytest.fixture(scope="session")
+def valid_image_rofs_commercial_with_mender_conf(request):
+    valid_image = "mender-image-full-cmdline-rofs-commercial-%s.ext4" % machine_name
+    if not os.path.exists(valid_image):
+        yield None
+        return
+
+    with tempfile.TemporaryDirectory() as d:
+
+        def cleanup():
+            shutil.rmtree(d, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
+
+
 def pytest_configure(config):
     verify_sane_test_environment()
 

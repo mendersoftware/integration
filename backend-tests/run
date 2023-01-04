@@ -9,7 +9,6 @@ COMPOSE_FILES_BASE="-f $INTEGRATION_PATH/backend-tests/docker/docker-compose.bac
 COMPOSE_FILES_OPEN=" \
         -f $INTEGRATION_PATH/docker-compose.yml \
         -f $INTEGRATION_PATH/docker-compose.demo.yml \
-        -f $INTEGRATION_PATH/docker-compose.reporting.yml \
         -f $INTEGRATION_PATH/docker-compose.storage.minio.yml \
         -f $INTEGRATION_PATH/extra/integration-testing/docker-compose.yml \
         -f $INTEGRATION_PATH/backend-tests/docker/docker-compose.backend-tests.yml \

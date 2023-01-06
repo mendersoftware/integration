@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -330,15 +330,11 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.get_mender_client_2_5()
+        env = container_factory.get_mender_client_2_5_setup(num_clients=1)
         request.addfinalizer(env.teardown)
         env.setup()
 
-        env.populate_clients(replicas=1)
-
-        clients = env.get_mender_clients()
-        assert len(clients) == 1, "Failed to setup client"
-        env.device = MenderDevice(clients[0])
+        env.device = MenderDevice(env.get_mender_clients()[0])
         env.device.ssh_is_opened()
 
         reset_mender_api(env)
@@ -410,7 +406,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
 
     @pytest.fixture(autouse=True, scope="class")
     def docker_env(self, request):
-        env = container_factory.get_mender_client_2_5(enterprise=True)
+        env = container_factory.get_mender_client_2_5_enterprise_setup()
         request.addfinalizer(env.teardown)
         env.setup()
 

@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -509,20 +509,34 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         time.sleep(45)
 
 
-class DockerComposeMenderClient_2_5(DockerComposeCompatibilitySetup):
-    """
-    Setup is identical to DockerComposeCompatiblitySetup but excluding images
-    without mender-connect.
-    """
+class DockerComposeMenderClient_2_5_Setup(DockerComposeNamespace):
+    """OS setup with mender-connect 1.0."""
 
-    def __init__(self, name, enterprise=False):
-        self._enterprise = enterprise
-        extra_files = self.MENDER_2_5_FILES
-        if self._enterprise:
-            extra_files += self.ENTERPRISE_FILES
-        super(DockerComposeCompatibilitySetup, self).__init__(
-            name, extra_files=extra_files
+    def __init__(self, name, num_clients=1):
+        self.num_clients = num_clients
+        super().__init__(name, self.MENDER_2_5_FILES)
+
+    def setup(self):
+        self._docker_compose_cmd(
+            "up -d --scale mender-client-2-5=%d" % self.num_clients
         )
+        self._wait_for_containers()
+
+    def get_mender_clients(self, network="mender"):
+        return super().get_mender_clients(
+            client_service_name="mender-client-2-5", network=network
+        )
+
+
+class DockerComposeMenderClient_2_5_EnterpriseSetup(DockerComposeNamespace):
+    """Enterprise setup with mender-connect 1.0."""
+
+    def __init__(self, name, num_clients=0):
+        super().__init__(name, self.ENTERPRISE_FILES + self.MENDER_2_5_FILES)
+
+    def setup(self):
+        self._docker_compose_cmd("up -d --scale mender-client-2-5=0")
+        self._wait_for_containers()
 
     def new_tenant_client(self, name, tenant):
         logger.info("creating client connected to tenant: " + tenant)
@@ -531,6 +545,11 @@ class DockerComposeMenderClient_2_5(DockerComposeCompatibilitySetup):
             env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(45)
+
+    def get_mender_clients(self, network="mender"):
+        return super().get_mender_clients(
+            client_service_name="mender-client-2-5", network=network
+        )
 
 
 class DockerComposeCustomSetup(DockerComposeNamespace):

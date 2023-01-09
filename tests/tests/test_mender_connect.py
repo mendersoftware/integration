@@ -26,7 +26,9 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 from ..common_setup import (
     class_persistent_standard_setup_one_client_bootstrapped,
+    standard_setup_one_client_bootstrapped,
     enterprise_no_client_class,
+    enterprise_no_client,
 )
 from ..MenderAPI import (
     devconnect,
@@ -46,7 +48,7 @@ container_factory = factory.get_factory()
 
 class _TestRemoteTerminalBase:
     @flaky(max_runs=3)
-    def test_regular_protocol_commands(self, docker_env):
+    def test_regular_protocol_commands(self, docker_env_flaky_test):
         """
         Ticket: QA-504
         Reason: The test fails due to the fact that the websocket connection is broken,
@@ -55,9 +57,9 @@ class _TestRemoteTerminalBase:
                 (see MEN-6137) while many other things timeout.
         """
 
-        self.assert_env(docker_env)
+        self.assert_env(docker_env_flaky_test)
 
-        with docker_env.devconnect.get_websocket() as ws:
+        with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
             receive_timeout_s = 16
             shell = proto_shell.ProtoShell(ws)
@@ -322,14 +324,19 @@ class TestRemoteTerminal(
         env.devconnect = devconnect
         yield env
 
+    @pytest.fixture(autouse=True, scope="function")
+    def docker_env_flaky_test(self, standard_setup_one_client_bootstrapped):
+        env = standard_setup_one_client_bootstrapped
+        env.devconnect = devconnect
+        yield env
+
 
 class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
     """
     This set of tests uses mender-connect v1.0
     """
 
-    @pytest.fixture(autouse=True, scope="class")
-    def docker_env(self, request):
+    def docker_env_impl(self, request):
         env = container_factory.get_mender_client_2_5_setup(num_clients=1)
         request.addfinalizer(env.teardown)
         env.setup()
@@ -341,7 +348,15 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         devauth.accept_devices(1)
 
         env.devconnect = devconnect
-        yield env
+        return env
+
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, request):
+        yield self.docker_env_impl(request)
+
+    @pytest.fixture(autouse=True, scope="function")
+    def docker_env_flaky_test(self, request):
+        yield self.docker_env_impl(request)
 
 
 def connected_device(env):
@@ -398,14 +413,24 @@ class TestRemoteTerminalEnterprise(
 
         yield env
 
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(self, enterprise_no_client):
+        env = enterprise_no_client
+
+        device, devconn = connected_device(env)
+
+        env.device = device
+        env.devconnect = devconn
+
+        yield env
+
 
 class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
     """
     This set of tests uses mender-connect v1.0
     """
 
-    @pytest.fixture(autouse=True, scope="class")
-    def docker_env(self, request):
+    def docker_env_impl(self, request):
         env = container_factory.get_mender_client_2_5_enterprise_setup()
         request.addfinalizer(env.teardown)
         env.setup()
@@ -416,4 +441,12 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
         env.device = device
         env.devconnect = devconn
 
-        yield env
+        return env
+
+    @pytest.fixture(autouse=True, scope="class")
+    def docker_env(self, request):
+        yield self.docker_env_impl(request)
+
+    @pytest.fixture(autouse=True, scope="function")
+    def docker_env_flaky_test(self, request):
+        yield self.docker_env_impl(request)

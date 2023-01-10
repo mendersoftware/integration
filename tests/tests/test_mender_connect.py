@@ -45,16 +45,16 @@ container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
-    """
-    Ticket: QA-504
-    Reason: The test fails due to the fact that the websocket connection is broken,
-            and the mender-connect can't recover from situation when shell could not
-            be stopped, and the session is left as empty with non-existent process
-            (see MEN-6137) while many other things timeout.
-    """
-
     @flaky(max_runs=3)
     def test_regular_protocol_commands(self, docker_env):
+        """
+        Ticket: QA-504
+        Reason: The test fails due to the fact that the websocket connection is broken,
+                and the mender-connect can't recover from situation when shell could not
+                be stopped, and the session is left as empty with non-existent process
+                (see MEN-6137) while many other things timeout.
+        """
+
         self.assert_env(docker_env)
 
         with docker_env.devconnect.get_websocket() as ws:

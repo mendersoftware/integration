@@ -101,7 +101,7 @@ def get_and_parse_email(env, address):
     # get the email from the SMTP server
     else:
         mail = env.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
+        logger.info("got mail: '%s'", mail)
         # read spool line by line, eval(line).decode('utf-8') for each line in lines
         # between start and end of message
         # concat and create header object for each
@@ -117,13 +117,13 @@ def get_and_parse_email(env, address):
                 continue
             if message_end == line:
                 if device_date is not None:
-                    logger.debug(f"using device_date {device_date}")
+                    logger.info(f"using device_date {device_date}")
                     message_string = (
                         device_date.strftime("Date: %a, %m %b %Y %H:%M:%S +0200")
                         + "\n"
                         + message_string
                     )
-                    logger.debug("msg:%s" % message_string)
+                    logger.info("msg:%s" % message_string)
                 h = Parser(policy=default).parsestr(message_string)
                 headers.append(h)
                 continue
@@ -137,15 +137,15 @@ def get_and_parse_email(env, address):
                 device_date = datetime.datetime.strptime(
                     line_string, "Time on device: %a, %m %b %Y %H:%M:%S %Z"
                 )
-                logger.debug(f"parsed device_date {device_date}")
+                logger.info(f"parsed device_date {device_date}")
 
     # log all messages for debug
     for m in headers:
-        logger.debug("got message:")
-        logger.debug("             body: %s", m.get_body().get_content())
-        logger.debug("             Bcc: %s", m["Bcc"])
-        logger.debug("             From: %s", m["From"])
-        logger.debug("             Subject: %s", m["Subject"])
+        logger.info("got message:")
+        logger.info("             body: %s", m.get_body().get_content())
+        logger.info("             Bcc: %s", m["Bcc"])
+        logger.info("             From: %s", m["From"])
+        logger.info("             Subject: %s", m["Subject"])
 
     return mail, headers
 
@@ -524,18 +524,18 @@ class TestMonitorClientEnterprise:
         assert (
             "some line 3" == alerts[1]["subject"]["details"]["lines_after"][0]["data"]
         )
-        logger.debug(
+        logger.info(
             "test_monitorclient_alert_email: got %s alerts" % json.dumps(alerts)
         )
-        logger.debug(
+        logger.info(
             "test_monitorclient_alert_email: got line -B1: '%s' from alerts"
             % alerts[1]["subject"]["details"]["lines_before"][0]["data"]
         )
-        logger.debug(
+        logger.info(
             "test_monitorclient_alert_email: got line -B2: '%s' from alerts"
             % alerts[1]["subject"]["details"]["lines_before"][1]["data"]
         )
-        logger.debug(
+        logger.info(
             "test_monitorclient_alert_email: got line -A1: '%s' from alerts"
             % alerts[1]["subject"]["details"]["lines_after"][0]["data"]
         )
@@ -883,8 +883,20 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_email_rbac: did not receive OK email alert."
         )
 
+    def bp(self):
+        if not self.DEBUG:
+            return
+        t = "/tmp/bp" + str(self.bpindex)
+        logger.info("bp: waiting on %s" % t)
+        while not os.path.exists(t):
+            time.sleep(0.1)
+        logger.info("bp: released on %s" % t)
+        self.bpindex = self.bpindex + 1
+
     def test_monitorclient_alert_store(self, monitor_commercial_setup_no_client):
         """Tests the monitor client alert local store"""
+        self.DEBUG = True
+        self.bpindex = 0
         service_name = "rpcbind"
         hostname = os.environ.get("GATEWAY_HOSTNAME", "docker.mender.io")
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
@@ -898,6 +910,7 @@ class TestMonitorClientEnterprise:
 
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
+        self.bp()
 
         logger.info(
             "test_monitorclient_alert_store: disabling access to %s (point to localhost in /etc/hosts)"
@@ -921,6 +934,7 @@ class TestMonitorClientEnterprise:
 
         time.sleep(2 * wait_for_alert_interval_s)
         _, messages = get_and_parse_email(monitor_commercial_setup_no_client, user_name)
+        self.bp()
         assert len(messages) == 0
         logger.info("test_monitorclient_alert_store: got no alerts, device is offline.")
 
@@ -936,7 +950,7 @@ class TestMonitorClientEnterprise:
             monitor_commercial_setup_no_client, user_name, 2
         )
         logger.info("got %d alert messages", len(messages))
-
+        self.bp()
         assert len(messages) > 1
 
         # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
@@ -949,6 +963,7 @@ class TestMonitorClientEnterprise:
         else:
             messages.sort(key=lambda x: x["Date"])
 
+        self.bp()
         assert_valid_alert(
             messages[0],
             user_name,

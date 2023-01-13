@@ -135,7 +135,7 @@ def get_and_parse_email(env, address):
             # get the date from b'Time on device: Thu, 01 Dec 2022 14:01:01 UTC' line
             if line_string.startswith("Time on device: "):
                 device_date = datetime.datetime.strptime(
-                    line_string, "Time on device: %a, %m %b %Y %H:%M:%S %Z"
+                    line_string, "Time on device: %a, %d %b %Y %H:%M:%S %Z"
                 )
                 logger.debug(f"parsed device_date {device_date}")
 

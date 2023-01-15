@@ -318,13 +318,13 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
 class TestRemoteTerminal(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(scope="class")
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
         env = class_persistent_standard_setup_one_client_bootstrapped
         env.devconnect = devconnect
         yield env
 
-    @pytest.fixture(autouse=True, scope="function")
+    @pytest.fixture(scope="function")
     def docker_env_flaky_test(self, standard_setup_one_client_bootstrapped):
         env = standard_setup_one_client_bootstrapped
         env.devconnect = devconnect
@@ -350,11 +350,11 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         env.devconnect = devconnect
         return env
 
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(scope="class")
     def docker_env(self, request):
         yield self.docker_env_impl(request)
 
-    @pytest.fixture(autouse=True, scope="function")
+    @pytest.fixture(scope="function")
     def docker_env_flaky_test(self, request):
         yield self.docker_env_impl(request)
 
@@ -443,10 +443,10 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
 
         return env
 
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(scope="class")
     def docker_env(self, request):
         yield self.docker_env_impl(request)
 
-    @pytest.fixture(autouse=True, scope="function")
+    @pytest.fixture(scope="function")
     def docker_env_flaky_test(self, request):
         yield self.docker_env_impl(request)

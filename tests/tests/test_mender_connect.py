@@ -38,6 +38,7 @@ from ..MenderAPI import (
     Authentication,
     DeviceConnect,
     get_container_manager,
+    set_container_manager,
     logger,
 )
 from testutils.common import User, update_tenant
@@ -295,6 +296,11 @@ class _TestRemoteTerminalBase:
             "dbus-send --system --dest=io.mender.AuthenticationManager --print-reply /io/mender/AuthenticationManager io.mender.Authentication1.GetJwtToken"
         )
         logger.info("assert_env: GetJWT: returns: '%s'" % (output))
+
+        # MenderAPI is a (partially) global object, which does not play well with these tests that
+        # combine class and function scoped fixtures. Set always the container manager so that each
+        # test correctly access its own environment from MenderAPI code.
+        set_container_manager(docker_env)
 
 
 class _TestRemoteTerminalBaseBogusProtoMessage:

@@ -31,9 +31,6 @@ from ..common_setup import (
     enterprise_no_client,
 )
 from ..MenderAPI import (
-    devconnect,
-    devauth,
-    reset_mender_api,
     DeviceAuthV2,
     Authentication,
     DeviceConnect,
@@ -327,13 +324,15 @@ class TestRemoteTerminal(
     @pytest.fixture(scope="class")
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
         env = class_persistent_standard_setup_one_client_bootstrapped
-        env.devconnect = devconnect
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
         yield env
 
     @pytest.fixture(scope="function")
     def docker_env_flaky_test(self, standard_setup_one_client_bootstrapped):
         env = standard_setup_one_client_bootstrapped
-        env.devconnect = devconnect
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
         yield env
 
 
@@ -350,10 +349,13 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
         env.device = MenderDevice(env.get_mender_clients()[0])
         env.device.ssh_is_opened()
 
-        reset_mender_api(env)
+        set_container_manager(env)
+        auth = Authentication()
+        devauth = DeviceAuthV2(auth)
         devauth.accept_devices(1)
 
-        env.devconnect = devconnect
+        env.devconnect = DeviceConnect(auth, devauth)
+
         return env
 
     @pytest.fixture(scope="class")
@@ -441,7 +443,7 @@ class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
         request.addfinalizer(env.teardown)
         env.setup()
 
-        reset_mender_api(env)
+        set_container_manager(env)
         device, devconn = connected_device(env)
 
         env.device = device

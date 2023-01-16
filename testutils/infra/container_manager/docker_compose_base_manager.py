@@ -129,8 +129,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
         else:
             assert (
                 False
-            ), "expected one instance of api-gateway running, but found: {} instance(s)".format(
-                len(gateway)
+            ), "expected one instance of api-gateway running, but found: {} instance(s) for project {}".format(
+                len(gateway), self.name
             )
 
     def restart_service(self, service):

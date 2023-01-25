@@ -28,6 +28,9 @@ logger = logging.getLogger("root")
 
 class DockerComposeNamespace(DockerComposeBaseNamespace):
     COMPOSE_FILES_PATH = DockerComposeBaseNamespace.COMPOSE_FILES_PATH
+    # Please note that the compose files sequence matters!
+    # The same parameter in different files can have different values and
+    # a value from the last yaml will be used.
     BASE_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.yml",
         COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",

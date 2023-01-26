@@ -74,6 +74,12 @@ services:
         environment:
             MINIO_ACCESS_KEY: minio
             MINIO_SECRET_KEY: minio123
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+            interval: 1s
+            timeout: 5s
+            retries: 10
+            start_period: 5s
         # use rate limiting, for more options see: https://docs.traefik.io/v2.2/middlewares/ratelimit/
         # labels:
         #     - traefik.http.middlewares.demo-ratelimit.ratelimit.average=30

@@ -7,7 +7,7 @@ services:
     minio:
         # DO NOT upgrade this to any version "2021.05" or later.
         # We want to stay on Apache license for now.
-        image: minio/minio:RELEASE.2019-04-23T23-50-36Z
+        image: minio/minio:RELEASE.2021-04-22T15-44-28Z
         restart: on-failure
         networks:
             mender:
@@ -16,12 +16,18 @@ services:
         environment:
             MINIO_HTTP_TRACE: /dev/stdout
         command: server /export
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+            interval: 60s
+            timeout: 5s
+            retries: 2
+            start_period: 10s
 
     mender-api-gateway:
-      environment:
-        STORAGE_URL: ${STORAGE_URL:-s3.docker.mender.io}
-      volumes:
-        - ./config/traefik/traefik.minio.yaml:/etc/traefik/config/traefik.minio.yaml:ro
+        environment:
+            STORAGE_URL: ${STORAGE_URL:-s3.docker.mender.io}
+        volumes:
+            - ./config/traefik/traefik.minio.yaml:/etc/traefik/config/traefik.minio.yaml:ro
 
     #
     # mender-deployments depends on minio if minio is in use

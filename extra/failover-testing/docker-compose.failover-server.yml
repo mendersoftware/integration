@@ -2,7 +2,7 @@
 # and docker-compose.storage.minio.yml, as they appeared when this file was
 # written.
 
-version: '2.1'
+version: '2.3'
 services:
 
     #

@@ -192,9 +192,14 @@ class TestMenderClientKeepAlive:
         )
         assert get_opened_tcp_connections(mender_device) > 0
 
-        configure_connectivity(mender_device, disable_keep_alive=disable_keep_alive)
+        configure_connectivity(
+            mender_device,
+            disable_keep_alive=disable_keep_alive,
+            inventory_poll=3600,
+            update_poll=3600,
+        )
         logger.info("test_keepalive_disable: waiting for client to restart")
-        time.sleep(1)
+        time.sleep(15)
         assert get_opened_tcp_connections(mender_device) == 0
         logger.info("test_keepalive_disable: ok, no connections to backend")
 

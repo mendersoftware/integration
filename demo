@@ -11,7 +11,7 @@ EXTRA_FILES=""
 
 DEMO_FILES="-f docker-compose.yml -f docker-compose.storage.minio.yml -f docker-compose.demo.yml"
 CLIENT_FILES="-f docker-compose.client.yml -f docker-compose.client.demo.yml"
-ENTERPRISE_FILES="-f docker-compose.enterprise.yml"
+ENTERPRISE_FILES="-f docker-compose.enterprise.yml -f docker-compose.testing.enterprise.yml"
 ENTERPRISE_CLIENT_FILES="-f docker-compose.monitor-client.commercial.yml -f docker-compose.client.demo.yml"
 
 CLIENT=0

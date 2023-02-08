@@ -299,7 +299,7 @@ class TestMonitorClientEnterprise:
 
         uuidv4 = str(uuid.uuid4())
         name = "test.mender.io-" + uuidv4
-        tid = cli.create_org(name, u.name, u.pwd, plan="enterprise")
+        tid = cli.create_org(name, u.name, u.pwd, plan="enterprise", addons=["monitor"])
 
         # at the moment we do not have a notion of a monitor add-on in the
         # backend, but this will be needed here, see MEN-4809

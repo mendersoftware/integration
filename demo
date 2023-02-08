@@ -255,6 +255,9 @@ create_user() {
                 $(run_compose_command ps -q mender-tenantadm) \
                 /usr/bin/tenantadm create-org \
                 --name=DemoOrganization \
+                --addon configure \
+                --addon monitor \
+                --addon troubleshoot \
                 --username=${USER} \
                 --password=${PASSWORD})
         retval=$?

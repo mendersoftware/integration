@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ def tenants_users(clean_migrated_mongo):
             "ci.email.tests+" + uuidv4 + "@mender.io",
             "secretsecret",
         )
-        tenants.append(create_org(tenant, username, password))
+        tenants.append(create_org(tenant, username, password, addons=["monitor"]))
 
     yield tenants
 

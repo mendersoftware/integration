@@ -69,7 +69,7 @@ def aggregate_dependabot_changelogs(
                         (
                             "*** A changelog entry which was assumed by the script to be "
                             + "derived from a dependabot commit could not be truncated "
-                            + "properly. Either a commit was wrongly assumed to be comitted "
+                            + "properly. Either a commit was wrongly assumed to be committed "
                             + "by dependabot or a dependabot commit does not, for unknown "
                             + "reasons, follow its standard format. The changelog entry "
                             + " that produced this fault was:\n\n%s"

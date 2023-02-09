@@ -1243,7 +1243,7 @@ def annotation_version(repo, tag_avail):
 
 
 def version_components(version):
-    """Returns a four-tuple containing the version componets major, minor, patch
+    """Returns a four-tuple containing the version components major, minor, patch
     and beta, as ints. Beta does not include the "b"."""
 
     match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)

@@ -297,9 +297,9 @@ services:
         networks:
             - mender
         environment:
-          - "discovery.type=single-node"
-          - "plugins.security.disabled=true"
-          - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+            - "discovery.type=single-node"
+            - "plugins.security.disabled=true"
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
 networks:
     mender: null

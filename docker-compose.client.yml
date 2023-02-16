@@ -12,8 +12,9 @@ services:
         tty: true
         privileged: true
         environment:
-          SERVER_URL:
-          TENANT_TOKEN:
+            SERVER_URL:
+            TENANT_TOKEN:
+
 
 networks:
     mender:

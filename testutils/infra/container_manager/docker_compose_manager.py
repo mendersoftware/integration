@@ -426,19 +426,16 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
         self._docker_compose_cmd(compose_args)
         self._wait_for_containers()
 
-    def populate_clients(self, name=None, tenant_token="", replicas=1):
-        client_services = self.client_services()
-        compose_cmd = "run -d"
-        if tenant_token != "":
-            compose_cmd += " -e TENANT_TOKEN={tkn}".format(tkn=tenant_token)
+    def populate_clients(self, name=None, tenant_token=""):
+        compose_cmd = "up -d " + " ".join(
+            ["--scale %s=1" % service for service in self.client_services()]
+        )
         if name is not None:
             compose_cmd += " --name '{name}'".format(name=name)
 
-        compose_cmd += " {service}"
-
-        for i in range(replicas):
-            for service in client_services:
-                self._docker_compose_cmd(compose_cmd.format(service=service))
+        self._docker_compose_cmd(
+            compose_cmd, env={"TENANT_TOKEN": "%s" % tenant_token},
+        )
 
     def get_mender_clients(self, network="mender"):
         cmd = [

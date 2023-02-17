@@ -8,5 +8,5 @@ services:
     tty: true
     privileged: true
     environment:
-      TENANT_TOKEN: ""
+      - TENANT_TOKEN=$TENANT_TOKEN
 

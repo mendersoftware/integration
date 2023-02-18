@@ -426,7 +426,7 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
         # In order for `ps --services` to return the services, the must have
         # been created, but they don't need to be running.
         self._docker_compose_cmd("up --no-start")
-        services = self._docker_compose_cmd("ps --services").split()
+        services = self._docker_compose_cmd("ps --services --all").split()
         clients = []
         for service in services:
             if service.startswith("mender-client"):

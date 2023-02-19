@@ -316,7 +316,6 @@ class TestClientCompatibilityBase:
             assert_successful_deployment(api_deployments, deployment_id)
 
 
-@pytest.mark.skip(reason="See QA-525")
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
     def test_compatibility(self, setup_os_compat):
         for version in COMPAT_MENDER_VERSIONS:
@@ -325,7 +324,6 @@ class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
             env.teardown()
 
 
-@pytest.mark.skip(reason="See QA-525")
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )

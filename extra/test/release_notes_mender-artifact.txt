@@ -38,10 +38,10 @@ New changes in mender-artifact since 3.6.0:
 
 * Add missing error description when artifact header can't be written.
 * cli: Fix parsing of filenames containing ".mender"
-  ([MEN-5076](https://tracker.mender.io/browse/MEN-5076))
+  ([MEN-5076](https://northerntech.atlassian.net/browse/MEN-5076))
 * Fix the checksum errors encountered in rare cases where the entire byte
   stream is not consumed during verification, and thus giving wrong checksum errors.
-  ([MEN-5094](https://tracker.mender.io/browse/MEN-5094))
+  ([MEN-5094](https://northerntech.atlassian.net/browse/MEN-5094))
 * Restore SSH snapshot feature on Mac OS
-  ([MEN-4362](https://tracker.mender.io/browse/MEN-4362), [MEN-5082](https://tracker.mender.io/browse/MEN-5082))
+  ([MEN-4362](https://northerntech.atlassian.net/browse/MEN-4362), [MEN-5082](https://northerntech.atlassian.net/browse/MEN-5082))
 

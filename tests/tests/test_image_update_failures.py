@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ class BaseTestFailures(MenderTesting):
 
     @MenderTesting.fast
     def do_test_large_update_image(self, env):
-        """Installing an image larger than the passive/active parition size should result in a failure."""
+        """Installing an image larger than the passive/active partition size should result in a failure."""
 
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)

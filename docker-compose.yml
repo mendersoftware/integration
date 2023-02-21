@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
@@ -21,6 +21,8 @@ services:
     #
     mender-deployments:
         image: registry.mender.io/mendersoftware/deployments-enterprise:staging
+        environment:
+            DEPLOYMENTS_REPORTING_ADDR: http://mender-reporting:8080
         extends:
             file: common.yml
             service: mender-base
@@ -49,6 +51,7 @@ services:
             - MENDER_DEB_PACKAGE_VERSION
             - HAVE_DEVICECONNECT=1
             - HAVE_DEVICECONFIG=1
+            - HAVE_REPORTING=1
 
     #
     # mender-api-gateway
@@ -93,6 +96,7 @@ services:
         image: registry.mender.io/mendersoftware/deviceauth-enterprise:staging
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+            DEVICEAUTH_ENABLE_REPORTING: 1
         extends:
             file: common.yml
             service: mender-base
@@ -109,6 +113,9 @@ services:
     #
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:staging
+        environment:
+            INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+            INVENTORY_ENABLE_REPORTING: 1
         extends:
             file: common.yml
             service: mender-base
@@ -118,6 +125,40 @@ services:
             - mender-mongo
         labels:
             mender.healthcheck.path: "/api/internal/v1/inventory/health"
+
+    #
+    # mender-reporting
+    #
+    mender-reporting:
+        image: mendersoftware/reporting:mender-master
+        command: server --automigrate
+        environment:
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-opensearch
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/reporting/health"
+
+    #
+    # mender-reporting-indexer
+    #
+    mender-reporting-indexer:
+        image: mendersoftware/reporting:mender-master
+        command: indexer
+        environment:
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-opensearch
 
     #
     # mender-useradm
@@ -247,6 +288,18 @@ services:
         command: -js
         networks:
             - mender
+
+    mender-opensearch:
+        image: opensearchproject/opensearch:2.4.0
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        environment:
+            - "discovery.type=single-node"
+            - "plugins.security.disabled=true"
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
 networks:
     mender: null

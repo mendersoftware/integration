@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -126,6 +126,22 @@ def valid_image_rofs_with_mender_conf(request):
         yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
+@pytest.fixture(scope="session")
+def valid_image_rofs_commercial_with_mender_conf(request):
+    valid_image = "mender-image-full-cmdline-rofs-commercial-%s.ext4" % machine_name
+    if not os.path.exists(valid_image):
+        yield None
+        return
+
+    with tempfile.TemporaryDirectory() as d:
+
+        def cleanup():
+            shutil.rmtree(d, ignore_errors=True)
+
+        request.addfinalizer(cleanup)
+        yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
+
+
 def pytest_configure(config):
     verify_sane_test_environment()
 
@@ -234,7 +250,7 @@ def pytest_exception_interact(node, call, report):
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter
-        output = subprocess.check_output("docker ps", shell=True).decode()
+        output = subprocess.check_output("docker ps -a", shell=True).decode()
         logger.info("Containers at the end of the test:")
         for line in output.split("\n"):
             logger.info(line)

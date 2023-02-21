@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -681,9 +681,16 @@ class TestDeviceMgmtBase:
         assert r.status_code == 204
 
         # only verify the device is gone
-        r = devapim.with_auth(utoken).call(
-            "GET", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
-        )
+        count = 5
+        while count > 0:
+            r = devapim.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": dev_pending.id}
+            )
+            if r.status_code == 404:
+                break
+            # need to wait while workflows worker executes the job
+            time.sleep(1)
+            count -= 1
         assert r.status_code == 404
 
         # log in an accepted device
@@ -715,9 +722,16 @@ class TestDeviceMgmtBase:
         assert r.status_code == 401
 
         # verify the device is gone
-        r = devapim.with_auth(utoken).call(
-            "GET", deviceauth.URL_DEVICE, path_params={"id": dev_acc.id}
-        )
+        count = 5
+        while count > 0:
+            r = devapim.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": dev_acc.id}
+            )
+            if r.status_code == 404:
+                break
+            # need to wait while workflows worker executes the job
+            time.sleep(1)
+            count -= 1
         assert r.status_code == 404
 
     def do_test_delete_device_not_found(self, devs_authsets, user):

@@ -38,6 +38,7 @@ def common_update_procedure(
     version=None,
     devauth=devauth,
     deploy=deploy,
+    autogenerate_delta=False,
 ):
 
     with artifact_lock:
@@ -78,6 +79,7 @@ def common_update_procedure(
                     name="New valid update",
                     artifact_name=artifact_name,
                     devices=devices,
+                    autogenerate_delta=autogenerate_delta,
                 )
             else:
                 logger.warn("failed to create artifact")
@@ -107,6 +109,7 @@ def update_image(
     version=None,
     devauth=devauth,
     deploy=deploy,
+    autogenerate_delta=False,
 ):
     """
         Perform a successful upgrade, and assert that deployment status/logs are correct.
@@ -131,6 +134,7 @@ def update_image(
             version=version,
             devauth=devauth,
             deploy=deploy,
+            autogenerate_delta=autogenerate_delta,
         )
         reboot.verify_reboot_performed()
 

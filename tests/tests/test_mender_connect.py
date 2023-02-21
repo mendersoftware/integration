@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -26,16 +26,16 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 from ..common_setup import (
     class_persistent_standard_setup_one_client_bootstrapped,
+    standard_setup_one_client_bootstrapped,
     enterprise_no_client_class,
+    enterprise_no_client,
 )
 from ..MenderAPI import (
-    devconnect,
-    devauth,
-    reset_mender_api,
     DeviceAuthV2,
     Authentication,
     DeviceConnect,
     get_container_manager,
+    set_container_manager,
     logger,
 )
 from testutils.common import User, update_tenant
@@ -45,19 +45,19 @@ container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
-    """
-    Ticket: QA-504
-    Reason: The test fails due to the fact that the websocket connection is broken,
-            and the mender-connect can't recover from situation when shell could not
-            be stopped, and the session is left as empty with non-existent process
-            (see MEN-6137) while many other things timeout.
-    """
-
     @flaky(max_runs=3)
-    def test_regular_protocol_commands(self, docker_env):
-        self.assert_env(docker_env)
+    def test_regular_protocol_commands(self, docker_env_flaky_test):
+        """
+        Ticket: QA-504
+        Reason: The test fails due to the fact that the websocket connection is broken,
+                and the mender-connect can't recover from situation when shell could not
+                be stopped, and the session is left as empty with non-existent process
+                (see MEN-6137) while many other things timeout.
+        """
 
-        with docker_env.devconnect.get_websocket() as ws:
+        self.assert_env(docker_env_flaky_test)
+
+        with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
             receive_timeout_s = 16
             shell = proto_shell.ProtoShell(ws)
@@ -294,6 +294,11 @@ class _TestRemoteTerminalBase:
         )
         logger.info("assert_env: GetJWT: returns: '%s'" % (output))
 
+        # MenderAPI is a (partially) global object, which does not play well with these tests that
+        # combine class and function scoped fixtures. Set always the container manager so that each
+        # test correctly access its own environment from MenderAPI code.
+        set_container_manager(docker_env)
+
 
 class _TestRemoteTerminalBaseBogusProtoMessage:
     def test_bogus_proto_message(self, docker_env):
@@ -316,10 +321,18 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
 class TestRemoteTerminal(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
-    @pytest.fixture(autouse=True, scope="class")
+    @pytest.fixture(scope="class")
     def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
         env = class_persistent_standard_setup_one_client_bootstrapped
-        env.devconnect = devconnect
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
+        yield env
+
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(self, standard_setup_one_client_bootstrapped):
+        env = standard_setup_one_client_bootstrapped
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
         yield env
 
 
@@ -328,24 +341,30 @@ class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
     This set of tests uses mender-connect v1.0
     """
 
-    @pytest.fixture(autouse=True, scope="class")
-    def docker_env(self, request):
-        env = container_factory.get_mender_client_2_5()
+    def docker_env_impl(self, request):
+        env = container_factory.get_mender_client_2_5_setup(num_clients=1)
         request.addfinalizer(env.teardown)
         env.setup()
 
-        env.populate_clients(replicas=1)
-
-        clients = env.get_mender_clients()
-        assert len(clients) == 1, "Failed to setup client"
-        env.device = MenderDevice(clients[0])
+        env.device = MenderDevice(env.get_mender_clients()[0])
         env.device.ssh_is_opened()
 
-        reset_mender_api(env)
+        set_container_manager(env)
+        auth = Authentication()
+        devauth = DeviceAuthV2(auth)
         devauth.accept_devices(1)
 
-        env.devconnect = devconnect
-        yield env
+        env.devconnect = DeviceConnect(auth, devauth)
+
+        return env
+
+    @pytest.fixture(scope="class")
+    def docker_env(self, request):
+        yield self.docker_env_impl(request)
+
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(self, request):
+        yield self.docker_env_impl(request)
 
 
 def connected_device(env):
@@ -402,22 +421,40 @@ class TestRemoteTerminalEnterprise(
 
         yield env
 
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(self, enterprise_no_client):
+        env = enterprise_no_client
 
-class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
-    """
-    This set of tests uses mender-connect v1.0
-    """
-
-    @pytest.fixture(autouse=True, scope="class")
-    def docker_env(self, request):
-        env = container_factory.get_mender_client_2_5(enterprise=True)
-        request.addfinalizer(env.teardown)
-        env.setup()
-
-        reset_mender_api(env)
         device, devconn = connected_device(env)
 
         env.device = device
         env.devconnect = devconn
 
         yield env
+
+
+class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
+    """
+    This set of tests uses mender-connect v1.0
+    """
+
+    def docker_env_impl(self, request):
+        env = container_factory.get_mender_client_2_5_enterprise_setup()
+        request.addfinalizer(env.teardown)
+        env.setup()
+
+        set_container_manager(env)
+        device, devconn = connected_device(env)
+
+        env.device = device
+        env.devconnect = devconn
+
+        return env
+
+    @pytest.fixture(scope="class")
+    def docker_env(self, request):
+        yield self.docker_env_impl(request)
+
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(self, request):
+        yield self.docker_env_impl(request)

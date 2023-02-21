@@ -5,7 +5,7 @@
 # Notes:
 # - integration/docker-compose.enterprise.yml file is assumed to be included
 
-version: '2.1'
+version: '2.3'
 services:
 
     mender-device-auth:

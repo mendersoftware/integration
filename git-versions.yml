@@ -47,7 +47,7 @@ services:
     # client repositories - container and image names are placeholders
     #
     mender:
-        image: mendersoftware/mender:3.4.0
+        image: mendersoftware/mender:3.5.0
 
     mender-connect:
         image: mendersoftware/mender-connect:2.1.0
@@ -59,7 +59,7 @@ services:
         image: mendersoftware/monitor-client:1.2.1
 
     mender-gateway:
-        image: mendersoftware/mender-gateway:1.0.1
+        image: mendersoftware/mender-gateway:1.1.0
 
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

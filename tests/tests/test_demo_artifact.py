@@ -26,7 +26,7 @@ from testutils.common import wait_until_healthy
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
-class TestDemoArtifact(MenderTesting):
+class BaseTestDemoArtifact(MenderTesting):
     """A simple class for testing the demo-Artifact upload."""
 
     EXTRA_ARGS = []
@@ -193,11 +193,15 @@ class TestDemoArtifact(MenderTesting):
         logger.info("Finished")
 
 
+class TestDemoArtifactOpenSource(BaseTestDemoArtifact):
+    pass
+
+
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
-class TestDemoArtifactEnterprise(TestDemoArtifact):
-    """A subclass of the TestDemoArtifact class for testing the demo-Artifact
+class TestDemoArtifactEnterprise(BaseTestDemoArtifact):
+    """A subclass of the BaseTestDemoArtifact class for testing the demo-Artifact
     upload in Enterprise mode."""
 
     EXTRA_ARGS = ["--enterprise-testing"]

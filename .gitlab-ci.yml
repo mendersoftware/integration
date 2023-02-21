@@ -47,5 +47,6 @@ publish:versions:
     expire_in: 2w
     paths:
       - versions.json
+    when: always
   rules:
     - if: $CI_COMMIT_TAG

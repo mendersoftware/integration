@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import uuid
 import os
 import subprocess
 from contextlib import contextmanager
+from typing import List
 
 import docker
 import redo
@@ -162,6 +163,7 @@ def create_org(
     username: str,
     password: str,
     plan: str = "os",
+    addons: List[str] = [],
     containers_namespace: str = "backend-tests",
     container_manager=None,
 ) -> Tenant:
@@ -169,7 +171,7 @@ def create_org(
         containers_namespace=containers_namespace, container_manager=container_manager
     )
     user_id = None
-    tenant_id = cli.create_org(name, username, password, plan=plan)
+    tenant_id = cli.create_org(name, username, password, plan=plan, addons=addons)
     tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
 
     host = GATEWAY_HOSTNAME

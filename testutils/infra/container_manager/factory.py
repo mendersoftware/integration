@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -30,10 +30,12 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyClientSetup,
     DockerComposeEnterpriseRofsClientSetup,
+    DockerComposeEnterpriseRofsCommercialClientSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
-    DockerComposeMenderClient_2_5,
+    DockerComposeMenderClient_2_5_Setup,
+    DockerComposeMenderClient_2_5_EnterpriseSetup,
 )
 from .kubernetes_manager import (
     KubernetesEnterpriseSetup,
@@ -121,6 +123,10 @@ class ContainerManagerFactory:
         """Enterprise setup with one Mender QEMU Read-Only FS client"""
         pass
 
+    def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender QEMU Read-Only FS commercial client"""
+        pass
+
     def get_enterprise_smtp_setup(self, name=None):
         """Enterprise setup with SMTP enabled"""
         pass
@@ -183,14 +189,20 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_enterprise_rofs_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseRofsClientSetup(name, num_clients)
 
-    def get_compatibility_setup(self, tag, name=None, **kwargs):
-        return DockerComposeCompatibilitySetup(name, tag, **kwargs)
+    def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseRofsCommercialClientSetup(name, num_clients)
+
+    def get_compatibility_setup(self, name=None, **kwargs):
+        return DockerComposeCompatibilitySetup(name, **kwargs)
 
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)
 
-    def get_mender_client_2_5(self, name=None, **kwargs):
-        return DockerComposeMenderClient_2_5(name, **kwargs)
+    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
+        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
+
+    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
+        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
     def get_custom_setup(self, name=None):
         return DockerComposeCustomSetup(name)
@@ -215,8 +227,11 @@ class KubernetesManagerFactory(ContainerManagerFactory):
     def get_enterprise_short_lived_token_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
 
-    def get_mender_client_2_5(self, name=None, **kwargs):
-        return DockerComposeMenderClient_2_5(name, **kwargs)
+    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
+        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
+
+    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
+        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
 
 def get_factory():

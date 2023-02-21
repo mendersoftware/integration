@@ -1,19 +1,20 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
     # mender-client
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:mender-3.4.0
+        image: mendersoftware/mender-client-qemu:mender-3.5.0
         networks:
             - mender
         stdin_open: true
         tty: true
         privileged: true
         environment:
-          SERVER_URL:
-          TENANT_TOKEN:
+            SERVER_URL:
+            TENANT_TOKEN:
+
 
 networks:
     mender:

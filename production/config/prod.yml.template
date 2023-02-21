@@ -16,7 +16,7 @@
 # - https://github.com/docker/compose/issues/3568
 # - https://github.com/docker/compose/issues/3219
 
-version: '2.1'
+version: '2.3'
 services:
 
     mender-iot-manager:

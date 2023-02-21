@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
@@ -21,4 +21,3 @@ services:
             DEPLOYMENTS_AWS_URI: https://s3-us-west-1.amazonaws.com
             DEPLOYMENTS_AWS_BUCKET: mender-artifacts-int-testing-us
             DEPLOYMENTS_AWS_EXTERNAL_URI: ""
-

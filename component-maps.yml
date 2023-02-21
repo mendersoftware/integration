@@ -288,6 +288,12 @@ git:
     release_component: false
     independent_component: true
 
+  app-update-module:
+    docker_image: []
+    docker_container: []
+    release_component: false
+    independent_component: true
+
 docker_image:
 
   iot-manager:

@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 HOST = "mender-reporting:8080"
 
 URL_INTERNAL = "/api/internal/v1/reporting"
-URL_INTERNAL_DEVICES_SEARCH = "/inventory/tenants/{tenant_id}/search"
+URL_INTERNAL_DEVICES_SEARCH = "/tenants/{tenant_id}/devices/search"
 
 URL_MGMT = "/api/management/v1/reporting"
 URL_MGMT_DEVICES_SEARCH = "/devices/search"

@@ -14,7 +14,7 @@ services:
         image: mendersoftware/mender-binary-delta:1.4.1
 
     mender-convert:
-        image: mendersoftware/mender-convert:3.0.1
+        image: mendersoftware/mender-convert:4.0.0
 
     meta-mender:
         image: mendersoftware/meta-mender:dunfell

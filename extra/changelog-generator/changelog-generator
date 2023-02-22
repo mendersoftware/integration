@@ -36,7 +36,7 @@ LINKED_SHAS = {}
 SHA_TO_TRACKER = {}
 
 JIRA_PROJECTS = "|".join(["ARCHIVE", "INF", "MEN", "QA", "MC", "ME"])
-JIRA_REGEX = rf"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:{JIRA_PROJECTS})(?:-| )[0-9]+)\]?"
+JIRA_REGEX = rf"\[?(?:Jira:? *)?(?:https?://northerntech.atlassian.net/browse/)?((?:{JIRA_PROJECTS})(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
 CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
@@ -564,7 +564,7 @@ for repo in repos:
         tracker = ""
         if SHA_TO_TRACKER.get(sha_entry):
             jiras = [
-                "[%s](https://tracker.mender.io/browse/%s)"
+                "[%s](https://northerntech.atlassian.net/browse/%s)"
                 % (ticket.upper(), ticket.upper())
                 for ticket in SHA_TO_TRACKER[sha_entry]
             ]

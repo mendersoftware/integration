@@ -193,6 +193,7 @@ class BaseTestDemoArtifact(MenderTesting):
         logger.info("Finished")
 
 
+@pytest.mark.skip(reason="not relevant in staging branch")
 class TestDemoArtifactOpenSource(BaseTestDemoArtifact):
     pass
 

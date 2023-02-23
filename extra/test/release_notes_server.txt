@@ -63,11 +63,11 @@ New changes in deployments since 3.0.0:
 
 * datastore_mongo: fix nil pointer dereference
 * remove the CORS middleware, rely on the API gateway instead
-  ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
+  ([MEN-4921](https://northerntech.atlassian.net/browse/MEN-4921))
 * move the /deployments/devices/{id} end-point to internal
-  ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
+  ([MEN-4525](https://northerntech.atlassian.net/browse/MEN-4525))
 * Listing devices in deployment sorts by statuses
-  ([MEN-4847](https://tracker.mender.io/browse/MEN-4847))
+  ([MEN-4847](https://northerntech.atlassian.net/browse/MEN-4847))
 
 ##### Dependabot bumps
 
@@ -157,11 +157,11 @@ New changes in deployments since 3.0.0:
 New changes in deviceauth since 3.0.0:
 
 * add support for fallback RSA private key
-  ([MEN-3152](https://tracker.mender.io/browse/MEN-3152))
+  ([MEN-3152](https://northerntech.atlassian.net/browse/MEN-3152))
 * remove the CORS middleware, rely on the API gateway instead
-  ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
+  ([MEN-4921](https://northerntech.atlassian.net/browse/MEN-4921))
 * Restrict access to monitor APIs to devices with monitor add-on
-  ([MEN-5077](https://tracker.mender.io/browse/MEN-5077))
+  ([MEN-5077](https://northerntech.atlassian.net/browse/MEN-5077))
 
 ##### Dependabot bumps
 
@@ -193,42 +193,42 @@ New changes in deviceauth since 3.0.0:
 New changes in deviceconnect since 1.2.0:
 
 * store the correct offset in the recordings control messages
-  ([MEN-4770](https://tracker.mender.io/browse/MEN-4770))
+  ([MEN-4770](https://northerntech.atlassian.net/browse/MEN-4770))
 
 #### gui (3.1.0)
 
 New changes in gui since 3.0.0:
 
 * added copy capabilities & sha checksum to device authset information
-  ([MEN-4791](https://tracker.mender.io/browse/MEN-4791))
+  ([MEN-4791](https://northerntech.atlassian.net/browse/MEN-4791))
 * fixed an issue that caused the deployment report to crash due to missing update control information
 * added role dependent (admin only) notification muting to global settings
-  ([MEN-4757](https://tracker.mender.io/browse/MEN-4757))
+  ([MEN-4757](https://northerntech.atlassian.net/browse/MEN-4757))
 * device details now show monitoring information if monitor add-on is enabled
-  ([MEN-4787](https://tracker.mender.io/browse/MEN-4787))
+  ([MEN-4787](https://northerntech.atlassian.net/browse/MEN-4787))
 * added monitor to addon selection
-  ([MEN-4836](https://tracker.mender.io/browse/MEN-4836))
+  ([MEN-4836](https://northerntech.atlassian.net/browse/MEN-4836))
 * fixed an issue that caused the page selection in the device list to change unintended
 * fixed an issue that caused release tab to crash when release generation takes longer than releases retrieval
 * added device list tag display & editing capabilties to device details
-  ([MEN-4755](https://tracker.mender.io/browse/MEN-4755))
+  ([MEN-4755](https://northerntech.atlassian.net/browse/MEN-4755))
 * made artifact creation more restrictive to not allow creation without device types or invalid paths
-  ([MEN-4933](https://tracker.mender.io/browse/MEN-4933))
+  ([MEN-4933](https://northerntech.atlassian.net/browse/MEN-4933))
 * fixed an issue that caused the device list to misbehave when quickly changing pages
-  ([MEN-4932](https://tracker.mender.io/browse/MEN-4932))
+  ([MEN-4932](https://northerntech.atlassian.net/browse/MEN-4932))
 * Adjust help text to say that RPi image is merely Mender ready.
 * require the current one when updating the user's password
-  ([MEN-4922](https://tracker.mender.io/browse/MEN-4922))
+  ([MEN-4922](https://northerntech.atlassian.net/browse/MEN-4922))
 * Install Mender commercial add-ons (namely: mender-monitor)
   during user on-boarding.
-  ([MEN-4759](https://tracker.mender.io/browse/MEN-4759))
+  ([MEN-4759](https://northerntech.atlassian.net/browse/MEN-4759))
 * switched device deployment progress to no longer show assumed progress
-  ([MEN-5025](https://tracker.mender.io/browse/MEN-5025))
+  ([MEN-5025](https://northerntech.atlassian.net/browse/MEN-5025))
 * ensure copied authset pubkey contains empty newline if it exists already
 * fixed an issue that prevented getting to devices based on their software in the overall device distribution
 * fixed an issue that prevented filter selections from being persisted
 * fixed an issue that prevented changes in monitoring issues from being reflected in the devicelist
-  ([MEN-5113](https://tracker.mender.io/browse/MEN-5113))
+  ([MEN-5113](https://northerntech.atlassian.net/browse/MEN-5113))
 
 ##### Dependabot bumps
 
@@ -1459,13 +1459,13 @@ New changes in gui since 3.0.0:
 New changes in inventory since 3.0.0:
 
 * PUT and PATCH device tags management endpoints
-  ([MEN-2342](https://tracker.mender.io/browse/MEN-2342))
+  ([MEN-2342](https://northerntech.atlassian.net/browse/MEN-2342))
 * apply configurable limits to tags (20) and inventory (100)
-  ([MEN-4781](https://tracker.mender.io/browse/MEN-4781))
+  ([MEN-4781](https://northerntech.atlassian.net/browse/MEN-4781))
 * remove the CORS middleware, rely on the API gateway instead
-  ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
+  ([MEN-4921](https://northerntech.atlassian.net/browse/MEN-4921))
 * improve device decommissioning and inventory data reset
-  ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
+  ([MEN-4525](https://northerntech.atlassian.net/browse/MEN-4525))
 * internal endpoint for reindexing monitor data
 
 ##### Dependabot bumps
@@ -1525,11 +1525,11 @@ New changes in inventory since 3.0.0:
 New changes in useradm since 1.15.0:
 
 * add support for fallback RSA private key
-  ([MEN-3153](https://tracker.mender.io/browse/MEN-3153))
+  ([MEN-3153](https://northerntech.atlassian.net/browse/MEN-3153))
 * remove the CORS middleware, rely on the API gateway instead
-  ([MEN-4921](https://tracker.mender.io/browse/MEN-4921))
+  ([MEN-4921](https://northerntech.atlassian.net/browse/MEN-4921))
 * require the current one when updating the user's password
-  ([MEN-4922](https://tracker.mender.io/browse/MEN-4922))
+  ([MEN-4922](https://northerntech.atlassian.net/browse/MEN-4922))
 
 ##### Dependabot bumps
 
@@ -1550,11 +1550,11 @@ New changes in useradm since 1.15.0:
 New changes in workflows since 2.0.0:
 
 * do not use upsert when acquiring jobs
-  ([MEN-4923](https://tracker.mender.io/browse/MEN-4923))
+  ([MEN-4923](https://northerntech.atlassian.net/browse/MEN-4923))
 * BCC support and CC fixes
-  ([MEN-4998](https://tracker.mender.io/browse/MEN-4998))
+  ([MEN-4998](https://northerntech.atlassian.net/browse/MEN-4998))
 * use internal end-points to provision and decommission devices
-  ([MEN-4525](https://tracker.mender.io/browse/MEN-4525))
+  ([MEN-4525](https://northerntech.atlassian.net/browse/MEN-4525))
 
 ##### Dependabot bumps
 

@@ -84,7 +84,7 @@ New changes in mender since 3.0.0:
   names. If no names are set, then the default is to try the
   grub-mender-grubenv tools first, followed by the "fw_" tools if the
   former are not found.
-  ([MEN-3978](https://tracker.mender.io/browse/MEN-3978))
+  ([MEN-3978](https://northerntech.atlassian.net/browse/MEN-3978))
 * Add missing filesystem sync which could produce an empty or
   corrupted Update Module file tree in
   `/var/lib/mender/modules/v3/payloads/0000/tree/files/` after an
@@ -93,6 +93,6 @@ New changes in mender since 3.0.0:
   client will now remove the cached authorization token upon the next restart of
   the dameon, and hence respect the new configuration, as opposed to letting it
   expire, which was the old functionality.
-  ([MEN-3420](https://tracker.mender.io/browse/MEN-3420))
+  ([MEN-3420](https://northerntech.atlassian.net/browse/MEN-3420))
 * [FIX] Fetch geo location data once per power cycle
 

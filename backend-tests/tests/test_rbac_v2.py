@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -95,22 +95,13 @@ class TestRBACv2DeploymentsEnterprise:
         create_roles(tenant.users[0].token, test_case["roles"])
         test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
         test_user = create_user(tid=tenant.id, **test_case["user"])
-        login(test_user, test_case["use_personal_access_token"])
-
-        # Create admin user so artifact can be uploaded
-        admin_user_data = {
-            "name": "admin-UUID@example.com",
-            "pwd": "password",
-            "roles": ["RBAC_ROLE_PERMIT_ALL"],
-        }
-        admin_user = create_user(tid=tenant.id, **admin_user_data)
-        login(admin_user, test_case["use_personal_access_token"])
+        login(test_user)
 
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
 
         dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
-        rsp = dplmnt_MGMT.with_auth(admin_user.token).call(
+        rsp = dplmnt_MGMT.with_auth(tenant.users[0].token).call(
             "POST",
             deployments.URL_DEPLOYMENTS_ARTIFACTS,
             files=(
@@ -224,11 +215,20 @@ class TestRBACv2DeploymentsEnterprise:
         # Initialize tenant's devices
         grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
 
+        # Create admin user so artifact can be uploaded
+        admin_user_data = {
+            "name": "admin-UUID@example.com",
+            "pwd": "password",
+            "roles": ["RBAC_ROLE_PERMIT_ALL"],
+        }
+        admin_user = create_user(tid=tenant.id, **admin_user_data)
+        login(admin_user)
+
         # Upload a bogus artifact
         artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
 
         dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
-        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+        rsp = dplmnt_MGMT.with_auth(admin_user.token).call(
             "POST",
             deployments.URL_DEPLOYMENTS_ARTIFACTS,
             files=(
@@ -311,7 +311,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
     )
     def test_deploy_to_group(self, clean_mongo, test_case):
         """
-        Tests adding group restrinction to roles and checking that users
+        Tests adding group restriction to roles and checking that users
         are only allowed to deploy to their group.
         """
         self.logger.info("RUN: %s", test_case["name"])
@@ -443,8 +443,8 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                         "name": "test",
                         "permission_sets_with_scope": [
                             {
-                                "name": "DeployToDevices",
-                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                                "name": "ConfigureDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"]},
                             },
                         ],
                     },
@@ -564,8 +564,8 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                     },
                 ],
                 "device_groups": {"test": 1, "production": 1},
-                "view_group": "test",
-                "get_configuration_status_code": 200,
+                "view_group": "production",
+                "get_configuration_status_code": 403,
             },
             {
                 "name": "Test RBAC configuration deployment forbidden",
@@ -621,7 +621,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 ],
                 "device_groups": {"test": 1, "production": 1},
                 "view_group": "production",
-                "get_configuration_status_code": 200,
+                "get_configuration_status_code": 403,
             },
         ],
     )
@@ -698,6 +698,10 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {
+                                "name": "ConfigureDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
                         ],
                     },
                 ],
@@ -711,7 +715,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 "move_device_between_groups_status_code": 204,
             },
             {
-                "name": "Test RBAC access to device - read, manage",
+                "name": "Test RBAC access to device - read, manage, configure",
                 "user": {
                     "name": "test1-UUID@example.com",
                     "pwd": "password",
@@ -729,14 +733,18 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "name": "ManageDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {
+                                "name": "ConfigureDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
                         ],
                     },
                 ],
                 "device_groups": {"test": 5, "production": 5},
                 "device_group": "test",
                 "get_configuration_status_code": 200,
-                "set_configuration_status_code": 403,
-                "deploy_configuration_status_code": 403,
+                "set_configuration_status_code": 204,
+                "deploy_configuration_status_code": 200,
                 "get_device_status_code": 200,
                 "reject_device_status_code": 204,
                 "move_device_between_groups_status_code": 204,
@@ -758,6 +766,10 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                             },
                             {
                                 "name": "DeployToDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                            {
+                                "name": "ConfigureDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                         ],
@@ -792,7 +804,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                 ],
                 "device_groups": {"test": 5, "production": 5},
                 "device_group": "test",
-                "get_configuration_status_code": 200,
+                "get_configuration_status_code": 403,
                 "set_configuration_status_code": 403,
                 "deploy_configuration_status_code": 403,
                 "get_device_status_code": 200,
@@ -820,6 +832,10 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                             },
                             {
                                 "name": "DeployToDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                            {
+                                "name": "ConfigureDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                         ],

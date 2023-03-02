@@ -34,6 +34,11 @@ All other arguments passed to this command are passed directly to
 docker-compose, if you want to run the demo, run:
 
 '$(basename $0) up'
+
+To expose the server over HTTP by disabling SSL, add the following to
+your docker-compose options:
+
+'-f docker-compose.no-ssl.yml'
 EOF
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -2776,7 +2776,9 @@ def do_release(release_state_file):
         print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
-        print("  N) Generate release notes from final tags")
+        print(
+            "  N) Generate release notes from current tag, either final tag or current build tag"
+        )
         print(
             '  D) Update ":%s" and/or ":latest" Docker tags to current release'
             % minor_version
@@ -2842,7 +2844,11 @@ def do_release(release_state_file):
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "n":
-            do_generate_release_notes(state["repo_dir"], state["version"])
+            # Generate release notes from tag_avail, which will either hold the final tag
+            # or the current build tag
+            do_generate_release_notes(
+                state["repo_dir"], tag_avail["integration"]["build_tag"]
+            )
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":

@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import sys
 import traceback
-import logging
 import datetime
 
 try:
@@ -1244,7 +1243,7 @@ def annotation_version(repo, tag_avail):
 
 
 def version_components(version):
-    """Returns a four-tuple containing the version componets major, minor, patch
+    """Returns a four-tuple containing the version components major, minor, patch
     and beta, as ints. Beta does not include the "b"."""
 
     match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
@@ -2784,7 +2783,9 @@ def do_release(release_state_file):
         print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
-        print("  N) Generate release notes from final tags")
+        print(
+            "  N) Generate release notes from current tag, either final tag or current build tag"
+        )
         print(
             '  D) Update ":%s" and/or ":latest" Docker tags to current release'
             % minor_version
@@ -2850,7 +2851,11 @@ def do_release(release_state_file):
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "n":
-            do_generate_release_notes(state["repo_dir"], state["version"])
+            # Generate release notes from tag_avail, which will either hold the final tag
+            # or the current build tag
+            do_generate_release_notes(
+                state["repo_dir"], tag_avail["integration"]["build_tag"]
+            )
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":

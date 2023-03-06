@@ -147,7 +147,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
         for line in logs.split("\n"):
             logger.debug(self._re_newlines_sub("", line))
 
-    def _docker_compose_cmd(self, arg_list, env=None):
+    def _docker_compose_cmd(self, arg_list, env=None, fail_early=True):
         """Run docker-compose command using self.docker_compose_files
 
         It will retry a few times due to https://github.com/opencontainers/runc/issues/1326
@@ -173,7 +173,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
                     logger.info(
                         'failed to run "%s": error follows:\n%s' % (cmd, e.output)
                     )
-                    self._stop_docker_compose()
+                    if fail_early:
+                        self._stop_docker_compose()
 
             if count < 5:
                 logger.info("sleeping %d seconds and retrying" % (count * 30))
@@ -183,13 +184,21 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     def _stop_docker_compose(self):
         with docker_lock:
+            stop_sleep_seconds = 15
+            retry_attempts = 8
+
             # Take down all docker instances in this namespace.
-            cmd = "docker ps -aq -f name=%s | xargs -r docker rm -fv" % self.name
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
-            cmd = (
-                "docker network list -q -f name=%s | xargs -r docker network rm"
-                % self.name
-            )
-            logger.info("running %s" % cmd)
-            subprocess.check_call(cmd, shell=True)
+            while retry_attempts > 0:
+                logger.info(
+                    "(attempts left: %d) trying to stop all containers in %s"
+                    % (retry_attempts, self.name)
+                )
+                try:
+                    self._docker_compose_cmd(
+                        "down -v --remove-orphans", fail_early=False
+                    )
+                    break
+                except Exception as e:
+                    time.sleep(stop_sleep_seconds)
+                    logger.error(e)
+                    retry_attempts = retry_attempts - 1

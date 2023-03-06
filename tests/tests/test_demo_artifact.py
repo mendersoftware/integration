@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -79,6 +79,7 @@ class TestDemoArtifact(MenderTesting):
                 cwd="..",
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 env=test_env,
             )
             logger.info("Started the demo script")
@@ -114,7 +115,6 @@ class TestDemoArtifact(MenderTesting):
         logger.info("Running test_demo_artifact_upload")
         logger.info("--------------------------------------------------")
         self.demo_artifact_upload(run_demo_script.run_demo_script_up)
-
         run_demo_script.teardown()
         self.auth.reset_auth_token()
 
@@ -141,10 +141,15 @@ class TestDemoArtifact(MenderTesting):
             logger.error(str(arts))
             raise
         assert "mender-demo-artifact" in arts[0]["name"]
+
         # Bring down the demo script
+        logger.info("-- Terminating demo script")
         proc.send_signal(signal.SIGTERM)
+        # Continue logging stdout until process stops
+        for line in proc.stdout:
+            logger.info(line.decode())
         proc.wait()
-        assert proc.returncode == 0
+        assert proc.returncode == 0, "Demo script failed with non-zero exit code"
 
     def demo_artifact_installation(self, run_demo_script):
         """Tests that the demo-artifact is successfully deployed to a client device."""

@@ -2,7 +2,7 @@ cryptography==39.0.1
 docker==6.0.1
 fabric==2.7.1
 filelock==3.9.0
-invoke==1.7.3
+invoke==2.0.0
 kubernetes==25.3.0
 msgpack==1.0.4
 paramiko==2.12.0

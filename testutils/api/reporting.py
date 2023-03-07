@@ -19,6 +19,7 @@ URL_INTERNAL_DEVICES_SEARCH = "/tenants/{tenant_id}/devices/search"
 
 URL_MGMT = "/api/management/v1/reporting"
 URL_MGMT_DEVICES_SEARCH = "/devices/search"
+URL_MGMT_DEPLOYMENTS_DEVICES_SEARCH = "/deployments/devices/search"
 
 REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS = 4.0
 

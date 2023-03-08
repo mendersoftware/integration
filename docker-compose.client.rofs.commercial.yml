@@ -5,4 +5,4 @@ services:
     # mender-client
     #
     mender-client:
-        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.5.x
+        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.5.1

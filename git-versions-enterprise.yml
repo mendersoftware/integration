@@ -8,31 +8,31 @@ services:
     # backend enterprise services
     #
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:4.2.x
+        image: registry.mender.io/mendersoftware/deployments-enterprise:4.2.2
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:4.2.x
+        image: registry.mender.io/mendersoftware/inventory-enterprise:4.2.1
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:2.2.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise:2.2.2
 
     mender-workflows-worker:
         image: registry.mender.io/mendersoftware/workflows-enterprise-worker:master
 
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:3.4.x
+        image: registry.mender.io/mendersoftware/tenantadm:3.4.1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:1.18.x
+        image: registry.mender.io/mendersoftware/useradm-enterprise:1.18.2
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:3.0.x
+        image: registry.mender.io/mendersoftware/auditlogs:3.0.2
 
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.x
+        image: registry.mender.io/mendersoftware/mtls-ambassador:1.0.2
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:1.2.x
+        image: registry.mender.io/mendersoftware/devicemonitor:1.2.1
 
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:3.2.x
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:3.2.2

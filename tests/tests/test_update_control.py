@@ -36,6 +36,14 @@ from ..MenderAPI import (
 
 
 class TestUpdateControlEnterprise:
+    def bp(self):
+        if not self.DEBUG:
+            return
+        t = "/tmp/bp" + str(self.bpindex)
+        while not os.path.exists(t):
+            time.sleep(0.1)
+        self.bpindex = self.bpindex + 1
+
     def test_update_control(
         self, enterprise_no_client, valid_image_with_mender_conf,
     ):
@@ -45,7 +53,9 @@ class TestUpdateControlEnterprise:
         client has reported the paused substate back to the server, all the way
         until the deployment is successfully finished.
         """
-
+        self.DEBUG = True
+        self.bpindex = 0
+        self.bp()
         uuidv4 = str(uuid.uuid4())
         tname = "test.mender.io-{}".format(uuidv4)
         email = "some.user+{}@example.com".format(uuidv4)
@@ -98,6 +108,7 @@ class TestUpdateControlEnterprise:
         # Query the deployment, and verify that the map returned contains the
         # deployment ID
         res_json = deploy.get_deployment(deployment_id)
+        self.bp()
         assert deployment_id == res_json.get("update_control_map").get("id"), res_json
 
         # Wait for the device to pause in ArtifactInstall

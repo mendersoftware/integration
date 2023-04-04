@@ -14,6 +14,7 @@
 import logging
 import pytest
 import uuid
+import time
 
 import testutils.api.deployments as deployments
 import testutils.api.deviceauth as deviceauth
@@ -21,6 +22,7 @@ import testutils.api.inventory as inventory
 import testutils.api.useradm as useradm
 import testutils.api.deviceconfig as deviceconfig
 from testutils.api import iot_manager
+import testutils.api.reporting as reporting
 
 from testutils.common import (
     create_org,
@@ -1370,6 +1372,112 @@ class TestRBACv2DeploymentsToGroupEnterprise:
             path_params={"id": device_id},
         )
         assert r.status_code == test_case["move_device_between_groups_status_code"]
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "Test RBAC: deployment reporting search",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "DeployToDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                            {
+                                "name": "ReadDevices",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                        ],
+                    },
+                ],
+                "device_groups": {"test": 3, "production": 3, "staging": 2},
+                "deploy_group": "test",
+                "status_code": 201,
+                "number_of_search_results": 3,
+            },
+        ],
+    )
+    @pytest.mark.storage_test
+    def test_reporting_deployment_search(self, clean_mongo, test_case):
+        """
+        Tests adding group restriction to roles and checking that users
+        are only allowed to search for deployment created for their group.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "some.user+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(tenant.users[0].token, test_case["roles"])
+        test_case["user"]["name"] = test_case["user"]["name"].replace("UUID", uuidv4)
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+
+        # Initialize tenant's devices
+        grouped_devices = setup_tenant_devices(tenant, test_case["device_groups"])
+
+        # Upload a bogus artifact
+        artifact = Artifact("tester", ["qemux86-64"], payload="bogus")
+
+        dplmnt_MGMT = ApiClient(deployments.URL_MGMT)
+        rsp = dplmnt_MGMT.with_auth(tenant.users[0].token).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS,
+            files=(
+                (
+                    "artifact",
+                    ("artifact.mender", artifact.make(), "application/octet-stream"),
+                ),
+            ),
+        )
+        assert rsp.status_code == 201, rsp.text
+
+        # Attempt to create deployment with test user
+        rsp = dplmnt_MGMT.with_auth(test_user.token).call(
+            "POST",
+            deployments.URL_DEPLOYMENTS_GROUP.format(name=test_case["deploy_group"]),
+            body={"artifact_name": "tester", "name": "dplmnt"},
+        )
+        assert rsp.status_code == test_case["status_code"], rsp.text
+        self.logger.info("PASS: %s" % test_case["name"])
+
+        # perform normal update
+        api_dev_deploy = ApiClient(deployments.URL_DEVICES)
+        for dev in grouped_devices[test_case["deploy_group"]]:
+            resp = api_dev_deploy.with_auth(dev.token).call(
+                "GET",
+                deployments.URL_NEXT,
+                qs_params={"artifact_name": "tester", "device_type": "qemux86-64",},
+            )
+            assert resp.status_code == 204
+
+        # get device deployment from reporting
+        api_mgmt_rep = ApiClient(reporting.URL_MGMT)
+        rsp = api_mgmt_rep.with_auth(test_user.token).call(
+            "POST", reporting.URL_MGMT_DEVICES_SEARCH, {}
+        )
+        # wait for data to propagate to reporting
+        # and get device deployments from reporting
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+        r = api_mgmt_rep.with_auth(test_user.token).call(
+            "POST", reporting.URL_MGMT_DEPLOYMENTS_DEVICES_SEARCH, {}
+        )
+        assert r.status_code == 200
+        dd = r.json()
+        assert len(dd) == test_case["number_of_search_results"]
 
 
 class TestRBACGetEmailsByGroupEnterprise:

@@ -110,8 +110,7 @@ services:
             service: mender-base
         environment:
             - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
-            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
-            - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
+            - GENERATE_DELTA_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:
             - mender
         depends_on:

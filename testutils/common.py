@@ -89,14 +89,30 @@ class Authset:
 
 
 class Device:
-    def __init__(self, id, id_data, pubkey, tenant_token="", status=""):
+    def __init__(self, id, id_data, pubkey, tenant_token="", status="", privkey=""):
         self.id = id
         self.id_data = id_data
         self.pubkey = pubkey
+        self.privkey = privkey
         self.tenant_token = tenant_token
         self.authsets = []
         self.token = None
         self.status = status
+
+    def send_inventory(self):
+        invd = ApiClient(inventory.URL_DEV)
+        r = invd.with_auth(self.token).call(
+            "PATCH", inventory.URL_DEVICE_ATTRIBUTES, self.inventory
+        )
+        assert r.status_code == 200
+
+    def send_auth_request(self):
+        devauthd = ApiClient(deviceauth.URL_DEVICES)
+        body, sighdr = deviceauth.auth_req(
+            self.id_data, self.pubkey, self.privkey, self.tenant_token
+        )
+        r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+        return r
 
 
 class Tenant:
@@ -263,7 +279,7 @@ def make_pending_device(
         dauthd1, dauthm, id_data, pub, priv, utoken, tenant_token=tenant_token
     )
 
-    dev = Device(new_set.did, new_set.id_data, pub, tenant_token)
+    dev = Device(new_set.did, new_set.id_data, pub, tenant_token, privkey=priv)
 
     dev.authsets.append(new_set)
 

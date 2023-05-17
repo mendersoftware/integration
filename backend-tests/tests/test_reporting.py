@@ -13,6 +13,7 @@
 #    limitations under the License.
 import logging
 from urllib import request
+from datetime import date
 import pytest
 import time
 import uuid
@@ -31,6 +32,8 @@ from testutils.common import (
     create_user,
     create_org,
     make_accepted_device,
+    make_pending_device,
+    change_authset_status,
     mongo,
     useExistingTenant,
 )
@@ -55,7 +58,7 @@ def dict_to_inventoryattrs(d, scope="inventory"):
     return attr_list
 
 
-def add_devices_to_tenant(tenant, dev_inventories):
+def add_devices_to_tenant(tenant, dev_inventories, status="accepted"):
     try:
         tenant.devices
     except AttributeError:
@@ -72,22 +75,28 @@ def add_devices_to_tenant(tenant, dev_inventories):
     tenant.api_token = utoken
 
     for inv in dev_inventories:
-        device = make_accepted_device(
-            devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
-        )
-        tenant.devices.append(device)
+        if status == "accepted":
+            device = make_accepted_device(
+                devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
+            )
+            tenant.devices.append(device)
+            attrs = dict_to_inventoryattrs(inv)
+            rsp = invd.with_auth(device.token).call(
+                "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
+            )
+            assert rsp.status_code == 200
+        elif status == "pending":
+            device = make_pending_device(
+                devauthd, devauthm, utoken, tenant_token=tenant.tenant_token
+            )
+            tenant.devices.append(device)
 
-        attrs = dict_to_inventoryattrs(inv)
-        rsp = invd.with_auth(device.token).call(
-            "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
-        )
-        assert rsp.status_code == 200
         device.inventory = inv
 
     return tenant
 
 
-def add_devices_to_user(user, dev_inventories):
+def add_devices_to_user(user, dev_inventories, status="accepted"):
     try:
         user.devices
     except AttributeError:
@@ -103,14 +112,19 @@ def add_devices_to_user(user, dev_inventories):
     user.api_token = utoken
 
     for inv in dev_inventories:
-        device = make_accepted_device(devauthd, devauthm, utoken)
-        user.devices.append(device)
+        if status == "accepted":
+            device = make_accepted_device(devauthd, devauthm, utoken)
+            user.devices.append(device)
 
-        attrs = dict_to_inventoryattrs(inv)
-        rsp = invd.with_auth(device.token).call(
-            "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
-        )
-        assert rsp.status_code == 200
+            attrs = dict_to_inventoryattrs(inv)
+            rsp = invd.with_auth(device.token).call(
+                "PATCH", inventory.URL_DEVICE_ATTRIBUTES, body=attrs
+            )
+            assert rsp.status_code == 200
+        elif status == "pending":
+            device = make_pending_device(devauthd, devauthm, utoken)
+            user.devices.append(device)
+
         device.inventory = inv
 
     return user
@@ -149,6 +163,30 @@ def user_reporting(user):
 
 
 @pytest.fixture(scope="function")
+def user_reporting_pending(user):
+    add_devices_to_user(
+        user,
+        [
+            {"artifact": "v1", "py3": "3.3", "py2": "2.7", "idx": 0},
+            {"artifact": ["v1", "v2"], "py3": "3.5", "py2": "2.7", "idx": 1},
+            {"artifact": ["v1", "v2"], "py2": "2.6", "idx": 2},
+            {"artifact": ["v1", "v2"], "py2": "2.7", "idx": 3},
+            {"artifact": "v2", "py3": "3.5", "py2": "2.7", "idx": 4},
+            {"artifact": "v2", "py3": "3.6", "py2": "2.7", "idx": 5},
+            {"artifact": ["v2", "v3"], "py3": "3.6", "idx": 6},
+            {"artifact": ["v2", "v3"], "py3": "3.7", "idx": 7},
+            {"artifact": ["v2", "v3"], "py3": "3.7", "idx": 8},
+            {"artifact": ["v1", "v2", "v3"], "py3": "3.8", "idx": 9},
+        ],
+        "pending",
+    )
+    # sleep a few seconds waiting for the data propagation to the reporting service
+    # and the Elasticsearch indexing to complete
+    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+    return user
+
+
+@pytest.fixture(scope="function")
 def tenant_ent(clean_mongo):
     # Initialize tenants and devices
     uuidv4 = str(uuid.uuid4())
@@ -172,6 +210,38 @@ def tenant_ent(clean_mongo):
             {"artifact": ["v2", "v3"], "py3": "3.7", "idx": 8},
             {"artifact": ["v1", "v2", "v3"], "py3": "3.8", "idx": 9},
         ],
+    )
+    # sleep a few seconds waiting for the data propagation to the reporting service
+    # and the Elasticsearch indexing to complete
+    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+    return tenant_ent
+
+
+@pytest.fixture(scope="function")
+def tenant_ent_pending(clean_mongo):
+    # Initialize tenants and devices
+    uuidv4 = str(uuid.uuid4())
+    tenant, username, password = (
+        "test.mender.io-" + uuidv4,
+        "some.user+" + uuidv4 + "@example.com",
+        "secretsecret",
+    )
+    tenant_ent = create_org(tenant, username, password, "enterprise")
+    add_devices_to_tenant(
+        tenant_ent,
+        [
+            {"artifact": "v1", "py3": "3.3", "py2": "2.7", "idx": 0},
+            {"artifact": ["v1", "v2"], "py3": "3.5", "py2": "2.7", "idx": 1},
+            {"artifact": ["v1", "v2"], "py2": "2.6", "idx": 2},
+            {"artifact": ["v1", "v2"], "py2": "2.7", "idx": 3},
+            {"artifact": "v2", "py3": "3.5", "py2": "2.7", "idx": 4},
+            {"artifact": "v2", "py3": "3.6", "py2": "2.7", "idx": 5},
+            {"artifact": ["v2", "v3"], "py3": "3.6", "idx": 6},
+            {"artifact": ["v2", "v3"], "py3": "3.7", "idx": 7},
+            {"artifact": ["v2", "v3"], "py3": "3.7", "idx": 8},
+            {"artifact": ["v1", "v2", "v3"], "py3": "3.8", "idx": 9},
+        ],
+        "pending",
     )
     # sleep a few seconds waiting for the data propagation to the reporting service
     # and the Elasticsearch indexing to complete
@@ -229,6 +299,28 @@ def tenant_os(clean_mongo):
     # and the Elasticsearch indexing to complete
     time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
     return tenant_os
+
+
+search_query_template = {
+    "page": 1,
+    "per_page": 1,
+    "filters": [
+        {"scope": "identity", "attribute": "status", "type": "$eq", "value": "pending",}
+    ],
+    "attributes": [
+        {"scope": "identity", "attribute": "status"},
+        {"scope": "inventory", "attribute": "artifact_name"},
+        {"scope": "inventory", "attribute": "device_type"},
+        {"scope": "inventory", "attribute": "mender_is_gateway"},
+        {"scope": "inventory", "attribute": "mender_gateway_system_id"},
+        {"scope": "inventory", "attribute": "rootfs-image.version"},
+        {"scope": "monitor", "attribute": "alerts"},
+        {"scope": "system", "attribute": "created_ts"},
+        {"scope": "system", "attribute": "updated_ts"},
+        {"scope": "system", "attribute": "group"},
+        {"scope": "tags", "attribute": "name"},
+    ],
+}
 
 
 @pytest.mark.skipif(
@@ -1219,3 +1311,113 @@ class TestReportingSearch:
                 for i, dev in enumerate(test_case_response):
                     assert dev["id"] == body[i]["id"], "Unexpected device in response"
                     assert_device_attributes(dev, body[i])
+
+
+@pytest.mark.skipif(
+    useExistingTenant(), reason="not feasible to test with existing tenant",
+)
+@pytest.mark.skipif(
+    isK8S(),
+    reason="reporting service not deployed to staging or production environment",
+)
+class TestLastCheckInEnterprise:
+    @property
+    def logger(self):
+        try:
+            return self._logger
+        except AttributeError:
+            self._logger = logging.getLogger(self.__class__.__name__)
+        return self._logger
+
+    def test_reporting_search(self, tenant_ent_pending):
+        global search_query_template
+        reporting_client = ApiClient(reporting.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        for d in tenant_ent_pending.devices:
+            d.send_auth_request()
+
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+
+        search_query = search_query_template
+        search_query["per_page"] = len(tenant_ent_pending.devices)
+        search_query["filters"][0]["value"] = "pending"
+        rsp = reporting_client.with_auth(tenant_ent_pending.api_token).call(
+            "POST", reporting.URL_MGMT_DEVICES_SEARCH, search_query
+        )
+        assert len(rsp.json()) == len(tenant_ent_pending.devices)
+        device_check_in_key = "check_in_time"
+        for j in rsp.json():
+            assert not device_check_in_key in j
+
+        today = date.today()
+        for d in tenant_ent_pending.devices:
+            aset_id = d.authsets[0].id
+            change_authset_status(
+                devauthm, d.id, aset_id, "accepted", tenant_ent_pending.api_token
+            )
+            d.send_auth_request()
+
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+        search_query = search_query_template
+        search_query["per_page"] = len(tenant_ent_pending.devices)
+        search_query["filters"][0]["value"] = "accepted"
+        rsp = reporting_client.with_auth(tenant_ent_pending.api_token).call(
+            "POST", reporting.URL_MGMT_DEVICES_SEARCH, search_query
+        )
+        assert len(rsp.json()) == len(tenant_ent_pending.devices)
+        device_check_in_key = "check_in_time"
+        date_string = today.strftime("%Y-%m-%d")
+        for j in rsp.json():
+            assert device_check_in_key in j
+            assert j[device_check_in_key] == f"{date_string}T00:00:00Z"
+
+
+class TestLastCheckIn:
+    @property
+    def logger(self):
+        try:
+            return self._logger
+        except AttributeError:
+            self._logger = logging.getLogger(self.__class__.__name__)
+        return self._logger
+
+    def test_reporting_search(self, user_reporting_pending):
+        global search_query_template
+        reporting_client = ApiClient(reporting.URL_MGMT)
+        devauthm = ApiClient(deviceauth.URL_MGMT)
+        for d in user_reporting_pending.devices:
+            d.send_auth_request()
+
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+        search_query = search_query_template
+        search_query["per_page"] = len(user_reporting_pending.devices)
+        search_query["filters"][0]["value"] = "pending"
+        rsp = reporting_client.with_auth(user_reporting_pending.api_token).call(
+            "POST", reporting.URL_MGMT_DEVICES_SEARCH, search_query
+        )
+        assert len(rsp.json()) == len(user_reporting_pending.devices)
+        device_check_in_key = "check_in_time"
+        for j in rsp.json():
+            assert not device_check_in_key in j
+
+        today = date.today()
+        for d in user_reporting_pending.devices:
+            aset_id = d.authsets[0].id
+            change_authset_status(
+                devauthm, d.id, aset_id, "accepted", user_reporting_pending.api_token
+            )
+            d.send_auth_request()
+
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+        search_query = search_query_template
+        search_query["per_page"] = len(user_reporting_pending.devices)
+        search_query["filters"][0]["value"] = "accepted"
+        rsp = reporting_client.with_auth(user_reporting_pending.api_token).call(
+            "POST", reporting.URL_MGMT_DEVICES_SEARCH, search_query
+        )
+        assert len(rsp.json()) == len(user_reporting_pending.devices)
+        device_check_in_key = "check_in_time"
+        date_string = today.strftime("%Y-%m-%d")
+        for j in rsp.json():
+            assert device_check_in_key in j
+            assert j[device_check_in_key] == f"{date_string}T00:00:00Z"

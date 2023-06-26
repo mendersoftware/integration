@@ -2,6 +2,8 @@
 
 ./verify-docker-versions
 
+# Detect docker-compose command
+DOCKER_COMPOSE_COMMAND=$(docker compose version &>/dev/null && echo 'docker compose' || echo 'docker-compose')
 # For the integration tests the name of the docker-compose project is generated
 # by pytest. For users, we use the folder name, but strip out a few characters
 # that aren't allowed.
@@ -148,7 +150,7 @@ pull_docker_containers() {
 
     if [[ "$?" -eq 1 ]]; then
         compose_args=""
-        docker_compose_output=$(docker-compose pull -h)
+        docker_compose_output=$(${DOCKER_COMPOSE_COMMAND} pull -h)
 
         # If --no-parallel option exists, it means that docker-compose is
         # running a version where --parallel is default and will warn about
@@ -160,7 +162,7 @@ pull_docker_containers() {
             compose_args="--parallel"
         fi
 
-        docker-compose pull ${compose_args}
+        ${DOCKER_COMPOSE_COMMAND} pull ${compose_args}
     fi
 }
 
@@ -420,7 +422,7 @@ follow_logs() {
 }
 
 run_compose_command() {
-    docker-compose \
+    ${DOCKER_COMPOSE_COMMAND} \
             $DEMO_FILES \
             -p ${DOCKER_COMPOSE_PROJECT_NAME} \
             $EXTRA_FILES "$@"

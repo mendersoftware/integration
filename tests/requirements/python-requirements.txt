@@ -4,8 +4,6 @@
 #
 #    pip-compile python-requirements.in
 #
-attrs==23.1.0
-    # via pytest
 bcrypt==4.0.1
     # via paramiko
 cachetools==5.3.1
@@ -28,8 +26,6 @@ dnspython==2.3.0
     # via pymongo
 docker==6.0.1
     # via -r python-requirements.in
-exceptiongroup==1.1.1
-    # via pytest
 execnet==1.9.0
     # via pytest-xdist
 fabric==2.7.1
@@ -82,7 +78,7 @@ pymongo==4.3.3
     # via -r python-requirements.in
 pynacl==1.5.0
     # via paramiko
-pytest==7.2.0
+pytest==7.4.0
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -125,8 +121,6 @@ six==1.16.0
     #   python-dateutil
 stripe==5.0.0
     # via -r python-requirements.in
-tomli==2.0.1
-    # via pytest
 urllib3==1.26.13
     # via
     #   -r python-requirements.in

@@ -245,7 +245,7 @@ services:
         command: --automigrate
 
     mender-mongo-2:
-        image: mongo:4.4
+        image: mongo:5.0
         extends:
             file: common.yml
             service: mender-base

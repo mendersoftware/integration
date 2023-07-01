@@ -119,7 +119,7 @@ six==1.16.0
     #   paramiko
     #   pathlib2
     #   python-dateutil
-stripe==5.0.0
+stripe==5.4.0
     # via -r python-requirements.in
 urllib3==1.26.13
     # via

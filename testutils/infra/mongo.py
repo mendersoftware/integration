@@ -27,7 +27,7 @@ class MongoClient:
         dbs = [
             d
             for d in dbs
-            if d not in ["local", "admin", "config", "reporting", "workflows"]
+            if d not in ["local", "admin", "config", "workflows"]
         ]
         for d in dbs:
             self.client.drop_database(d)

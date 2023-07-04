@@ -21,8 +21,6 @@ services:
     #
     mender-deployments:
         image: mendersoftware/deployments:mender-master
-        environment:
-            DEPLOYMENTS_REPORTING_ADDR: http://mender-reporting:8080
         extends:
             file: common.yml
             service: mender-base
@@ -125,40 +123,6 @@ services:
             - mender-mongo
         labels:
             mender.healthcheck.path: "/api/internal/v1/inventory/health"
-
-    #
-    # mender-reporting
-    #
-    mender-reporting:
-        image: mendersoftware/reporting:mender-master
-        command: server --automigrate
-        environment:
-            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-opensearch
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/reporting/health"
-
-    #
-    # mender-reporting-indexer
-    #
-    mender-reporting-indexer:
-        image: mendersoftware/reporting:mender-master
-        command: indexer
-        environment:
-            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-opensearch
 
     #
     # mender-useradm
@@ -286,18 +250,6 @@ services:
         command: -js
         networks:
             - mender
-
-    mender-opensearch:
-        image: opensearchproject/opensearch:2.4.0
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        environment:
-            - "discovery.type=single-node"
-            - "plugins.security.disabled=true"
-            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
 networks:
     mender: null

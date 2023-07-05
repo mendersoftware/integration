@@ -31,6 +31,7 @@ from redo import retrier
 
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
+import testutils.api.reporting as reporting
 import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
@@ -50,8 +51,18 @@ def mongo():
 def clean_mongo(mongo):
     """Fixture setting up a clean (i.e. empty database). Yields
     pymongo.MongoClient connected to the DB."""
+    opensearch_cleanup()
     mongo_cleanup(mongo)
     yield mongo.client
+
+
+def opensearch_cleanup():
+    try:
+        requests.post(
+            reporting.OPENSEARCH_DELETE_URL, json={"query": {"match_all": {}}}
+        )
+    except requests.RequestException:
+        pass
 
 
 def mongo_cleanup(mongo):
@@ -601,5 +612,9 @@ def setup_tenant_devices(tenant, device_groups):
             device.group = group
             grouped_devices[group].append(device)
             tenant.devices.append(device)
+
+    # sleep a few seconds waiting for the data propagation to the reporting service
+    # and the Elasticsearch indexing to complete
+    time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
 
     return grouped_devices

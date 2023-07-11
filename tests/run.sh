@@ -213,6 +213,10 @@ if [ -n "$K8S" ]; then
     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
 fi
 
+while [[ ! -f /tmp/release ]]; do
+  sleep 1;
+done
+
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \

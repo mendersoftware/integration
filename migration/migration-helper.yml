@@ -5,7 +5,7 @@ services:
     # mongo migration helper service
     #
     mongo-helper:
-        image: mongo:5.0
+        image: mongo:4.4
         networks:
             - mender
         volumes:

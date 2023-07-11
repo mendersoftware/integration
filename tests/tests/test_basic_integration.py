@@ -47,7 +47,7 @@ class DeviceAuthFailover(DeviceAuthV2):
 
     def get_devauth_base_path(self):
         return "https://%s/api/management/v2/devauth/" % (
-            get_container_manager().get_ip_of_service("mender-api-gateway-2")[0]
+            get_container_manager().get_ip_of_service("mender-api-gateway-1")[0]
         )
 
 

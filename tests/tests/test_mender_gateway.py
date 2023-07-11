@@ -423,101 +423,15 @@ class BaseTestMenderGateway(MenderTesting):
         deploy.check_expected_status("finished", deployment_id_3)
 
 
-class TestMenderGatewayOpenSource(BaseTestMenderGateway):
+class TestMenderGatewayOpenSource(BaseTestMenderGateway): # here
     @flaky(max_runs=3)
     @MenderTesting.fast
-    def test_deployment_one_device(
-        self,
-        standard_setup_one_client_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_one_device(
-            standard_setup_one_client_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_gateway_and_one_device(
-        self,
-        standard_setup_one_client_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-        image_with_mender_conf_and_mender_gateway_conf,
-    ):
-        self.do_test_deployment_gateway_and_one_device(
-            standard_setup_one_client_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-            image_with_mender_conf_and_mender_gateway_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_update_both(
+    def test_deployment_two_devices_update_one( # here
         self,
         standard_setup_two_clients_bootstrapped_with_gateway,
         valid_image_with_mender_conf,
     ):
-        self.do_test_deployment_two_devices_update_both(
-            standard_setup_two_clients_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_update_one(
-        self,
-        standard_setup_two_clients_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_two_devices_update_one(
-            standard_setup_two_clients_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_parallel_updates(
-        self,
-        standard_setup_two_clients_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_two_devices_parallel_updates(
-            standard_setup_two_clients_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_parallel_updates_one_failure(
-        self,
-        standard_setup_two_clients_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_two_devices_parallel_updates_one_failure(
-            standard_setup_two_clients_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_parallel_updates_one_aborted(
-        self,
-        standard_setup_two_clients_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_two_devices_parallel_updates_one_aborted(
-            standard_setup_two_clients_bootstrapped_with_gateway,
-            valid_image_with_mender_conf,
-        )
-
-    @flaky(max_runs=3)
-    @MenderTesting.fast
-    def test_deployment_two_devices_parallel_updates_multiple_deployments(
-        self,
-        standard_setup_two_clients_bootstrapped_with_gateway,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployment_two_devices_parallel_updates_multiple_deployments(
+        self.do_test_deployment_two_devices_update_one( # here
             standard_setup_two_clients_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
         )

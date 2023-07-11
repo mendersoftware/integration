@@ -16,6 +16,7 @@ import time
 import json
 import requests
 import pytest
+import pdb
 
 from . import logger
 from . import get_container_manager
@@ -54,6 +55,7 @@ class DeviceAuthV2:
         starttime = time.time()
         sleeptime = 5
 
+        pdb.set_trace()
         got_devices = False
         while starttime + max_wait >= time.time():
             time.sleep(sleeptime)

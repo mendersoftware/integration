@@ -159,9 +159,9 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
             # datetime does not have an RFC3339 parser, but we can convert
             # the timestamp to a compatible ISO format by removing
             # fractions and replacing the Zulu timezone with GMT.
-            updated_ts = datetime.fromisoformat(
-                device["updated_ts"].split(".")[0] + "+00:00"
-            )
+            updated_ts = datetime.fromisoformat(device["updated_ts"].split(".")[0])
+            updated_ts = updated_ts.replace(tzinfo=timezone.utc)
+            update_after = update_after.replace(tzinfo=timezone.utc)
             if updated_ts > update_after:
                 num_updated += 1
             else:

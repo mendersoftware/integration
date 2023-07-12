@@ -3,12 +3,15 @@
 # removes the current user account, acts as a password reset utility
 # after resetting the account, the user will be prompted to re-create it; no data will be lost
 
+# Detect docker-compose command
+DOCKER_COMPOSE_COMMAND=$(docker compose version &>/dev/null && echo 'docker compose' || echo 'docker-compose')
+
 while true; do
     read -p "This will reset the user account. Do you want to continue (y/n)" -n 1 yn
     echo
     case $yn in
         [y]* )
-            exec docker-compose \
+            exec ${DOCKER_COMPOSE_COMMAND} \
                 exec \
                 mender-mongo-useradm \
                 mongo useradm --eval "db.users.remove({})"

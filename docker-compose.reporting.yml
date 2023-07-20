@@ -8,6 +8,28 @@ services:
         environment:
             DEPLOYMENTS_REPORTING_ADDR: http://mender-reporting:8080
 
+
+    #
+    # mender-device-auth
+    #
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_ENABLE_REPORTING: 1
+
+    #
+    # mender-gui
+    #
+    mender-gui:
+        environment:
+            HAVE_REPORTING: 1
+
+    #
+    # mender-inventory
+    #
+    mender-inventory:
+        environment:
+            INVENTORY_ENABLE_REPORTING: 1
+
     #
     # mender-reporting
     #

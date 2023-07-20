@@ -49,7 +49,6 @@ services:
             - MENDER_DEB_PACKAGE_VERSION
             - HAVE_DEVICECONNECT=1
             - HAVE_DEVICECONFIG=1
-            - HAVE_REPORTING=1
 
     #
     # mender-api-gateway
@@ -94,7 +93,6 @@ services:
         image: mendersoftware/deviceauth:mender-3.6.x
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
-            DEVICEAUTH_ENABLE_REPORTING: 1
         extends:
             file: common.yml
             service: mender-base
@@ -113,7 +111,6 @@ services:
         image: mendersoftware/inventory:mender-3.6.x
         environment:
             INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
-            INVENTORY_ENABLE_REPORTING: 1
         extends:
             file: common.yml
             service: mender-base

@@ -12,7 +12,9 @@ pyrsistent==0.18.1
 pytest==7.1.0
 pytest-forked==1.4.0
 pytest-html==3.1.1
-pytest-metadata==2.0.1
+# pytest-metadata 2.0.1 not compatible with python 3.11.4
+pytest-metadata ==2.0.4
+pyyaml==6.0.1
 pytest-timeout==2.1.0
 pytest-xdist==2.5.0
 redo==2.0.4

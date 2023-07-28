@@ -33,7 +33,7 @@ RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.g
     apt-get update && apt-get install mender-artifact
 RUN mender-artifact write bootstrap-artifact \
         --artifact-name original \
-        --device-type docker-client \
+        --device-type generic-x86_64 \
         --provides "rootfs-image.version:original" \
         --output-path /bootstrap.mender
 
@@ -45,7 +45,7 @@ RUN jq ".User=\"root\"" \
 WORKDIR /src/mender-configure-module
 RUN make DESTDIR=/mender-install install
 
-RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
+RUN mkdir -p /mender-install/var/lib/mender && echo device_type=generic-x86_64 > /mender-install/var/lib/mender/device_type
 
 FROM ubuntu:22.04
 

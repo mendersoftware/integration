@@ -8,7 +8,7 @@ services:
         image: mendersoftware/mender-artifact:3.10.x
 
     mender-cli:
-        image: mendersoftware/mender-cli:1.10.x
+        image: mendersoftware/mender-cli:1.11.x
 
     mender-binary-delta:
         image: mendersoftware/mender-binary-delta:1.4.x

@@ -46,7 +46,7 @@ invoke==1.7.3
     #   fabric
 kubernetes==25.3.0
     # via -r python-requirements.in
-msgpack==1.0.4
+msgpack==1.0.5
     # via -r python-requirements.in
 oauthlib==3.2.2
     # via requests-oauthlib

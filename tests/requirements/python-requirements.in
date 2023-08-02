@@ -4,7 +4,7 @@ fabric==2.7.1
 filelock==3.9.0
 invoke==1.7.3
 kubernetes==25.3.0
-msgpack==1.0.4
+msgpack==1.0.5
 paramiko==2.12.0
 py3dns==3.2.1
 pymongo==4.3.3

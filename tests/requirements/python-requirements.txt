@@ -56,7 +56,7 @@ packaging==23.1
     # via
     #   docker
     #   pytest
-paramiko==2.12.0
+paramiko==3.3.1
     # via
     #   -r python-requirements.in
     #   fabric
@@ -118,7 +118,6 @@ six==1.16.0
     # via
     #   google-auth
     #   kubernetes
-    #   paramiko
     #   pathlib2
     #   python-dateutil
 stripe==5.5.0

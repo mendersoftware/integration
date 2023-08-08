@@ -10,7 +10,7 @@ py3dns==3.2.1
 pymongo==4.3.3
 pytest==7.4.0
 pytest-html==3.2.0
-pytest-metadata==2.0.4
+pytest-metadata==3.0.0
 pytest-timeout==2.1.0
 pytest-xdist==3.1.0
 redo==2.0.4

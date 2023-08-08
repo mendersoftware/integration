@@ -89,7 +89,7 @@ pytest==7.4.0
     #   pytest-xdist
 pytest-html==3.2.0
     # via -r python-requirements.in
-pytest-metadata==2.0.4
+pytest-metadata==3.0.0
     # via
     #   -r python-requirements.in
     #   pytest-html

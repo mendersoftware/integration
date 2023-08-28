@@ -15,6 +15,8 @@
 import json
 import tempfile
 import time
+import os
+
 
 import pytest
 
@@ -271,9 +273,19 @@ class BaseTestInventory(MenderTesting):
         ), "The device has not updated the inventory after the udpate"
 
 
+def bp(i):
+    t="/tmp/bp"+str(i)
+    logger.info(f"waiting on {t}")
+    while not os.path.exists(t):
+        time.sleep(0.1)
+    logger.info(f"released on {t}")
+    os.remove(t)
+
+
 class TestInventoryOpenSource(BaseTestInventory):
     @MenderTesting.fast
     def test_inventory(self, standard_setup_one_client_bootstrapped):
+        bp(1)
         self.do_test_inventory(standard_setup_one_client_bootstrapped)
 
     @MenderTesting.fast

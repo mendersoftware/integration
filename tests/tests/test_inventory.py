@@ -134,6 +134,7 @@ class BaseTestInventory(MenderTesting):
                             in attrs
                         )
                         # Should be in inventory because it comes with artifact.
+                        logger.info("alf inv dbg attr before 137 %s." % json.dumps(attrs))
                         assert (
                             json.loads(
                                 '{"name": "rootfs-image.swname.version", "value": "v2"}'

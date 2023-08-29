@@ -15,6 +15,7 @@
 import json
 import tempfile
 import time
+import os
 
 import pytest
 
@@ -36,6 +37,15 @@ exit 0
     return get_script_artifact(
         script, artifact_name, device_type, output_path, extra_args
     )
+
+
+def bp(i):
+    t="/tmp/bp"+str(i)
+    logger.info(f"waiting on {t}")
+    while not os.path.exists(t):
+        time.sleep(0.1)
+    logger.info(f"released on {t}")
+    os.remove(t)
 
 
 class BaseTestInventory(MenderTesting):
@@ -134,7 +144,9 @@ class BaseTestInventory(MenderTesting):
                             in attrs
                         )
                         # Should be in inventory because it comes with artifact.
-                        logger.info("alf inv dbg attr before 137 %s." % json.dumps(attrs))
+                        bp(0)
+                        logger.info("alf inv dbg id %s attr before 137 %s." % (device["id"], json.dumps(attrs)))
+                        bp(1)
                         assert (
                             json.loads(
                                 '{"name": "rootfs-image.swname.version", "value": "v2"}'

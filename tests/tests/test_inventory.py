@@ -78,6 +78,8 @@ class BaseTestInventory(MenderTesting):
         deploy_simple_artifact(
             "simple-artifact-2", "--software-name swname --software-version v2"
         )
+        device_update_timeout = 8*60
+        time.sleep(device_update_timeout)
 
         # verify the inventory
         latest_exception = None

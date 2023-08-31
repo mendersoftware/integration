@@ -6,7 +6,7 @@ invoke==1.7.3
 kubernetes==27.2.0
 msgpack==1.0.5
 paramiko==3.3.1
-py3dns==3.2.1
+py3dns==4.0.0
 pymongo==4.3.3
 pytest==7.4.0
 pytest-html==3.2.0

@@ -120,8 +120,10 @@ six==1.16.0
     #   kubernetes
     #   pathlib2
     #   python-dateutil
-stripe==5.5.0
+stripe==6.2.0
     # via -r python-requirements.in
+typing-extensions==4.7.1
+    # via stripe
 urllib3==1.26.16
     # via
     #   -r python-requirements.in

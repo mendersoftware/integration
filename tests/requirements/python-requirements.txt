@@ -135,5 +135,5 @@ websocket-client==1.6.1
     # via
     #   docker
     #   kubernetes
-websockets==10.4
+websockets==11.0.3
     # via -r python-requirements.in

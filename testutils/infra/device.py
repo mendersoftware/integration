@@ -129,7 +129,7 @@ class MenderDevice:
             raise (raise_exception)
 
     def yocto_id_installed_on_machine(self):
-        cmd = "mender show-artifact"
+        cmd = "mender-update show-artifact"
         output = self.run(cmd, hide=True).strip()
         return output
 

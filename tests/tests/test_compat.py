@@ -28,6 +28,7 @@ from testutils.infra.device import MenderDevice
 from testutils.common import create_org, create_user
 from testutils.api.client import ApiClient
 from testutils.api import deviceauth, useradm, inventory, deployments
+from ..MenderAPI import logger
 
 from .. import conftest
 
@@ -141,6 +142,7 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
     while num_updated < num_devices:
         if datetime.now(timezone.utc) > deadline:
             pytest.fail("timeout waiting for devices to submit inventory")
+            logger.info("assert_inventory_updated.num_devices: " + str(num_devices))
 
         rsp = api_inventory.call(
             "GET", inventory.URL_DEVICES, qs_params={"per_page": num_devices * 2}
@@ -161,7 +163,15 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
             # fractions and replacing the Zulu timezone with GMT.
             updated_ts = datetime.fromisoformat(device["updated_ts"].split(".")[0])
             updated_ts = updated_ts.replace(tzinfo=timezone.utc)
+            logger.info(
+                "assert_inventory_updated.updated_ts: "
+                + datetime.strptime(str(updated_ts), "%Y-%m-%d %H:%M:%S")
+            )
             update_after = update_after.replace(tzinfo=timezone.utc)
+            logger.info(
+                "assert_inventory_updated.updated_after: "
+                + datetime.strptime(str(updated_after), "%Y-%m-%d %H:%M:%S")
+            )
             if updated_ts > update_after:
                 num_updated += 1
             else:

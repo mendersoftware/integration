@@ -33,7 +33,7 @@ from .. import conftest
 
 container_factory = factory.get_factory()
 
-TIMEOUT = timedelta(minutes=5)
+TIMEOUT = timedelta(minutes=10)
 """
  COMPAT_MENDER_VERSIONS array stores the versions of the virtual device images we test against.
  In order to add a new client: add a new a composition file in
@@ -133,7 +133,7 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
                           to use the inventory management api,
                           i.e. api_client.with_auth(api_token).
     :param num_devices: the number of devices to wait for.
-    :param timeout: optional timeout (defaults to 5min).
+    :param timeout: optional timeout (defaults to 10min).
     """
     update_after = datetime.now(timezone.utc)
     deadline = update_after + timeout

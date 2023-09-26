@@ -198,7 +198,7 @@ class BaseTestBasicIntegration(MenderTesting):
                 wait_count = 0
 
         def deployment_triggered_callback():
-            mender_device.run("mender check-update")
+            mender_device.run("mender-update check-update")
             logger.info("mender client has forced an update check")
 
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")

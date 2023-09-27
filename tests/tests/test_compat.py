@@ -126,9 +126,8 @@ def accept_devices(api_deviceauth, devices=None):
 
 def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
     """
-    Polls the inventory every second, checking the returned "updated_ts"
-    properties for each device, waiting for the value to update to a value
-    later than when this function was called.
+    Polls the inventory every second, checking all devices reported some
+    attributes with inventory scope.
     :param api_inventory: testutils.api.client.ApiClient setup and authorized
                           to use the inventory management api,
                           i.e. api_client.with_auth(api_token).
@@ -153,18 +152,16 @@ def assert_inventory_updated(api_inventory, num_devices, timeout=TIMEOUT):
         if len(dev_invs) < num_devices:
             time.sleep(1)
             continue
-        # Check if inventories has been updated since starting this loop
+        # Check if inventory attributes has been reported
         num_updated = 0
         for device in dev_invs:
-            # datetime does not have an RFC3339 parser, but we can convert
-            # the timestamp to a compatible ISO format by removing
-            # fractions and replacing the Zulu timezone with GMT.
-            updated_ts = datetime.fromisoformat(device["updated_ts"].split(".")[0])
-            updated_ts = updated_ts.replace(tzinfo=timezone.utc)
-            update_after = update_after.replace(tzinfo=timezone.utc)
-            if updated_ts > update_after:
-                num_updated += 1
-            else:
+            updated = False
+            for attr in device["attributes"]:
+                if attr["scope"] == "inventory":
+                    num_updated += 1
+                    updated = True
+                    break
+            if updated == False:
                 time.sleep(1)
                 break
 

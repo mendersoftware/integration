@@ -872,6 +872,8 @@ def test_git_to_buildparam():
         "mtls-ambassador": "MTLS_AMBASSADOR_REV",
         "deviceconnect": "DEVICECONNECT_REV",
         "mender-connect": "MENDER_CONNECT_REV",
+        "mender-setup": "MENDER_SETUP_REV",
+        "mender-snapshot": "MENDER_SNAPSHOT_REV",
         "deviceconfig": "DEVICECONFIG_REV",
         "devicemonitor": "DEVICEMONITOR_REV",
         "monitor-client": "MONITOR_CLIENT_REV",

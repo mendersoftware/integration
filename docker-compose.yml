@@ -57,24 +57,15 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: traefik:v2.8
+        image: traefik:v2.10
         extends:
             file: common.yml
             service: mender-base
-        # Enables the web UI and tells Traefik to listen to docker
-        command:
-            - --accesslog=true
-            - --entrypoints.http.address=:80
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.https.address=:443
-            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --providers.file.directory=/etc/traefik/config
         volumes:
             # So that Traefik can listen to the Docker events
             - /var/run/docker.sock:/var/run/docker.sock:ro
+            # Static configuration file
+            - ./config/traefik/static/traefik.yaml:/etc/traefik/traefik.yaml:ro
             # Dynamic configuration files
             - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
             - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro

@@ -57,7 +57,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: traefik:v2.8
+        image: traefik:v2.10
         extends:
             file: common.yml
             service: mender-base

@@ -44,7 +44,7 @@ invoke==1.7.3
     # via
     #   -r python-requirements.in
     #   fabric
-kubernetes==27.2.0
+kubernetes==28.1.0
     # via -r python-requirements.in
 msgpack==1.0.5
     # via -r python-requirements.in

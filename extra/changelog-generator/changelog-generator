@@ -384,7 +384,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
                 line = tracker_removed.strip(" ")
 
-            if re.match("^ticket: *none *$", line, re.IGNORECASE):
+            if re.match(r"^ticket: *none *$", line, re.IGNORECASE):
                 continue
 
             if not title_fetched:
@@ -392,7 +392,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 title_fetched = True
 
             match_changelog = re.match(
-                "^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
+                r"^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
             )
             if match_changelog:
                 if log_entry:
@@ -414,7 +414,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 # - From here, if [.:]+ then capture the rest in a new group
                 # - Else just expect end line
                 match_keyword = re.match(
-                    "^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
+                    r"^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
                     match_changelog.group(2),
                     re.IGNORECASE,
                 )
@@ -454,8 +454,8 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 continue
 
             for cancel_expr in [
-                "^ *Cancel-Changelog: *([0-9a-f]+).*",
-                "^This reverts commit ([0-9a-f]+).*",
+                r"^ *Cancel-Changelog: *([0-9a-f]+).*",
+                r"^This reverts commit ([0-9a-f]+).*",
             ]:
                 match = re.match(cancel_expr, line, re.IGNORECASE)
                 if match:
@@ -476,7 +476,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                     continue
 
             match = re.match(
-                "^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE
+                r"^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE
             )
             if match:
                 if log_entry:
@@ -494,7 +494,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
 
             # Use a slightly stricter filter for other "<something>-by:"
             # messages than for "Signed-off-by:", to avoid false positives.
-            match = re.match("^(Signed-off-by:|\S+-by:.*>\s*$)", line, re.IGNORECASE)
+            match = re.match(r"^(Signed-off-by:|\S+-by:.*>\s*$)", line, re.IGNORECASE)
             if match:
                 # Ignore such lines.
                 continue

@@ -15,7 +15,7 @@ pytest-timeout==2.1.0
 pytest-xdist==3.3.1
 redo==2.0.4
 requests==2.31.0
-urllib3==1.26.16
+urllib3==1.26.17
 websockets==11.0.3
 flaky==3.7.0
 stripe==6.6.0

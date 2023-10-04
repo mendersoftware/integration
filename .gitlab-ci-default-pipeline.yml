@@ -13,7 +13,7 @@ variables:
   LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
 
 test:extra-tools:
-  image: "python:3"
+  image: "python:3.11.6"
   stage: test
 
   before_script:

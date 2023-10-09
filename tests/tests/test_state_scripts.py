@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -733,7 +733,7 @@ class BaseTestStateScripts(MenderTesting):
 
             # Write this again in case it was corrupted above.
             with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
-                fd.write("2")
+                fd.write("3")
 
             # Then zip and copy them to QEMU host.
             subprocess.check_call(
@@ -771,7 +771,7 @@ class BaseTestStateScripts(MenderTesting):
                     if test_set.get("CorruptEtcScriptVersionIn") == script:
                         fd.write("printf '1000' > /etc/mender/scripts/version\n")
                     if test_set.get("RestoreEtcScriptVersionIn") == script:
-                        fd.write("printf '2' > /etc/mender/scripts/version\n")
+                        fd.write("printf '3' > /etc/mender/scripts/version\n")
 
             # Callback for our custom artifact maker
             def make_artifact(filename, artifact_name):

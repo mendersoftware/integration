@@ -130,7 +130,7 @@ services:
     # mender-reporting
     #
     mender-reporting:
-        image: mendersoftware/reporting:mender-master
+        image: mendersoftware/reporting:staging
         command: server --automigrate
         environment:
             REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
@@ -148,7 +148,7 @@ services:
     # mender-reporting-indexer
     #
     mender-reporting-indexer:
-        image: mendersoftware/reporting:mender-master
+        image: mendersoftware/reporting:staging
         command: indexer
         environment:
             REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"

@@ -8,3 +8,4 @@ make
 python3
 openssl1.1-compat
 jq
+gcompat

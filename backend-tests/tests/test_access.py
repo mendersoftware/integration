@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -438,7 +438,7 @@ def _make_trial_tenant():
     res = tadmi.call(
         "GET",
         tenantadm.URL_INTERNAL_TENANTS,
-        qs_params={"username": email},  # urllib.parse.quote(email)}
+        qs_params={"q": tname},  # urllib.parse.quote(email)}
     )
 
     assert res.status_code == 200

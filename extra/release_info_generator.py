@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -31,16 +31,20 @@ LtsEnd = namedtuple("LtsEnd", ["isExpired", "date"])
 releaseMatcher = compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)")
 tagMatcher = compile(r"tag:'(.*)' datetime:'(\d+)'")
 
-lastChecked = getenv("LAST_CHECKED", "2.2.0")
+lastChecked = getenv("LAST_CHECKED", "3.3.0")
 endOfToday = datetime.combine(datetime.now(), time.max)
 
 ltsChecks = {
     # until 3.1 all even releases were LTS
     "until-3.2": lambda minorVersion, minorValue: minorVersion < "3.2"
     and not int(minorValue) % 2,
-    # from 3.3 all odd releases are assumed to be LTS
+    # from 3.3 all odd releases were assumed to be LTS
     "from-3.3": lambda minorVersion, minorValue: minorVersion >= "3.2"
+    and minorVersion < "3.5"
     and int(minorValue) % 2,
+    # from 3.5 all even releases are assumed to be LTS
+    "from-3.5": lambda minorVersion, minorValue: minorVersion >= "3.5"
+    and not int(minorValue) % 2,
 }
 
 

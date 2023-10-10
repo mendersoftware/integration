@@ -15,6 +15,19 @@ services:
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1
 
+    mender-inventory:
+        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
+        environment:
+            INVENTORY_REDIS_ADDR: "mender-redis:6379"
+            INVENTORY_REDIS_USERNAME: ""
+            INVENTORY_REDIS_PASSWORD: ""
+            INVENTORY_REDIS_DB: "3"
+            INVENTORY_REDIS_TIMEOUT_SEC: "1"
+            INVENTORY_REDIS_LIMITS_EXPIRE_SEC: "1800"
+
+    mender-workflows-server:
+        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-master
+
     mender-workflows-worker:
         environment:
             HAVE_AUDITLOGS: 1
@@ -100,8 +113,7 @@ services:
             service: mender-base
         environment:
             - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
-            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
-            - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
+            - GENERATE_DELTA_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:
             - mender
         depends_on:

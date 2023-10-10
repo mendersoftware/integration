@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ class TestSecurityOpenSource(BaseTestSecurity):
                 try:
                     for host in exposed_hosts.split():
                         with contextlib.closing(
-                            ssl.wrap_socket(socket.socket())
+                            ssl.SSLContext().wrap_socket(socket.socket())
                         ) as sock:
                             logger.info("%s: connect to host with TLS" % host)
                             host, port = host.split(":")

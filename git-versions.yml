@@ -52,6 +52,12 @@ services:
     mender-connect:
         image: mendersoftware/mender-connect:2.1.0
 
+    mender-setup:
+        image: mendersoftware/mender-setup:master
+
+    mender-snapshot:
+        image: mendersoftware/mender-snapshot:master
+
     mender-configure-module:
         image: mendersoftware/mender-configure-module:1.0.4
 

@@ -24,8 +24,8 @@ http:
         - sec-headers
         - compression
       rule: >-
-        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants`) ||
-        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants/trial`)
+        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants/trial`) ||
+        Method(`OPTIONS`,`POST`) && PathPrefix(`/api/management/{version:v[0-9]+}/tenantadm/tenants/signup`)
       service: tenantadm
       tls: true
 

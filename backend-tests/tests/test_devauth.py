@@ -458,6 +458,7 @@ def make_devs_with_authsets(user, tenant_token=""):
     devices.append(dev)
 
     devices.sort(key=lambda dev: dev.id)
+    devices.sort(key=lambda dev: dev.status)
     return devices
 
 

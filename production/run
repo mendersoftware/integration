@@ -3,6 +3,8 @@ set -e
 
 ../verify-docker-versions
 
+# Detect docker-compose command
+DOCKER_COMPOSE_COMMAND=$(docker compose version &>/dev/null && echo 'docker compose' || echo 'docker-compose')
 # Pass this value on to the GUI container as an env variable
 export INTEGRATION_VERSION=$(git describe --tags --abbrev=0)
 # Parse the Mender-Artifact version used from the other-components.yml file's image tag
@@ -24,7 +26,7 @@ if [ -f ./config/enterprise.yml ]; then
     ENTERPRISE_PROD="-f ./config/enterprise.yml"
 fi
 
-exec docker-compose \
+exec ${DOCKER_COMPOSE_COMMAND} \
      -p menderproduction \
      -f ../docker-compose.yml \
      -f ../docker-compose.storage.minio.yml \

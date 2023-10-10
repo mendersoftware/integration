@@ -39,14 +39,14 @@ publish:versions:
     - git for-each-ref --shell --format="tag:%(refname:short) datetime:%(creatordate:format:%s)" "refs/tags/*" | sort -V -r > tags
     - python extra/release_info_generator.py
     - /root/.deno/bin/deno fmt versions.json
-    - hub clone mendersoftware/mender-docs-site && mv versions.json mender-docs-site/versions.json && cd mender-docs-site
+    - hub clone mendersoftware/mender-docs-site && mv versions.json mender-docs-site/releases/versions.json && cd mender-docs-site
     - git checkout -b update-versions-$(date +%s)
-    - "git add versions.json && git commit --signoff -m 'chore: Version information update'"
+    - "git add releases/versions.json && git commit --signoff -m 'chore: Version information update'"
     - hub pull-request --push --base mendersoftware:master --message "Version information update" --message "keeping up with the versions"
   artifacts:
     expire_in: 2w
     paths:
-      - versions.json
+      - mender-docs-site/releases/versions.json
     when: always
   rules:
     - if: $CI_COMMIT_TAG

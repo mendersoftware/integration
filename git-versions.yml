@@ -47,16 +47,22 @@ services:
     # client repositories - container and image names are placeholders
     #
     mender:
-        image: mendersoftware/mender:3.5.0
+        image: mendersoftware/mender:3.5.1
 
     mender-connect:
         image: mendersoftware/mender-connect:2.1.0
 
+    mender-setup:
+        image: mendersoftware/mender-setup:master
+
+    mender-snapshot:
+        image: mendersoftware/mender-snapshot:master
+
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:1.0.4
+        image: mendersoftware/mender-configure-module:1.1.1
 
     monitor-client:
-        image: mendersoftware/monitor-client:1.2.1
+        image: mendersoftware/monitor-client:1.3.0
 
     mender-gateway:
         image: mendersoftware/mender-gateway:1.1.0

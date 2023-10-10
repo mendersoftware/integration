@@ -57,7 +57,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: traefik:v2.8
+        image: traefik:v2.10
         extends:
             file: common.yml
             service: mender-base
@@ -130,7 +130,7 @@ services:
     # mender-reporting
     #
     mender-reporting:
-        image: mendersoftware/reporting:mender-master
+        image: mendersoftware/reporting:staging
         command: server --automigrate
         environment:
             REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
@@ -148,7 +148,7 @@ services:
     # mender-reporting-indexer
     #
     mender-reporting-indexer:
-        image: mendersoftware/reporting:mender-master
+        image: mendersoftware/reporting:staging
         command: indexer
         environment:
             REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
@@ -223,8 +223,6 @@ services:
             file: common.yml
             service: mender-base
         environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
-            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
             - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:
             - mender
@@ -269,7 +267,7 @@ services:
             mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
 
     mender-mongo:
-        image: mongo:4.4
+        image: mongo:5.0
         extends:
             file: common.yml
             service: mender-base
@@ -284,7 +282,7 @@ services:
                     - mongo-workflows
 
     mender-nats:
-        image: nats:2.6-alpine
+        image: nats:2.7.4-scratch
         command: -js
         networks:
             - mender

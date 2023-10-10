@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -872,6 +872,8 @@ def test_git_to_buildparam():
         "mtls-ambassador": "MTLS_AMBASSADOR_REV",
         "deviceconnect": "DEVICECONNECT_REV",
         "mender-connect": "MENDER_CONNECT_REV",
+        "mender-setup": "MENDER_SETUP_REV",
+        "mender-snapshot": "MENDER_SNAPSHOT_REV",
         "deviceconfig": "DEVICECONFIG_REV",
         "devicemonitor": "DEVICEMONITOR_REV",
         "monitor-client": "MONITOR_CLIENT_REV",

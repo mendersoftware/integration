@@ -2,7 +2,7 @@ version: '2.3'
 services:
 
     local-smtp:
-        image: python
+        image: python:3.11.6
         environment:
             - PYTHONUNBUFFERED=1
         command: bash -c "mkdir -p /var/spool/mail; stdbuf -oL python -m smtpd -n -c DebuggingServer 0.0.0.0:1025 > /var/spool/mail/local"

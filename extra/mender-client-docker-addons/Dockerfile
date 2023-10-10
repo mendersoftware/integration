@@ -8,12 +8,16 @@ RUN apt-get update && apt-get install -y make git build-essential golang liblzma
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
+ARG MENDER_SETUP_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
 RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CONNECT_REV)
+
+RUN git clone https://github.com/mendersoftware/mender-setup /src/mender-setup
+RUN (cd /src/mender-setup && git fetch origin $MENDER_SETUP_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_SETUP_REV)
 
 RUN git clone https://github.com/mendersoftware/mender-configure-module /src/mender-configure-module
 # Checkout latest tag. No-op if there are no tags (stay in master)
@@ -33,7 +37,7 @@ RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.g
     apt-get update && apt-get install mender-artifact
 RUN mender-artifact write bootstrap-artifact \
         --artifact-name original \
-        --device-type docker-client \
+        --device-type generic-x86_64 \
         --provides "rootfs-image.version:original" \
         --output-path /bootstrap.mender
 
@@ -45,7 +49,7 @@ RUN jq ".User=\"root\"" \
 WORKDIR /src/mender-configure-module
 RUN make DESTDIR=/mender-install install
 
-RUN mkdir -p /mender-install/var/lib/mender && echo device_type=docker-client > /mender-install/var/lib/mender/device_type
+RUN mkdir -p /mender-install/var/lib/mender && echo device_type=generic-x86_64 > /mender-install/var/lib/mender/device_type
 
 FROM ubuntu:22.04
 

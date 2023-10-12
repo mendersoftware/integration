@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -250,7 +250,7 @@ def pytest_exception_interact(node, call, report):
 
         # Note that this is not very fine grained, but running docker-compose -p XXXX ps seems
         # to ignore the filter
-        output = subprocess.check_output("docker ps", shell=True).decode()
+        output = subprocess.check_output("docker ps -a", shell=True).decode()
         logger.info("Containers at the end of the test:")
         for line in output.split("\n"):
             logger.info(line)

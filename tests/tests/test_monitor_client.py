@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 #    limitations under the License.
 #
 
+import datetime
 import json
 import os
 import os.path
@@ -106,19 +107,37 @@ def get_and_parse_email(env, address):
         # concat and create header object for each
         headers = []
         message_string = ""
+        device_date = None
         for line in mail.splitlines():
             if line.startswith(message_mail_options_prefix):
                 continue
             if message_start == line:
                 message_string = ""
+                device_date = None
                 continue
             if message_end == line:
-                headers.append(Parser(policy=default).parsestr(message_string))
+                if device_date is not None:
+                    logger.debug(f"using device_date {device_date}")
+                    message_string = (
+                        device_date.strftime("Date: %a, %m %b %Y %H:%M:%S +0200")
+                        + "\n"
+                        + message_string
+                    )
+                    logger.debug("msg:%s" % message_string)
+                h = Parser(policy=default).parsestr(message_string)
+                headers.append(h)
                 continue
             # extra safety, we are supposed to only eval b'string' lines
             if not line.startswith("b'"):
                 continue
-            message_string = message_string + eval(line).decode("utf-8") + "\n"
+            line_string = eval(line).decode("utf-8")
+            message_string = message_string + line_string + "\n"
+            # get the date from b'Time on device: Thu, 01 Dec 2022 14:01:01 UTC' line
+            if line_string.startswith("Time on device: "):
+                device_date = datetime.datetime.strptime(
+                    line_string, "Time on device: %a, %d %b %Y %H:%M:%S %Z"
+                )
+                logger.debug(f"parsed device_date {device_date}")
 
     # log all messages for debug
     for m in headers:
@@ -280,7 +299,7 @@ class TestMonitorClientEnterprise:
 
         uuidv4 = str(uuid.uuid4())
         name = "test.mender.io-" + uuidv4
-        tid = cli.create_org(name, u.name, u.pwd, plan="enterprise")
+        tid = cli.create_org(name, u.name, u.pwd, plan="enterprise", addons=["monitor"])
 
         # at the moment we do not have a notion of a monitor add-on in the
         # backend, but this will be needed here, see MEN-4809
@@ -922,8 +941,13 @@ class TestMonitorClientEnterprise:
 
         # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
         # sort the emails by subject to avoid wrong-order issues because of delivery time
+        # with QA-510, we bring the sorting of emails according to an alert time as noted
+        # on a device. the staging could use the same, leaving it as is, since the staging
+        # tests need some attention in other places.
         if isK8S():
             messages.sort(key=lambda x: x["Subject"])
+        else:
+            messages.sort(key=lambda x: x["Date"])
 
         assert_valid_alert(
             messages[0],
@@ -1131,8 +1155,13 @@ class TestMonitorClientEnterprise:
 
         # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
         # sort the emails by subject to avoid wrong-order issues because of delivery time
+        # with QA-510, we bring the sorting of emails according to an alert time as noted
+        # on a device. the staging could use the same, leaving it as is, since the staging
+        # tests need some attention in other places.
         if isK8S():
             messages.sort(key=lambda x: x["Subject"])
+        else:
+            messages.sort(key=lambda x: x["Date"])
 
         i = 0
         for service_name in ["crond", "mender-connect"]:
@@ -1706,8 +1735,13 @@ class TestMonitorClientEnterprise:
 
         # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
         # sort the emails by subject to avoid wrong-order issues because of delivery time
+        # with QA-510, we bring the sorting of emails according to an alert time as noted
+        # on a device. the staging could use the same, leaving it as is, since the staging
+        # tests need some attention in other places.
         if isK8S():
             messages.sort(key=lambda x: x["Subject"])
+        else:
+            messages.sort(key=lambda x: x["Date"])
 
         assert "${workflow.input" not in mail
         assert_valid_alert(

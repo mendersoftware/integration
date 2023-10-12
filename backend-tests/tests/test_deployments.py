@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -2164,3 +2164,115 @@ class TestDynamicDeploymentsEnterprise:
         else:
             # max_devices reached, so deployment is finished
             assert dep["status"] == "finished"
+
+
+class _TestDeploymentsShowArtifactSizeBase(object):
+    def do_test_show_artifact_size(self, clean_mongo, user_token, devs):
+        api_mgmt_dep = ApiClient(deployments.URL_MGMT)
+        api_mgmt_rep = ApiClient(reporting.URL_MGMT)
+
+        # get artifact size
+        r = api_mgmt_dep.with_auth(user_token).call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS
+            + "?name="
+            + "deployments-phase-testing",
+        )
+        assert r.status_code == 200
+        artifacts = r.json()
+        assert len(artifacts) == 1
+        artifact_size = artifacts[0]["size"]
+
+        # Make deployment request
+        deployment_req = {
+            "name": "phased-deployment",
+            "artifact_name": "deployments-phase-testing",
+            "devices": [dev.id for dev in devs],
+        }
+        r = api_mgmt_dep.with_auth(user_token).call(
+            "POST", deployments.URL_DEPLOYMENTS, deployment_req
+        )
+        assert r.status_code == 201
+        depid = r.headers["Location"].split("/")[5]
+
+        # get deployment and check the total size is zero
+        dep = get_deployment(depid, user_token)
+        assert dep["statistics"]["total_size"] == 0
+
+        # there is no artifact for the first device
+        status_code = try_update(devs[0], default_device_type="foo")
+        assert status_code == 204
+
+        # second device has artifact already installed
+        status_code = try_update(
+            devs[1], default_artifact_name=deployment_req["artifact_name"]
+        )
+        assert status_code == 204
+
+        # rest of the devices will perform normal update
+        for dev in devs[2:]:
+            status_code = try_update(dev)
+            assert status_code == 200
+
+        # get deployment again and check the total size
+        # keep in mind that first first two devices shouldn't be counted
+        dep = get_deployment(depid, user_token)
+        assert dep["statistics"]["total_size"] == (len(devs) - 2) * artifact_size
+
+        # verify device deployments
+        r = api_mgmt_dep.with_auth(user_token).call(
+            "GET", deployments.URL_DEVICE_DEPLOYMENTS_ID.format(id=devs[0].id)
+        )
+        assert r.status_code == 200
+        dd = r.json()
+        assert len(dd) == 1
+        assert "image" not in dd[0]["device"]
+
+        for dev in devs[1:]:
+            r = api_mgmt_dep.with_auth(user_token).call(
+                "GET", deployments.URL_DEVICE_DEPLOYMENTS_ID.format(id=dev.id)
+            )
+            assert r.status_code == 200
+            dd = r.json()
+            assert len(dd) == 1
+            assert dd[0]["device"]["image"]["size"] == artifact_size
+
+        # wait for data to propagate to reporting
+        # and get same info from reporting
+        time.sleep(reporting.REPORTING_DATA_PROPAGATION_SLEEP_TIME_SECS)
+        query = {
+            "device_ids": [devs[0].id],
+        }
+        r = api_mgmt_rep.with_auth(user_token).call(
+            "POST", reporting.URL_MGMT_DEPLOYMENTS_DEVICES_SEARCH, query
+        )
+        assert r.status_code == 200
+        dd = r.json()
+        assert len(dd) == 1
+        assert "image_size" not in dd[0]
+
+        for dev in devs[1:]:
+            query = {
+                "device_ids": [dev.id],
+            }
+            r = api_mgmt_rep.with_auth(user_token).call(
+                "POST", reporting.URL_MGMT_DEPLOYMENTS_DEVICES_SEARCH, query
+            )
+            assert r.status_code == 200
+            dd = r.json()
+            assert len(dd) == 1
+            assert dd[0]["image_size"] == artifact_size
+
+
+@pytest.mark.storage_test
+class TestDeploymentShowArtifactSizeOpenSource(_TestDeploymentsShowArtifactSizeBase):
+    def test_show_artifact_size(self, clean_mongo):
+        _user, user_token, devs = setup_devices_and_management_st(10)
+        self.do_test_show_artifact_size(clean_mongo, user_token, devs)
+
+
+@pytest.mark.storage_test
+class TestDeploymentShowArtifactSizeEnterprise(_TestDeploymentsShowArtifactSizeBase):
+    def test_show_artifact_size(self, clean_mongo):
+        _user, _tenant, user_token, devs = setup_devices_and_management_mt(10)
+        self.do_test_show_artifact_size(clean_mongo, user_token, devs)

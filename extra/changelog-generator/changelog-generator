@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+# Copyright 2023 Northern.tech AS
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 # Used to generate changelogs from the repository.
 
@@ -23,7 +36,7 @@ LINKED_SHAS = {}
 SHA_TO_TRACKER = {}
 
 JIRA_PROJECTS = "|".join(["ARCHIVE", "INF", "MEN", "QA", "MC", "ME"])
-JIRA_REGEX = rf"\[?(?:Jira:? *)?(?:https?://tracker.mender.io/browse/)?((?:{JIRA_PROJECTS})(?:-| )[0-9]+)\]?"
+JIRA_REGEX = rf"\[?(?:Jira:? *)?(?:https?://northerntech.atlassian.net/browse/)?((?:{JIRA_PROJECTS})(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
 CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
@@ -56,7 +69,7 @@ def aggregate_dependabot_changelogs(
                         (
                             "*** A changelog entry which was assumed by the script to be "
                             + "derived from a dependabot commit could not be truncated "
-                            + "properly. Either a commit was wrongly assumed to be comitted "
+                            + "properly. Either a commit was wrongly assumed to be committed "
                             + "by dependabot or a dependabot commit does not, for unknown "
                             + "reasons, follow its standard format. The changelog entry "
                             + " that produced this fault was:\n\n%s"
@@ -371,7 +384,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 tracker_removed = re.sub(TRACKER_REGEX, "", line, flags=re.IGNORECASE)
                 line = tracker_removed.strip(" ")
 
-            if re.match("^ticket: *none *$", line, re.IGNORECASE):
+            if re.match(r"^ticket: *none *$", line, re.IGNORECASE):
                 continue
 
             if not title_fetched:
@@ -379,7 +392,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 title_fetched = True
 
             match_changelog = re.match(
-                "^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
+                r"^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
             )
             if match_changelog:
                 if log_entry:
@@ -401,7 +414,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 # - From here, if [.:]+ then capture the rest in a new group
                 # - Else just expect end line
                 match_keyword = re.match(
-                    "^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
+                    r"^(Title|Commit|All|None) *(?:[.:]+ *(.*)$|$)",
                     match_changelog.group(2),
                     re.IGNORECASE,
                 )
@@ -441,8 +454,8 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 continue
 
             for cancel_expr in [
-                "^ *Cancel-Changelog: *([0-9a-f]+).*",
-                "^This reverts commit ([0-9a-f]+).*",
+                r"^ *Cancel-Changelog: *([0-9a-f]+).*",
+                r"^This reverts commit ([0-9a-f]+).*",
             ]:
                 match = re.match(cancel_expr, line, re.IGNORECASE)
                 if match:
@@ -463,7 +476,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                     continue
 
             match = re.match(
-                "^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE
+                r"^\(cherry picked from commit ([0-9a-f]+)\)", line, re.IGNORECASE
             )
             if match:
                 if log_entry:
@@ -481,7 +494,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
 
             # Use a slightly stricter filter for other "<something>-by:"
             # messages than for "Signed-off-by:", to avoid false positives.
-            match = re.match("^(Signed-off-by:|\S+-by:.*>\s*$)", line, re.IGNORECASE)
+            match = re.match(r"^(Signed-off-by:|\S+-by:.*>\s*$)", line, re.IGNORECASE)
             if match:
                 # Ignore such lines.
                 continue
@@ -551,7 +564,7 @@ for repo in repos:
         tracker = ""
         if SHA_TO_TRACKER.get(sha_entry):
             jiras = [
-                "[%s](https://tracker.mender.io/browse/%s)"
+                "[%s](https://northerntech.atlassian.net/browse/%s)"
                 % (ticket.upper(), ticket.upper())
                 for ticket in SHA_TO_TRACKER[sha_entry]
             ]

@@ -251,6 +251,29 @@ git:
     release_component: true
     independent_component: true
 
+  mender-setup:
+    docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
+    - mender-client-docker-addons
+    - mender-monitor-qemu-commercial
+    docker_container:
+      - mender-client
+    release_component: true
+    independent_component: true
+
+  mender-snapshot:
+    docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
+    - mender-monitor-qemu-commercial
+    docker_container:
+      - mender-client
+    release_component: true
+    independent_component: true
+
   deviceconfig:
     docker_image:
     - deviceconfig
@@ -285,6 +308,12 @@ git:
     - mender-ci-tools
     docker_container:
     - mender-ci-workflows
+    release_component: false
+    independent_component: true
+
+  app-update-module:
+    docker_image: []
+    docker_container: []
     release_component: false
     independent_component: true
 

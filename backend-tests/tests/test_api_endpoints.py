@@ -110,6 +110,9 @@ def get_api_endpoints(repo):
             )
         for path, path_value in data["paths"].items():
             for method, definition in path_value.items():
+                # ignore the shutdown endpoint
+                if path.rstrip("/").endswith("/shutdown"):
+                    continue
                 returns_401 = (
                     len(definition.get("security") or ()) > 0
                     or len(data.get("security") or ()) > 0

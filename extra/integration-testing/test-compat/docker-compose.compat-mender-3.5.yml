@@ -1,7 +1,7 @@
 version: '2.3'
 services:
-  mender-client-3-4:
-    image: mendersoftware/mender-client-qemu:mender-3.4
+  mender-client-3-5:
+    image: mendersoftware/mender-client-qemu:mender-3.5
     networks:
        - mender
     stdin_open: true

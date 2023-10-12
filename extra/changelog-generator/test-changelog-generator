@@ -211,7 +211,7 @@ git commit --allow-empty -m 'Jira MEN-1111: Changelog with Jira. N55
 
 jira archive-2
 men-9
-https://tracker.mender.io/browse/men-1
+https://northerntech.atlassian.net/browse/men-1
 
 Changelog: commit'
 
@@ -221,7 +221,7 @@ git commit --allow-empty -m 'Jira MEN-1111: Changelog with Jira tracker. N56
 
 jira archive-2
 men-9
-https://tracker.mender.io/browse/men-1
+https://northerntech.atlassian.net/browse/men-1
 
 Changelog: commit'
 
@@ -231,7 +231,7 @@ git commit --allow-empty -m 'Jira MEN-1111: Changelog with many Jira refs. N57
 
 Ref: jira: archive-2
 Ref: men-9
-Ref: https://tracker.mender.io/browse/men-1
+Ref: https://northerntech.atlassian.net/browse/men-1
 Ticket: MEN-12345
 
 Changelog: commit'
@@ -582,15 +582,15 @@ New changes in test-changelog-generator.$$ since prev_branch:
 
   Should be included N82
 * Custom changelog with keyword, should be fix N99
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Ending with a code example N103
 
   \`\`\`
   code example
   \`\`\`
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Something enterprise N104
-  ([ME-1234](https://tracker.mender.io/browse/ME-1234))
+  ([ME-1234](https://northerntech.atlassian.net/browse/ME-1234))
 * Fix type N79
 * Aggregated Dependabot Changelogs:
   * Bumps [github.com/klauspost/pgzip](https://github.com/klauspost/pgzip) from 1.2.3 to 1.2.4.
@@ -611,13 +611,13 @@ New changes in test-changelog-generator.$$ since prev_branch:
 * Feat type with scope and refs N94
 
   Should be included N95
-  ([MEN-0603](https://tracker.mender.io/browse/MEN-0603))
+  ([MEN-0603](https://northerntech.atlassian.net/browse/MEN-0603))
 * Fix type with scope, some letters uppercase N97
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Custom changelog with keyword and ref, should be feat N100
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Custom changelog with keyword with uppercase letters and ref, should be feat N101
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Feat type N87
 
   Should be included N88
@@ -644,18 +644,18 @@ New changes in test-changelog-generator.$$ since prev_branch:
 * Changelog title with trailing dot. N54
 * Changelog with GPG entry N67
 * Changelog with Jira tracker. N56
-  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+  ([ARCHIVE-2](https://northerntech.atlassian.net/browse/ARCHIVE-2), [MEN-1111](https://northerntech.atlassian.net/browse/MEN-1111), [MEN-1](https://northerntech.atlassian.net/browse/MEN-1), [MEN-9](https://northerntech.atlassian.net/browse/MEN-9))
 * Changelog with Jira. N55
-  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+  ([ARCHIVE-2](https://northerntech.atlassian.net/browse/ARCHIVE-2), [MEN-1111](https://northerntech.atlassian.net/browse/MEN-1111), [MEN-1](https://northerntech.atlassian.net/browse/MEN-1), [MEN-9](https://northerntech.atlassian.net/browse/MEN-9))
 * Changelog with Windows line endings N66
 * Changelog with inline Jira refs. N58a
-  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+  ([ARCHIVE-7777](https://northerntech.atlassian.net/browse/ARCHIVE-7777), [MEN-7778](https://northerntech.atlassian.net/browse/MEN-7778), [MEN-80](https://northerntech.atlassian.net/browse/MEN-80), [MEN-81](https://northerntech.atlassian.net/browse/MEN-81))
 * Changelog with invalid signed-off N65
 
   Commit message
   Mention "Signed-off-by: " mid sentence
 * Changelog with many Jira refs. N57
-  ([ARCHIVE-2](https://tracker.mender.io/browse/ARCHIVE-2), [MEN-1111](https://tracker.mender.io/browse/MEN-1111), [MEN-12345](https://tracker.mender.io/browse/MEN-12345), [MEN-1](https://tracker.mender.io/browse/MEN-1), [MEN-9](https://tracker.mender.io/browse/MEN-9))
+  ([ARCHIVE-2](https://northerntech.atlassian.net/browse/ARCHIVE-2), [MEN-1111](https://northerntech.atlassian.net/browse/MEN-1111), [MEN-12345](https://northerntech.atlassian.net/browse/MEN-12345), [MEN-1](https://northerntech.atlassian.net/browse/MEN-1), [MEN-9](https://northerntech.atlassian.net/browse/MEN-9))
 * Changelog with signed-off N64
 
   Commit message
@@ -677,35 +677,36 @@ New changes in test-changelog-generator.$$ since prev_branch:
 
 
   More stuff. N52
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Jira entries in parentheses (commit) N45
 
 
   Stuff. N46
-  ([MEN-4321](https://tracker.mender.io/browse/MEN-4321), [MEN-54321](https://tracker.mender.io/browse/MEN-54321))
+  ([MEN-4321](https://northerntech.atlassian.net/browse/MEN-4321), [MEN-54321](https://northerntech.atlassian.net/browse/MEN-54321))
 * Jira entries in parentheses (title) N41
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234), [MEN-2345](https://northerntech.atlassian.net/browse/MEN-2345))
 * Jira entries inline (commit) N47
 
 
-  Stuff N48 ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+  Stuff N48
+  ([MEN-2345](https://northerntech.atlassian.net/browse/MEN-2345))
 * Jira entries inline (title) N43
-  ([MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+  ([MEN-2345](https://northerntech.atlassian.net/browse/MEN-2345))
 * Jira entry N36
 
   Should be included N37
-  ([MEN-645](https://tracker.mender.io/browse/MEN-645))
+  ([MEN-645](https://northerntech.atlassian.net/browse/MEN-645))
 * Jira entry in title N38
-  ([MEN-76](https://tracker.mender.io/browse/MEN-76))
+  ([MEN-76](https://northerntech.atlassian.net/browse/MEN-76))
 * Jira twice (commit) N49
 
 
   More stuff. N50
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-2345](https://tracker.mender.io/browse/MEN-2345))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234), [MEN-2345](https://northerntech.atlassian.net/browse/MEN-2345))
 * Make sure the bugtracker reference is taken from the title
              and goes after this message. The title should not be
              included. N68
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234))
 * Several entries for changelog N30
 
   Should be included N31
@@ -716,15 +717,15 @@ New changes in test-changelog-generator.$$ since prev_branch:
 * Should also be included, but separately and not twice. N32
 * Should be in changelog though. N29
 * Should be there N40
-  ([MEN-1234](https://tracker.mender.io/browse/MEN-1234), [MEN-123](https://tracker.mender.io/browse/MEN-123))
+  ([MEN-1234](https://northerntech.atlassian.net/browse/MEN-1234), [MEN-123](https://northerntech.atlassian.net/browse/MEN-123))
 * Some inline reference. N58b
-  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+  ([ARCHIVE-7777](https://northerntech.atlassian.net/browse/ARCHIVE-7777), [MEN-7778](https://northerntech.atlassian.net/browse/MEN-7778), [MEN-80](https://northerntech.atlassian.net/browse/MEN-80), [MEN-81](https://northerntech.atlassian.net/browse/MEN-81))
 * Some inline reference. N60
-  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+  ([ARCHIVE-7777](https://northerntech.atlassian.net/browse/ARCHIVE-7777), [MEN-7778](https://northerntech.atlassian.net/browse/MEN-7778), [MEN-80](https://northerntech.atlassian.net/browse/MEN-80), [MEN-81](https://northerntech.atlassian.net/browse/MEN-81))
 * Some other reference. N59
-  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+  ([ARCHIVE-7777](https://northerntech.atlassian.net/browse/ARCHIVE-7777), [MEN-7778](https://northerntech.atlassian.net/browse/MEN-7778), [MEN-80](https://northerntech.atlassian.net/browse/MEN-80), [MEN-81](https://northerntech.atlassian.net/browse/MEN-81))
 * Some other reference. N61
-  ([ARCHIVE-7777](https://tracker.mender.io/browse/ARCHIVE-7777), [MEN-7778](https://tracker.mender.io/browse/MEN-7778), [MEN-80](https://tracker.mender.io/browse/MEN-80), [MEN-81](https://tracker.mender.io/browse/MEN-81))
+  ([ARCHIVE-7777](https://northerntech.atlassian.net/browse/ARCHIVE-7777), [MEN-7778](https://northerntech.atlassian.net/browse/MEN-7778), [MEN-80](https://northerntech.atlassian.net/browse/MEN-80), [MEN-81](https://northerntech.atlassian.net/browse/MEN-81))
 * Squashed commits N69
 * Squashed commits N69
 * This should be in changelog N8
@@ -776,14 +777,14 @@ New changes in mender since 3.3.0:
 * If paused before ArtifactReboot, and then manually
   rebooting the device outside of Mender, the client will properly
   resume the update now, instead of failing and rolling back.
-  ([MEN-5709](https://tracker.mender.io/browse/MEN-5709))
+  ([MEN-5709](https://northerntech.atlassian.net/browse/MEN-5709))
 * Over D-Bus we return the ProxyHost equal to 127.0.0.1
 * Resolve symlinks for /dev/disk/by-partlabel
 * The client update and inventory checks are now unaffected by the use
   of the `check-update` and `send-inventory` commands. While previously, this
   would both move the intervals at which checks we're done, and also extend them
   beyond the expected polling intervals configured.
-  ([INF-1000](https://tracker.mender.io/browse/INF-1000), [MEN-5547](https://tracker.mender.io/browse/MEN-5547))
+  ([INF-1000](https://northerntech.atlassian.net/browse/INF-1000), [MEN-5547](https://northerntech.atlassian.net/browse/MEN-5547))
 * Upgrade openssl dependency to fix cast error in recent Go.
 * rootfs-image-v2: Make sure to set mender_boot_part_hex
 * setenv: Fix script input syntax.
@@ -791,7 +792,7 @@ New changes in mender since 3.3.0:
 ##### Features
 
 * Add DaemonLogLevel parameter in configuration file
-  ([MEN-5583](https://tracker.mender.io/browse/MEN-5583))
+  ([MEN-5583](https://northerntech.atlassian.net/browse/MEN-5583))
 
 ##### Other
 

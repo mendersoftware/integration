@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -45,6 +45,11 @@ devmonitor = DeviceMonitor(auth)
 # -- When adding something here, also add a reset method and add it below --
 
 
+def set_container_manager(manager):
+    global container_manager
+    container_manager = manager
+
+
 def reset_mender_api(manager=None):
     auth.reset()
     devauth.reset()
@@ -53,8 +58,7 @@ def reset_mender_api(manager=None):
     image.reset()
     inv.reset()
     devmonitor.reset()
-    global container_manager
-    container_manager = manager
+    set_container_manager(manager)
 
 
 reset_mender_api()

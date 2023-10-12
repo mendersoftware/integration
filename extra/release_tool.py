@@ -275,16 +275,11 @@ CLIENT_SERVICES_ENT = {
 }
 
 
-class BuildParam:
-    type = None
-    value = None
-
-    def __init__(self, type, value):
-        self.type = type
-        self.value = value
-
-    def __repr__(self):
-        return "{0.type}:'{0.value}'".format(self)
+def build_param(value):
+    if type(value) is dict:
+        return value["value"]
+    else:
+        return value
 
 
 EXTRA_BUILDPARAMS_CACHE = None
@@ -1608,7 +1603,7 @@ def get_extra_buildparams_from_yaml():
 
     for key, value in build_variables.items():
         if not in_versioned_repos.get(key):
-            extra_buildparams[key] = BuildParam("string", value)
+            extra_buildparams[key] = build_param(value)
 
     return extra_buildparams
 
@@ -1633,9 +1628,7 @@ def trigger_build(state, tag_avail):
             for param in extra_buildparams.keys():
                 if state_value(state, ["extra_buildparams", param]) is None:
                     update_state(
-                        state,
-                        ["extra_buildparams", param],
-                        extra_buildparams[param].value,
+                        state, ["extra_buildparams", param], extra_buildparams[param],
                     )
 
         if params is None:

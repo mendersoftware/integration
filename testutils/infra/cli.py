@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -117,7 +117,7 @@ class CliTenantadm(BaseCli):
         enterprise = Microservice("/usr/bin/tenantadm", "/etc/tenantadm")
         self.choose_binary_and_config_paths([enterprise], self.service_name)
 
-    def create_org(self, name, username, password, plan="os") -> str:
+    def create_org(self, name, username, password, plan="os", addons=[]) -> str:
         cmd = [
             self.service.bin_path,
             "create-org",
@@ -130,6 +130,8 @@ class CliTenantadm(BaseCli):
             "--plan",
             plan,
         ]
+        for addon in addons:
+            cmd.extend(["--addon", addon])
 
         tid = self.container_manager.execute(self.cid, cmd)
         return tid

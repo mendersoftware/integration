@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -137,6 +137,23 @@ class BaseTestBasicIntegration(MenderTesting):
             env.get_virtual_network_host_ip(),
             install_image=valid_image_with_mender_conf(mender_conf),
             compression_type="none",
+            devauth=devauth,
+            deploy=deploy,
+        )
+
+    def do_test_update_zstd_compression(self, env, valid_image_with_mender_conf):
+        """Uploads a zstd-compressed artifact, and runs the whole update process."""
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        mender_device = env.device
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+
+        update_image(
+            env.device,
+            env.get_virtual_network_host_ip(),
+            install_image=valid_image_with_mender_conf(mender_conf),
+            compression_type="zstd_best",
             devauth=devauth,
             deploy=deploy,
         )
@@ -348,6 +365,13 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    def test_update_zstd_compression(
+        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+    ):
+        self.do_test_update_zstd_compression(
+            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        )
+
     def test_forced_update_check_from_client(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -395,6 +419,13 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
         self.do_test_update_no_compression(
+            enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        )
+
+    def test_update_zstd_compression(
+        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+    ):
+        self.do_test_update_zstd_compression(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 

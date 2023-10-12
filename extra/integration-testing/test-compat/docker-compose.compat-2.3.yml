@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 services:
   mender-client-2-3:
     image: mendersoftware/mender-client-qemu:2.3
@@ -8,7 +8,7 @@ services:
     tty: true
     privileged: true
     environment:
-      TENANT_TOKEN: ""
+      - TENANT_TOKEN=$TENANT_TOKEN
     volumes:
       # Provision demo certificate
       - ./cert/cert.crt:/mnt/config/server.crt

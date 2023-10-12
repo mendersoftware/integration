@@ -2,7 +2,7 @@
 # and docker-compose.storage.minio.yml, as they appeared when this file was
 # written.
 
-version: '2.1'
+version: '2.3'
 services:
 
     #
@@ -72,7 +72,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway-2:
-        image: traefik:v2.8
+        image: traefik:v2.10
         extends:
             file: common.yml
             service: mender-base
@@ -245,7 +245,7 @@ services:
         command: --automigrate
 
     mender-mongo-2:
-        image: mongo:4.4
+        image: mongo:5.0
         extends:
             file: common.yml
             service: mender-base

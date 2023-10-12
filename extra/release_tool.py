@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import sys
 import traceback
-import logging
 import datetime
 
 try:
@@ -276,16 +275,11 @@ CLIENT_SERVICES_ENT = {
 }
 
 
-class BuildParam:
-    type = None
-    value = None
-
-    def __init__(self, type, value):
-        self.type = type
-        self.value = value
-
-    def __repr__(self):
-        return "{0.type}:'{0.value}'".format(self)
+def build_param(value):
+    if type(value) is dict:
+        return value["value"]
+    else:
+        return value
 
 
 EXTRA_BUILDPARAMS_CACHE = None
@@ -1244,7 +1238,7 @@ def annotation_version(repo, tag_avail):
 
 
 def version_components(version):
-    """Returns a four-tuple containing the version componets major, minor, patch
+    """Returns a four-tuple containing the version components major, minor, patch
     and beta, as ints. Beta does not include the "b"."""
 
     match = re.match(r"^([0-9]+)\.([0-9]+)\.([0-9]+)(?:b([0-9]+))?", version)
@@ -1609,7 +1603,7 @@ def get_extra_buildparams_from_yaml():
 
     for key, value in build_variables.items():
         if not in_versioned_repos.get(key):
-            extra_buildparams[key] = BuildParam("string", value)
+            extra_buildparams[key] = build_param(value)
 
     return extra_buildparams
 
@@ -1634,9 +1628,7 @@ def trigger_build(state, tag_avail):
             for param in extra_buildparams.keys():
                 if state_value(state, ["extra_buildparams", param]) is None:
                     update_state(
-                        state,
-                        ["extra_buildparams", param],
-                        extra_buildparams[param].value,
+                        state, ["extra_buildparams", param], extra_buildparams[param],
                     )
 
         if params is None:
@@ -2310,7 +2302,7 @@ def do_docker_compose_branches_from_follows(state):
         cmd = [
             "commit",
             "-asm",
-            """Update branch references for %s.
+            """chore: Update branch references for %s.
 
 Changelog: None"""
             % bare_branch,
@@ -2784,7 +2776,9 @@ def do_release(release_state_file):
         print("  B) Trigger new integration build using current tags")
         print("  L) Generate license text for all dependencies")
         print("  F) Tag and push final tag, based on current build tag")
-        print("  N) Generate release notes from final tags")
+        print(
+            "  N) Generate release notes from current tag, either final tag or current build tag"
+        )
         print(
             '  D) Update ":%s" and/or ":latest" Docker tags to current release'
             % minor_version
@@ -2850,7 +2844,11 @@ def do_release(release_state_file):
         elif reply.lower() == "l":
             do_license_generation(state, tag_avail)
         elif reply.lower() == "n":
-            do_generate_release_notes(state["repo_dir"], state["version"])
+            # Generate release notes from tag_avail, which will either hold the final tag
+            # or the current build tag
+            do_generate_release_notes(
+                state["repo_dir"], tag_avail["integration"]["build_tag"]
+            )
         elif reply.lower() == "u":
             purge_build_tags(state, tag_avail)
         elif reply.lower() == "m":

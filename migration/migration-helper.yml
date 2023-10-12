@@ -1,11 +1,11 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
     # mongo migration helper service
     #
     mongo-helper:
-        image: mongo:4.4
+        image: mongo:5.0
         networks:
             - mender
         volumes:

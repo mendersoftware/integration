@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
@@ -57,7 +57,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway:
-        image: traefik:v2.8
+        image: traefik:v2.10
         extends:
             file: common.yml
             service: mender-base
@@ -96,6 +96,7 @@ services:
         image: mendersoftware/deviceauth:mender-master
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+            DEVICEAUTH_ENABLE_REPORTING: 1
         extends:
             file: common.yml
             service: mender-base
@@ -222,8 +223,6 @@ services:
             file: common.yml
             service: mender-base
         environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
-            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
             - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
         networks:
             - mender
@@ -268,7 +267,7 @@ services:
             mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
 
     mender-mongo:
-        image: mongo:4.4
+        image: mongo:5.0
         extends:
             file: common.yml
             service: mender-base
@@ -283,7 +282,7 @@ services:
                     - mongo-workflows
 
     mender-nats:
-        image: nats:2.6-alpine
+        image: nats:2.7.4-scratch
         command: -js
         networks:
             - mender
@@ -296,9 +295,9 @@ services:
         networks:
             - mender
         environment:
-          - "discovery.type=single-node"
-          - "plugins.security.disabled=true"
-          - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+            - "discovery.type=single-node"
+            - "plugins.security.disabled=true"
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
 
 networks:
     mender: null

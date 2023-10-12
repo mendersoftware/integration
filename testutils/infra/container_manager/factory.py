@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ from .docker_compose_manager import (
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
-    DockerComposeMenderClient_2_5,
+    DockerComposeMenderClient_2_5_Setup,
+    DockerComposeMenderClient_2_5_EnterpriseSetup,
 )
 from .kubernetes_manager import (
     KubernetesEnterpriseSetup,
@@ -197,8 +198,11 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)
 
-    def get_mender_client_2_5(self, name=None, **kwargs):
-        return DockerComposeMenderClient_2_5(name, **kwargs)
+    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
+        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
+
+    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
+        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
     def get_custom_setup(self, name=None):
         return DockerComposeCustomSetup(name)
@@ -223,8 +227,11 @@ class KubernetesManagerFactory(ContainerManagerFactory):
     def get_enterprise_short_lived_token_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
 
-    def get_mender_client_2_5(self, name=None, **kwargs):
-        return DockerComposeMenderClient_2_5(name, **kwargs)
+    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
+        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
+
+    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
+        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
 
 def get_factory():

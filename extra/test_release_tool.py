@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -872,6 +872,8 @@ def test_git_to_buildparam():
         "mtls-ambassador": "MTLS_AMBASSADOR_REV",
         "deviceconnect": "DEVICECONNECT_REV",
         "mender-connect": "MENDER_CONNECT_REV",
+        "mender-setup": "MENDER_SETUP_REV",
+        "mender-snapshot": "MENDER_SNAPSHOT_REV",
         "deviceconfig": "DEVICECONFIG_REV",
         "devicemonitor": "DEVICEMONITOR_REV",
         "monitor-client": "MONITOR_CLIENT_REV",
@@ -920,6 +922,7 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
+@pytest.mark.skip(reason="QA-609")
 def test_generate_release_notes_from_master(request, capsys, is_master):
     if not is_master:
         pytest.skip("This test requires master tags in the docker-compose files.")

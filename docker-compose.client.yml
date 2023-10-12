@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 services:
 
     #
@@ -12,8 +12,9 @@ services:
         tty: true
         privileged: true
         environment:
-          SERVER_URL:
-          TENANT_TOKEN:
+            SERVER_URL:
+            TENANT_TOKEN:
+
 
 networks:
     mender:

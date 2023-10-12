@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -46,11 +46,13 @@ class DockerComposeBaseNamespace(DockerNamespace):
         self._debug_log_containers_logs()
         self._stop_docker_compose()
 
-    def get_mender_clients(self, network="mender"):
+    def get_mender_clients(self, network="mender", client_service_name="mender-client"):
         """Returns IP address(es) of mender-client container(s)"""
         clients = [
             ip + ":8822"
-            for ip in self.get_ip_of_service("mender-client", network=network)
+            for ip in self.get_ip_of_service(
+                service=client_service_name, network=network
+            )
         ]
         return clients
 
@@ -127,8 +129,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
         else:
             assert (
                 False
-            ), "expected one instance of api-gateway running, but found: {} instance(s)".format(
-                len(gateway)
+            ), "expected one instance of api-gateway running, but found: {} instance(s) for project {}".format(
+                len(gateway), self.name
             )
 
     def restart_service(self, service):

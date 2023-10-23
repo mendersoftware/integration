@@ -33,12 +33,12 @@
 ## Getting Started
 
 The dependencies for the integration tests are collected and organized in
-dependency files in the `./requirements` folder, and separated into
+dependency files in the `./requirements-*` folders, and separated into
 
 
 | Debian                 | Alpine                 | Python                    |
 | :-------------:        | :-------------:        | :-----:                   |
-| *deb-requirements.txt* | *apt-requirements.txt* | *python-requirements.txt* |
+| *requirements-system/deb-requirements.txt* | *requirements-system/apt-requirements.txt* | *requirements-python/python-requirements.txt* |
 
 ## Installing Dependencies
 
@@ -99,19 +99,19 @@ $ deactivate
 ### Debian
 
 ```bash
-$ apt install -yyq $(cat requirements/deb-requirements.txt)
+$ apt install -yyq $(cat requirements-system/deb-requirements.txt)
 ```
 
 ### Alpine Linux
 
 ```bash
-$ apk --update add $(cat requirements/apk-requirements.txt)
+$ apk --update add $(cat requirements-system/apk-requirements.txt)
 ```
 
 ### Python3
 
 ```bash
-$ pip3  install  -r requirements/python-requirements.txt
+$ pip3  install  -r requirements-python/python-requirements.txt
 ```
 
 > The Python install works the same whether or not a Python virtual-environment

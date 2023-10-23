@@ -2,7 +2,7 @@ version: 2
 updates:
   - commit-message:
       prefix: chore
-    directory: /tests/requirements
+    directory: /tests/requirements-python
     package-ecosystem: pip
     schedule:
       interval: monthly

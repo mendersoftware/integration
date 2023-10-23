@@ -83,7 +83,7 @@ test:staging:integration-tests:
     - docker version # Verify that the docker server is up and running
     # Get and install the integration test requirements
     - apk add $(cat tests/requirements/apk-requirements.txt | grep -v py-pip)
-    - CRYPTOGRAPHY_DONT_BUILD_RUST=1 pip3 install -r tests/requirements/python-requirements.txt
+    - CRYPTOGRAPHY_DONT_BUILD_RUST=1 pip3 install -r tests/requirements-python/python-requirements.txt
     # Install awscli, kubectl and aws-iam-authenticator
     - apk add --no-cache aws-cli
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"

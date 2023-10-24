@@ -95,7 +95,7 @@ pytest-metadata==3.0.0
     # via
     #   -r python-requirements.in
     #   pytest-html
-pytest-timeout==2.1.0
+pytest-timeout==2.2.0
     # via -r python-requirements.in
 pytest-xdist==3.3.1
     # via -r python-requirements.in

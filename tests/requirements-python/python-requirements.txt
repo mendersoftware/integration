@@ -126,7 +126,7 @@ stripe==6.6.0
     # via -r python-requirements.in
 typing-extensions==4.7.1
     # via stripe
-urllib3==1.26.17
+urllib3==1.26.18
     # via
     #   -r python-requirements.in
     #   docker

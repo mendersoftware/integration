@@ -91,9 +91,8 @@ class BaseTestBootstrapping(MenderTesting):
 
         # Check from client side
         mender_device.run(
-            "journalctl -u %s -l -S '%s' | grep -q 'authentication request rejected'"
+            "journalctl -u mender-authd -l -S '%s' | grep -q 'Failed to authorize with the server'"
             % (
-                mender_device.get_client_service_name(),
                 time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(reject_time)),
             )
         )

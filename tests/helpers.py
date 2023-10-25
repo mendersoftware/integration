@@ -74,7 +74,7 @@ class Helpers:
                 # Use systemctl instead of journalctl in order to get only
                 # entries since the last service restart.
                 "systemctl status --no-pager -l -n 100000 mender-updated"
-                + "| grep 'successfully received new authorization data'",
+                + "| grep 'No update available'",
                 warn=True,
             )
             if out != "":

@@ -12,25 +12,20 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import shutil
-import os
 import time
 
 import pytest
 
 from .. import conftest
-from testutils.common import ApiClient
 from ..common_setup import enterprise_one_rofs_commercial_client_bootstrapped
-from .common_update import update_image, update_image_failed
+from .common_update import update_image
+from testutils.common import ApiClient
 import testutils.api.deployments as deployments
 
 from ..MenderAPI import (
     image,
-    logger,
-    devauth,
     DeviceAuthV2,
     Deployments,
-    Inventory,
     get_container_manager,
 )
 from .mendertesting import MenderTesting

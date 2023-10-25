@@ -319,7 +319,7 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 
             devauth_failover.accept_devices(1)
 
-            output = mender_device.run(
+            mender_device.run(
                 f'journalctl -S"{date}"'
                 + ' | grep -l "successfully received new authorization data"'
             ).strip()

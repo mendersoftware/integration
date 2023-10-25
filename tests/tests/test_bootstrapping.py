@@ -87,7 +87,6 @@ class BaseTestBootstrapping(MenderTesting):
             else:
                 # use assert to fail, so we can get backend logs
                 pytest.fail("no error while trying to deploy to rejected device")
-                return
 
         # Check from client side
         mender_device.run(

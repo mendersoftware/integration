@@ -18,7 +18,6 @@ import random
 import pytest
 
 from .. import conftest
-from ..helpers import Helpers
 from ..MenderAPI import devauth, deploy, image, logger
 from . import artifact_lock
 

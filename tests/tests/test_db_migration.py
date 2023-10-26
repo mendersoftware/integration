@@ -17,8 +17,6 @@ import os
 import tempfile
 import shutil
 
-import pytest
-
 from ..common_setup import (
     setup_with_legacy_client,
     enterprise_with_legacy_client,

@@ -16,8 +16,8 @@ import uuid
 import time
 
 from ..common_setup import enterprise_no_client
-from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth, devauth, logger, inv
+from .common_update import update_image
 from .mendertesting import MenderTesting
 from testutils.common import new_tenant_client
 

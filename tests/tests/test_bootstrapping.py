@@ -16,7 +16,6 @@ import time
 
 import pytest
 
-from .. import conftest
 from ..common_setup import (
     standard_setup_one_client,
     standard_setup_one_client_bootstrapped,

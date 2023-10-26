@@ -17,7 +17,6 @@ import logging
 import pytest
 import json
 import time
-from . import conftest
 
 from .MenderAPI import devauth
 

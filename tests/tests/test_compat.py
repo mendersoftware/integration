@@ -29,7 +29,6 @@ from testutils.common import create_org, create_user
 from testutils.api.client import ApiClient
 from testutils.api import deviceauth, useradm, inventory, deployments
 
-from .. import conftest
 
 container_factory = factory.get_factory()
 

@@ -20,7 +20,6 @@ import time
 
 import pytest
 
-from .. import conftest
 from ..common_setup import (
     running_custom_production_setup,
     standard_setup_with_short_lived_token,

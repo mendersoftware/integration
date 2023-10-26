@@ -15,7 +15,6 @@
 import uuid
 import time
 
-from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from ..MenderAPI import auth, devauth, logger, inv

@@ -14,7 +14,6 @@
 
 import tempfile
 
-from .. import conftest
 from ..common_setup import (
     standard_setup_two_clients_bootstrapped,
     enterprise_two_clients_bootstrapped,

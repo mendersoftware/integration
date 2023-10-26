@@ -18,7 +18,6 @@ import time
 
 import pytest
 
-from .. import conftest
 from ..common_setup import (
     standard_setup_one_rofs_client_bootstrapped,
     standard_setup_with_short_lived_token,

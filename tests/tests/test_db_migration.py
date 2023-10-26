@@ -19,7 +19,6 @@ import shutil
 
 import pytest
 
-from .. import conftest
 from ..common_setup import (
     setup_with_legacy_client,
     enterprise_with_legacy_client,

@@ -106,7 +106,7 @@ class MenderDevice:
 
         _put(self, file, local_path, remote_path)
 
-    def ssh_is_opened(self, wait=60 * 60):
+    def ssh_is_opened(self, wait=10 * 60):
         """Block until SSH connection is established on the device
 
         Keyword arguments:
@@ -238,7 +238,7 @@ class RebootDetector:
                 logger.info("Client has rebooted %d time(s)", reboot_count)
                 return True
 
-    def verify_reboot_performed(self, max_wait=60 * 60, number_of_reboots=1):
+    def verify_reboot_performed(self, max_wait=10 * 60, number_of_reboots=1):
         if self.server is None:
             raise RuntimeError(
                 "verify_reboot_performed() used outside of 'with' scope."
@@ -296,7 +296,7 @@ class MenderDeviceGroup:
             output_dict[dev.host_string] = output
         return output_dict
 
-    def ssh_is_opened(self, wait=60 * 60):
+    def ssh_is_opened(self, wait=10 * 60):
         """Block until SSH connection is established for all devices in group sequentially
 
         see MenderDevice.ssh_is_opened
@@ -361,7 +361,7 @@ def _put(device, file, local_path=".", remote_path="."):
 
 # Roughly the execution time of the slowest test (*) times 3
 # (*) As per 2020-03-24 test_image_download_retry_hosts_broken takes 515.13 seconds
-_DEFAULT_WAIT_TIME = 25 * 60
+_DEFAULT_WAIT_TIME = 10 * 60
 
 
 def _run(conn, cmd, **kw):

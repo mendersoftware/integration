@@ -62,29 +62,39 @@ class Helpers:
         return ip_to_device_id
 
     @staticmethod
-    def check_log_have_authtoken(device):
-        """Verify that the device was authenticated since its last service start."""
+    def _check_log_for_message(device, service, message, since=None):
+        if since:
+            cmd = f"journalctl -u {service} -l -S '{since}'"
+        else:
+            # Use systemctl instead of journalctl in order to get only
+            # entries since the last service restart.
+            cmd = f"systemctl status --no-pager -l -n 100000 {service}"
+
         sleepsec = 0
-        MENDER_STORE_TIMEOUT = 600
-        while sleepsec < MENDER_STORE_TIMEOUT:
-            out = device.run(
-                # Use systemctl instead of journalctl in order to get only
-                # entries since the last service restart.
-                "systemctl status --no-pager -l -n 100000 mender-updated"
-                + "| grep 'No update available'",
-                warn=True,
-            )
+        timeout = 600
+        while sleepsec < timeout:
+            out = device.run(cmd + "| grep '" + message + "'", warn=True,)
             if out != "":
                 return
 
             time.sleep(10)
             sleepsec += 10
             logger.info(
-                "waiting for authorization message in mender client log, sleepsec: {}".format(
-                    sleepsec
-                )
+                f"waiting for message '{message}' in {service} log, waited for: {sleepsec}"
             )
 
         assert (
-            sleepsec <= MENDER_STORE_TIMEOUT
-        ), "timeout for mender-store file exceeded"
+            sleepsec <= timeout
+        ), f"timeout for waiting for message '{message}' in {service} log"
+
+    @staticmethod
+    def check_log_is_authenticated(device, since=None):
+        Helpers._check_log_for_message(
+            device, "mender-updated", "No update available", since
+        )
+
+    @staticmethod
+    def check_log_is_unauthenticated(device, since=None):
+        Helpers._check_log_for_message(
+            device, "mender-authd", "Failed to authorize with the server", since
+        )

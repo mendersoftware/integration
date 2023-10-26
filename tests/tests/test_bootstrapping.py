@@ -48,8 +48,7 @@ class BaseTestBootstrapping(MenderTesting):
 
         # make sure all devices are accepted
         devauth.check_expected_status("accepted", 1)
-
-        Helpers.check_log_have_authtoken(mender_device)
+        Helpers.check_log_is_authenticated(mender_device)
 
         # print all device ids
         for device in devauth.get_devices_status("accepted"):
@@ -88,11 +87,9 @@ class BaseTestBootstrapping(MenderTesting):
                 pytest.fail("no error while trying to deploy to rejected device")
 
         # Check from client side
-        mender_device.run(
-            "journalctl -u mender-authd -l -S '%s' | grep -q 'Failed to authorize with the server'"
-            % (
-                time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(reject_time)),
-            )
+        Helpers.check_log_is_unauthenticated(
+            mender_device,
+            time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(reject_time)),
         )
 
         # Restart client to force log reset.
@@ -102,7 +99,7 @@ class BaseTestBootstrapping(MenderTesting):
         devauth.accept_devices(1)
 
         # Check from client side that it can be authorized
-        Helpers.check_log_have_authtoken(mender_device)
+        Helpers.check_log_is_authenticated(mender_device)
 
 
 class TestBootstrappingOpenSource(BaseTestBootstrapping):

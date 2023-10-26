@@ -25,9 +25,10 @@ from ..common_setup import (
     standard_setup_with_short_lived_token,
     enterprise_with_short_lived_token,
 )
+from ..helpers import Helpers
+from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
-from ..MenderAPI import DeviceAuthV2, Deployments, logger
 
 
 class BaseTestSecurity(MenderTesting):
@@ -39,11 +40,7 @@ class BaseTestSecurity(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
-        mender_device.run(
-            'journalctl -u %s -l --no-pager | grep "received new authorization data"'
-            % mender_device.get_client_service_name(),
-            wait=60,
-        )
+        Helpers.check_log_is_authenticated(mender_device)
 
         # this call verifies that the deployment process goes into an "inprogress" state
         # which is only possible when the client has a valid token.

@@ -237,7 +237,8 @@ def pytest_exception_interact(node, call, report):
                 logger.info("Not able to print client deployment log")
 
             for service in [
-                "mender-client",
+                "mender-authd",
+                "mender-updated",
                 "mender-connect",
                 "mender-monitor",
                 "mender-gateway",

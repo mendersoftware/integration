@@ -75,7 +75,7 @@ def configure_connectivity(
     )
     mender_device.run("systemctl stop mender-connect || true")
     mender_device.run("systemctl stop mender-monitor || true")
-    mender_device.run("systemctl restart mender-client")
+    mender_device.run("systemctl restart mender-authd")
 
 
 def clean_config(mender_device):

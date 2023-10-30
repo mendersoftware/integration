@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ class MenderDevice:
             raise (raise_exception)
 
     def yocto_id_installed_on_machine(self):
-        cmd = "mender show-artifact"
+        cmd = "mender-update show-artifact"
         output = self.run(cmd, hide=True).strip()
         return output
 
@@ -153,7 +153,7 @@ class MenderDevice:
     def get_client_service_name(self):
         if self._service_name is None:
             self._service_name = self.run(
-                "if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi"
+                "echo mender-updated"
             ).strip()
         return self._service_name
 

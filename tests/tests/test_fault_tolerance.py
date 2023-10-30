@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,10 +32,6 @@ from .mendertesting import MenderTesting
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    {
-        "blockAfterStart": False,
-        "logMessageToLookFor": "[uU]pdate (check|fetch) failed:",
-    },
     {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
 ]
 

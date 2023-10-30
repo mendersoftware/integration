@@ -3,8 +3,9 @@
 FROM ubuntu:22.04 AS build
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
-    jq libssl-dev libglib2.0-dev curl cmake liblmdb++-dev
+RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev    \
+    jq libssl-dev libglib2.0-dev curl cmake liblmdb++-dev libboost-dev libboost-log-dev \
+    libarchive-dev libdbus-1-dev
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master
@@ -57,7 +58,8 @@ RUN mkdir -p /mender-install/var/lib/mender && echo device_type=generic-x86_64 >
 
 FROM ubuntu:22.04
 
-RUN mkdir -p /run/dbus && apt-get update && apt-get install -y liblzma5 dbus openssh-server
+RUN mkdir -p /run/dbus && apt-get update && apt-get install -y \
+    liblzma5 dbus openssh-server liblmdb0 libarchive13 libboost-log1.74.0
 
 # Set no password
 RUN sed -ie 's/^root:[^:]*:/root::/' /etc/shadow

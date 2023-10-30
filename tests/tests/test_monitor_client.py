@@ -904,7 +904,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -985,7 +985,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         patterns_count = 30
         expected_alerts_count = (
@@ -1418,7 +1418,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         log_file_name = "/tmp/mylog.log"
         log_file = "@tail -f " + log_file_name
@@ -1569,7 +1569,7 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_remove_old_alerts: remove old alerts from store scenario."
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         mender_device.run(
             "sed -i.backup -e 's/ALERT_STORE_MAX_RECORD_AGE_S=.*/ALERT_STORE_MAX_RECORD_AGE_S="
@@ -1622,7 +1622,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -1696,7 +1696,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)

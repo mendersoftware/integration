@@ -198,7 +198,7 @@ class BaseTestBasicIntegration(MenderTesting):
                 wait_count = 0
 
         def deployment_triggered_callback():
-            mender_device.run("mender check-update")
+            mender_device.run("mender-update check-update")
             logger.info("mender client has forced an update check")
 
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")
@@ -254,7 +254,7 @@ class BaseTestBasicIntegration(MenderTesting):
 
         # Now that the client has settled into the wait-state, run the command, and check if it does indeed exit the wait state,
         # and send inventory.
-        mender_device.run("mender send-inventory")
+        mender_device.run("mender-update send-inventory")
         logger.info("mender client has forced an inventory update")
 
         for i in range(10):

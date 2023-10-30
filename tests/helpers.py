@@ -51,7 +51,7 @@ class Helpers:
         identity_to_id = {}
         for dev in devauth_devices:
             # Strip the array from the reported identity
-            dev["identity_data"]["mac"] = dev["identity_data"]['mac'][0]
+            dev["identity_data"]["mac"] = dev["identity_data"]["mac"][0]
             identity_to_id[
                 json.dumps(dev["identity_data"], separators=(",", ":"))
             ] = dev["id"]

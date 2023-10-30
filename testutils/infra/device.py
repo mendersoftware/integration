@@ -152,9 +152,7 @@ class MenderDevice:
 
     def get_client_service_name(self):
         if self._service_name is None:
-            self._service_name = self.run(
-                "echo mender-updated"
-            ).strip()
+            self._service_name = self.run("echo mender-updated").strip()
         return self._service_name
 
 

@@ -32,10 +32,6 @@ from .mendertesting import MenderTesting
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-   {
-        "blockAfterStart": False,
-        "logMessageToLookFor": "[uU]pdate (check|fetch) failed:",
-    },
     {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
 ]
 

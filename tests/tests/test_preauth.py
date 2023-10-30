@@ -198,10 +198,8 @@ class Client:
 
     ID_HELPER = "/usr/share/mender/identity/mender-device-identity"
     PRIV_KEY = "/data/mender/mender-agent.pem"
-    MENDER_STORE = "/data/mender/mender-store"
 
     KEYGEN_TIMEOUT = 300
-    DEVICE_ACCEPTED_TIMEOUT = 600
 
     @staticmethod
     def get_logs(device):

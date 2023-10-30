@@ -29,8 +29,6 @@ from .mendertesting import MenderTesting
 
 
 class BaseTestBootstrapping(MenderTesting):
-    MENDER_STORE = "/data/mender/mender-store"
-
     def do_test_bootstrap(self, env):
         """Simply make sure we are able to bootstrap a device"""
 

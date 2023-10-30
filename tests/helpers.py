@@ -62,13 +62,13 @@ class Helpers:
         return ip_to_device_id
 
     @staticmethod
-    def _check_log_for_message(device, service, message, since=None):
+    def _check_log_for_message(device, message, since=None):
         if since:
-            cmd = f"journalctl -u {service} -l -S '{since}'"
+            cmd = f"journalctl -u mender-authd -l -S '{since}'"
         else:
             # Use systemctl instead of journalctl in order to get only
             # entries since the last service restart.
-            cmd = f"systemctl status --no-pager -l -n 100000 {service}"
+            cmd = f"systemctl status --no-pager -l -n 100000 mender-authd"
 
         sleepsec = 0
         timeout = 600
@@ -80,21 +80,21 @@ class Helpers:
             time.sleep(10)
             sleepsec += 10
             logger.info(
-                f"waiting for message '{message}' in {service} log, waited for: {sleepsec}"
+                f"waiting for message '{message}' in mender-authd log, waited for: {sleepsec}"
             )
 
         assert (
             sleepsec <= timeout
-        ), f"timeout for waiting for message '{message}' in {service} log"
+        ), f"timeout for waiting for message '{message}' in mender-authd log"
 
     @staticmethod
     def check_log_is_authenticated(device, since=None):
         Helpers._check_log_for_message(
-            device, "mender-updated", "No update available", since
+            device, "Successfully received new authorization data", since
         )
 
     @staticmethod
     def check_log_is_unauthenticated(device, since=None):
         Helpers._check_log_for_message(
-            device, "mender-authd", "Failed to authorize with the server", since
+            device, "Failed to authorize with the server", since
         )

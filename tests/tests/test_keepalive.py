@@ -16,8 +16,6 @@
 import json
 import os
 import os.path
-import pytest
-import shutil
 import tempfile
 import time
 import uuid

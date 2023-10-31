@@ -84,7 +84,7 @@ class TestPreauthBase(MenderTesting):
         assert dev_accepted["auth_sets"][0]["pubkey"] == preauth_key
 
         # verify device was issued a token
-        Helpers.check_log_have_authtoken(mender_device)
+        Helpers.check_log_is_authenticated(mender_device)
 
     def do_test_ok_preauth_and_remove(self):
         """
@@ -198,10 +198,8 @@ class Client:
 
     ID_HELPER = "/usr/share/mender/identity/mender-device-identity"
     PRIV_KEY = "/data/mender/mender-agent.pem"
-    MENDER_STORE = "/data/mender/mender-store"
 
     KEYGEN_TIMEOUT = 300
-    DEVICE_ACCEPTED_TIMEOUT = 600
 
     @staticmethod
     def get_logs(device):

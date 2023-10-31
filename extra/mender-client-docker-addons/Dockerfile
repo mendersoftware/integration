@@ -30,7 +30,7 @@ RUN (cd /src/mender-configure-module && \
 RUN mkdir --parents /mender-install/etc/mender
 
 WORKDIR /src/mender
-RUN test -f CMakeLists.txt && cmake -D MENDER_NO_BUILD=1 -S .
+RUN if [ -f CMakeLists.txt ]; then cmake -D MENDER_NO_BUILD=1 -S .; fi
 RUN DESTDIR=/mender-install make prefix=/usr install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf

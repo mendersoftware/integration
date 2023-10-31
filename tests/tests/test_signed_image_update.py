@@ -14,7 +14,6 @@
 
 import pytest
 
-from .. import conftest
 from ..common_setup import (
     standard_setup_with_signed_artifact_client,
     enterprise_with_signed_artifact_client,

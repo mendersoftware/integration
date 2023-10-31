@@ -96,14 +96,14 @@ test:integration-tests:requirements:
   stage: test
   rules:
     - changes:
-      - tests/requirements/apk-requirements.txt
-      - tests/requirements/python-requirements.txt
+      - tests/requirements-system/apk-requirements.txt
+      - tests/requirements-python/python-requirements.txt
   # Use same image as in mender-qa
   image: docker:dind
   script:
     # Get and install the integration test requirements
-    - apk add $(cat tests/requirements/apk-requirements.txt)
-    - pip install -r tests/requirements/python-requirements.txt
+    - apk add $(cat tests/requirements-system/apk-requirements.txt)
+    - pip install -r tests/requirements-python/python-requirements.txt
 
 build:docker:
   variables:

@@ -685,16 +685,14 @@ class BaseTestStateScripts(MenderTesting):
                 raise
 
             finally:
-                client_service_name = mender_device.get_client_service_name()
                 mender_device.run(
                     (
-                        "systemctl stop %s && "
+                        "systemctl stop mender-updated && "
                         + "rm -f /data/test_state_scripts.log && "
                         + "rm -rf /etc/mender/scripts && "
                         + "rm -rf /data/mender/scripts && "
-                        + "systemctl start %s"
+                        + "systemctl start mender-updated"
                     )
-                    % (client_service_name, client_service_name)
                 )
 
     def do_test_state_scripts(
@@ -709,7 +707,6 @@ class BaseTestStateScripts(MenderTesting):
 
         work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
-        client_service_name = mender_device.get_client_service_name()
         try:
             script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
@@ -740,7 +737,7 @@ class BaseTestStateScripts(MenderTesting):
                 ["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir
             )
             # Stop client first to avoid race conditions.
-            mender_device.run("systemctl stop %s" % client_service_name)
+            mender_device.run("systemctl stop mender-updated")
             try:
                 mender_device.put(
                     os.path.join(work_dir, "rootfs-scripts.tar.gz"), remote_path="/"
@@ -752,7 +749,7 @@ class BaseTestStateScripts(MenderTesting):
                     + "rm -f /rootfs-scripts.tar.gz"
                 )
             finally:
-                mender_device.run("systemctl start %s" % client_service_name)
+                mender_device.run("systemctl start mender-updated")
 
             # Put artifact-scripts in the artifact.
             artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -812,7 +809,7 @@ class BaseTestStateScripts(MenderTesting):
 
                 info_query = [
                     "cat /data/test_state_scripts.log 1>&2",
-                    "journalctl -u %s" % client_service_name,
+                    "journalctl -u mender-updated",
                     "top -n5 -b",
                     "ls -l /proc/`pgrep mender`/fd",
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",

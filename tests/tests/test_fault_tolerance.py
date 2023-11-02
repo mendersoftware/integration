@@ -113,8 +113,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u %s -l --no-pager | egrep 'msg=\".*%s' | wc -l"
-                % (device.get_client_service_name(), search_string),
+                f"journalctl -u mender-authd -l --no-pager | egrep 'msg=\".*{search_string}' | wc -l",
                 hide=True,
             )
             time.sleep(2)

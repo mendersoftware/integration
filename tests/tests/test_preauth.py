@@ -203,9 +203,7 @@ class Client:
 
     @staticmethod
     def get_logs(device):
-        output_from_journalctl = device.run(
-            "journalctl -u %s -l" % device.get_client_service_name()
-        )
+        output_from_journalctl = device.run("journalctl -u mender-updated -l")
         logger.info(output_from_journalctl)
 
     @staticmethod
@@ -239,7 +237,7 @@ class Client:
     def restart(device):
         """Restart the mender service."""
 
-        device.run("systemctl restart %s.service" % device.get_client_service_name())
+        device.run("systemctl restart mender-updated")
 
     @staticmethod
     def __wait_for_keygen(device):

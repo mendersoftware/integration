@@ -137,9 +137,8 @@ class _TestRemoteTerminalBase:
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
-        client_service_name = docker_env.device.get_client_service_name()
         docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies stop {client_service_name}"
+            f"systemctl --job-mode=ignore-dependencies stop mender-authd"
         )
         docker_env.device.run(
             "systemctl --job-mode=ignore-dependencies restart mender-connect"
@@ -149,7 +148,7 @@ class _TestRemoteTerminalBase:
 
         # At this point, mender-connect will already have queried DBus.
         docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
+            f"systemctl --job-mode=ignore-dependencies start mender-authd"
         )
 
         with docker_env.devconnect.get_websocket():

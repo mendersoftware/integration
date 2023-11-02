@@ -173,14 +173,13 @@ class BaseTestBasicIntegration(MenderTesting):
             "\\1 1800",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         def deployment_callback():
             logger.info("Running pre deployment callback function")
             wait_count = 0
             # Match the log template six times to make sure the client is truly sleeping.
-            catcmd = "journalctl -u %s --output=cat" % client_service_name
+            catcmd = "journalctl -u mender-updated --output=cat"
             template = mender_device.run(catcmd)
             while True:
                 logger.info("sleeping...")
@@ -224,13 +223,12 @@ class BaseTestBasicIntegration(MenderTesting):
             "\\1 1800",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         logger.info("Running pre deployment callback function")
         wait_count = 0
         # Match the log template six times to make sure the client is truly sleeping.
-        catcmd = "journalctl -u %s --output=cat" % client_service_name
+        catcmd = "journalctl -u mender-updated --output=cat"
         template = mender_device.run(catcmd)
         while True:
             logger.info("sleeping...")

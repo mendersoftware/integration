@@ -74,6 +74,7 @@ def configure_connectivity(
     mender_device.run("systemctl stop mender-connect || true")
     mender_device.run("systemctl stop mender-monitor || true")
     mender_device.run("systemctl restart mender-authd")
+    mender_device.run("systemctl restart mender-updated")
 
 
 def clean_config(mender_device):
@@ -82,7 +83,8 @@ def clean_config(mender_device):
     )
     mender_device.run("systemctl start mender-connect || true")
     mender_device.run("systemctl start mender-monitor || true")
-    mender_device.run("systemctl restart mender-client || true")
+    mender_device.run("systemctl restart mender-authd || true")
+    mender_device.run("systemctl restart mender-updated || true")
 
 
 def get_opened_tcp_connections(mender_device):

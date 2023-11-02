@@ -149,21 +149,11 @@ class TestConfigurationEnterprise(MenderTesting):
 
 def was_update_forced(mender_device):
     """Check that the update was triggered by update-check
-    It's possible that due to a race, the update was applied by normal check, blocking the update check trigger.
-    Make sure which case it is.
     """
 
-    out = mender_device.run(
-        "journalctl -u %s -l" % mender_device.get_client_service_name()
-    )
-    if (
-        "Forced wake-up from sleep" in out
-        and "Forcing state machine to: update-check" in out
-    ):
+    out = mender_device.run("journalctl -u mender-updated -l")
+    if "SIGUSR1 received, triggering deployments check" in out:
         return True
-    elif "Cannot check update or update inventory while in update-fetch state" in out:
-        # race condition - check-update came while we were already updating
-        return False
     elif "/usr/share/mender/modules/v3/mender-configure" in out:
         # deployment was processed too quickly
         return False

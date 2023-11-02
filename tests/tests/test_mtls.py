@@ -297,7 +297,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
 
-            output = setup_ent_mtls.device.run("journalctl -u mender-updated | cat")
+            output = setup_ent_mtls.device.run("journalctl --unit mender-updated | cat")
             assert "loaded private key: '" in output
 
             # prepare a test artifact

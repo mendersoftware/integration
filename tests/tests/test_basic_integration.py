@@ -179,7 +179,7 @@ class BaseTestBasicIntegration(MenderTesting):
             logger.info("Running pre deployment callback function")
             wait_count = 0
             # Match the log template six times to make sure the client is truly sleeping.
-            catcmd = "journalctl -u mender-updated --output=cat"
+            catcmd = "journalctl --unit mender-updated --output cat"
             template = mender_device.run(catcmd)
             while True:
                 logger.info("sleeping...")
@@ -228,7 +228,7 @@ class BaseTestBasicIntegration(MenderTesting):
         logger.info("Running pre deployment callback function")
         wait_count = 0
         # Match the log template six times to make sure the client is truly sleeping.
-        catcmd = "journalctl -u mender-updated --output=cat"
+        catcmd = "journalctl --unit mender-updated --output cat"
         template = mender_device.run(catcmd)
         while True:
             logger.info("sleeping...")

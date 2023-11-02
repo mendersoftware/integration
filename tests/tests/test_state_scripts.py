@@ -809,7 +809,7 @@ class BaseTestStateScripts(MenderTesting):
 
                 info_query = [
                     "cat /data/test_state_scripts.log 1>&2",
-                    "journalctl -u mender-updated",
+                    "journalctl --unit mender-updated",
                     "top -n5 -b",
                     "ls -l /proc/`pgrep mender`/fd",
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",

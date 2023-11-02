@@ -151,7 +151,7 @@ def was_update_forced(mender_device):
     """Check that the update was triggered by update-check
     """
 
-    out = mender_device.run("journalctl -u mender-updated -l")
+    out = mender_device.run("journalctl --unit mender-updated --full")
     if "SIGUSR1 received, triggering deployments check" in out:
         return True
     elif "/usr/share/mender/modules/v3/mender-configure" in out:

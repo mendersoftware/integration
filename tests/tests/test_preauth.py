@@ -202,7 +202,7 @@ class Client:
 
     @staticmethod
     def get_logs(device):
-        output_from_journalctl = device.run("journalctl -u mender-updated -l")
+        output_from_journalctl = device.run("journalctl --unit mender-updated --full")
         logger.info(output_from_journalctl)
 
     @staticmethod

@@ -1470,7 +1470,7 @@ class TestMonitorClientEnterprise:
         )
 
         output = mender_device.run(
-            "journalctl -u mender-monitor --output=cat --no-pager --reverse"
+            "journalctl --unit mender-monitor --output cat --no-pager --reverse"
         )
 
         assert len(messages) == 2, output

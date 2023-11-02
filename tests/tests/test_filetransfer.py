@@ -38,7 +38,6 @@ from ..common_setup import (
 
 from ..MenderAPI import (
     auth,
-    authentication,
     get_container_manager,
     reset_mender_api,
     logger,

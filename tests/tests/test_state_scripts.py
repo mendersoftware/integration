@@ -653,7 +653,7 @@ class BaseTestStateScripts(MenderTesting):
                 # wait until the last script has been run
                 logger.debug("Wait until the last script has been run")
                 script_logs = ""
-                timeout = time.time() + 60 * 60
+                timeout = time.time() + 10 * 60
                 while timeout >= time.time():
                     time.sleep(3)
                     try:
@@ -818,7 +818,7 @@ class BaseTestStateScripts(MenderTesting):
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
                 starttime = time.time()
-                while starttime + 60 * 60 >= time.time():
+                while starttime + 10 * 60 >= time.time():
                     output = mender_device.run(
                         "grep Error /data/test_state_scripts.log", warn_only=True
                     )

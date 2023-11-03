@@ -20,18 +20,16 @@ import shutil
 from .. import conftest
 from ..common_setup import (
     standard_setup_one_docker_client_bootstrapped,
-    standard_setup_one_client_bootstrapped,
     enterprise_one_docker_client_bootstrapped,
-    enterprise_one_client_bootstrapped,
 )
-from .common_update import common_update_procedure, update_image
+from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 
 class BaseTestUpdateModules(MenderTesting):
     def do_test_rootfs_image_rejected(self, env):
-        """Test that a rootfs-image update is rejected when such a setup isn't
+        """Test that a update for a non-existing module is rejected when such a setup isn't
         present."""
 
         mender_device = env.device
@@ -46,7 +44,8 @@ class BaseTestUpdateModules(MenderTesting):
 
             def make_artifact(artifact_file, artifact_id):
                 cmd = (
-                    "mender-artifact write rootfs-image -o %s -n %s -t docker-client -f %s"
+                    "mender-artifact write module-image "
+                    + "-o %s -n %s -t docker-client -T nonexisting-module -f %s"
                     % (artifact_file, artifact_id, file1)
                 )
                 logger.info("Executing: " + cmd)
@@ -59,48 +58,18 @@ class BaseTestUpdateModules(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-            output = mender_device.run("mender --no-syslog show-artifact").strip()
+            output = mender_device.run("mender-update show-artifact").strip()
             assert output == "original"
 
             output = env.get_logs_of_service("mender-client")
+            assert "Update Module not found for given artifact type" in output
             assert (
-                "Artifact Payload type 'rootfs-image' is not supported by this Mender Client"
+                "Cannot launch /usr/share/mender/modules/v3/nonexisting-module"
                 in output
             )
 
         finally:
             shutil.rmtree(file_tree)
-
-    def do_test_rootfs_update_module_success(self, env, valid_image_with_mender_conf):
-        """Test the rootfs-image-v2 update module, which does the same as the
-        built-in rootfs-image type."""
-
-        mender_conf = env.device.run("cat /etc/mender/mender.conf")
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        def make_artifact(artifact_file, artifact_id):
-            cmd = (
-                "mender-artifact write module-image "
-                + "-o %s -n %s -t %s -T rootfs-image-v2 -f %s"
-                % (
-                    artifact_file,
-                    artifact_id,
-                    conftest.machine_name,
-                    valid_image_with_mender_conf(mender_conf),
-                )
-            )
-            logger.info("Executing: " + cmd)
-            subprocess.check_call(cmd, shell=True)
-            return artifact_file
-
-        update_image(
-            env.device,
-            env.get_virtual_network_host_ip(),
-            make_artifact=make_artifact,
-            devauth=devauth,
-            deploy=deploy,
-        )
 
 
 class TestUpdateModulesOpenSource(BaseTestUpdateModules):
@@ -110,24 +79,8 @@ class TestUpdateModulesOpenSource(BaseTestUpdateModules):
             standard_setup_one_docker_client_bootstrapped
         )
 
-    @MenderTesting.fast
-    def test_rootfs_update_module_success(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-    ):
-        self.do_test_rootfs_update_module_success(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
 
 class TestUpdateModulesEnterprise(BaseTestUpdateModules):
     @MenderTesting.fast
     def test_rootfs_image_rejected(self, enterprise_one_docker_client_bootstrapped):
         self.do_test_rootfs_image_rejected(enterprise_one_docker_client_bootstrapped)
-
-    @MenderTesting.fast
-    def test_rootfs_update_module_success(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-    ):
-        self.do_test_rootfs_update_module_success(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-        )

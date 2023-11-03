@@ -21,25 +21,13 @@ import time
 import uuid
 import inspect
 
-from email.parser import Parser
-from email.policy import default
-from redo import retriable
-from ..common_setup import monitor_commercial_setup_no_client
-
 from ..MenderAPI import (
     authentication,
-    get_container_manager,
     DeviceAuthV2,
-    DeviceMonitor,
-    Inventory,
     logger,
 )
 
-from testutils.api import useradm
-from testutils.api.client import ApiClient
 from testutils.infra.container_manager import factory
-from testutils.infra.container_manager.kubernetes_manager import isK8S
-from testutils.infra import smtpd_mock
 from testutils.common import User, new_tenant_client
 from testutils.infra.cli import CliTenantadm
 

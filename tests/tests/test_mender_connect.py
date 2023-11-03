@@ -336,37 +336,6 @@ class TestRemoteTerminal(
         yield env
 
 
-class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
-    """
-    This set of tests uses mender-connect v1.0
-    """
-
-    def docker_env_impl(self, request):
-        env = container_factory.get_mender_client_2_5_setup(num_clients=1)
-        request.addfinalizer(env.teardown)
-        env.setup()
-
-        env.device = MenderDevice(env.get_mender_clients()[0])
-        env.device.ssh_is_opened()
-
-        set_container_manager(env)
-        auth = Authentication()
-        devauth = DeviceAuthV2(auth)
-        devauth.accept_devices(1)
-
-        env.devconnect = DeviceConnect(auth, devauth)
-
-        return env
-
-    @pytest.fixture(scope="class")
-    def docker_env(self, request):
-        yield self.docker_env_impl(request)
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(self, request):
-        yield self.docker_env_impl(request)
-
-
 def connected_device(env):
     uuidv4 = str(uuid.uuid4())
     tname = "test.mender.io-{}".format(uuidv4)
@@ -431,30 +400,3 @@ class TestRemoteTerminalEnterprise(
         env.devconnect = devconn
 
         yield env
-
-
-class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
-    """
-    This set of tests uses mender-connect v1.0
-    """
-
-    def docker_env_impl(self, request):
-        env = container_factory.get_mender_client_2_5_enterprise_setup()
-        request.addfinalizer(env.teardown)
-        env.setup()
-
-        set_container_manager(env)
-        device, devconn = connected_device(env)
-
-        env.device = device
-        env.devconnect = devconn
-
-        return env
-
-    @pytest.fixture(scope="class")
-    def docker_env(self, request):
-        yield self.docker_env_impl(request)
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(self, request):
-        yield self.docker_env_impl(request)

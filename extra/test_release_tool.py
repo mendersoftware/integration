@@ -102,13 +102,15 @@ def test_version_of(capsys, is_master):
 
     # Querying mender with version-type docker should error, since it maps to
     # multiple containers and we don't know which one to choose.
-    run_main_assert_result(capsys, ["--version-of", "mender"], "master")
+    run_main_assert_result(capsys, ["--version-of", "mender"], "feature-c++-client")
     with pytest.raises(Exception):
         run_main_assert_result(
             capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
         )
     run_main_assert_result(
-        capsys, ["--version-of", "mender", "--version-type", "git"], "master"
+        capsys,
+        ["--version-of", "mender", "--version-type", "git"],
+        "feature-c++-client",
     )
 
     # For an independent component, it should also error because it doesn't have

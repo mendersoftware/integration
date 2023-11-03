@@ -13,13 +13,14 @@
 #    limitations under the License.
 #
 
+import inspect
 import json
 import os
 import os.path
+import pytest
 import tempfile
 import time
 import uuid
-import inspect
 
 from ..MenderAPI import (
     authentication,
@@ -94,6 +95,9 @@ def get_opened_tcp_connections(mender_device):
 #    * restart mender-client and expect 0 connections
 #  * configure IdleConnTimeoutSeconds while DisableKeepAlive is false (test_keepalive_idle_connections)
 #    * expect the connection count to drop to 0 after given timeout
+@pytest.mark.skipif(
+    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+)
 class TestMenderClientKeepAlive:
     """Tests for the Mender client and keep alive connections"""
 

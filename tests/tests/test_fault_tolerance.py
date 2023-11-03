@@ -12,14 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
 import json
-import re
+import os
+import pytest
 import shutil
 import tempfile
 import time
-
-import pytest
 
 from .. import conftest
 from ..common_setup import (
@@ -38,6 +36,9 @@ DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
 
 @pytest.mark.skipif(
     isK8S(), reason="This test suite is not supposed to be run on staging environment"
+)
+@pytest.mark.skipif(
+    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
 )
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(

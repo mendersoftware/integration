@@ -12,11 +12,10 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import shutil
 import os
-import time
-
 import pytest
+import shutil
+import time
 
 from ..common_setup import (
     standard_setup_one_rofs_client_bootstrapped,
@@ -270,6 +269,9 @@ class BaseTestBasicIntegration(MenderTesting):
 
 class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_update_failover_server(self, setup_failover, valid_image):
         """
         Client is initially set up against server A, and then receives an update
@@ -328,6 +330,9 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             os.remove(tmp_image)
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_double_update_rofs(
         self,
         standard_setup_one_rofs_client_bootstrapped,
@@ -347,6 +352,9 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_failed_updated_and_valid_update(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -361,6 +369,9 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_update_zstd_compression(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
@@ -368,6 +379,9 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_forced_update_check_from_client(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -386,6 +400,9 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_double_update_rofs(
         self,
         enterprise_one_rofs_client_bootstrapped,
@@ -404,6 +421,9 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         )
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_failed_updated_and_valid_update(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -418,6 +438,9 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_update_zstd_compression(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
@@ -425,6 +448,9 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_forced_update_check_from_client(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):

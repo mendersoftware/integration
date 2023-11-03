@@ -14,8 +14,9 @@
 
 import json
 import os
-import tempfile
+import pytest
 import shutil
+import tempfile
 
 from ..common_setup import (
     setup_with_legacy_client,
@@ -26,6 +27,9 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 
+@pytest.mark.skipif(
+    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+)
 class BaseTestDBMigration(MenderTesting):
     def ensure_persistent_conf_script(self, dir):
         # Because older versions of Yocto branches did not split mender.conf

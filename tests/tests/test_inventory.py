@@ -13,10 +13,10 @@
 #    limitations under the License.
 
 import json
+import os
+import pytest
 import tempfile
 import time
-
-import pytest
 
 from .. import conftest
 from ..common_setup import (
@@ -273,6 +273,9 @@ class BaseTestInventory(MenderTesting):
 
 class TestInventoryOpenSource(BaseTestInventory):
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_inventory(self, standard_setup_one_client_bootstrapped):
         self.do_test_inventory(standard_setup_one_client_bootstrapped)
 
@@ -287,6 +290,9 @@ class TestInventoryOpenSource(BaseTestInventory):
 
 class TestInventoryEnterprise(BaseTestInventory):
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_inventory(self, enterprise_one_client_bootstrapped):
         self.do_test_inventory(enterprise_one_client_bootstrapped)
 

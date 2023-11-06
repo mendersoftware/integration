@@ -13,12 +13,13 @@
 #    limitations under the License.
 
 import json
+import os
 import os.path
 import pytest
+import re
 import shutil
 import tempfile
 import time
-import re
 
 from testutils.common import create_org
 from testutils.infra.container_manager import factory
@@ -86,6 +87,9 @@ exit 0
 
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
+)
+@pytest.mark.skipif(
+    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
 )
 class TestClientMTLSEnterprise:
     wait_for_device_timeout_seconds = 64

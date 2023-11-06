@@ -12,6 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import os
+import pytest
+
 from ..common_setup import (
     standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
@@ -89,6 +92,9 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         self.abort_deployment(standard_setup_one_client_bootstrapped, valid_image)
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_deployment_abortion_downloading(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -97,6 +103,9 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         )
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_deployment_abortion_rebooting(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -116,6 +125,9 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
         self.abort_deployment(enterprise_one_client_bootstrapped, valid_image)
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_deployment_abortion_downloading(
         self, enterprise_one_client_bootstrapped, valid_image
     ):
@@ -124,6 +136,9 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
         )
 
     @MenderTesting.fast
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_deployment_abortion_rebooting(
         self, enterprise_one_client_bootstrapped, valid_image
     ):

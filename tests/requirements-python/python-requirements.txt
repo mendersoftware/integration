@@ -18,7 +18,7 @@ cffi==1.15.1
     #   pynacl
 charset-normalizer==2.1.1
     # via requests
-cryptography==41.0.4
+cryptography==41.0.5
     # via
     #   -r python-requirements.in
     #   paramiko
@@ -26,11 +26,13 @@ dnspython==2.3.0
     # via pymongo
 docker==6.1.3
     # via -r python-requirements.in
+exceptiongroup==1.1.3
+    # via pytest
 execnet==1.9.0
     # via pytest-xdist
 fabric==2.7.1
     # via -r python-requirements.in
-filelock==3.12.4
+filelock==3.13.1
     # via -r python-requirements.in
 flaky==3.7.0
     # via -r python-requirements.in
@@ -122,8 +124,10 @@ six==1.16.0
     #   kubernetes
     #   pathlib2
     #   python-dateutil
-stripe==7.0.0
+stripe==7.2.0
     # via -r python-requirements.in
+tomli==2.0.1
+    # via pytest
 typing-extensions==4.7.1
     # via stripe
 urllib3==1.26.18

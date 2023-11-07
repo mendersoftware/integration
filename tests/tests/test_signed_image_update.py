@@ -72,9 +72,6 @@ class BaseTestSignedUpdates(MenderTesting):
 
 @MenderTesting.fast
 class TestSignedUpdatesOpenSource(BaseTestSignedUpdates):
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_signed_artifact_success(
         self, standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
     ):
@@ -98,9 +95,6 @@ class TestSignedUpdatesOpenSource(BaseTestSignedUpdates):
 
 @MenderTesting.fast
 class TestSignedUpdatesEnterprise(BaseTestSignedUpdates):
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_signed_artifact_success(
         self, enterprise_with_signed_artifact_client, valid_image_with_mender_conf
     ):

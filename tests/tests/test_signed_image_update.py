@@ -12,7 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
 import pytest
 
 from ..common_setup import (
@@ -82,9 +81,6 @@ class TestSignedUpdatesOpenSource(BaseTestSignedUpdates):
     @pytest.mark.parametrize(
         "standard_setup_with_signed_artifact_client", ["force_new"], indirect=True
     )
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_unsigned_artifact_fails_deployment(
         self, standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
     ):
@@ -104,9 +100,6 @@ class TestSignedUpdatesEnterprise(BaseTestSignedUpdates):
 
     @pytest.mark.parametrize(
         "enterprise_with_signed_artifact_client", ["force_new"], indirect=True
-    )
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
     )
     def test_unsigned_artifact_fails_deployment(
         self, enterprise_with_signed_artifact_client, valid_image_with_mender_conf

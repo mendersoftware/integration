@@ -197,8 +197,10 @@ class BaseTestInventory(MenderTesting):
                                 assert any([subkey in keys for subkey in key])
                             else:
                                 assert key in keys
-                    except:
-                        logger.info("Exception caught, 'device' json: %s" % device)
+                    except Exception as e:
+                        logger.info(
+                            f"Exception caught, 'device' json: {device}, exception {str(e)}"
+                        )
                         raise
             except Exception as e:
                 latest_exception = e

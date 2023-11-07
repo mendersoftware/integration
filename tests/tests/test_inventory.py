@@ -270,7 +270,7 @@ class BaseTestInventory(MenderTesting):
         assert len(post_deployment_inv_json) > 0
         assert "rootfs-image.swname.version" in str(
             post_deployment_inv_json
-        ), "The device has not updated the inventory after the udpate"
+        ), "The device has not updated the inventory after the update"
 
 
 class TestInventoryOpenSource(BaseTestInventory):

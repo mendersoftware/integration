@@ -346,9 +346,6 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_failed_updated_and_valid_update(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -406,9 +403,6 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         )
 
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_failed_updated_and_valid_update(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):

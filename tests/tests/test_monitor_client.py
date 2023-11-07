@@ -290,6 +290,9 @@ def prepare_dockerevents_monitoring(
     )
 
 
+@pytest.mark.skipif(
+    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+)
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -1500,9 +1503,6 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_send_saved_alerts_on_network_issues: got CRITICAL alert email."
         )
 
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_monitorclient_send_configuration_data(
         self, monitor_commercial_setup_no_client
     ):
@@ -1606,9 +1606,6 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("systemctl restart mender-monitor")
 
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_monitorclient_alert_store_discard_http_400(
         self, monitor_commercial_setup_no_client
     ):

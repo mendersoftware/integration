@@ -290,7 +290,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
             self.wait_for_download_retry_attempts(
                 mender_device,
-                "Unexpected error during download: certificate verify failed ",
+                "Failed to perform the SSL handshake: certificate verify failed",
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
@@ -386,9 +386,6 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     @MenderTesting.slow
     def test_image_download_retry_hosts_broken(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
@@ -437,9 +434,6 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
         )
 
     @MenderTesting.slow
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_image_download_retry_hosts_broken(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):

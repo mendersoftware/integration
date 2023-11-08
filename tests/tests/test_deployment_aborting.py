@@ -103,9 +103,6 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         )
 
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_deployment_abortion_rebooting(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
@@ -136,9 +133,6 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
         )
 
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_deployment_abortion_rebooting(
         self, enterprise_one_client_bootstrapped, valid_image
     ):

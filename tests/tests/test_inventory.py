@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import json
-import os
 import pytest
 import tempfile
 import time
@@ -197,8 +196,10 @@ class BaseTestInventory(MenderTesting):
                                 assert any([subkey in keys for subkey in key])
                             else:
                                 assert key in keys
-                    except:
-                        logger.info("Exception caught, 'device' json: %s" % device)
+                    except Exception as e:
+                        logger.info(
+                            f"Exception caught, 'device' json: {device}, exception {str(e)}"
+                        )
                         raise
             except Exception as e:
                 latest_exception = e
@@ -268,14 +269,11 @@ class BaseTestInventory(MenderTesting):
         assert len(post_deployment_inv_json) > 0
         assert "rootfs-image.swname.version" in str(
             post_deployment_inv_json
-        ), "The device has not updated the inventory after the udpate"
+        ), "The device has not updated the inventory after the update"
 
 
 class TestInventoryOpenSource(BaseTestInventory):
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_inventory(self, standard_setup_one_client_bootstrapped):
         self.do_test_inventory(standard_setup_one_client_bootstrapped)
 
@@ -290,9 +288,6 @@ class TestInventoryOpenSource(BaseTestInventory):
 
 class TestInventoryEnterprise(BaseTestInventory):
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_inventory(self, enterprise_one_client_bootstrapped):
         self.do_test_inventory(enterprise_one_client_bootstrapped)
 

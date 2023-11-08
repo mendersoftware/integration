@@ -12,9 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
-import pytest
-
 from ..common_setup import (
     standard_setup_two_clients_bootstrapped,
     enterprise_two_clients_bootstrapped,
@@ -25,9 +22,6 @@ from .mendertesting import MenderTesting
 from ..helpers import Helpers
 
 
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class BaseTestGrouping(MenderTesting):
     def validate_group_responses(self, device_map, inv):
         """Checks whether the device_map corresponds to the server's view of

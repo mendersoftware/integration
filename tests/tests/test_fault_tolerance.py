@@ -33,9 +33,6 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 @pytest.mark.skipif(
     isK8S(), reason="This test suite is not supposed to be run on staging environment"
 )
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(
         self,
@@ -110,8 +107,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u %s -l --no-pager | egrep 'msg=\".*%s' | wc -l"
-                % (device.get_client_service_name(), search_string),
+                f"journalctl -u mender-updated -l --no-pager | egrep 'msg=\".*{search_string}' | wc -l",
                 hide=True,
             )
             time.sleep(2)
@@ -253,7 +249,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
             # re-enable connectivity after 2 retries
-            self.wait_for_download_retry_attempts(mender_device, "Download connection broken:")
+            self.wait_for_download_retry_attempts(mender_device, "Connection timed out")
 
             self.manipulate_network_connectivity(
                 mender_device, True, hosts=[blocked_service]
@@ -292,9 +288,9 @@ class BasicTestFaultTolerance(MenderTesting):
                 deploy=deploy,
             )
 
-            # We use "pdate" to be able to match "Update" (2.4.x) and "update" (2.3.x and earlier)
             self.wait_for_download_retry_attempts(
-                mender_device, "pdate fetch failed",
+                mender_device,
+                "Unexpected error during download: certificate verify failed ",
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
@@ -390,6 +386,9 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     @MenderTesting.slow
     def test_image_download_retry_hosts_broken(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
@@ -398,6 +397,9 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_rootfs_conf_missing_from_new_update(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -435,6 +437,9 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
         )
 
     @MenderTesting.slow
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_image_download_retry_hosts_broken(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
@@ -442,6 +447,9 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf
         )
 
+    @pytest.mark.skipif(
+        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
+    )
     def test_rootfs_conf_missing_from_new_update(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):

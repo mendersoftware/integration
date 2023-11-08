@@ -24,10 +24,6 @@ class MongoClient:
         if isK8S():
             return
         dbs = self.client.list_database_names()
-        dbs = [
-            d
-            for d in dbs
-            if d not in ["local", "admin", "config", "workflows"]
-        ]
+        dbs = [d for d in dbs if d not in ["local", "admin", "config", "workflows"]]
         for d in dbs:
             self.client.drop_database(d)

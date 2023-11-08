@@ -348,7 +348,7 @@ class BasicTestFaultTolerance(MenderTesting):
             update_image_failed(
                 mender_device,
                 host_ip,
-                expected_log_message="Unable to roll back with a stub module, but will try to reboot to restore state",
+                expected_log_message="Cannot parse RootfsPartA/B in any configuration file!",
                 install_image=valid_image_with_mender_conf(output),
                 devauth=devauth,
                 deploy=deploy,
@@ -394,9 +394,6 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
         )
 
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_rootfs_conf_missing_from_new_update(
         self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
     ):
@@ -441,9 +438,6 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf
         )
 
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_rootfs_conf_missing_from_new_update(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):

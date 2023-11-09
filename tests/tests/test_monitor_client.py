@@ -289,9 +289,6 @@ def prepare_dockerevents_monitoring(
     )
 
 
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -1529,7 +1526,7 @@ class TestMonitorClientEnterprise:
         prepare_log_monitoring(
             mender_device,
             "clientlogs",
-            "@journalctl -u mender-client -f",
+            "@journalctl -u mender-authd -f",
             "[Ee]rror.*",
             use_ctl=True,
         )

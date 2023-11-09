@@ -702,6 +702,10 @@ class TestMonitorClientEnterprise:
             mender_device.run("systemctl start %s" % service_name)
             time.sleep(not_running_time)
 
+        logger.info(
+            "test_monitorclient_flapping: waiting for %s seconds"
+            % (2 * wait_for_alert_interval_s)
+        )
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email(
             monitor_commercial_setup_no_client, user_name

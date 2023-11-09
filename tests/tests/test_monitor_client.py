@@ -205,7 +205,6 @@ def prepare_log_monitoring(
     use_ctl=False,
 ):
     if use_ctl:
-        # create log mender-client "State transition: .*" "@journalctl -u mender-client -f"
         mender_device.run(
             'mender-monitorctl create log "%s" "%s" "%s"'
             % (service_name, log_pattern, log_file)

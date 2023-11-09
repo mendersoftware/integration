@@ -92,14 +92,14 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         self.abort_deployment(standard_setup_one_client_bootstrapped, valid_image)
 
     @MenderTesting.fast
-    @pytest.mark.skipif(
-        not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-    )
     def test_deployment_abortion_downloading(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
         self.abort_deployment(
-            standard_setup_one_client_bootstrapped, valid_image, "downloading"
+            standard_setup_one_client_bootstrapped,
+            valid_image,
+            "downloading",
+            mender_performs_reboot=True,
         )
 
     @MenderTesting.fast

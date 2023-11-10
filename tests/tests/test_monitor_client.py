@@ -205,7 +205,6 @@ def prepare_log_monitoring(
     use_ctl=False,
 ):
     if use_ctl:
-        # create log mender-client "State transition: .*" "@journalctl -u mender-client -f"
         mender_device.run(
             'mender-monitorctl create log "%s" "%s" "%s"'
             % (service_name, log_pattern, log_file)
@@ -290,9 +289,6 @@ def prepare_dockerevents_monitoring(
     )
 
 
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class TestMonitorClientEnterprise:
     """Tests for the Monitor client"""
 
@@ -703,6 +699,10 @@ class TestMonitorClientEnterprise:
             mender_device.run("systemctl start %s" % service_name)
             time.sleep(not_running_time)
 
+        logger.info(
+            "test_monitorclient_flapping: waiting for %s seconds"
+            % (2 * wait_for_alert_interval_s)
+        )
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email(
             monitor_commercial_setup_no_client, user_name
@@ -1526,7 +1526,7 @@ class TestMonitorClientEnterprise:
         prepare_log_monitoring(
             mender_device,
             "clientlogs",
-            "@journalctl -u mender-client -f",
+            "@journalctl -u mender-authd -f",
             "[Ee]rror.*",
             use_ctl=True,
         )

@@ -54,9 +54,6 @@ exit 0
 
 
 @pytest.mark.usefixtures("enterprise_no_client")
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class TestDeploymentRetryEnterprise(MenderTesting):
     """Tests the retry deployment functionality"""
 

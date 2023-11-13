@@ -208,7 +208,7 @@ done
             del mender_conf_json["RootfsPartB"]
             valid_image = valid_image_with_mender_conf(json.dumps(mender_conf_json))
 
-            # do the succesful update twice
+            # do the successful update twice
             host_ip = env.get_virtual_network_host_ip()
             update_image(
                 mender_device,

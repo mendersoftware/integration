@@ -27,9 +27,6 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 
 
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class BaseTestDBMigration(MenderTesting):
     def ensure_persistent_conf_script(self, dir):
         # Because older versions of Yocto branches did not split mender.conf
@@ -226,13 +223,14 @@ done
             )
             assert mender_device.run("cat %s" % test_log).strip() == "\n".join(scripts)
 
+            # NOTE: With client >= 4.x we only support Artifact version 3
             update_image(
                 mender_device,
                 host_ip,
                 install_image=valid_image,
                 # Second update should not need storage_device_state_scripts.
                 scripts=[ensure_persistent_conf] + scripts_paths,
-                version=2,
+                version=3,
                 devauth=devauth,
                 deploy=deploy,
             )

@@ -91,9 +91,6 @@ def add_mender_conf_and_mender_gateway_conf(d, image, mender_conf, mender_gatewa
     return new_image
 
 
-@pytest.mark.skipif(
-    not (os.environ.get("NIGHTLY_BUILD", "false") == "true"), reason="MEN-6671",
-)
 class BaseTestMenderGateway(MenderTesting):
     def do_test_deployment_one_device(self, env, valid_image_with_mender_conf):
         mender_device = env.device

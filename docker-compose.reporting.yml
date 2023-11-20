@@ -1,0 +1,80 @@
+version: '2.3'
+services:
+
+    #
+    # mender-deployments
+    #
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_REPORTING_ADDR: http://mender-reporting:8080
+
+
+    #
+    # mender-device-auth
+    #
+    mender-device-auth:
+        environment:
+            DEVICEAUTH_ENABLE_REPORTING: 1
+
+    #
+    # mender-gui
+    #
+    mender-gui:
+        environment:
+            HAVE_REPORTING: 1
+
+    #
+    # mender-inventory
+    #
+    mender-inventory:
+        environment:
+            INVENTORY_ENABLE_REPORTING: 1
+
+    #
+    # mender-reporting
+    #
+    mender-reporting:
+        image: mendersoftware/reporting:mender-3.6.x
+        command: server --automigrate
+        environment:
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-opensearch
+        labels:
+            mender.healthcheck.path: "/api/internal/v1/reporting/health"
+
+    #
+    # mender-reporting-indexer
+    #
+    mender-reporting-indexer:
+        image: mendersoftware/reporting:mender-3.6.x
+        command: indexer
+        environment:
+            REPORTING_OPENSEARCH_ADDRESSES: "http://mender-opensearch:9200"
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        depends_on:
+            - mender-opensearch
+
+    #
+    # mender-opensearch
+    #
+    mender-opensearch:
+        image: opensearchproject/opensearch:2.4.0
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            - mender
+        environment:
+            - "discovery.type=single-node"
+            - "plugins.security.disabled=true"
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"

@@ -481,7 +481,6 @@ class BaseTestFileTransferLimits(MenderTesting):
                     "[MEN-4659] Deviceconnect should not respond with 5xx errors "
                     + "on user restriction errors"
                 )
-                pass
             else:
                 raise e
 

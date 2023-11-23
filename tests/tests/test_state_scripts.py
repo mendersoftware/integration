@@ -703,7 +703,9 @@ class BaseTestStateScripts(MenderTesting):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
 
-        if description == "Corrupted_script_version_in_etc":
+        if description == "Corrupted_script_version_in_etc" and not (
+            os.environ.get("NIGHTLY_BUILD", "false") == "true"
+        ):
             pytest.skip("MEN-6671")
 
         mender_device = env.device

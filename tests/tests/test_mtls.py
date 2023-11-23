@@ -291,7 +291,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True
         )
         if output.rstrip() != "true":
-            pytest.skip("Needs SoftHSM to run this test")
+            pytest.fail("Needs SoftHSM to run this test")
 
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)

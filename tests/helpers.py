@@ -62,11 +62,11 @@ class Helpers:
     @staticmethod
     def _check_log_for_message(device, message, since=None):
         if since:
-            cmd = f"journalctl -u mender-authd -l -S '{since}'"
+            cmd = f"journalctl --unit mender-authd --full --since '{since}'"
         else:
             # Use systemctl instead of journalctl in order to get only
             # entries since the last service restart.
-            cmd = f"systemctl status --no-pager -l -n 100000 mender-authd"
+            cmd = f"systemctl status --no-pager --full --lines 100000 mender-authd"
 
         sleepsec = 0
         timeout = 600

@@ -107,7 +107,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                f"journalctl -u mender-updated -l --no-pager | grep -E 'msg=\".*{search_string}' | wc -l",
+                f"journalctl --unit mender-updated --full --no-pager | grep -E 'msg=\".*{search_string}' | wc -l",
                 hide=True,
             )
             time.sleep(2)

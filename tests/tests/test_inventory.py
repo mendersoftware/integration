@@ -225,8 +225,7 @@ class BaseTestInventory(MenderTesting):
             "\\1 300",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         # Get the inventory sent after first boot
         initial_inv_json = inv.get_devices()

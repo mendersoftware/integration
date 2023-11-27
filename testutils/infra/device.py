@@ -150,11 +150,6 @@ class MenderDevice:
     def get_reboot_detector(self, host_ip):
         return RebootDetector(self, host_ip)
 
-    def get_client_service_name(self):
-        if self._service_name is None:
-            self._service_name = self.run("echo mender-updated").strip()
-        return self._service_name
-
 
 class RebootDetector:
     def __init__(self, device, host_ip):
@@ -303,12 +298,6 @@ class MenderDeviceGroup:
         """
         for dev in self._devices:
             dev.ssh_is_opened(wait)
-
-    def get_client_service_name(self):
-        # We assume that the service name is always the same across all devices,
-        # so it's enough to return the first one.
-        assert len(self._devices) > 0
-        return self._devices[0].get_client_service_name()
 
 
 def _ssh_prep_args(device):

@@ -52,7 +52,7 @@ class BasicTestFaultTolerance(MenderTesting):
     def block_by_ip(self, device, accessible, host):
         """Get IP of host and block by that."""
         gateway_ip = device.run(
-            r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+            r"nslookup %s | grep -A1 'Name:' | grep -E '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
             % (host),
             hide=True,
         ).strip()
@@ -107,7 +107,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                f"journalctl -u mender-updated -l --no-pager | egrep 'msg=\".*{search_string}' | wc -l",
+                f"journalctl --unit mender-updated --full --no-pager | grep -E 'msg=\".*{search_string}' | wc -l",
                 hide=True,
             )
             time.sleep(2)

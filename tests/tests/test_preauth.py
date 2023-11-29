@@ -56,9 +56,8 @@ class TestPreauthBase(MenderTesting):
         assert dev_preauth["auth_sets"][0]["pubkey"] == preauth_key
 
         # make one of the existing devices the preauthorized device
-        # by substituting id data and restarting
+        # by substituting id data script
         Client.substitute_id_data(mender_device, preauth_iddata)
-        Client.restart(mender_device)
 
         # verify api results - after some time the device should be 'accepted'
         for _ in range(120):
@@ -203,9 +202,7 @@ class Client:
 
     @staticmethod
     def get_logs(device):
-        output_from_journalctl = device.run(
-            "journalctl -u %s -l" % device.get_client_service_name()
-        )
+        output_from_journalctl = device.run("journalctl --unit mender-updated --full")
         logger.info(output_from_journalctl)
 
     @staticmethod
@@ -234,12 +231,6 @@ class Client:
 
         cmd = 'echo "{}" > {}'.format(id_data, Client.ID_HELPER)
         device.run(cmd)
-
-    @staticmethod
-    def restart(device):
-        """Restart the mender service."""
-
-        device.run("systemctl restart %s.service" % device.get_client_service_name())
 
     @staticmethod
     def __wait_for_keygen(device):

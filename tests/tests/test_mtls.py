@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -97,13 +97,11 @@ class TestClientMTLSEnterprise:
         script = f"""\
 #!/bin/bash
 echo "module: /usr/lib/softhsm/libsofthsm2.so" > /usr/share/p11-kit/modules/softhsm2.module
-softhsm2-util --init-token --free --label testtoken --pin {pin} --so-pin 0002
-pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write-object "{key}" --type privkey --id 0909 --label certificatekey
-
-# Add the public key to the slot also
-# (Needed for the pkcs11-provider - since it does not extract it when needed)
-openssl pkey -in {key} -pubout -out {key}.pub
-pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write-object "{key}.pub" --type pubkey --id 0909 --label certificatekey
+mkdir -p /softhsm/tokens
+echo "directories.tokendir = /softhsm/tokens" > /softhsm/softhsm2.conf
+export SOFTHSM2_CONF=/softhsm/softhsm2.conf;
+softhsm2-util --init-token --free --label unittoken1 --pin {pin} --so-pin 0002
+pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write-object "{key}" --type privkey --id 0909 --label privatekey
 """
         tmpdir = tempfile.mkdtemp()
         initialize_hsm_script = os.path.join(tmpdir, "init-hsm.sh")
@@ -122,12 +120,32 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
         pt11tool_output = device.run(
-            f"p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin={pin} --list-all-privkeys"
+            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin="
+            + pin
+            + " --list-all-privkeys"
         ).rstrip("\n")
         key_uri = re.search(r"URL:\s(.*)", pt11tool_output).group(1)
         key_uri = key_uri + ";pin-value=" + pin
 
+        device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
+        device.run(
+            'echo -ne "[openssl_init]\nengines=engine_section\n\n[engine_section]\npkcs11 = pkcs11_section\n\n[pkcs11_section]\nengine_id = '
+            + ssl_engine_id
+            + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
+        )
+        device.run(
+            'sed -i.backup -e "/\\[Service\\]/ a Environment=SOFTHSM2_CONF=/softhsm/softhsm2.conf" /lib/systemd/system/%s.service'
+            % device.get_client_service_name()
+        )
         return key_uri
+
+    def hsm_cleanup(self, device):
+        device.run(
+            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service || true"
+            % (device.get_client_service_name(), device.get_client_service_name())
+        )
+        device.run("rm -Rf /softhsm")
+        device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
         # upload the certificates
@@ -141,6 +159,19 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         )
         env.device.run("update-ca-certificates")
 
+        env.device.put(
+            "server.crt",
+            local_path=os.path.join(certs, "server"),
+            remote_path="/etc/mender",
+        )
+        env.device.put(
+            "cert.crt",
+            local_path=os.path.join(basedir, "cert"),
+            remote_path="/etc/mender",
+        )
+        env.device.run(
+            "cat /etc/mender/server.crt /etc/mender/cert.crt > /tmp/server.crt && mv /tmp/server.crt /etc/mender/server.crt && rm /etc/mender/cert.crt"
+        )
         if algorithm is not None:
             env.device.put(
                 f"client.1.{algorithm}.crt",
@@ -153,7 +184,8 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 remote_path="/var/lib/mender",
             )
 
-        env.device.run("systemctl stop mender-authd")
+        client_service_name = env.device.get_client_service_name()
+        env.device.run("systemctl stop %s" % client_service_name)
         tmpdir = tempfile.mkdtemp()
 
         ssl_engine_id = "pkcs11"
@@ -168,6 +200,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             config = json.loads(output)
             # replace mender.conf with an mTLS enabled one
             config["ServerURL"] = "https://mtls-ambassador:8080"
+            config["ServerCertificate"] = "/etc/mender/server.crt"
             config["SkipVerify"] = True
             if algorithm is not None:
                 if use_hsm is True:
@@ -176,18 +209,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                         "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
                         "Key": key_uri,
                     }
-                    config["Security"] = {
-                        "SSLEngine": ssl_engine_id,
-                        "AuthPrivateKey": key_uri,
-                    }
-                    logger.info(f"set private key to {key_uri}")
+                    logger.info('client key set to "%s"' % key_uri)
                 else:
                     config["HttpsClient"] = {
                         "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
                         "Key": f"/var/lib/mender/client.1.{algorithm}.key",
-                    }
-                    config["Security"] = {
-                        "AuthPrivateKey": f"/var/lib/mender/client.1.{algorithm}.key",
                     }
             if "ArtifactVerifyKey" in config:
                 del config["ArtifactVerifyKey"]
@@ -208,7 +234,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         # start the Mender client
         logger.info("starting the client.")
         env.device.run("systemctl daemon-reload")
-        env.device.run("systemctl start mender-authd")
+        env.device.run("systemctl start %s" % client_service_name)
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
@@ -249,10 +275,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         deploy.check_expected_status("finished", deployment_id)
 
         # verify the update was actually installed on the device
-        out = setup_ent_mtls.device.run("mender-update show-artifact").strip()
+        out = setup_ent_mtls.device.run(
+            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
+        ).strip()
         assert out == "mtls-artifact"
 
-    @pytest.mark.skip(reason="QA-587")
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
@@ -263,7 +290,8 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         if output.rstrip() != "true":
             pytest.fail("Needs SoftHSM to run this test")
 
-        self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
+        try:
+            self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
 
         output = setup_ent_mtls.device.run("journalctl --unit mender-authd | cat")
         assert "Successfully loaded private key from pkcs11" in output
@@ -273,37 +301,53 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             artifact = make_script_artifact(
                 "mtls-artifact", conftest.machine_name, tf.name
             )
-            deploy.upload_image(artifact)
+            assert "loaded private key: '" in output
 
-        for device in devauth.get_devices_status("pending"):
-            devauth.decommission(device["id"])
+            # prepare a test artifact
+            with tempfile.NamedTemporaryFile() as tf:
+                artifact = make_script_artifact(
+                    "mtls-artifact", conftest.machine_name, tf.name
+                )
+                deploy.upload_image(artifact)
 
-        i = self.wait_for_device_timeout_seconds
-        while i > 0:
-            i = i - 1
-            time.sleep(1)
+            for device in devauth.get_devices_status("pending"):
+                devauth.decommission(device["id"])
+
+            i = self.wait_for_device_timeout_seconds
+            while i > 0:
+                i = i - 1
+                time.sleep(1)
+                devices = list(
+                    set(
+                        [
+                            device["id"]
+                            for device in devauth.get_devices_status("accepted")
+                        ]
+                    )
+                )
+                if len(devices) > 0:
+                    break
+
+            # deploy the update to the device
             devices = list(
                 set([device["id"] for device in devauth.get_devices_status("accepted")])
             )
-            if len(devices) > 0:
-                break
+            assert len(devices) == 1
+            deployment_id = deploy.trigger_deployment(
+                "mtls-test", artifact_name="mtls-artifact", devices=devices,
+            )
 
-        # deploy the update to the device
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
-        assert len(devices) == 1
-        deployment_id = deploy.trigger_deployment(
-            "mtls-test", artifact_name="mtls-artifact", devices=devices,
-        )
+            # now just wait for the update to succeed
+            deploy.check_expected_statistics(deployment_id, "success", 1)
+            deploy.check_expected_status("finished", deployment_id)
 
-        # now just wait for the update to succeed
-        deploy.check_expected_statistics(deployment_id, "success", 1)
-        deploy.check_expected_status("finished", deployment_id)
-
-        # verify the update was actually installed on the device
-        out = setup_ent_mtls.device.run("mender-update show-artifact").strip()
-        assert out == "mtls-artifact"
+            # verify the update was actually installed on the device
+            out = setup_ent_mtls.device.run(
+                "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
+            ).strip()
+            assert out == "mtls-artifact"
+        finally:
+            self.hsm_cleanup(setup_ent_mtls.device)
 
     @MenderTesting.fast
     def test_mtls_enterprise_without_client_cert(self, setup_ent_mtls):
@@ -321,7 +365,9 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             "pending", max_wait=device_not_present_timeout_seconds * 0.5, no_assert=True
         ):
             devauth.decommission(device["id"])
-        setup_ent_mtls.device.run("systemctl start mender-authd")
+        setup_ent_mtls.device.run(
+            "systemctl start %s" % setup_ent_mtls.device.get_client_service_name()
+        )
 
         # wait device_not_present_timeout_seconds
         time.sleep(device_not_present_timeout_seconds)

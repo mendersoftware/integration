@@ -147,19 +147,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         )
         env.device.run("update-ca-certificates")
 
-        env.device.put(
-            "server.crt",
-            local_path=os.path.join(certs, "server"),
-            remote_path="/etc/mender",
-        )
-        env.device.put(
-            "cert.crt",
-            local_path=os.path.join(basedir, "cert"),
-            remote_path="/etc/mender",
-        )
-        env.device.run(
-            "cat /etc/mender/server.crt /etc/mender/cert.crt > /tmp/server.crt && mv /tmp/server.crt /etc/mender/server.crt && rm /etc/mender/cert.crt"
-        )
         if algorithm is not None:
             env.device.put(
                 f"client.1.{algorithm}.crt",
@@ -188,7 +175,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             config = json.loads(output)
             # replace mender.conf with an mTLS enabled one
             config["ServerURL"] = "https://mtls-ambassador:8080"
-            config["ServerCertificate"] = "/etc/mender/server.crt"
             config["SkipVerify"] = True
             if algorithm is not None:
                 if use_hsm is True:

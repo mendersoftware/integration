@@ -162,8 +162,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 remote_path="/var/lib/mender",
             )
 
-        client_service_name = env.device.get_client_service_name()
-        env.device.run("systemctl stop %s" % client_service_name)
+        env.device.run("systemctl stop mender-authd")
         tmpdir = tempfile.mkdtemp()
 
         ssl_engine_id = "pkcs11"
@@ -211,7 +210,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         # start the Mender client
         logger.info("starting the client.")
         env.device.run("systemctl daemon-reload")
-        env.device.run("systemctl start %s" % client_service_name)
+        env.device.run("systemctl start mender-authd")
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
@@ -344,9 +343,8 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             "pending", max_wait=device_not_present_timeout_seconds * 0.5, no_assert=True
         ):
             devauth.decommission(device["id"])
-        setup_ent_mtls.device.run(
-            "systemctl start %s" % setup_ent_mtls.device.get_client_service_name()
-        )
+
+        setup_ent_mtls.device.run("systemctl start mender-authd")
 
         # wait device_not_present_timeout_seconds
         time.sleep(device_not_present_timeout_seconds)

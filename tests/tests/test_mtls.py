@@ -92,6 +92,7 @@ class TestClientMTLSEnterprise:
     wait_for_device_timeout_seconds = 64
 
     def hsm_setup(self, pin, ssl_engine_id, device):
+        setup_openssl_conf()
         algorithm = "rsa"
         key = f"/var/lib/mender/client.1.{algorithm}.key"
         script = f"""\
@@ -115,6 +116,14 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         finally:
             shutil.rmtree(tmpdir)
 
+    def setup_openssl_conf():
+        device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
+        device.run(
+            'echo -ne "[openssl_init]\nengines=engine_section\n\n[engine_section]\npkcs11 = pkcs11_section\n\n[pkcs11_section]\nengine_id = '
+            + ssl_engine_id
+            + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
+        )
+
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
         pt11tool_output = device.run(
             "p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin="
@@ -124,12 +133,6 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         key_uri = re.search(r"URL:\s(.*)", pt11tool_output).group(1)
         key_uri = key_uri + ";pin-value=" + pin
 
-        device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
-        device.run(
-            'echo -ne "[openssl_init]\nengines=engine_section\n\n[engine_section]\npkcs11 = pkcs11_section\n\n[pkcs11_section]\nengine_id = '
-            + ssl_engine_id
-            + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
-        )
         return key_uri
 
     def hsm_cleanup(self, device):
@@ -213,6 +216,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])
     def test_mtls_enterprise(self, setup_ent_mtls, algorithm):
+
         self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=False)
 
         # prepare a test artifact

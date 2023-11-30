@@ -97,9 +97,6 @@ class TestClientMTLSEnterprise:
         script = f"""\
 #!/bin/bash
 echo "module: /usr/lib/softhsm/libsofthsm2.so" > /usr/share/p11-kit/modules/softhsm2.module
-mkdir -p /softhsm/tokens
-echo "directories.tokendir = /softhsm/tokens" > /softhsm/softhsm2.conf
-export SOFTHSM2_CONF=/softhsm/softhsm2.conf;
 softhsm2-util --init-token --free --label unittoken1 --pin {pin} --so-pin 0002
 pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write-object "{key}" --type privkey --id 0909 --label privatekey
 """
@@ -120,7 +117,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
         pt11tool_output = device.run(
-            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin="
+            "p11tool --login --provider=/usr/lib/softhsm/libsofthsm2.so --set-pin="
             + pin
             + " --list-all-privkeys"
         ).rstrip("\n")
@@ -133,18 +130,9 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
             + ssl_engine_id
             + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
         )
-        device.run(
-            'sed -i.backup -e "/\\[Service\\]/ a Environment=SOFTHSM2_CONF=/softhsm/softhsm2.conf" /lib/systemd/system/%s.service'
-            % device.get_client_service_name()
-        )
         return key_uri
 
     def hsm_cleanup(self, device):
-        device.run(
-            "mv /lib/systemd/system/%s.service.backup /lib/systemd/system/%s.service || true"
-            % (device.get_client_service_name(), device.get_client_service_name())
-        )
-        device.run("rm -Rf /softhsm")
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
@@ -275,9 +263,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         deploy.check_expected_status("finished", deployment_id)
 
         # verify the update was actually installed on the device
-        out = setup_ent_mtls.device.run(
-            "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
-        ).strip()
+        out = setup_ent_mtls.device.run("mender show-artifact").strip()
         assert out == "mtls-artifact"
 
     @MenderTesting.fast
@@ -293,30 +279,42 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
 
-        output = setup_ent_mtls.device.run("journalctl --unit mender-authd | cat")
-        assert "Successfully loaded private key from pkcs11" in output
-
-        # prepare a test artifact
-        with tempfile.NamedTemporaryFile() as tf:
-            artifact = make_script_artifact(
-                "mtls-artifact", conftest.machine_name, tf.name
-            )
-            assert "loaded private key: '" in output
+            output = setup_ent_mtls.device.run("journalctl --unit mender-authd | cat")
+            assert "Successfully loaded private key from pkcs11" in output
 
             # prepare a test artifact
             with tempfile.NamedTemporaryFile() as tf:
                 artifact = make_script_artifact(
                     "mtls-artifact", conftest.machine_name, tf.name
                 )
-                deploy.upload_image(artifact)
+                assert "loaded private key: '" in output
 
-            for device in devauth.get_devices_status("pending"):
-                devauth.decommission(device["id"])
+                # prepare a test artifact
+                with tempfile.NamedTemporaryFile() as tf:
+                    artifact = make_script_artifact(
+                        "mtls-artifact", conftest.machine_name, tf.name
+                    )
+                    deploy.upload_image(artifact)
 
-            i = self.wait_for_device_timeout_seconds
-            while i > 0:
-                i = i - 1
-                time.sleep(1)
+                for device in devauth.get_devices_status("pending"):
+                    devauth.decommission(device["id"])
+
+                i = self.wait_for_device_timeout_seconds
+                while i > 0:
+                    i = i - 1
+                    time.sleep(1)
+                    devices = list(
+                        set(
+                            [
+                                device["id"]
+                                for device in devauth.get_devices_status("accepted")
+                            ]
+                        )
+                    )
+                    if len(devices) > 0:
+                        break
+
+                # deploy the update to the device
                 devices = list(
                     set(
                         [
@@ -325,27 +323,18 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                         ]
                     )
                 )
-                if len(devices) > 0:
-                    break
+                assert len(devices) == 1
+                deployment_id = deploy.trigger_deployment(
+                    "mtls-test", artifact_name="mtls-artifact", devices=devices,
+                )
 
-            # deploy the update to the device
-            devices = list(
-                set([device["id"] for device in devauth.get_devices_status("accepted")])
-            )
-            assert len(devices) == 1
-            deployment_id = deploy.trigger_deployment(
-                "mtls-test", artifact_name="mtls-artifact", devices=devices,
-            )
+                # now just wait for the update to succeed
+                deploy.check_expected_statistics(deployment_id, "success", 1)
+                deploy.check_expected_status("finished", deployment_id)
 
-            # now just wait for the update to succeed
-            deploy.check_expected_statistics(deployment_id, "success", 1)
-            deploy.check_expected_status("finished", deployment_id)
-
-            # verify the update was actually installed on the device
-            out = setup_ent_mtls.device.run(
-                "export SOFTHSM2_CONF=/softhsm/softhsm2.conf; mender show-artifact"
-            ).strip()
-            assert out == "mtls-artifact"
+                # verify the update was actually installed on the device
+                out = setup_ent_mtls.device.run("mender show-artifact").strip()
+                assert out == "mtls-artifact"
         finally:
             self.hsm_cleanup(setup_ent_mtls.device)
 

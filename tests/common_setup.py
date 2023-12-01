@@ -185,7 +185,7 @@ def standard_setup_without_client(request):
 
 
 @pytest.fixture(scope="function")
-def setup_with_legacy_client(request):
+def setup_with_legacy_v1_client(request):
     # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
     # it when running other platforms.
     if conftest.machine_name != "qemux86-64":
@@ -193,7 +193,7 @@ def setup_with_legacy_client(request):
             "Test only works with qemux86-64, and this is %s" % conftest.machine_name
         )
 
-    env = container_factory.get_legacy_client_setup()
+    env = container_factory.get_legacy_v1_client_setup()
     request.addfinalizer(env.teardown)
 
     env.setup()
@@ -545,8 +545,8 @@ def enterprise_with_short_lived_token(request):
 
 
 @pytest.fixture(scope="function")
-def enterprise_with_legacy_client(request):
-    env = container_factory.get_enterprise_legacy_client_setup(num_clients=0)
+def enterprise_with_legacy_v1_client(request):
+    env = container_factory.get_enterprise_legacy_v1_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()

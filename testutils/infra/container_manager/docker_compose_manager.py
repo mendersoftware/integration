@@ -54,7 +54,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
     ]
-    LEGACY_CLIENT_FILES = [
+    LEGACY_V1_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
@@ -209,11 +209,11 @@ class DockerComposeRofsClientSetup(DockerComposeNamespace):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
 
 
-class DockerComposeLegacyClientSetup(DockerComposeNamespace):
+class DockerComposeLegacyV1ClientSetup(DockerComposeNamespace):
     def __init__(
         self, name,
     ):
-        DockerComposeNamespace.__init__(self, name, self.LEGACY_CLIENT_FILES)
+        DockerComposeNamespace.__init__(self, name, self.LEGACY_V1_CLIENT_FILES)
 
 
 class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
@@ -345,7 +345,7 @@ class DockerComposeEnterpriseShortLivedTokenSetup(DockerComposeEnterpriseSetup):
             )
 
 
-class DockerComposeEnterpriseLegacyClientSetup(DockerComposeEnterpriseSetup):
+class DockerComposeEnterpriseLegacyV1ClientSetup(DockerComposeEnterpriseSetup):
     def __init__(self, name, num_clients=0):
         self.num_clients = num_clients
         if self.num_clients > 0:
@@ -354,7 +354,7 @@ class DockerComposeEnterpriseLegacyClientSetup(DockerComposeEnterpriseSetup):
             )
         else:
             DockerComposeNamespace.__init__(
-                self, name, self.ENTERPRISE_FILES + self.LEGACY_CLIENT_FILES
+                self, name, self.ENTERPRISE_FILES + self.LEGACY_V1_CLIENT_FILES
             )
 
 

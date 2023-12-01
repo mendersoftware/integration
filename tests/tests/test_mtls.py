@@ -92,7 +92,6 @@ class TestClientMTLSEnterprise:
     wait_for_device_timeout_seconds = 64
 
     def hsm_setup(self, pin, ssl_engine_id, device):
-        setup_openssl_conf()
         algorithm = "rsa"
         key = f"/var/lib/mender/client.1.{algorithm}.key"
         script = f"""\
@@ -116,13 +115,35 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         finally:
             shutil.rmtree(tmpdir)
 
-    def setup_openssl_conf():
+    def setup_openssl_conf(hsm_implementation):
         device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
-        device.run(
-            'echo -ne "[openssl_init]\nengines=engine_section\n\n[engine_section]\npkcs11 = pkcs11_section\n\n[pkcs11_section]\nengine_id = '
-            + ssl_engine_id
-            + '\nMODULE_PATH = /usr/lib/softhsm/libsofthsm2.so\ninit = 0\n" >> /etc/ssl/openssl.cnf'
-        )
+        if hsm_implementation == "engine":
+            conf = f"""
+            [openssl_init]
+            engines = engine_section
+
+            [engine_section]
+            pkcs11 = pkcs11_section
+
+            [pkcs11_section]
+            engine_id = {ssl_engine_id}
+            """
+
+            device.run(f"echo -ne {conf} >> /etc/ssl/openssl.cnf")
+        elif hsm_implementation == "provider":
+            conf = """
+            [openssl_init]
+            providers = provider_sect
+
+            [provider_sect]
+            default = default_sect
+            pkcs11 = pkcs11_sect
+
+            [pkcs11_sect]
+            activate = 1
+            module = /usr/lib/ossl-modules/pkcs11.so
+            """
+            device.run(f"echo -ne {conf} >> /etc/ssl/openssl.cnf")
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
         pt11tool_output = device.run(
@@ -257,13 +278,16 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
-    def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm):
+    @pytest.mark.parametrize("hsm_implementation", ["engine", "provider"])
+    def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
         # Check if the client has has SoftHSM (from yocto dunfell forward)
         output = setup_ent_mtls.device.run(
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True
         )
         if output.rstrip() != "true":
             pytest.fail("Needs SoftHSM to run this test")
+
+        setup_openssl_conf(hsm_implementation)
 
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)

@@ -60,6 +60,10 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.testing.yml",
     ]
+    LEGACY_V3_CLIENT_FILES = [
+        COMPOSE_FILES_PATH
+        + "/extra/integration-testing/test-compat/docker-compose.compat-mender-3.6.yml",
+    ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH
         + "/extra/signed-artifact-client-testing/docker-compose.signed-client.yml"
@@ -216,6 +220,22 @@ class DockerComposeLegacyV1ClientSetup(DockerComposeNamespace):
         DockerComposeNamespace.__init__(self, name, self.LEGACY_V1_CLIENT_FILES)
 
 
+class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
+    def __init__(
+        self, name,
+    ):
+        DockerComposeNamespace.__init__(self, name, self.LEGACY_V3_CLIENT_FILES)
+
+    def get_mender_clients(self, network="mender"):
+        clients = [
+            ip + ":8822"
+            for ip in self.get_ip_of_service(
+                service="mender-client-3-6", network=network
+            )
+        ]
+        return clients
+
+
 class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
     def __init__(
         self, name,
@@ -356,6 +376,36 @@ class DockerComposeEnterpriseLegacyV1ClientSetup(DockerComposeEnterpriseSetup):
             DockerComposeNamespace.__init__(
                 self, name, self.ENTERPRISE_FILES + self.LEGACY_V1_CLIENT_FILES
             )
+
+
+class DockerComposeEnterpriseLegacyV3ClientSetup(DockerComposeEnterpriseSetup):
+    def __init__(self, name, num_clients=0):
+        self.num_clients = num_clients
+        if self.num_clients > 0:
+            raise NotImplementedError(
+                "Clients not implemented on setup time, use new_tenant_client"
+            )
+        else:
+            DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES)
+
+    def new_tenant_client(self, name, tenant):
+        if not self.LEGACY_V3_CLIENT_FILES[0] in self.docker_compose_files:
+            self.extra_files += self.LEGACY_V3_CLIENT_FILES
+        logger.info("creating Mender v3.6 client connected to tenant: " + tenant)
+        self._docker_compose_cmd(
+            f"run -d --name={self.name}_{name} mender-client-3-6",
+            env={"TENANT_TOKEN": "%s" % tenant},
+        )
+        time.sleep(45)
+
+    def get_mender_clients(self, network="mender"):
+        clients = [
+            ip + ":8822"
+            for ip in self.get_ip_of_service(
+                service="mender-client-3-6", network=network
+            )
+        ]
+        return clients
 
 
 class DockerComposeEnterpriseRofsClientSetup(DockerComposeEnterpriseSetup):

@@ -20,6 +20,7 @@ from .docker_compose_manager import (
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
     DockerComposeLegacyV1ClientSetup,
+    DockerComposeLegacyV3ClientSetup,
     DockerComposeEnterpriseDockerClientSetup,
     DockerComposeSignedArtifactClientSetup,
     DockerComposeShortLivedTokenSetup,
@@ -29,6 +30,7 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseSignedArtifactClientSetup,
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyV1ClientSetup,
+    DockerComposeEnterpriseLegacyV3ClientSetup,
     DockerComposeEnterpriseRofsClientSetup,
     DockerComposeEnterpriseRofsCommercialClientSetup,
     DockerComposeCustomSetup,
@@ -77,6 +79,10 @@ class ContainerManagerFactory:
         """Setup with one Mender client v1.7"""
         pass
 
+    def get_legacy_v3_client_setup(self, name=None):
+        """Setup with one Mender bundle v3.6"""
+        pass
+
     def get_signed_artifact_client_setup(self, name=None):
         """Standard setup with pre-installed verification key in the client"""
         pass
@@ -111,6 +117,10 @@ class ContainerManagerFactory:
 
     def get_enterprise_legacy_v1_client_setup(self, name=None, num_clients=0):
         """Enterprise setup with one Mender client v1.7"""
+        pass
+
+    def get_enterprise_legacy_v3_client_setup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender bundle v3.6"""
         pass
 
     def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
@@ -157,6 +167,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_legacy_v1_client_setup(self, name=None):
         return DockerComposeLegacyV1ClientSetup(name)
 
+    def get_legacy_v3_client_setup(self, name=None):
+        return DockerComposeLegacyV3ClientSetup(name)
+
     def get_signed_artifact_client_setup(self, name=None):
         return DockerComposeSignedArtifactClientSetup(name)
 
@@ -180,6 +193,9 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def get_enterprise_legacy_v1_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseLegacyV1ClientSetup(name, num_clients)
+
+    def get_enterprise_legacy_v3_client_setup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseLegacyV3ClientSetup(name, num_clients)
 
     def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseDockerClientSetup(name, num_clients)

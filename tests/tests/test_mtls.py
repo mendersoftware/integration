@@ -278,7 +278,18 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
-    @pytest.mark.parametrize("hsm_implementation", ["engine", "provider"])
+    @pytest.mark.parametrize(
+        "hsm_implementation",
+        [
+            "engine",
+            pytest.param(
+                "provider",
+                marks=pytest.mark.skip(
+                    reason="QA-587 - Meta-mender currently does not support the OpenSSL version required to build the provider"
+                ),
+            ),
+        ],
+    )
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
         # Check if the client has has SoftHSM (from yocto dunfell forward)
         output = setup_ent_mtls.device.run(

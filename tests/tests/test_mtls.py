@@ -206,6 +206,10 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                         "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
                         "Key": key_uri,
                     }
+                    config["Security"] = {
+                        "SSLEngine": ssl_engine_id,
+                        "AuthPrivateKey": key_uri,
+                    }
                     logger.info('client key set to "%s"' % key_uri)
                 else:
                     config["HttpsClient"] = {

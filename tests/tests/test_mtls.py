@@ -115,35 +115,35 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         finally:
             shutil.rmtree(tmpdir)
 
-    def setup_openssl_conf(hsm_implementation):
+    def setup_openssl_conf(self, device, hsm_implementation):
         device.run("cp /etc/ssl/openssl.cnf /etc/ssl/openssl.cnf.backup")
         if hsm_implementation == "engine":
-            conf = f"""
-            [openssl_init]
-            engines = engine_section
+            conf = """
+[openssl_init]
+engines = engine_section
 
-            [engine_section]
-            pkcs11 = pkcs11_section
+[engine_section]
+pkcs11 = pkcs11_section
 
-            [pkcs11_section]
-            engine_id = {ssl_engine_id}
+[pkcs11_section]
+engine_id = pkcs11
             """
 
-            device.run(f"echo -ne {conf} >> /etc/ssl/openssl.cnf")
+            device.run(f'echo -ne "{conf}" >> /etc/ssl/openssl.cnf')
         elif hsm_implementation == "provider":
             conf = """
-            [openssl_init]
-            providers = provider_sect
+[openssl_init]
+providers = provider_sect
 
-            [provider_sect]
-            default = default_sect
-            pkcs11 = pkcs11_sect
+[provider_sect]
+default = default_sect
+pkcs11 = pkcs11_sect
 
-            [pkcs11_sect]
-            activate = 1
-            module = /usr/lib/ossl-modules/pkcs11.so
+[pkcs11_sect]
+activate = 1
+module = /usr/lib/ossl-modules/pkcs11.so
             """
-            device.run(f"echo -ne {conf} >> /etc/ssl/openssl.cnf")
+            device.run(f'echo -ne "{conf}" >> /etc/ssl/openssl.cnf')
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
         pt11tool_output = device.run(
@@ -212,6 +212,9 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                     }
                     logger.info('client key set to "%s"' % key_uri)
                 else:
+                    config["Security"] = {
+                        "AuthPrivateKey": f"/var/lib/mender/client.1.{algorithm}.key",
+                    }
                     config["HttpsClient"] = {
                         "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
                         "Key": f"/var/lib/mender/client.1.{algorithm}.key",
@@ -277,7 +280,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         deploy.check_expected_status("finished", deployment_id)
 
         # verify the update was actually installed on the device
-        out = setup_ent_mtls.device.run("mender show-artifact").strip()
+        out = setup_ent_mtls.device.run("mender-update show-artifact").strip()
         assert out == "mtls-artifact"
 
     @MenderTesting.fast
@@ -302,7 +305,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         if output.rstrip() != "true":
             pytest.fail("Needs SoftHSM to run this test")
 
-        setup_openssl_conf(hsm_implementation)
+        self.setup_openssl_conf(setup_ent_mtls.device, hsm_implementation)
 
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
@@ -357,7 +360,7 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
                 deploy.check_expected_status("finished", deployment_id)
 
                 # verify the update was actually installed on the device
-                out = setup_ent_mtls.device.run("mender show-artifact").strip()
+                out = setup_ent_mtls.device.run("mender-update show-artifact").strip()
                 assert out == "mtls-artifact"
         finally:
             self.hsm_cleanup(setup_ent_mtls.device)

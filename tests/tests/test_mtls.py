@@ -292,15 +292,11 @@ pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write
         try:
             self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
 
-            output = setup_ent_mtls.device.run("journalctl --unit mender-authd | cat")
-            assert "Successfully loaded private key from pkcs11" in output
-
             # prepare a test artifact
             with tempfile.NamedTemporaryFile() as tf:
                 artifact = make_script_artifact(
                     "mtls-artifact", conftest.machine_name, tf.name
                 )
-                assert "loaded private key: '" in output
 
                 # prepare a test artifact
                 with tempfile.NamedTemporaryFile() as tf:

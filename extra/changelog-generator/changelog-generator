@@ -365,9 +365,14 @@ def gather_entries(repo, range, remove_cherry_picks=True):
         title = ""
         commit_msg = ""
         log_entry_commit = False
+        commit_prefix = ""
         log_entry_local = False
         log_entry = ""
         exclusive_tag_seen = False
+
+        type_match = re.match(CONVENTIONAL_COMMIT_TYPE_REGEX, blob, re.IGNORECASE)
+        cc_prefix = type_match.group(0) if type_match else ""
+
         for line in blob.split("\n"):
             line = line.rstrip("\r")
             if line == "":
@@ -388,11 +393,11 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 continue
 
             if not title_fetched:
-                title = line
+                title = line[len(cc_prefix) :]
                 title_fetched = True
 
             match_changelog = re.match(
-                r"^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
+                r"^ *Changelog(?:\((fix|feat|chore)\))?: *(.*)", line, re.IGNORECASE
             )
             if match_changelog:
                 if log_entry:
@@ -402,12 +407,9 @@ def gather_entries(repo, range, remove_cherry_picks=True):
 
                 type_keyword = match_changelog.group(1)
                 if type_keyword:
-                    add_entry(
-                        entries,
-                        sha,
-                        type_keyword.lower() + ": " + match_changelog.group(2),
-                    )
-                    continue
+                    log_entry = type_keyword.lower() + ": "
+                elif cc_prefix:
+                    log_entry = cc_prefix
 
                 # The logic of this regex is:
                 # - Shall start with Title|Commit|All|None
@@ -434,11 +436,14 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                     exclusive_tag_seen = True
 
                     if match_keyword.group(1).lower() == "title":
-                        log_entry = title
+                        log_entry += title
                     elif match_keyword.group(1).lower() == "none":
                         log_entry_commit = False
+                        log_entry = ""
                     elif match_keyword.group(1).lower() in ["commit", "all"]:
                         log_entry_commit = True
+                        commit_prefix = log_entry
+                        log_entry = ""
                         if match_keyword.group(2):
                             # Log the rest of the line
                             if commit_msg:
@@ -446,11 +451,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                             commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    type_match = re.match(
-                        CONVENTIONAL_COMMIT_TYPE_REGEX, commit_msg, re.IGNORECASE
-                    )
-                    cc_prefix = type_match.group(0) if type_match else ""
-                    log_entry = cc_prefix + match_changelog.group(2)
+                    log_entry += match_changelog.group(2)
                 continue
 
             for cancel_expr in [
@@ -513,6 +514,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 commit_msg += line
 
         if log_entry_commit:
+            commit_msg = commit_prefix + commit_msg[len(cc_prefix) :]
             add_entry(entries, sha, commit_msg.strip())
         if log_entry:
             add_entry(entries, sha, log_entry.strip())

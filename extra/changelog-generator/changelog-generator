@@ -392,7 +392,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 title_fetched = True
 
             match_changelog = re.match(
-                r"^ *Changelog(?:\((fix|feat)\))?: *(.*)", line, re.IGNORECASE
+                r"^ *Changelog(?:\((fix|feat|chore)\))?: *(.*)", line, re.IGNORECASE
             )
             if match_changelog:
                 if log_entry:

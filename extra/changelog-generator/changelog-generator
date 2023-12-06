@@ -365,6 +365,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
         title = ""
         commit_msg = ""
         log_entry_commit = False
+        commit_prefix = ""
         log_entry_local = False
         log_entry = ""
         exclusive_tag_seen = False
@@ -441,6 +442,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                         log_entry = ""
                     elif match_keyword.group(1).lower() in ["commit", "all"]:
                         log_entry_commit = True
+                        commit_prefix = log_entry
                         log_entry = ""
                         if match_keyword.group(2):
                             # Log the rest of the line
@@ -512,6 +514,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 commit_msg += line
 
         if log_entry_commit:
+            commit_msg = commit_prefix + commit_msg[len(cc_prefix) :]
             add_entry(entries, sha, commit_msg.strip())
         if log_entry:
             add_entry(entries, sha, log_entry.strip())

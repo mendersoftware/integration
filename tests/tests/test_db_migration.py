@@ -19,8 +19,8 @@ import shutil
 import tempfile
 
 from ..common_setup import (
-    setup_with_legacy_client,
-    enterprise_with_legacy_client,
+    setup_with_legacy_v1_client,
+    enterprise_with_legacy_v1_client,
 )
 from .common_update import update_image, common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
@@ -244,31 +244,31 @@ done
 
 class TestDBMigrationOpenSource(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
-        self, setup_with_legacy_client, valid_image_with_mender_conf
+        self, setup_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_failure(
-            setup_with_legacy_client, valid_image_with_mender_conf
+            setup_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
     def test_migrate_from_legacy_mender_v1_success(
-        self, setup_with_legacy_client, valid_image_with_mender_conf
+        self, setup_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_success(
-            setup_with_legacy_client, valid_image_with_mender_conf
+            setup_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
 
 class TestDBMigrationEnterprise(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
-        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+        self, enterprise_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_failure(
-            enterprise_with_legacy_client, valid_image_with_mender_conf
+            enterprise_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
     def test_migrate_from_legacy_mender_v1_success(
-        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+        self, enterprise_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_success(
-            enterprise_with_legacy_client, valid_image_with_mender_conf
+            enterprise_with_legacy_v1_client, valid_image_with_mender_conf
         )

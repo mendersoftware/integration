@@ -392,7 +392,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 continue
 
             if not title_fetched:
-                title = line
+                title = line[len(cc_prefix) :]
                 title_fetched = True
 
             match_changelog = re.match(
@@ -435,7 +435,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                     exclusive_tag_seen = True
 
                     if match_keyword.group(1).lower() == "title":
-                        log_entry = title
+                        log_entry += title
                     elif match_keyword.group(1).lower() == "none":
                         log_entry_commit = False
                         log_entry = ""

@@ -406,12 +406,9 @@ def gather_entries(repo, range, remove_cherry_picks=True):
 
                 type_keyword = match_changelog.group(1)
                 if type_keyword:
-                    add_entry(
-                        entries,
-                        sha,
-                        type_keyword.lower() + ": " + match_changelog.group(2),
-                    )
-                    continue
+                    log_entry = type_keyword.lower() + ": "
+                elif cc_prefix:
+                    log_entry = cc_prefix
 
                 # The logic of this regex is:
                 # - Shall start with Title|Commit|All|None
@@ -441,8 +438,10 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                         log_entry = title
                     elif match_keyword.group(1).lower() == "none":
                         log_entry_commit = False
+                        log_entry = ""
                     elif match_keyword.group(1).lower() in ["commit", "all"]:
                         log_entry_commit = True
+                        log_entry = ""
                         if match_keyword.group(2):
                             # Log the rest of the line
                             if commit_msg:
@@ -450,7 +449,7 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                             commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    log_entry = cc_prefix + match_changelog.group(2)
+                    log_entry += match_changelog.group(2)
                 continue
 
             for cancel_expr in [

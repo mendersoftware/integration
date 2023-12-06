@@ -368,6 +368,10 @@ def gather_entries(repo, range, remove_cherry_picks=True):
         log_entry_local = False
         log_entry = ""
         exclusive_tag_seen = False
+
+        type_match = re.match(CONVENTIONAL_COMMIT_TYPE_REGEX, blob, re.IGNORECASE)
+        cc_prefix = type_match.group(0) if type_match else ""
+
         for line in blob.split("\n"):
             line = line.rstrip("\r")
             if line == "":
@@ -446,10 +450,6 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                             commit_msg += match_keyword.group(2)
                 else:
                     log_entry_local = True
-                    type_match = re.match(
-                        CONVENTIONAL_COMMIT_TYPE_REGEX, commit_msg, re.IGNORECASE
-                    )
-                    cc_prefix = type_match.group(0) if type_match else ""
                     log_entry = cc_prefix + match_changelog.group(2)
                 continue
 

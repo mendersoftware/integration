@@ -19,11 +19,7 @@ services:
     mender-inventory:
         image: registry.mender.io/mendersoftware/inventory-enterprise:mender-master
         environment:
-            INVENTORY_REDIS_ADDR: "mender-redis:6379"
-            INVENTORY_REDIS_USERNAME: ""
-            INVENTORY_REDIS_PASSWORD: ""
-            INVENTORY_REDIS_DB: "3"
-            INVENTORY_REDIS_TIMEOUT_SEC: "1"
+            INVENTORY_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             INVENTORY_REDIS_LIMITS_EXPIRE_SEC: "1800"
 
     mender-workflows-server:
@@ -54,11 +50,7 @@ services:
     mender-device-auth:
         image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-master
         environment:
-            DEVICEAUTH_REDIS_ADDR: "mender-redis:6379"
-            DEVICEAUTH_REDIS_USERNAME: ""
-            DEVICEAUTH_REDIS_PASSWORD: ""
-            DEVICEAUTH_REDIS_DB: "1"
-            DEVICEAUTH_REDIS_TIMEOUT_SEC: "1"
+            DEVICEAUTH_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             DEVICEAUTH_REDIS_LIMITS_EXPIRE_SEC: "3600"
             DEVICEAUTH_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             DEVICEAUTH_HAVE_ADDONS: 1
@@ -67,11 +59,7 @@ services:
     mender-useradm:
         image: registry.mender.io/mendersoftware/useradm-enterprise:mender-master
         environment:
-            USERADM_REDIS_ADDR: "mender-redis:6379"
-            USERADM_REDIS_USERNAME: ""
-            USERADM_REDIS_PASSWORD: ""
-            USERADM_REDIS_DB: "2"
-            USERADM_REDIS_TIMEOUT_SEC: "1"
+            USERADM_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"
             USERADM_TENANTADM_ADDR: 'http://mender-tenantadm:8080'
             USERADM_HAVE_ADDONS: 1

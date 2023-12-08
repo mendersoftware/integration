@@ -38,7 +38,9 @@ SHA_TO_TRACKER = {}
 JIRA_PROJECTS = "|".join(["ARCHIVE", "INF", "MEN", "QA", "MC", "ME"])
 JIRA_REGEX = rf"\[?(?:Jira:? *)?(?:https?://northerntech.atlassian.net/browse/)?((?:{JIRA_PROJECTS})(?:-| )[0-9]+)\]?"
 TRACKER_REGEX = r"\(?(?:(?:Ref|Ticket):? *)?%s\)?:? *" % (JIRA_REGEX)
-CONVENTIONAL_COMMIT_TYPE_REGEX = r"^(fix|feat|chore)(?:\(\S+\))?!?: ?"
+CONVENTIONAL_COMMIT_TYPE_REGEX = (
+    r"^(fix|feat|build|chore|ci|docs|perf|refac|revert|style|test)(?:\(\S+\))?!?: ?"
+)
 DEPENDABOT_REGEX = r"[Bb]umps? .* from .* to .*"
 ORGANIZATION = "mendersoftware"
 
@@ -397,7 +399,9 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                 title_fetched = True
 
             match_changelog = re.match(
-                r"^ *Changelog(?:\((fix|feat|chore)\))?: *(.*)", line, re.IGNORECASE
+                r"^ *Changelog(?:\((fix|feat|build|chore|ci|docs|perf|refac|revert|style|test)\))?: *(.*)",
+                line,
+                re.IGNORECASE,
             )
             if match_changelog:
                 if log_entry:

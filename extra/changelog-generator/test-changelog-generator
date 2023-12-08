@@ -591,6 +591,12 @@ Changelog(fix): Commit'
 
 ################################################################################
 
+git commit --allow-empty -m 'feat: refac in changelog tag N111
+
+Changelog(refac): Commit'
+
+################################################################################
+
 "$SRC_DIR/changelog-generator" --repo --sort-changelog prev_branch..$main > result.txt 2>stderr.txt || {
     echo "Script failed with $?"
     echo "--------"
@@ -779,6 +785,7 @@ New changes in test-changelog-generator.$$ since prev_branch:
 * This should be in changelog N8
   And this N9
 * This too. N33
+* refac in changelog tag N111
 
 EOF
 diff -u expected.txt result.txt

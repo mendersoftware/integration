@@ -2424,7 +2424,7 @@ def determine_version_bump(state, repo, from_v, to_v):
     (major, minor, patch, _) = version_components(from_v)
     version_mask = [False, False, False]
 
-    for sha in revlist:
+    for sha in filter(None, revlist):
         commit_message = execute_git(
             state, repo.git(), ["log", "--format=%B", "-1", sha], capture=True
         )

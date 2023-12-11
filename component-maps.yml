@@ -260,7 +260,7 @@ git:
     - mender-monitor-qemu-commercial
     docker_container:
       - mender-client
-    release_component: true
+    release_component: false
     independent_component: true
 
   mender-snapshot:
@@ -271,7 +271,7 @@ git:
     - mender-monitor-qemu-commercial
     docker_container:
       - mender-client
-    release_component: true
+    release_component: false
     independent_component: true
 
   deviceconfig:

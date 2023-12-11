@@ -9,7 +9,7 @@ services:
     # mender-iot-manager
     #
     mender-iot-manager-2:
-        image: mendersoftware/iot-manager:mender-master
+        image: mendersoftware/iot-manager:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base
@@ -27,7 +27,7 @@ services:
     # mender-deployments
     #
     mender-deployments-2:
-        image: mendersoftware/deployments:mender-master
+        image: mendersoftware/deployments:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base
@@ -53,7 +53,7 @@ services:
     # mender-gui
     #
     mender-gui-2:
-        image: mendersoftware/gui:mender-master
+        image: mendersoftware/gui:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base
@@ -122,7 +122,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth-2:
-        image: mendersoftware/deviceauth:mender-master
+        image: mendersoftware/deviceauth:mender-3.7.x
         command: server --automigrate
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
@@ -146,7 +146,7 @@ services:
     # mender-inventory
     #
     mender-inventory-2:
-        image: mendersoftware/inventory:mender-master
+        image: mendersoftware/inventory:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base
@@ -164,7 +164,7 @@ services:
     # mender-useradm
     #
     mender-useradm-2:
-        image: mendersoftware/useradm:mender-master
+        image: mendersoftware/useradm:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base
@@ -186,7 +186,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server-2:
-        image: mendersoftware/workflows:mender-master
+        image: mendersoftware/workflows:mender-3.7.x
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -207,7 +207,7 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker-2:
-        image: mendersoftware/workflows-worker:mender-master
+        image: mendersoftware/workflows-worker:mender-3.7.x
         command: worker --automigrate --excluded-workflows generate_artifact,generate_delta_artifact
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
@@ -226,7 +226,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker-2:
-        image: mendersoftware/create-artifact-worker:mender-master
+        image: mendersoftware/create-artifact-worker:mender-3.7.x
         extends:
             file: common.yml
             service: mender-base

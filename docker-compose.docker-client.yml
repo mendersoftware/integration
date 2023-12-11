@@ -3,7 +3,7 @@ services:
 
     mender-client:
         # Needs to be built in mender client's test directory.
-        image: mendersoftware/mender-client-docker:mender-master
+        image: mendersoftware/mender-client-docker:mender-3.7.x
         networks:
             - mender
 

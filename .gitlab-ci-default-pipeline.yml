@@ -98,7 +98,7 @@ test:integration-tests:requirements:
       - tests/requirements/apk-requirements.txt
       - tests/requirements/python-requirements.txt
   # Use same image as in mender-qa
-  image: docker:dind
+  image: docker:24.0.7-dind-alpine3.18
   script:
     # Get and install the integration test requirements
     - apk add $(cat tests/requirements/apk-requirements.txt)

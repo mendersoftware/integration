@@ -49,7 +49,6 @@ services:
             REPORTING_REV: ${REPORTING_REV}
 
     mender-iot-manager:
-        image: mendersoftware/iot-manager:mender-master
         environment:
           IOT_MANAGER_DOMAIN_WHITELIST: "*.azure-devices.net *.iot.*.amazonaws.com mender-backend-tests-runner"
 

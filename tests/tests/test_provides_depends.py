@@ -17,7 +17,6 @@ import subprocess
 import time
 import uuid
 
-from .. import conftest
 from ..common_setup import enterprise_no_client
 from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting

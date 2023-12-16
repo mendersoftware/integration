@@ -14,15 +14,13 @@
 
 import json
 import os
-import tempfile
-import shutil
-
 import pytest
+import shutil
+import tempfile
 
-from .. import conftest
 from ..common_setup import (
-    setup_with_legacy_client,
-    enterprise_with_legacy_client,
+    setup_with_legacy_v1_client,
+    enterprise_with_legacy_v1_client,
 )
 from .common_update import update_image, common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
@@ -210,7 +208,7 @@ done
             del mender_conf_json["RootfsPartB"]
             valid_image = valid_image_with_mender_conf(json.dumps(mender_conf_json))
 
-            # do the succesful update twice
+            # do the successful update twice
             host_ip = env.get_virtual_network_host_ip()
             update_image(
                 mender_device,
@@ -225,13 +223,14 @@ done
             )
             assert mender_device.run("cat %s" % test_log).strip() == "\n".join(scripts)
 
+            # NOTE: With client >= 4.x we only support Artifact version 3
             update_image(
                 mender_device,
                 host_ip,
                 install_image=valid_image,
                 # Second update should not need storage_device_state_scripts.
                 scripts=[ensure_persistent_conf] + scripts_paths,
-                version=2,
+                version=3,
                 devauth=devauth,
                 deploy=deploy,
             )
@@ -245,31 +244,31 @@ done
 
 class TestDBMigrationOpenSource(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
-        self, setup_with_legacy_client, valid_image_with_mender_conf
+        self, setup_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_failure(
-            setup_with_legacy_client, valid_image_with_mender_conf
+            setup_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
     def test_migrate_from_legacy_mender_v1_success(
-        self, setup_with_legacy_client, valid_image_with_mender_conf
+        self, setup_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_success(
-            setup_with_legacy_client, valid_image_with_mender_conf
+            setup_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
 
 class TestDBMigrationEnterprise(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
-        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+        self, enterprise_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_failure(
-            enterprise_with_legacy_client, valid_image_with_mender_conf
+            enterprise_with_legacy_v1_client, valid_image_with_mender_conf
         )
 
     def test_migrate_from_legacy_mender_v1_success(
-        self, enterprise_with_legacy_client, valid_image_with_mender_conf
+        self, enterprise_with_legacy_v1_client, valid_image_with_mender_conf
     ):
         self.do_test_migrate_from_legacy_mender_v1_success(
-            enterprise_with_legacy_client, valid_image_with_mender_conf
+            enterprise_with_legacy_v1_client, valid_image_with_mender_conf
         )

@@ -47,7 +47,7 @@ services:
     # client repositories - container and image names are placeholders
     #
     mender:
-        image: mendersoftware/mender:feature-c++-client
+        image: mendersoftware/mender:master
 
     mender-connect:
         image: mendersoftware/mender-connect:master

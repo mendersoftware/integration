@@ -6,8 +6,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev \
     jq libssl-dev libglib2.0-dev curl
 
-ARG MENDER_CLIENT_REV=master
-ARG MENDER_CONNECT_REV=master
+ARG MENDER_CLIENT_REV=3.5.x
+ARG MENDER_CONNECT_REV=2.2.x
 ARG MENDER_SETUP_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender

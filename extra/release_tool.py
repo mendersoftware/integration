@@ -2074,7 +2074,7 @@ def merge_release_tag(state, tag_avail, repo):
         cleanup_temp_git_checkout(tmpdir)
 
 
-def push_latest_docker_tags(state, tag_avail):
+def push_latest_docker_tags(state, tag_avail, args):
     """Make all the Docker ":latest" tags point to the current release."""
 
     for repo in Component.get_components_of_type("git"):
@@ -2154,28 +2154,38 @@ def push_latest_docker_tags(state, tag_avail):
             else:
                 build_tag = tag_avail["image_tag"]
 
-            exec_list.append(
-                [
-                    "docker",
-                    "pull",
-                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
-                ]
-            )
-            exec_list.append(
-                [
-                    "docker",
-                    "tag",
-                    "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
-                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
-                ]
-            )
-            exec_list.append(
-                [
-                    "docker",
-                    "push",
-                    "%s/%s:%s" % (prefix, image.docker_image(), new_version),
-                ]
-            )
+            if args.no_multiplatform:
+                exec_list.append(
+                    [
+                        "docker",
+                        "pull",
+                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                    ]
+                )
+                exec_list.append(
+                    [
+                        "docker",
+                        "tag",
+                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                        "%s/%s:%s" % (prefix, image.docker_image(), new_version),
+                    ]
+                )
+                exec_list.append(
+                    [
+                        "docker",
+                        "push",
+                        "%s/%s:%s" % (prefix, image.docker_image(), new_version),
+                    ]
+                )
+            else:
+                exec_list.append(
+                    [
+                        "regctl",
+                        "copy",
+                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                        "%s/%s:%s" % (prefix, image.docker_image(), new_version),
+                    ]
+                )
 
         query_execute_list(exec_list)
 
@@ -2683,7 +2693,7 @@ def do_generate_release_notes(
         )
 
 
-def do_release(release_state_file):
+def do_release(release_state_file, args):
     """Handles the interactive menu for doing a release."""
 
     global RELEASE_TOOL_STATE
@@ -2826,7 +2836,7 @@ def do_release(release_state_file):
                     Component.get_component_of_type("git", "integration"),
                 )
         elif reply.lower() == "d":
-            push_latest_docker_tags(state, tag_avail)
+            push_latest_docker_tags(state, tag_avail, args)
         elif reply.lower() == "p":
             git_list = []
             for repo in Component.get_components_of_type("git"):
@@ -3312,6 +3322,15 @@ def do_select_test_suite():
     print(select_test_suite())
 
 
+def is_regctl_installed():
+    """Check if regctl client is installed"""
+    try:
+        subprocess.run(["regctl", "version"])
+        return True
+    except:
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -3468,6 +3487,11 @@ def main():
         help="Generate changelogs and statistics and put them in `release_notes_*.txt` files. "
         + "Use `--in-integration-version` argument to choose which integration range to generate notes for.",
     )
+    parser.add_argument(
+        "--no-multiplatform",
+        action="store_true",
+        help="Force using legacy docker commands not compatbile with multiplatform images. ",
+    )
     args = parser.parse_args()
 
     # Check conflicting options.
@@ -3516,7 +3540,7 @@ def main():
         release_state_file = "release-state.yml"
         if args.release_state_file:
             release_state_file = args.release_state_file
-        do_release(release_state_file)
+        do_release(release_state_file, args)
     elif args.hosted_release:
         do_hosted_release(args.version)
     elif args.select_test_suite:
@@ -3529,6 +3553,9 @@ def main():
         do_generate_release_notes(
             os.path.dirname(integration_dir()), args.in_integration_version
         )
+    elif args.no_multiplatform:
+        if not is_regctl_installed:
+            raise Exception("regctl is required but not installed")
     else:
         parser.print_help()
         sys.exit(1)

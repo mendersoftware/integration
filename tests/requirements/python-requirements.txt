@@ -4,6 +4,12 @@
 #
 #    pip-compile python-requirements.in
 #
+aiosmtpd==1.4.4.post2
+    # via -r python-requirements.in
+atpublic==4.0
+    # via aiosmtpd
+attrs==23.2.0
+    # via aiosmtpd
 bcrypt==4.0.1
     # via paramiko
 cachetools==5.3.1

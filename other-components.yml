@@ -17,4 +17,4 @@ services:
         image: mendersoftware/mender-convert:master
 
     meta-mender:
-        image: mendersoftware/meta-mender:dunfell
+        image: mendersoftware/meta-mender:kirkstone

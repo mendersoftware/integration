@@ -23,7 +23,7 @@ services:
         image: registry.mender.io/mendersoftware/tenantadm:master
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:feature-ALV-210
 
     mender-auditlogs:
         image: registry.mender.io/mendersoftware/auditlogs:master

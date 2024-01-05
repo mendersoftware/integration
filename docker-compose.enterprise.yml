@@ -57,7 +57,7 @@ services:
             DEVICEAUTH_ENABLE_AUDIT: 1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-master
+        image: registry.mender.io/mendersoftware/useradm-enterprise:feature-ALV-210
         environment:
             USERADM_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"

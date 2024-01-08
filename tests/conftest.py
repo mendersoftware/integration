@@ -215,6 +215,17 @@ def pytest_exception_interact(node, call, report):
             logger.info("Could not find devices in test environment, no printing logs")
         else:
 
+            def log_and_maybe_truncate(output):
+                """For long entries, log the last 10k chars as info and all as debug"""
+                if len(output) > 10000:
+                    logger.info(output[-10000:])
+                    logger.info(
+                        "... (truncated, see test log file for complete output)"
+                    )
+                    logger.debug(output)
+                else:
+                    logger.info(output)
+
             def run_remote_command(instances, command):
                 """Log command output for a list of MenderDevice and/or MenderDeviceGroup."""
                 for instance in instances:
@@ -223,11 +234,11 @@ def pytest_exception_interact(node, call, report):
                     output = instance.run(command, wait=60)
 
                     if isinstance(instance, MenderDevice):
-                        logger.info(output)
+                        log_and_maybe_truncate(output)
                     else:
                         for dev, log in output.items():
                             logger.info("Printing output of device %s", dev)
-                            logger.info(log)
+                            log_and_maybe_truncate(log)
 
             try:
                 logger.info("Printing client deployment log, if possible:")
@@ -237,14 +248,17 @@ def pytest_exception_interact(node, call, report):
                 logger.info("Not able to print client deployment log")
 
             for service in [
-                "mender-client",
+                "mender-authd",
+                "mender-updated",
                 "mender-connect",
                 "mender-monitor",
                 "mender-gateway",
             ]:
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)
-                    run_remote_command(devices, "journalctl -u %s || true" % service)
+                    run_remote_command(
+                        devices, "journalctl --unit %s || true" % service
+                    )
                 except:
                     logger.info("Not able to print %s systemd log" % service)
 

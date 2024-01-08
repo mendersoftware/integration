@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ class MenderDevice:
 
         _put(self, file, local_path, remote_path)
 
-    def ssh_is_opened(self, wait=60 * 60):
+    def ssh_is_opened(self, wait=10 * 60):
         """Block until SSH connection is established on the device
 
         Keyword arguments:
@@ -129,7 +129,7 @@ class MenderDevice:
             raise (raise_exception)
 
     def yocto_id_installed_on_machine(self):
-        cmd = "mender show-artifact"
+        cmd = "mender-update show-artifact"
         output = self.run(cmd, hide=True).strip()
         return output
 
@@ -149,13 +149,6 @@ class MenderDevice:
 
     def get_reboot_detector(self, host_ip):
         return RebootDetector(self, host_ip)
-
-    def get_client_service_name(self):
-        if self._service_name is None:
-            self._service_name = self.run(
-                "if test -e /lib/systemd/system/mender.service; then echo mender; else echo mender-client; fi"
-            ).strip()
-        return self._service_name
 
 
 class RebootDetector:
@@ -240,7 +233,7 @@ class RebootDetector:
                 logger.info("Client has rebooted %d time(s)", reboot_count)
                 return True
 
-    def verify_reboot_performed(self, max_wait=60 * 60, number_of_reboots=1):
+    def verify_reboot_performed(self, max_wait=10 * 60, number_of_reboots=1):
         if self.server is None:
             raise RuntimeError(
                 "verify_reboot_performed() used outside of 'with' scope."
@@ -298,19 +291,13 @@ class MenderDeviceGroup:
             output_dict[dev.host_string] = output
         return output_dict
 
-    def ssh_is_opened(self, wait=60 * 60):
+    def ssh_is_opened(self, wait=10 * 60):
         """Block until SSH connection is established for all devices in group sequentially
 
         see MenderDevice.ssh_is_opened
         """
         for dev in self._devices:
             dev.ssh_is_opened(wait)
-
-    def get_client_service_name(self):
-        # We assume that the service name is always the same across all devices,
-        # so it's enough to return the first one.
-        assert len(self._devices) > 0
-        return self._devices[0].get_client_service_name()
 
 
 def _ssh_prep_args(device):
@@ -361,9 +348,8 @@ def _put(device, file, local_path=".", remote_path="."):
             break
 
 
-# Roughly the execution time of the slowest test (*) times 3
-# (*) As per 2020-03-24 test_image_download_retry_hosts_broken takes 515.13 seconds
-_DEFAULT_WAIT_TIME = 25 * 60
+# TODO: Revisit this arbitrary value.
+_DEFAULT_WAIT_TIME = 10 * 60
 
 
 def _run(conn, cmd, **kw):

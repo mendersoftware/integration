@@ -1038,7 +1038,7 @@ class TestAuthsetMgmtBase:
             change_authset_status(devauthm, dev.id, aset.id, "accepted", utoken)
 
             # in case of originally preauthd/accepted devs: the original authset must be rejected now
-            if dev.status in ["accepted", "preauthorized"]:
+            if dev.status in ["accepted"]:
                 aset_to_reject = [a for a in dev.authsets if a.status == dev.status]
                 assert len(aset_to_reject) == 1
                 aset_to_reject[0].status = "rejected"

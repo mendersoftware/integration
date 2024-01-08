@@ -160,7 +160,7 @@ class Deployments:
         return json.loads(r.text)
 
     def check_expected_status(
-        self, expected_status, deployment_id, max_wait=60 * 60, polling_frequency=0.2
+        self, expected_status, deployment_id, max_wait=10 * 60, polling_frequency=0.2
     ):
         timeout = time.time() + max_wait
 
@@ -184,7 +184,7 @@ class Deployments:
         )
 
     def check_not_in_status(
-        self, expected_status, deployment_id, max_wait=60 * 60, polling_frequency=0.2
+        self, expected_status, deployment_id, max_wait=10 * 60, polling_frequency=0.2
     ):
         timeout = time.time() + max_wait
 
@@ -212,7 +212,7 @@ class Deployments:
         deployment_id,
         expected_status,
         expected_count,
-        max_wait=60 * 60,
+        max_wait=10 * 60,
         polling_frequency=0.2,
     ):
         timeout = time.time() + max_wait

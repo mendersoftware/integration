@@ -12,7 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from .. import conftest
+import os
+import pytest
+
 from ..common_setup import (
     standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
@@ -94,7 +96,10 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
         self.abort_deployment(
-            standard_setup_one_client_bootstrapped, valid_image, "downloading"
+            standard_setup_one_client_bootstrapped,
+            valid_image,
+            "downloading",
+            mender_performs_reboot=True,
         )
 
     @MenderTesting.fast
@@ -121,7 +126,10 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
         self, enterprise_one_client_bootstrapped, valid_image
     ):
         self.abort_deployment(
-            enterprise_one_client_bootstrapped, valid_image, "downloading"
+            enterprise_one_client_bootstrapped,
+            valid_image,
+            "downloading",
+            mender_performs_reboot=True,
         )
 
     @MenderTesting.fast

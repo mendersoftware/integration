@@ -13,10 +13,9 @@
 #    limitations under the License.
 
 import json
+import pytest
 import tempfile
 import time
-
-import pytest
 
 from .. import conftest
 from ..common_setup import (
@@ -197,8 +196,10 @@ class BaseTestInventory(MenderTesting):
                                 assert any([subkey in keys for subkey in key])
                             else:
                                 assert key in keys
-                    except:
-                        logger.info("Exception caught, 'device' json: %s" % device)
+                    except Exception as e:
+                        logger.info(
+                            f"Exception caught, 'device' json: {device}, exception {str(e)}"
+                        )
                         raise
             except Exception as e:
                 latest_exception = e
@@ -224,8 +225,7 @@ class BaseTestInventory(MenderTesting):
             "\\1 300",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         # Get the inventory sent after first boot
         initial_inv_json = inv.get_devices()
@@ -268,7 +268,7 @@ class BaseTestInventory(MenderTesting):
         assert len(post_deployment_inv_json) > 0
         assert "rootfs-image.swname.version" in str(
             post_deployment_inv_json
-        ), "The device has not updated the inventory after the udpate"
+        ), "The device has not updated the inventory after the update"
 
 
 class TestInventoryOpenSource(BaseTestInventory):

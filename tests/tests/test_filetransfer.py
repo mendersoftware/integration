@@ -481,7 +481,6 @@ class BaseTestFileTransferLimits(MenderTesting):
                     "[MEN-4659] Deviceconnect should not respond with 5xx errors "
                     + "on user restriction errors"
                 )
-                pass
             else:
                 raise e
 
@@ -630,9 +629,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 400, r.json()
-        assert (
-            r.json().get("error") == "file transfer failed: path is not a regular file"
-        )
+        assert r.json().get("error").endswith("path is not a regular file")
 
     def test_filetransfer_limits_download_ok_file_owner_match(
         self, mender_device_setup

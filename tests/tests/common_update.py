@@ -18,7 +18,6 @@ import random
 import pytest
 
 from .. import conftest
-from ..helpers import Helpers
 from ..MenderAPI import devauth, deploy, image, logger
 from . import artifact_lock
 
@@ -178,7 +177,7 @@ def update_image_failed(
     device,
     host_ip,
     expected_mender_clients=1,
-    expected_log_message="Reboot to the new update failed",
+    expected_log_message="ArtifactVerifyReboot: Process exited with status 1",
     install_image="broken_update.ext4",
     make_artifact=None,
     expected_number_of_reboots=2,

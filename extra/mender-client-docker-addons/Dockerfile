@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y make git build-essential golang liblzma
     jq libssl-dev libglib2.0-dev curl cmake liblmdb++-dev libboost-dev libboost-log-dev \
     libarchive-dev libdbus-1-dev
 
-ARG MENDER_CLIENT_REV=3.5.x
+ARG MENDER_CLIENT_REV=4.0.x
 ARG MENDER_CONNECT_REV=2.2.x
-ARG MENDER_SETUP_REV=master
+ARG MENDER_SETUP_REV=1.0.x
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)

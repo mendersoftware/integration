@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import sys
+import pathlib
 
 # Only do basic checks on these.
 OTHER_REPOS = [
@@ -33,6 +34,11 @@ LICENSE_FILES_COVERED = {}
 
 CALLED_FROM_RELEASE_TOOL = False
 
+# Path to the directory of this file
+TOOL_PATH = pathlib.Path(__file__).parent.resolve()
+
+# Template to pass to go-licenses report
+GO_LICENSES_TEMPLATE = os.path.join(TOOL_PATH, "go-licenses-extract.tpl")
 
 # -------------------------------------------------------------------------------
 # Used as reference in the below variable.
@@ -1484,6 +1490,22 @@ def add_to_licenses(component, content):
         LICENSES[component].append(content)
 
 
+def process_golicenses_output(output):
+    component = ""
+    component_license = ""
+    for line in output.splitlines(True):
+        if component == "":
+            component = line
+            component_license = ""
+        else:
+            if line == "===NEXT COMPONENT===":
+                add_to_licenses(component, component_license)
+                component = ""
+                component_license = ""
+            else:
+                component_license += line
+
+
 def process_chksum_file(file):
     fd = open(file)
 
@@ -1529,11 +1551,26 @@ def process_chksum_file(file):
 
 # Go style licenses.
 def do_go_repo(repopath):
+    lic_golicenses = os.path.join(repopath, "licenses.csv")
     lic_chksums = os.path.join(repopath, "LIC_FILES_CHKSUM.sha256")
-    if not os.path.exists(lic_chksums):
-        raise Exception("No license checksums found at %s" % lic_chksums)
 
-    process_chksum_file(lic_chksums)
+    if os.path.exists(lic_golicenses):
+        output = subprocess.check_output(
+            ["go-licenses", "report", "--template", GO_LICENSES_TEMPLATE, ".",],
+            cwd=repopath,
+        )
+        process_golicenses_output(output.decode())
+
+        # Ignore the license in this directory, which is our own license.
+        LICENSE_FILES_COVERED[
+            os.path.join(repopath, get_base_license_filename(repopath))
+        ] = True
+    elif os.path.exists(lic_chksums):
+        process_chksum_file(lic_chksums)
+    else:
+        raise Exception(
+            f"No license checksums found. Tried {lic_golicenses} and {lic_chksums}"
+        )
 
     verify_no_license_leftovers(repopath)
 

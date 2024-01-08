@@ -308,7 +308,7 @@ class BaseTestMenderGateway(MenderTesting):
         deploy.get_logs(device_id_1, deployment_id_1, expected_status=404)
 
         deploy.check_expected_statistics(deployment_id_2, "failure", 1)
-        assert "Reboot to the new update failed" in deploy.get_logs(
+        assert "ArtifactVerifyReboot: Process exited with status 1" in deploy.get_logs(
             device_id_2, deployment_id_2
         )
 

@@ -12,9 +12,6 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import pytest
-import ssl
-
 from testutils.util import websockets
 from testutils.api import deviceconnect
 from . import api_version

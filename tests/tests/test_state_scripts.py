@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -653,7 +653,7 @@ class BaseTestStateScripts(MenderTesting):
                 # wait until the last script has been run
                 logger.debug("Wait until the last script has been run")
                 script_logs = ""
-                timeout = time.time() + 60 * 60
+                timeout = time.time() + 10 * 60
                 while timeout >= time.time():
                     time.sleep(3)
                     try:
@@ -685,16 +685,12 @@ class BaseTestStateScripts(MenderTesting):
                 raise
 
             finally:
-                client_service_name = mender_device.get_client_service_name()
                 mender_device.run(
-                    (
-                        "systemctl stop %s && "
-                        + "rm -f /data/test_state_scripts.log && "
-                        + "rm -rf /etc/mender/scripts && "
-                        + "rm -rf /data/mender/scripts && "
-                        + "systemctl start %s"
-                    )
-                    % (client_service_name, client_service_name)
+                    "systemctl stop mender-updated && "
+                    + "rm -f /data/test_state_scripts.log && "
+                    + "rm -rf /etc/mender/scripts && "
+                    + "rm -rf /data/mender/scripts && "
+                    + "systemctl start mender-updated"
                 )
 
     def do_test_state_scripts(
@@ -709,7 +705,6 @@ class BaseTestStateScripts(MenderTesting):
 
         work_dir = "test_state_scripts.%s" % mender_device.host_string
         deployment_id = None
-        client_service_name = mender_device.get_client_service_name()
         try:
             script_content = '#!/bin/sh\n\necho "`date --rfc-3339=seconds` $(basename $0)" >> /data/test_state_scripts.log\n'
             script_failure_content = script_content + "exit 1\n"
@@ -733,14 +728,14 @@ class BaseTestStateScripts(MenderTesting):
 
             # Write this again in case it was corrupted above.
             with open(os.path.join(rootfs_script_dir, "version"), "w") as fd:
-                fd.write("2")
+                fd.write("3")
 
             # Then zip and copy them to QEMU host.
             subprocess.check_call(
                 ["tar", "czf", "../rootfs-scripts.tar.gz", "."], cwd=rootfs_script_dir
             )
             # Stop client first to avoid race conditions.
-            mender_device.run("systemctl stop %s" % client_service_name)
+            mender_device.run("systemctl stop mender-updated")
             try:
                 mender_device.put(
                     os.path.join(work_dir, "rootfs-scripts.tar.gz"), remote_path="/"
@@ -752,7 +747,7 @@ class BaseTestStateScripts(MenderTesting):
                     + "rm -f /rootfs-scripts.tar.gz"
                 )
             finally:
-                mender_device.run("systemctl start %s" % client_service_name)
+                mender_device.run("systemctl start mender-updated")
 
             # Put artifact-scripts in the artifact.
             artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
@@ -771,7 +766,7 @@ class BaseTestStateScripts(MenderTesting):
                     if test_set.get("CorruptEtcScriptVersionIn") == script:
                         fd.write("printf '1000' > /etc/mender/scripts/version\n")
                     if test_set.get("RestoreEtcScriptVersionIn") == script:
-                        fd.write("printf '2' > /etc/mender/scripts/version\n")
+                        fd.write("printf '3' > /etc/mender/scripts/version\n")
 
             # Callback for our custom artifact maker
             def make_artifact(filename, artifact_name):
@@ -812,13 +807,13 @@ class BaseTestStateScripts(MenderTesting):
 
                 info_query = [
                     "cat /data/test_state_scripts.log 1>&2",
-                    "journalctl -u %s" % client_service_name,
+                    "journalctl --unit mender-updated",
                     "top -n5 -b",
                     "ls -l /proc/`pgrep mender`/fd",
                     "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
                 starttime = time.time()
-                while starttime + 60 * 60 >= time.time():
+                while starttime + 10 * 60 >= time.time():
                     output = mender_device.run(
                         "grep Error /data/test_state_scripts.log", warn_only=True
                     )
@@ -861,14 +856,11 @@ class BaseTestStateScripts(MenderTesting):
                 except:
                     pass
             mender_device.run(
-                (
-                    "systemctl stop %s && "
-                    + "rm -f /data/test_state_scripts.log && "
-                    + "rm -rf /etc/mender/scripts && "
-                    + "rm -rf /data/mender/scripts && "
-                    + "systemctl start %s"
-                )
-                % (client_service_name, client_service_name)
+                "systemctl stop mender-updated && "
+                + "rm -f /data/test_state_scripts.log && "
+                + "rm -rf /etc/mender/scripts && "
+                + "rm -rf /data/mender/scripts && "
+                + "systemctl start mender-updated"
             )
 
     def verify_script_log_correct(self, test_set, log_orig):

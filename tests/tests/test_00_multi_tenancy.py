@@ -15,10 +15,10 @@
 import uuid
 import time
 
-from .. import conftest
 from ..common_setup import enterprise_no_client
-from .common_update import update_image, common_update_procedure
+from ..helpers import Helpers
 from ..MenderAPI import auth, devauth, logger, inv
+from .common_update import update_image
 from .mendertesting import MenderTesting
 from testutils.common import new_tenant_client
 
@@ -44,12 +44,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
             enterprise_no_client, "mender-client", wrong_token
         )
         mender_device.ssh_is_opened()
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run(
-            'journalctl -u %s | grep "authentication request rejected server error message: Unauthorized"'
-            % client_service_name,
-            wait=70,
-        )
+        Helpers.check_log_is_unauthenticated(mender_device,)
 
         for _ in range(5):
             time.sleep(5)
@@ -59,7 +54,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
         mender_device.run(
             "sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token)
         )
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-authd")
 
         devauth.get_devices(expected_devices=1)
 

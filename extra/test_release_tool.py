@@ -108,7 +108,7 @@ def test_version_of(capsys, is_master):
             capsys, ["--version-of", "mender", "--version-type", "docker"], "master"
         )
     run_main_assert_result(
-        capsys, ["--version-of", "mender", "--version-type", "git"], "master"
+        capsys, ["--version-of", "mender", "--version-type", "git"], "master",
     )
 
     # For an independent component, it should also error because it doesn't have

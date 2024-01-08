@@ -2,7 +2,6 @@
 
 import argparse
 import datetime
-import json
 import os
 import re
 import subprocess
@@ -1588,7 +1587,7 @@ def do_repos():
 
     for repo in output.decode().strip().split("\n"):
         repopath = find_repo(repo)
-        for path, dirs, files in os.walk(repopath):
+        for _, _, files in os.walk(repopath):
             if repo in IGNORE_REPOS:
                 break
 
@@ -1613,7 +1612,7 @@ def do_repos():
 
 
 def verify_no_license_leftovers(location):
-    for path, dirs, files in os.walk(location):
+    for path, _, files in os.walk(location):
         for file in files:
             if file in LICENSE_CANDIDATES and not LICENSE_FILES_COVERED.get(
                 os.path.join(path, file)

@@ -1497,13 +1497,12 @@ def process_golicenses_output(output):
         if component == "":
             component = line
             component_license = ""
+        elif line == "===NEXT COMPONENT===":
+            add_to_licenses(component, component_license)
+            component = ""
+            component_license = ""
         else:
-            if line == "===NEXT COMPONENT===":
-                add_to_licenses(component, component_license)
-                component = ""
-                component_license = ""
-            else:
-                component_license += line
+            component_license += line
 
 
 def process_chksum_file(file):
@@ -1640,6 +1639,11 @@ def do_repos():
 """
                     )
                 # Ignore GUI, since it will be fetched from the above file.
+                break
+            elif os.path.exists(os.path.join(repopath, "CMakeLists.txt")):
+                # mender repo or other C++ project
+                process_chksum_file(os.path.join(repopath, "LIC_FILES_CHKSUM.sha256"))
+                verify_no_license_leftovers(repopath)
                 break
             elif repo in OTHER_REPOS:
                 # The check above is enough.

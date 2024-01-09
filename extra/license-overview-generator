@@ -2,22 +2,29 @@
 
 import argparse
 import datetime
-import json
 import os
 import re
 import subprocess
 import sys
+import pathlib
 
 # Only do basic checks on these.
-OTHER_REPOS = [ 'mender-api-gateway-docker', 'integration', 'monitor-client', 'mender-binary-delta', 'mender-configure-module', 'mender-convert' ]
+OTHER_REPOS = [
+    "mender-api-gateway-docker",
+    "integration",
+    "monitor-client",
+    "mender-binary-delta",
+    "mender-configure-module",
+    "mender-convert",
+]
 # We don't currently care about these.
-IGNORE_REPOS = [ ]
+IGNORE_REPOS = []
 
 # The directories to look in.
 DIRS = [os.path.join(os.path.dirname(sys.argv[0]), "../..")]
 
 # Candidates for license files.
-LICENSE_CANDIDATES = [ "LICENSE", "LICENCE", "LICENSE.txt", "LICENSE.md", "COPYING" ]
+LICENSE_CANDIDATES = ["LICENSE", "LICENCE", "LICENSE.txt", "LICENSE.md", "COPYING"]
 
 # A dictionary of the licenses we have collected, key is module, value is text.
 LICENSES = {}
@@ -27,8 +34,13 @@ LICENSE_FILES_COVERED = {}
 
 CALLED_FROM_RELEASE_TOOL = False
 
+# Path to the directory of this file
+TOOL_PATH = pathlib.Path(__file__).parent.resolve()
 
-#-------------------------------------------------------------------------------
+# Template to pass to go-licenses report
+GO_LICENSES_TEMPLATE = os.path.join(TOOL_PATH, "go-licenses-extract.tpl")
+
+# -------------------------------------------------------------------------------
 # Used as reference in the below variable.
 MIT_LICENSE = """MIT License
 
@@ -55,8 +67,7 @@ THE SOFTWARE."""
 # Some licenses we know about. We use these when the authors have not provided
 # the full license themselves.
 KNOWN_LICENSES = {
-    "BSD":
-"""Copyright (c) The Regents of the University of California.
+    "BSD": """Copyright (c) The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -82,9 +93,7 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGE.""",
-
-    "BSD-2-Clause":
-"""The FreeBSD Copyright
+    "BSD-2-Clause": """The FreeBSD Copyright
 
 Copyright 1992-2010 The FreeBSD Project. All rights reserved.
 
@@ -95,9 +104,7 @@ Redistributions in binary form must reproduce the above copyright notice, this l
 THIS SOFTWARE IS PROVIDED BY THE FREEBSD PROJECT ``AS IS`` AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as representing official policies, either expressed or implied, of the FreeBSD Project.""",
-
-    "BSD-3-Clause":
-"""Copyright (c) %d, %s
+    "BSD-3-Clause": """Copyright (c) %d, %s
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -106,9 +113,7 @@ Redistributions of source code must retain the above copyright notice, this list
 Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 Neither the name of the <ORGANIZATION> nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
-
-    "BSD-4-Clause":
-"""Copyright (c) %d, %s
+    "BSD-4-Clause": """Copyright (c) %d, %s
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -135,11 +140,8 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.""",
-
     "(GPL-2.0 OR MIT)": MIT_LICENSE,
-
-    "ISC":
-"""ISC License:
+    "ISC": """ISC License:
 
 Copyright &#169; 2004-2010 by Internet Systems Consortium, Inc. ("ISC")
 Copyright &#169; 1995-2003 by Internet Software Consortium
@@ -147,13 +149,9 @@ Copyright &#169; 1995-2003 by Internet Software Consortium
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
 
 THE SOFTWARE IS PROVIDED "AS IS" AND ISC DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL ISC BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.""",
-
-    'MIT': MIT_LICENSE,
-
-    '(MIT OR Apache-2.0)': MIT_LICENSE,
-
-    "MIT/X11":
-"""The MIT/X11 License
+    "MIT": MIT_LICENSE,
+    "(MIT OR Apache-2.0)": MIT_LICENSE,
+    "MIT/X11": """The MIT/X11 License
 
 Copyright (c) %d %s
 
@@ -162,14 +160,9 @@ Permission is hereby granted, free of charge, to any person obtaining a copy of 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.""",
-
-    "Public Domain":
-"""This software is in the public domain.""",
-
-    '(WTFPL OR MIT)': MIT_LICENSE,
-
-    "Apache-2.0":
-"""Apache-2.0 license
+    "Public Domain": """This software is in the public domain.""",
+    "(WTFPL OR MIT)": MIT_LICENSE,
+    "Apache-2.0": """Apache-2.0 license
 
 Copyright (c) %d %s
 
@@ -343,9 +336,7 @@ Copyright (c) %d %s
       defend, and hold each Contributor harmless for any liability
       incurred by, or claims asserted against, such Contributor by reason
       of your accepting any such warranty or additional liability.""",
-
-    "GPLv2":
-    """
+    "GPLv2": """
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
 
@@ -687,9 +678,7 @@ library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.
 
     """,
-
-    "GPLv3":
-    """
+    "GPLv3": """
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
@@ -1366,9 +1355,7 @@ Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
     """,
-
-    "yocto layer license by NT" :
-    """
+    "yocto layer license by NT": """
 YOCTO LAYER LICENSE FOR MENDER BY NORTHERN.TECH
 ===============================================
 
@@ -1428,17 +1415,26 @@ Except as expressly set forth in this section 4 the layer software and all servi
 Open Source License Terms
 -------------------------
 
-This program uses additional software licensed under Open Source licenses, listed under each individual component."""
-
+This program uses additional software licensed under Open Source licenses, listed under each individual component.""",
 }
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 
-parser = argparse.ArgumentParser(description='Generate a license overview for Mender repositories.')
-parser.add_argument('--dir', dest='DIRS', action='append',
-                    help='Directories to look for repositories. Later directories take precedence.')
-parser.add_argument('--called-from-release-tool', dest='CALLED_FROM_RELEASE_TOOL', action='store_true',
-                    help=argparse.SUPPRESS)
+parser = argparse.ArgumentParser(
+    description="Generate a license overview for Mender repositories."
+)
+parser.add_argument(
+    "--dir",
+    dest="DIRS",
+    action="append",
+    help="Directories to look for repositories. Later directories take precedence.",
+)
+parser.add_argument(
+    "--called-from-release-tool",
+    dest="CALLED_FROM_RELEASE_TOOL",
+    action="store_true",
+    help=argparse.SUPPRESS,
+)
 parsed = parser.parse_args()
 
 if parsed.DIRS is not None:
@@ -1451,7 +1447,7 @@ if parsed.CALLED_FROM_RELEASE_TOOL:
 
 
 def select_license_text(license, author):
-    if KNOWN_LICENSES[license].find('%s') == -1:
+    if KNOWN_LICENSES[license].find("%s") == -1:
         return KNOWN_LICENSES[license]
     else:
         return KNOWN_LICENSES[license] % (datetime.date.today().year, author)
@@ -1464,11 +1460,16 @@ def find_repo(repo):
             loc = os.path.join(dir, repo)
 
     if loc is None:
-        raise Exception(("Could not find repository %s in any of the locations: %s. " +
-                         "Use --dir=<dir> to add directories to the search path.")
-                        % (repo, ", ".join(DIRS)))
+        raise Exception(
+            (
+                "Could not find repository %s in any of the locations: %s. "
+                + "Use --dir=<dir> to add directories to the search path."
+            )
+            % (repo, ", ".join(DIRS))
+        )
 
     return loc
+
 
 def add_file_to_licenses(component, license_file):
     LICENSE_FILES_COVERED[license_file] = True
@@ -1476,6 +1477,7 @@ def add_file_to_licenses(component, license_file):
     license_fd = open(license_file)
     content = license_fd.read()
     add_to_licenses(component, content)
+
 
 def add_to_licenses(component, content):
     # Get rid of '```' markers that mess up the doc rendering.
@@ -1487,6 +1489,22 @@ def add_to_licenses(component, content):
     elif content not in existing:
         LICENSES[component].append(content)
 
+
+def process_golicenses_output(output):
+    component = ""
+    component_license = ""
+    for line in output.splitlines(True):
+        if component == "":
+            component = line
+            component_license = ""
+        elif line == "===NEXT COMPONENT===":
+            add_to_licenses(component, component_license)
+            component = ""
+            component_license = ""
+        else:
+            component_license += line
+
+
 def process_chksum_file(file):
     fd = open(file)
 
@@ -1496,7 +1514,7 @@ def process_chksum_file(file):
         line = line.strip()
         line_count += 1
 
-        if line[0:1] == '#':
+        if line[0:1] == "#":
             continue
 
         entries = line.split()
@@ -1509,8 +1527,10 @@ def process_chksum_file(file):
         component = os.path.dirname(entries[1])
 
         # Ignore the license in this directory, which is our own license.
-        if license_file.find('/') == -1:
-            LICENSE_FILES_COVERED[os.path.join(os.path.dirname(file), license_file)] = True
+        if license_file.find("/") == -1:
+            LICENSE_FILES_COVERED[
+                os.path.join(os.path.dirname(file), license_file)
+            ] = True
             continue
 
         if component[0:7] == "vendor/":
@@ -1518,20 +1538,41 @@ def process_chksum_file(file):
 
         if component.find("/vendor/") >= 0:
             # We assume that sub dependencies are covered by the top license.
-            LICENSE_FILES_COVERED[os.path.join(os.path.dirname(file), license_file)] = True
+            LICENSE_FILES_COVERED[
+                os.path.join(os.path.dirname(file), license_file)
+            ] = True
             continue
 
-        add_file_to_licenses(component, os.path.join(os.path.dirname(file), license_file))
+        add_file_to_licenses(
+            component, os.path.join(os.path.dirname(file), license_file)
+        )
+
 
 # Go style licenses.
 def do_go_repo(repopath):
+    lic_golicenses = os.path.join(repopath, "licenses.csv")
     lic_chksums = os.path.join(repopath, "LIC_FILES_CHKSUM.sha256")
-    if not os.path.exists(lic_chksums):
-        raise Exception("No license checksums found at %s" % lic_chksums)
 
-    process_chksum_file(lic_chksums)
+    if os.path.exists(lic_golicenses):
+        output = subprocess.check_output(
+            ["go-licenses", "report", "--template", GO_LICENSES_TEMPLATE, ".",],
+            cwd=repopath,
+        )
+        process_golicenses_output(output.decode())
+
+        # Ignore the license in this directory, which is our own license.
+        LICENSE_FILES_COVERED[
+            os.path.join(repopath, get_base_license_filename(repopath))
+        ] = True
+    elif os.path.exists(lic_chksums):
+        process_chksum_file(lic_chksums)
+    else:
+        raise Exception(
+            f"No license checksums found. Tried {lic_golicenses} and {lic_chksums}"
+        )
 
     verify_no_license_leftovers(repopath)
+
 
 def get_base_license_filename(repopath):
     for license_filename in LICENSE_CANDIDATES:
@@ -1539,40 +1580,50 @@ def get_base_license_filename(repopath):
             return license_filename
     raise Exception("Cannot fine any license file at %s" % repopath)
 
+
 def check_base_license(repopath):
     # Use the license in the integration repository (this repository) as a basis for OS repos
     with open(os.path.join(os.path.dirname(sys.argv[0]), "..", "LICENSE")) as fd:
-        expected_lines_os = fd.read().strip().split('\n')
+        expected_lines_os = fd.read().strip().split("\n")
         expected_top = expected_lines_os[0]
         # Lose first line, which depends on copyright year.
         del expected_lines_os[0]
 
     # YOCTO LAYER LICENSE FOR MENDER BY NORTHERN.TECH is accepted.
-    expected_lines_yocto_closed = KNOWN_LICENSES["yocto layer license by NT"].split('\n')
+    expected_lines_yocto_closed = KNOWN_LICENSES["yocto layer license by NT"].split(
+        "\n"
+    )
 
     with open(os.path.join(repopath, get_base_license_filename(repopath))) as fd:
-        license_lines = fd.read().strip().split('\n')
+        license_lines = fd.read().strip().split("\n")
         license_top = license_lines[0]
         # Lose first line, which depends on copyright year.
         del license_lines[0]
 
     if license_lines != expected_lines_os:
         # "All Rights Reserved" is also accepted for Enterprise licenses.
-        if license_lines != expected_lines_yocto_closed and license_lines[1] != "All Rights Reserved":
+        if (
+            license_lines != expected_lines_yocto_closed
+            and license_lines[1] != "All Rights Reserved"
+        ):
             assert False, "%s doesn't have correct license text" % repopath
 
     # Now compare top lines, but omitting copyright year.
     expected_top_altered = re.sub("2[01][0-9][0-9]", "", expected_top)
     license_top_altered = re.sub("2[01][0-9][0-9]", "", license_top)
-    assert license_top_altered == expected_top_altered, "%s != %s" % (license_top_altered, expected_top_altered)
+    assert license_top_altered == expected_top_altered, "%s != %s" % (
+        license_top_altered,
+        expected_top_altered,
+    )
+
 
 def do_repos():
     release_tool = os.path.join(os.path.dirname(sys.argv[0]), "release_tool.py")
     output = subprocess.check_output([release_tool, "-l"])
 
-    for repo in output.decode().strip().split('\n'):
+    for repo in output.decode().strip().split("\n"):
         repopath = find_repo(repo)
-        for path, dirs, files in os.walk(repopath):
+        for _, _, files in os.walk(repopath):
             if repo in IGNORE_REPOS:
                 break
 
@@ -1582,10 +1633,17 @@ def do_repos():
                 break
             elif os.path.basename(repopath) in ["gui", "gui-enterprise"]:
                 if not CALLED_FROM_RELEASE_TOOL:
-                    sys.stderr.write("""GUI must be fetched manually when not using release tool:
+                    sys.stderr.write(
+                        """GUI must be fetched manually when not using release tool:
   docker cp GUI_CONTAINER:/var/www/mender-gui/dist/disclaimer.txt .
-""")
+"""
+                    )
                 # Ignore GUI, since it will be fetched from the above file.
+                break
+            elif os.path.exists(os.path.join(repopath, "CMakeLists.txt")):
+                # mender repo or other C++ project
+                process_chksum_file(os.path.join(repopath, "LIC_FILES_CHKSUM.sha256"))
+                verify_no_license_leftovers(repopath)
                 break
             elif repo in OTHER_REPOS:
                 # The check above is enough.
@@ -1593,16 +1651,24 @@ def do_repos():
         else:
             raise Exception("Unrecognized repository type: %s" % repopath)
 
+
 def verify_no_license_leftovers(location):
-    for path, dirs, files in os.walk(location):
+    for path, _, files in os.walk(location):
         for file in files:
-            if file in LICENSE_CANDIDATES and not LICENSE_FILES_COVERED.get(os.path.join(path, file)):
-                raise Exception("Found unhandled license in %s" % os.path.join(path, file))
+            if file in LICENSE_CANDIDATES and not LICENSE_FILES_COVERED.get(
+                os.path.join(path, file)
+            ):
+                raise Exception(
+                    "Found unhandled license in %s" % os.path.join(path, file)
+                )
+
 
 do_repos()
 
+
 def case_insensitive_item(item):
     return item[0].lower()
+
 
 # Manually add U-Boot and GRUB
 add_to_licenses("git.denx.de/u-boot", KNOWN_LICENSES["GPLv2"])
@@ -1615,7 +1681,9 @@ sorted_licenses = sorted(LICENSES.items(), key=case_insensitive_item)
 separator = "\n\n--------------------------------------------------------------------------------\n\n"
 component_texts = []
 for component in sorted_licenses:
-    text = separator.join(["%s:\n\n%s" % (component[0], license) for license in component[1]])
+    text = separator.join(
+        ["%s:\n\n%s" % (component[0], license) for license in component[1]]
+    )
     component_texts.append(text)
 
 print("Third party licenses used in Mender.")
@@ -1623,4 +1691,6 @@ print(separator)
 print(separator.join(component_texts))
 
 if not CALLED_FROM_RELEASE_TOOL:
-    sys.stderr.write("WARNING: It is recommended to call this tool from release_tool.py, to get the versions right.\n")
+    sys.stderr.write(
+        "WARNING: It is recommended to call this tool from release_tool.py, to get the versions right.\n"
+    )

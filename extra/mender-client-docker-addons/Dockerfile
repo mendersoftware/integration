@@ -32,7 +32,7 @@ RUN mkdir --parents /mender-install/etc/mender
 WORKDIR /src/mender
 RUN cmake -D CMAKE_INSTALL_PREFIX:PATH=/usr -S .
 RUN DESTDIR=/mender-install make --jobs=$(nproc --all) install
-RUN jq ".ServerCertificate=\"/usr/share/doc/mender-client/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
+RUN jq ".ServerCertificate=\"/usr/share/doc/mender-auth/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
 
 # Install mender-artifact from upstream

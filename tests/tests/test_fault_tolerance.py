@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,14 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import os
 import json
-import re
+import os
+import pytest
 import shutil
 import tempfile
 import time
-
-import pytest
 
 from .. import conftest
 from ..common_setup import (
@@ -30,14 +28,6 @@ from .common_update import common_update_procedure, update_image_failed
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 from testutils.infra.container_manager.kubernetes_manager import isK8S
-
-DOWNLOAD_RETRY_TIMEOUT_TEST_SETS = [
-    {
-        "blockAfterStart": False,
-        "logMessageToLookFor": "[uU]pdate (check|fetch) failed:",
-    },
-    {"blockAfterStart": True, "logMessageToLookFor": "Download connection broken:"},
-]
 
 
 @pytest.mark.skipif(
@@ -62,7 +52,7 @@ class BasicTestFaultTolerance(MenderTesting):
     def block_by_ip(self, device, accessible, host):
         """Get IP of host and block by that."""
         gateway_ip = device.run(
-            r"nslookup %s | grep -A1 'Name:' | egrep '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
+            r"nslookup %s | grep -A1 'Name:' | grep -E '^Address( 1)?:'  | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])'"
             % (host),
             hide=True,
         ).strip()
@@ -113,12 +103,11 @@ class BasicTestFaultTolerance(MenderTesting):
     def wait_for_download_retry_attempts(self, device, search_string):
         """ Block until logs contain messages related to failed download attempts """
 
-        timeout_time = int(time.time()) + (60 * 10)
+        timeout_time = int(time.time()) + (10 * 60)
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                "journalctl -u %s -l --no-pager | egrep 'msg=\".*%s' | wc -l"
-                % (device.get_client_service_name(), search_string),
+                f"journalctl --unit mender-updated --full --no-pager | grep -E 'msg=\".*{search_string}' | wc -l",
                 hide=True,
             )
             time.sleep(2)
@@ -198,7 +187,7 @@ class BasicTestFaultTolerance(MenderTesting):
         assert mender_device.yocto_id_installed_on_machine() == expected_yocto_id
 
     def do_test_image_download_retry_timeout(
-        self, env, test_set, valid_image_with_mender_conf,
+        self, env, valid_image_with_mender_conf,
     ):
         """
         Install an update, and block storage connection when we detect it's
@@ -230,52 +219,37 @@ class BasicTestFaultTolerance(MenderTesting):
         blocked_service = None
 
         with mender_device.get_reboot_detector(host_ip) as reboot:
-            if test_set["blockAfterStart"]:
-                # Block after we start the download.
-                mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-                deployment_id, new_yocto_id = common_update_procedure(
-                    valid_image_with_mender_conf(mender_conf),
-                    devauth=devauth,
-                    deploy=deploy,
-                )
-                mender_device.run(
-                    "start=$(date -u +%s);"
-                    + 'output="";'
-                    + 'while [ -z "$output" ]; do '
-                    + "sleep 0.1;"
-                    + 'output="$(fuser -mv %s)";' % inactive_part
-                    + "now=$(date -u +%s);"
-                    + "if [ $(($now - $start)) -gt 600 ]; then "
-                    + "exit 1;"
-                    + "fi;"
-                    + "done",
-                    wait=10 * 60,
-                )
+            # Block after we start the download.
+            mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+            deployment_id, new_yocto_id = common_update_procedure(
+                valid_image_with_mender_conf(mender_conf),
+                devauth=devauth,
+                deploy=deploy,
+            )
+            mender_device.run(
+                "start=$(date -u +%s);"
+                + 'output="";'
+                + 'while [ -z "$output" ]; do '
+                + "sleep 0.1;"
+                + 'output="$(fuser -mv %s)";' % inactive_part
+                + "now=$(date -u +%s);"
+                + "if [ $(($now - $start)) -gt 600 ]; then "
+                + "exit 1;"
+                + "fi;"
+                + "done",
+                wait=10 * 60,
+            )
 
-                # storage must be blocked by ip to kill an ongoing connection
-                # so block the whole gateway
-                blocked_service = "docker.mender.io"
-            else:
-                # storage can/must be blocked just by domain since
-                # gateway must still be accessible for deployment reporting
-                blocked_service = "s3.docker.mender.io"
+            # storage must be blocked by ip to kill an ongoing connection
+            # so block the whole gateway
+            blocked_service = "docker.mender.io"
 
             self.manipulate_network_connectivity(
                 mender_device, False, hosts=[blocked_service]
             )
 
-            if not test_set["blockAfterStart"]:
-                mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-                deployment_id, new_yocto_id = common_update_procedure(
-                    valid_image_with_mender_conf(mender_conf),
-                    devauth=devauth,
-                    deploy=deploy,
-                )
-
             # re-enable connectivity after 2 retries
-            self.wait_for_download_retry_attempts(
-                mender_device, test_set["logMessageToLookFor"]
-            )
+            self.wait_for_download_retry_attempts(mender_device, "Connection timed out")
 
             self.manipulate_network_connectivity(
                 mender_device, True, hosts=[blocked_service]
@@ -314,9 +288,9 @@ class BasicTestFaultTolerance(MenderTesting):
                 deploy=deploy,
             )
 
-            # We use "pdate" to be able to match "Update" (2.4.x) and "update" (2.3.x and earlier)
             self.wait_for_download_retry_attempts(
-                mender_device, "pdate fetch failed",
+                mender_device,
+                "Failed to perform the SSL handshake: certificate verify failed",
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
@@ -374,7 +348,7 @@ class BasicTestFaultTolerance(MenderTesting):
             update_image_failed(
                 mender_device,
                 host_ip,
-                expected_log_message="Unable to roll back with a stub module, but will try to reboot to restore state",
+                expected_log_message="Cannot parse RootfsPartA/B in any configuration file!",
                 install_image=valid_image_with_mender_conf(output),
                 devauth=devauth,
                 deploy=deploy,
@@ -405,17 +379,11 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
         )
 
     @MenderTesting.slow
-    @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
     def test_image_download_retry_timeout(
-        self,
-        standard_setup_one_client_bootstrapped,
-        test_set,
-        valid_image_with_mender_conf,
+        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_timeout(
-            standard_setup_one_client_bootstrapped,
-            test_set,
-            valid_image_with_mender_conf,
+            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
         )
 
     @MenderTesting.slow
@@ -455,15 +423,11 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
         )
 
     @MenderTesting.slow
-    @pytest.mark.parametrize("test_set", DOWNLOAD_RETRY_TIMEOUT_TEST_SETS)
     def test_image_download_retry_timeout(
-        self,
-        enterprise_one_client_bootstrapped,
-        test_set,
-        valid_image_with_mender_conf,
+        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_timeout(
-            enterprise_one_client_bootstrapped, test_set, valid_image_with_mender_conf
+            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
         )
 
     @MenderTesting.slow

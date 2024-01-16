@@ -44,7 +44,6 @@ REPO_TO_ENV_VARIABLE = {
     "inventory": "INVENTORY_REV",
     "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
     "iot-manager": "IOT_MANAGER_REV",
-    "reporting": "REPORTING_REV",
     "tenantadm": "TENANTADM_REV",
     "useradm": "USERADM_REV",
     "useradm-enterprise": "USERADM_ENTERPRISE_REV",
@@ -110,6 +109,9 @@ def get_api_endpoints(repo):
             )
         for path, path_value in data["paths"].items():
             for method, definition in path_value.items():
+                # ignore the shutdown endpoint
+                if path.rstrip("/").endswith("/shutdown"):
+                    continue
                 returns_401 = (
                     len(definition.get("security") or ()) > 0
                     or len(data.get("security") or ()) > 0
@@ -175,7 +177,6 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
         "deviceconnect",
         "inventory",
         "iot-manager",
-        "reporting",
         "useradm",
         "workflows",
     )
@@ -205,7 +206,6 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         "devicemonitor",
         "inventory-enterprise",
         "iot-manager",
-        "reporting",
         "tenantadm",
         "useradm-enterprise",
         "workflows-enterprise",
@@ -221,8 +221,6 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
     def test_api_endpoints(
         self, kind, returns_401, method, scheme, host, path, get_endpoint_url
     ):
-        if "reporting" in path and isK8S():
-            pytest.skip("reporting not deployed to staging")
         self.do_test_api_endpoints(
             kind, returns_401, method, scheme, host, path, get_endpoint_url
         )

@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2023 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -12,12 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import subprocess
 import logging
-import pytest
 import json
 import time
-from . import conftest
 
 from .MenderAPI import devauth
 
@@ -63,29 +60,39 @@ class Helpers:
         return ip_to_device_id
 
     @staticmethod
-    def check_log_have_authtoken(device):
-        """Verify that the device was authenticated since its last service start."""
+    def _check_log_for_message(device, message, since=None):
+        if since:
+            cmd = f"journalctl --unit mender-authd --full --since '{since}'"
+        else:
+            # Use systemctl instead of journalctl in order to get only
+            # entries since the last service restart.
+            cmd = f"systemctl status --no-pager --full --lines 100000 mender-authd"
+
         sleepsec = 0
-        MENDER_STORE_TIMEOUT = 600
-        while sleepsec < MENDER_STORE_TIMEOUT:
-            out = device.run(
-                # Use systemctl instead of journalctl in order to get only
-                # entries since the last service restart.
-                "systemctl status --no-pager -l -n 100000 mender-client "
-                + "| grep 'successfully received new authorization data'",
-                warn=True,
-            )
+        timeout = 600
+        while sleepsec < timeout:
+            out = device.run(cmd + "| grep '" + message + "'", warn=True,)
             if out != "":
                 return
 
             time.sleep(10)
             sleepsec += 10
             logger.info(
-                "waiting for authorization message in mender client log, sleepsec: {}".format(
-                    sleepsec
-                )
+                f"waiting for message '{message}' in mender-authd log, waited for: {sleepsec}"
             )
 
         assert (
-            sleepsec <= MENDER_STORE_TIMEOUT
-        ), "timeout for mender-store file exceeded"
+            sleepsec <= timeout
+        ), f"timeout for waiting for message '{message}' in mender-authd log"
+
+    @staticmethod
+    def check_log_is_authenticated(device, since=None):
+        Helpers._check_log_for_message(
+            device, "Successfully received new authorization data", since
+        )
+
+    @staticmethod
+    def check_log_is_unauthenticated(device, since=None):
+        Helpers._check_log_for_message(
+            device, "Failed to authorize with the server", since
+        )

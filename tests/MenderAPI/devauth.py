@@ -109,7 +109,7 @@ class DeviceAuthV2:
         assert r.status_code == requests.status_codes.codes.no_content
 
     def check_expected_status(
-        self, status, expected_value, max_wait=60 * 60, polling_frequency=1
+        self, status, expected_value, max_wait=10 * 60, polling_frequency=1
     ):
         timeout = time.time() + max_wait
         seen = set()

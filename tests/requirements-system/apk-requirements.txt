@@ -1,0 +1,13 @@
+bash
+cmake
+curl
+g++
+gcompat
+git
+iptables
+jq
+make
+openssh-client
+openssl1.1-compat
+py-pip
+python3

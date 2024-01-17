@@ -205,7 +205,6 @@ def prepare_log_monitoring(
     use_ctl=False,
 ):
     if use_ctl:
-        # create log mender-client "State transition: .*" "@journalctl -u mender-client -f"
         mender_device.run(
             'mender-monitorctl create log "%s" "%s" "%s"'
             % (service_name, log_pattern, log_file)
@@ -700,6 +699,10 @@ class TestMonitorClientEnterprise:
             mender_device.run("systemctl start %s" % service_name)
             time.sleep(not_running_time)
 
+        logger.info(
+            "test_monitorclient_flapping: waiting for %s seconds"
+            % (2 * wait_for_alert_interval_s)
+        )
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email(
             monitor_commercial_setup_no_client, user_name
@@ -904,7 +907,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -985,7 +988,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         patterns_count = 30
         expected_alerts_count = (
@@ -1418,7 +1421,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         log_file_name = "/tmp/mylog.log"
         log_file = "@tail -f " + log_file_name
@@ -1470,7 +1473,7 @@ class TestMonitorClientEnterprise:
         )
 
         output = mender_device.run(
-            "journalctl -u mender-monitor --output=cat --no-pager --reverse"
+            "journalctl --unit mender-monitor --output cat --no-pager --reverse"
         )
 
         assert len(messages) == 2, output
@@ -1523,7 +1526,7 @@ class TestMonitorClientEnterprise:
         prepare_log_monitoring(
             mender_device,
             "clientlogs",
-            "@journalctl -u mender-client -f",
+            "@journalctl -u mender-authd -f",
             "[Ee]rror.*",
             use_ctl=True,
         )
@@ -1569,7 +1572,7 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_remove_old_alerts: remove old alerts from store scenario."
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
 
         mender_device.run(
             "sed -i.backup -e 's/ALERT_STORE_MAX_RECORD_AGE_S=.*/ALERT_STORE_MAX_RECORD_AGE_S="
@@ -1622,7 +1625,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)
@@ -1696,7 +1699,7 @@ class TestMonitorClientEnterprise:
             % hostname
         )
         mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-client")
+        mender_device.run("systemctl restart mender-authd")
         mender_device.run("systemctl stop %s" % service_name)
         logger.info(
             "Stopped %s, sleeping %ds." % (service_name, wait_for_alert_interval_s)

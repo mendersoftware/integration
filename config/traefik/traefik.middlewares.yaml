@@ -17,8 +17,7 @@ http:
           NetworkErrorRatio() > 0.10
   
     sec-headers:
-      headers:
-        referrerPolicy: "no-referrer" # {{- if (env "MENDER_DEMO") }}
+      headers: # {{- if (env "MENDER_DEMO") }}
         stsSeconds: 0
         isDevelopment: true
         # {{ else }}

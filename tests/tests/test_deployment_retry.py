@@ -13,6 +13,7 @@
 #    limitations under the License.
 
 import json
+import os
 import pytest
 import tempfile
 import uuid
@@ -121,7 +122,7 @@ class TestDeploymentRetryEnterprise(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
 
             # Verify the update was actually installed on the device
-            out = device.run("mender show-artifact").strip()
+            out = device.run("mender-update show-artifact").strip()
             assert out == "retry-artifact"
 
             # Verify the number of attempts taken to install the update

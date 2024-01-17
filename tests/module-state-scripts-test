@@ -18,7 +18,7 @@ case "$STATE" in
         ;;
 
     ArtifactReboot|ArtifactRollbackReboot)
-        systemctl restart mender-client || systemctl restart mender
+        systemctl restart mender-updated
         ;;
 
 esac

@@ -137,9 +137,8 @@ class _TestRemoteTerminalBase:
         # connection. This is important because we don't have DBus activation
         # enabled in the systemd service file, so it's a race condition who gets
         # to the DBus service first.
-        client_service_name = docker_env.device.get_client_service_name()
         docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies stop {client_service_name}"
+            f"systemctl --job-mode=ignore-dependencies stop mender-updated"
         )
         docker_env.device.run(
             "systemctl --job-mode=ignore-dependencies restart mender-connect"
@@ -149,7 +148,7 @@ class _TestRemoteTerminalBase:
 
         # At this point, mender-connect will already have queried DBus.
         docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies start {client_service_name}"
+            f"systemctl --job-mode=ignore-dependencies start mender-updated"
         )
 
         with docker_env.devconnect.get_websocket():
@@ -191,6 +190,51 @@ class _TestRemoteTerminalBase:
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
+
+    @pytest.mark.xfail(reason="CE-277")
+    def test_in_poor_network_environment(self, docker_env):
+        self.assert_env(docker_env)
+
+        receive_timeout_s = 16
+
+        def is_shell_is_working(shell):
+            # Test if a simple command works.
+            shell.sendInput("ls /\n".encode())
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            output = output.decode()
+            assert "usr" in output
+            assert "etc" in output
+
+        with docker_env.devconnect.get_websocket() as ws:
+            shell = proto_shell.ProtoShell(ws)
+            body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+
+            # Drain any initial output from the prompt. It should end in either "# "
+            # (root) or "$ " (user).
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert output[-2:].decode() in [
+                "# ",
+                "$ ",
+            ], "Could not detect shell prompt."
+
+            is_shell_is_working(shell)
+
+            docker_env.device.run(
+                "iptables -A OUTPUT -j DROP --destination docker.mender.io"
+            )
+
+            # Plenty of time for the session to mess up
+            time.sleep(60)
+
+            # Re-enable a good connection
+            docker_env.device.run("iptables -D OUTPUT 1")
+
+            time.sleep(30)
+            is_shell_is_working(shell)
 
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)
@@ -336,37 +380,6 @@ class TestRemoteTerminal(
         yield env
 
 
-class TestRemoteTerminal_1_0(_TestRemoteTerminalBase):
-    """
-    This set of tests uses mender-connect v1.0
-    """
-
-    def docker_env_impl(self, request):
-        env = container_factory.get_mender_client_2_5_setup(num_clients=1)
-        request.addfinalizer(env.teardown)
-        env.setup()
-
-        env.device = MenderDevice(env.get_mender_clients()[0])
-        env.device.ssh_is_opened()
-
-        set_container_manager(env)
-        auth = Authentication()
-        devauth = DeviceAuthV2(auth)
-        devauth.accept_devices(1)
-
-        env.devconnect = DeviceConnect(auth, devauth)
-
-        return env
-
-    @pytest.fixture(scope="class")
-    def docker_env(self, request):
-        yield self.docker_env_impl(request)
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(self, request):
-        yield self.docker_env_impl(request)
-
-
 def connected_device(env):
     uuidv4 = str(uuid.uuid4())
     tname = "test.mender.io-{}".format(uuidv4)
@@ -431,30 +444,3 @@ class TestRemoteTerminalEnterprise(
         env.devconnect = devconn
 
         yield env
-
-
-class TestRemoteTerminalEnterprise_1_0(_TestRemoteTerminalBase):
-    """
-    This set of tests uses mender-connect v1.0
-    """
-
-    def docker_env_impl(self, request):
-        env = container_factory.get_mender_client_2_5_enterprise_setup()
-        request.addfinalizer(env.teardown)
-        env.setup()
-
-        set_container_manager(env)
-        device, devconn = connected_device(env)
-
-        env.device = device
-        env.devconnect = devconn
-
-        return env
-
-    @pytest.fixture(scope="class")
-    def docker_env(self, request):
-        yield self.docker_env_impl(request)
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(self, request):
-        yield self.docker_env_impl(request)

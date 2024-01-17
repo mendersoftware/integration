@@ -19,7 +19,8 @@ from .docker_compose_manager import (
     DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
-    DockerComposeLegacyClientSetup,
+    DockerComposeLegacyV1ClientSetup,
+    DockerComposeLegacyV3ClientSetup,
     DockerComposeEnterpriseDockerClientSetup,
     DockerComposeSignedArtifactClientSetup,
     DockerComposeShortLivedTokenSetup,
@@ -28,14 +29,13 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseSetupWithGateway,
     DockerComposeEnterpriseSignedArtifactClientSetup,
     DockerComposeEnterpriseShortLivedTokenSetup,
-    DockerComposeEnterpriseLegacyClientSetup,
+    DockerComposeEnterpriseLegacyV1ClientSetup,
+    DockerComposeEnterpriseLegacyV3ClientSetup,
     DockerComposeEnterpriseRofsClientSetup,
     DockerComposeEnterpriseRofsCommercialClientSetup,
     DockerComposeCustomSetup,
     DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
-    DockerComposeMenderClient_2_5_Setup,
-    DockerComposeMenderClient_2_5_EnterpriseSetup,
 )
 from .kubernetes_manager import (
     KubernetesEnterpriseSetup,
@@ -75,8 +75,12 @@ class ContainerManagerFactory:
         """Standard setup with one QEMU Read-Only FS client instead of standard R/W"""
         pass
 
-    def get_legacy_client_setup(self, name=None):
+    def get_legacy_v1_client_setup(self, name=None):
         """Setup with one Mender client v1.7"""
+        pass
+
+    def get_legacy_v3_client_setup(self, name=None):
+        """Setup with one Mender bundle v3.6"""
         pass
 
     def get_signed_artifact_client_setup(self, name=None):
@@ -111,8 +115,12 @@ class ContainerManagerFactory:
         """Enterprise setup on which deviceauth has a short lived token (expire timeout = 0)"""
         pass
 
-    def get_enterprise_legacy_client_setup(self, name=None, num_clients=0):
+    def get_enterprise_legacy_v1_client_setup(self, name=None, num_clients=0):
         """Enterprise setup with one Mender client v1.7"""
+        pass
+
+    def get_enterprise_legacy_v3_client_setup(self, name=None, num_clients=0):
+        """Enterprise setup with one Mender bundle v3.6"""
         pass
 
     def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
@@ -156,8 +164,11 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_rofs_client_setup(self, name=None):
         return DockerComposeRofsClientSetup(name)
 
-    def get_legacy_client_setup(self, name=None):
-        return DockerComposeLegacyClientSetup(name)
+    def get_legacy_v1_client_setup(self, name=None):
+        return DockerComposeLegacyV1ClientSetup(name)
+
+    def get_legacy_v3_client_setup(self, name=None):
+        return DockerComposeLegacyV3ClientSetup(name)
 
     def get_signed_artifact_client_setup(self, name=None):
         return DockerComposeSignedArtifactClientSetup(name)
@@ -180,8 +191,11 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_enterprise_short_lived_token_setup(self, name=None):
         return DockerComposeEnterpriseShortLivedTokenSetup(name)
 
-    def get_enterprise_legacy_client_setup(self, name=None, num_clients=0):
-        return DockerComposeEnterpriseLegacyClientSetup(name, num_clients)
+    def get_enterprise_legacy_v1_client_setup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseLegacyV1ClientSetup(name, num_clients)
+
+    def get_enterprise_legacy_v3_client_setup(self, name=None, num_clients=0):
+        return DockerComposeEnterpriseLegacyV3ClientSetup(name, num_clients)
 
     def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseDockerClientSetup(name, num_clients)
@@ -197,12 +211,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)
-
-    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
-        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
-
-    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
-        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
     def get_custom_setup(self, name=None):
         return DockerComposeCustomSetup(name)
@@ -226,12 +234,6 @@ class KubernetesManagerFactory(ContainerManagerFactory):
 
     def get_enterprise_short_lived_token_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
-
-    def get_mender_client_2_5_setup(self, name=None, num_clients=1, **kwargs):
-        return DockerComposeMenderClient_2_5_Setup(name, num_clients, **kwargs)
-
-    def get_mender_client_2_5_enterprise_setup(self, name=None, num_clients=0):
-        return DockerComposeMenderClient_2_5_EnterpriseSetup(name, num_clients)
 
 
 def get_factory():

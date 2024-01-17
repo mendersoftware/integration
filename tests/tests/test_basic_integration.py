@@ -12,13 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import shutil
 import os
+import pytest
+import shutil
 import time
 
-import pytest
-
-from .. import conftest
 from ..common_setup import (
     standard_setup_one_rofs_client_bootstrapped,
     standard_setup_with_short_lived_token,
@@ -39,6 +37,7 @@ from ..MenderAPI import (
     get_container_manager,
 )
 from .mendertesting import MenderTesting
+from ..helpers import Helpers
 
 
 class DeviceAuthFailover(DeviceAuthV2):
@@ -173,14 +172,13 @@ class BaseTestBasicIntegration(MenderTesting):
             "\\1 1800",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         def deployment_callback():
             logger.info("Running pre deployment callback function")
             wait_count = 0
             # Match the log template six times to make sure the client is truly sleeping.
-            catcmd = "journalctl -u %s --output=cat" % client_service_name
+            catcmd = "journalctl --unit mender-updated --output cat"
             template = mender_device.run(catcmd)
             while True:
                 logger.info("sleeping...")
@@ -198,7 +196,7 @@ class BaseTestBasicIntegration(MenderTesting):
                 wait_count = 0
 
         def deployment_triggered_callback():
-            mender_device.run("mender check-update")
+            mender_device.run("mender-update check-update")
             logger.info("mender client has forced an update check")
 
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")
@@ -224,13 +222,12 @@ class BaseTestBasicIntegration(MenderTesting):
             "\\1 1800",
         )
         mender_device.run(sedcmd)
-        client_service_name = mender_device.get_client_service_name()
-        mender_device.run("systemctl restart %s" % client_service_name)
+        mender_device.run("systemctl restart mender-updated")
 
         logger.info("Running pre deployment callback function")
         wait_count = 0
         # Match the log template six times to make sure the client is truly sleeping.
-        catcmd = "journalctl -u %s --output=cat" % client_service_name
+        catcmd = "journalctl --unit mender-updated --output cat"
         template = mender_device.run(catcmd)
         while True:
             logger.info("sleeping...")
@@ -254,7 +251,7 @@ class BaseTestBasicIntegration(MenderTesting):
 
         # Now that the client has settled into the wait-state, run the command, and check if it does indeed exit the wait state,
         # and send inventory.
-        mender_device.run("mender send-inventory")
+        mender_device.run("mender-update send-inventory")
         logger.info("mender client has forced an inventory update")
 
         for i in range(10):
@@ -318,11 +315,7 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             assert len(devices) == 1
 
             devauth_failover.accept_devices(1)
-
-            output = mender_device.run(
-                f'journalctl -S"{date}"'
-                + ' | grep -l "successfully received new authorization data"'
-            ).strip()
+            Helpers.check_log_is_authenticated(mender_device, date)
 
             # Old server should have no devices now.
             devices = devauth.get_devices_status(status="accepted")

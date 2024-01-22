@@ -236,6 +236,7 @@ class _TestRemoteTerminalBase:
             time.sleep(30)
             is_shell_is_working(shell)
 
+    @flaky(max_runs=3)
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)
 

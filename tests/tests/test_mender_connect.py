@@ -198,7 +198,7 @@ class _TestRemoteTerminalBase:
 
         receive_timeout_s = 16
 
-        def is_shell_is_working(shell):
+        def is_shell_working(shell):
             # Test if a simple command works.
             shell.sendInput("ls /\n".encode())
             output = shell.recvOutput(receive_timeout_s)
@@ -222,7 +222,7 @@ class _TestRemoteTerminalBase:
                 "$ ",
             ], "Could not detect shell prompt."
 
-            is_shell_is_working(shell)
+            is_shell_working(shell)
 
             docker_env.device.run(
                 "iptables -A OUTPUT -j DROP --destination docker.mender.io"
@@ -235,7 +235,7 @@ class _TestRemoteTerminalBase:
             docker_env.device.run("iptables -D OUTPUT 1")
 
             time.sleep(30)
-            is_shell_is_working(shell)
+            is_shell_working(shell)
 
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)

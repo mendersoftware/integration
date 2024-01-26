@@ -362,7 +362,7 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
             assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
 
 
-class TestRemoteTerminal(
+class TestRemoteTerminalOpenSource(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
     @pytest.fixture(scope="class")

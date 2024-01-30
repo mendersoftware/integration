@@ -252,6 +252,8 @@ start_server() {
             sleep 1
         done
     done
+    # Sleep some seconds more to further waiting for the useradm service
+    sleep 5
 }
 
 create_user() {

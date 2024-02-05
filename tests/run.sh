@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2022 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -86,12 +86,6 @@ echo "Detected Mender branch: $MENDER_BRANCH"
 echo "Detected mender-artifact branch: $MENDER_ARTIFACT_BRANCH"
 echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
 
-function modify_services_for_testing() {
-    # Remove all published ports for testing
-    sed -e '/9000:9000/d' -e '/8080:8080/d' -e '/443:443/d' -e '/80:80/d' -e '/ports:/d' ../docker-compose.demo.yml > ../docker-compose.testing.yml
-    sed -e '/9000:9000/d' -e '/ports:/d' ../storage-proxy/docker-compose.storage-proxy.demo.yml > ../storage-proxy/docker-compose.storage-proxy.testing.yml
-}
-
 function inject_pre_generated_ssh_keys() {
     ssh-keygen -f /tmp/mender-id_rsa -t rsa -N ''
     printf "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa\n" | debugfs -w core-image-full-cmdline-$MACHINE_NAME.ext4
@@ -148,8 +142,6 @@ function get_requirements() {
     chmod +x downloaded-tools/single-file-artifact-gen
 
     export PATH=$PWD/downloaded-tools:$PATH
-
-    inject_pre_generated_ssh_keys
 }
 
 if [[ $1 == "--get-requirements" ]]; then
@@ -157,31 +149,9 @@ if [[ $1 == "--get-requirements" ]]; then
     exit 0
 fi
 
-dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
-
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements
 fi
-
-# Extract file system images from Docker images
-mkdir -p output
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-       mendersoftware/mender-client-qemu:$(../extra/release_tool.py --version-of mender-client-qemu --version-type docker)
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-        mendersoftware/mender-client-qemu-rofs:$(../extra/release_tool.py --version-of mender-client-qemu-rofs --version-type docker)
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-        registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:$(../extra/release_tool.py --version-of mender-gateway --version-type docker)
-docker run --rm --privileged --entrypoint /extract_fs -v $PWD/output:/output \
-         registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:$(../extra/release_tool.py --version-of mender-qemu-rofs-commercial --version-type docker)
-mv output/* .
-rmdir output
-
-modify_services_for_testing
-
-cp -f core-image-full-cmdline-$MACHINE_NAME.ext4 core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
-debugfs -w -R "rm /lib/systemd/systemd-networkd" core-image-full-cmdline-$MACHINE_NAME-broken-network.ext4
-
-dd if=/dev/urandom of=broken_update.ext4 bs=10M count=5
 
 # Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
 EXTRA_TEST_ARGS=

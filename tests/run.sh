@@ -86,13 +86,6 @@ echo "Detected Mender branch: $MENDER_BRANCH"
 echo "Detected mender-artifact branch: $MENDER_ARTIFACT_BRANCH"
 echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
 
-function inject_pre_generated_ssh_keys() {
-    ssh-keygen -f /tmp/mender-id_rsa -t rsa -N ''
-    printf "cd /home/root/\nmkdir .ssh\ncd .ssh\nwrite /tmp/mender-id_rsa.pub id_rsa.pub\nwrite /tmp/mender-id_rsa id_rsa\n" | debugfs -w core-image-full-cmdline-$MACHINE_NAME.ext4
-    rm /tmp/mender-id_rsa.pub
-    rm /tmp/mender-id_rsa
-}
-
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools

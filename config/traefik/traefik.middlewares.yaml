@@ -42,7 +42,7 @@ http:
     userauth:
       forwardAuth:
         address: "http://mender-useradm:8080/api/internal/v1/useradm/auth/verify"
-        authResponseHeaders: "X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups"
+        authResponseHeaders: "X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups,X-MEN-RBAC-Releases-Tags"
   
     json-error-responder1:
       errors:

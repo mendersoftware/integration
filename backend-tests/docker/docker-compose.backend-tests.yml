@@ -1,7 +1,8 @@
 version: '2.3'
 services:
     mender-backend-tests-runner:
-        image: mendersoftware/mender-test-containers:backend-integration-testing
+      #image: mendersoftware/mender-test-containers:backend-integration-testing
+        image: registry.gitlab.com/northern.tech/mender/mender-test-containers:backend-integration-testing-multiplatform-rob
         networks:
             - mender
         volumes:

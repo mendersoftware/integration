@@ -5,7 +5,7 @@
 # 'services' tag.
 services:
     mender-artifact:
-        image: mendersoftware/mender-artifact:3.11.1
+        image: mendersoftware/mender-artifact:3.11.2
 
     mender-cli:
         image: mendersoftware/mender-cli:1.12.0

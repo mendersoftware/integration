@@ -1,7 +1,7 @@
 version: '2.3'
 services:
   mtls-ambassador:
-    image: registry.mender.io/mendersoftware/mtls-ambassador:mender-3.7.1
+    image: registry.mender.io/mendersoftware/mtls-ambassador:mender-3.7.2
     networks:
       - mender
     volumes:

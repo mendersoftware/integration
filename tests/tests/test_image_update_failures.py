@@ -56,7 +56,7 @@ class BaseTestFailures(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
     @MenderTesting.fast
-    def do_test_large_update_image(self, env):
+    def do_test_large_update_image(self, env, large_image):
         """Installing an image larger than the passive/active partition size should result in a failure."""
 
         mender_device = env.device
@@ -66,7 +66,7 @@ class BaseTestFailures(MenderTesting):
         host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
-                install_image="large_image.dat",
+                install_image=large_image,
                 # We use verify_status=False because the device is very quick in reporting
                 # failure and the test framework might miss the 'inprogress' status transition.
                 verify_status=False,
@@ -88,8 +88,12 @@ class TestFailuresOpenSource(BaseTestFailures):
         )
 
     @MenderTesting.fast
-    def test_large_update_image(self, standard_setup_one_client_bootstrapped):
-        self.do_test_large_update_image(standard_setup_one_client_bootstrapped)
+    def test_large_update_image(
+        self, standard_setup_one_client_bootstrapped, large_image
+    ):
+        self.do_test_large_update_image(
+            standard_setup_one_client_bootstrapped, large_image
+        )
 
 
 class TestFailuresOpenEnterprise(BaseTestFailures):
@@ -102,5 +106,5 @@ class TestFailuresOpenEnterprise(BaseTestFailures):
         )
 
     @MenderTesting.fast
-    def test_large_update_image(self, enterprise_one_client_bootstrapped):
-        self.do_test_large_update_image(enterprise_one_client_bootstrapped)
+    def test_large_update_image(self, enterprise_one_client_bootstrapped, large_image):
+        self.do_test_large_update_image(enterprise_one_client_bootstrapped, large_image)

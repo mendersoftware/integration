@@ -53,7 +53,7 @@ class BaseTestLegacyGolangUpdate(MenderTesting):
         )
 
     def do_test_migrate_from_legacy_mender_v3_failure(
-        self, env, valid_image,
+        self, env, valid_image, broken_update_image,
     ):
         """
         Start a legacy client (3.6 bundle, the last golang client) and do one failed update followed
@@ -93,10 +93,10 @@ class TestLegacyGolangUpdateOpenSource(BaseTestLegacyGolangUpdate):
         )
 
     def test_migrate_from_legacy_mender_v3_failure(
-        self, setup_with_legacy_v3_client, valid_image
+        self, setup_with_legacy_v3_client, valid_image, broken_update_image,
     ):
         self.do_test_migrate_from_legacy_mender_v3_failure(
-            setup_with_legacy_v3_client, valid_image
+            setup_with_legacy_v3_client, valid_image, broken_update_image,
         )
 
 
@@ -112,11 +112,16 @@ class TestLegacyGolangUpdateEnterprise(BaseTestLegacyGolangUpdate):
         )
 
     def test_migrate_from_legacy_mender_v3_failure(
-        self, enterprise_with_legacy_v3_client, valid_image_with_mender_conf
+        self,
+        enterprise_with_legacy_v3_client,
+        valid_image_with_mender_conf,
+        broken_update_image,
     ):
         mender_conf = enterprise_with_legacy_v3_client.device.run(
             "cat /etc/mender/mender.conf"
         )
         self.do_test_migrate_from_legacy_mender_v3_failure(
-            enterprise_with_legacy_v3_client, valid_image_with_mender_conf(mender_conf)
+            enterprise_with_legacy_v3_client,
+            valid_image_with_mender_conf(mender_conf),
+            broken_update_image,
         )

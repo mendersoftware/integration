@@ -127,7 +127,7 @@ class BasicTestFaultTolerance(MenderTesting):
         logger.info("Waiting for system to finish download")
 
     def do_test_update_image_breaks_networking(
-        self, env, install_image,
+        self, env, broken_network_image,
     ):
         """
         Install an image without systemd-networkd binary existing.
@@ -143,7 +143,7 @@ class BasicTestFaultTolerance(MenderTesting):
         host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
-                install_image, devauth=devauth, deploy=deploy
+                broken_network_image, devauth=devauth, deploy=deploy
             )
             reboot.verify_reboot_performed()  # since the network is broken, two reboots will be performed, and the last one will be detected
             deploy.check_expected_statistics(deployment_id, "failure", 1)
@@ -361,13 +361,10 @@ class BasicTestFaultTolerance(MenderTesting):
 class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
-        self, standard_setup_one_client_bootstrapped,
+        self, standard_setup_one_client_bootstrapped, broken_network_image,
     ):
-        install_image = (
-            "core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name
-        )
         self.do_test_update_image_breaks_networking(
-            standard_setup_one_client_bootstrapped, install_image
+            standard_setup_one_client_bootstrapped, broken_network_image,
         )
 
     @MenderTesting.slow
@@ -405,13 +402,10 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
 class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
-        self, enterprise_one_client_bootstrapped,
+        self, enterprise_one_client_bootstrapped, broken_network_image,
     ):
-        install_image = (
-            "core-image-full-cmdline-%s-broken-network.ext4" % conftest.machine_name
-        )
         self.do_test_update_image_breaks_networking(
-            enterprise_one_client_bootstrapped, install_image
+            enterprise_one_client_bootstrapped, broken_network_image,
         )
 
     @MenderTesting.slow

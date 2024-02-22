@@ -2181,6 +2181,7 @@ def push_latest_docker_tags(state, tag_avail, args):
                 exec_list.append(
                     [
                         "regctl",
+                        "image",
                         "copy",
                         "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
                         "%s/%s:%s" % (prefix, image.docker_image(), new_version),

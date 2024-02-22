@@ -5,7 +5,7 @@ FROM ubuntu:22.04 AS build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y make git build-essential golang liblzma-dev    \
     jq libssl-dev libglib2.0-dev curl cmake liblmdb++-dev libboost-dev libboost-log-dev \
-    libarchive-dev libdbus-1-dev
+    libarchive-dev libdbus-1-dev libsystemd-dev
 
 ARG MENDER_CLIENT_REV=master
 ARG MENDER_CONNECT_REV=master

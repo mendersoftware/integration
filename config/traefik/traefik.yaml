@@ -212,7 +212,7 @@ http:
         - sec-headers
         - compression
         - json-error-responder4
-      rule: '!Path(`/api/management/{ver:v[0-9]+}/useradm/auth/logout`)&&PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(auth|oauth2)}`)'
+      rule: '!Path(`/api/management/{ver:v[0-9]+}/useradm/auth/logout`)&&PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(auth|oauth2|oidc)}`)'
       service: useradm
       tls: true
 

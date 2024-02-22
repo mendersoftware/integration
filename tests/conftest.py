@@ -1,4 +1,4 @@
-# Copyright 2023 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@ import os
 import subprocess
 import shutil
 import tempfile
+import yaml
 from distutils.version import LooseVersion
 
 import filelock
 import pytest
+from filelock import FileLock
 from testutils.infra.container_manager.base import BaseContainerManagerNamespace
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
 
@@ -55,9 +57,142 @@ def pytest_addoption(parser):
     )
 
 
+def _remove_ports(file, output_file):
+    with open(file, "r") as f, open(output_file, "w") as out:
+        file = yaml.safe_load(f)
+        for key in file["services"]:
+            services = file["services"][key]
+            if services.get("ports", False):
+                del services["ports"]
+        yaml.safe_dump(file, out, sort_keys=False)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def modify_compose_for_testing(request):
+    demo = "../docker-compose.demo.yml"
+    storage_proxy_demo = "../storage-proxy/docker-compose.storage-proxy.demo.yml"
+    # Output files after modifying for testing
+    testing = "../docker-compose.testing.yml"
+    storage_proxy_testing = "../storage-proxy/docker-compose.storage-proxy.testing.yml"
+
+    # Remove published ports from docker-compose-demo
+    _remove_ports(demo, testing)
+    # Remove published ports from docker-compose.storage-proxy.demo
+    _remove_ports(storage_proxy_demo, storage_proxy_testing)
+
+
+def _extract_fs_from_image(request, client_compose_file, filename):
+    if os.path.exists(os.path.join(THIS_DIR, filename)):
+        return filename
+    d = os.path.join(THIS_DIR, "output")
+    image_type = "mender-client"
+    if "gateway" in client_compose_file:
+        image_type = "mender-gateway"
+
+    with open(client_compose_file) as f:
+        data = yaml.safe_load(f)
+        image = data["services"][image_type]["image"]
+
+    subprocess.run(
+        [
+            "docker",
+            "run",
+            "--rm",
+            "--privileged",
+            "--entrypoint",
+            "/extract_fs",
+            "--volume",
+            d + ":/output",
+            image,
+        ]
+    )
+
+    if not os.path.exists(os.path.join(THIS_DIR, filename)):
+        shutil.copy(os.path.join(d, filename), THIS_DIR)
+
+    def cleanup():
+        shutil.rmtree(d, ignore_errors=True)
+
+    request.addfinalizer(cleanup)
+
+    return filename
+
+
+def _image(request, compose_file, filename):
+    return _extract_fs_from_image(
+        request, os.path.join(THIS_DIR, "..", compose_file), filename
+    )
+
+
+# https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once
+def run_if_non_existent(request, tmp_path_factory, compose_file, filename):
+    """
+    Makes session scoped fixtures only run once
+    to avoid conflict while running multiple workers with xdist
+    """
+    root_tmp_dir = tmp_path_factory.getbasetemp().parent
+    file_lock = root_tmp_dir / filename
+
+    with FileLock(f"{file_lock}.lock"):
+        if file_lock.is_file() and os.path.exists(os.path.join(THIS_DIR, filename)):
+            return filename
+    return _image(request, compose_file, filename)
+
+
 @pytest.fixture(scope="session")
-def valid_image(request):
-    return "core-image-full-cmdline-%s.ext4" % machine_name
+def valid_image(request, tmp_path_factory, worker_id):
+    compose_file = "docker-compose.client.yml"
+    filename = f"core-image-full-cmdline-{machine_name}.ext4"
+
+    if worker_id == "master":
+        return filename
+
+    return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
+
+
+@pytest.fixture(scope="session")
+def gateway_image(request, tmp_path_factory, worker_id):
+    compose_file = "docker-compose.mender-gateway.commercial.yml"
+    filename = f"mender-gateway-image-full-cmdline-{machine_name}.ext4"
+
+    if worker_id == "master":
+        return filename
+
+    return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
+
+
+def _special_image(request, image, command):
+    subprocess.run(command, check=True)
+    return image
+
+
+@pytest.fixture(scope="session")
+def broken_network_image(request, valid_image):
+    image = f"core-image-full-cmdline-{machine_name}-broken-network.ext4"
+    shutil.copy(valid_image, image)
+    return _special_image(
+        request,
+        image,
+        ["debugfs", "-w", "-R", "rm /lib/systemd/systemd-networkd", image],
+    )
+
+
+@pytest.fixture(scope="session")
+def large_image(request):
+    return _special_image(
+        request,
+        "large_image.dat",
+        ["dd", "if=/dev/zero", "of=large_image.dat", "bs=300M", "count=1"],
+    )
+
+
+@pytest.fixture(scope="session")
+def broken_update_image(request):
+    return _special_image(
+        request,
+        "broken_update.ext4",
+        ["dd", "if=/dev/urandom", "of=broken_update.ext4", "bs=10M", "count=5"],
+    )
 
 
 def add_mender_conf_to_image(image, d, mender_conf):
@@ -98,7 +233,7 @@ def add_mender_conf_to_image(image, d, mender_conf):
     return new_image
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def valid_image_with_mender_conf(request, valid_image):
     """Insert the given mender_conf into a valid_image"""
     with tempfile.TemporaryDirectory() as d:
@@ -112,7 +247,13 @@ def valid_image_with_mender_conf(request, valid_image):
 
 @pytest.fixture(scope="session")
 def valid_image_rofs_with_mender_conf(request):
-    valid_image = "mender-image-full-cmdline-rofs-%s.ext4" % machine_name
+
+    valid_image = _image(
+        request,
+        "docker-compose.client.rofs.yml",
+        f"mender-image-full-cmdline-rofs-{machine_name}.ext4",
+    )
+
     if not os.path.exists(valid_image):
         yield None
         return
@@ -128,7 +269,13 @@ def valid_image_rofs_with_mender_conf(request):
 
 @pytest.fixture(scope="session")
 def valid_image_rofs_commercial_with_mender_conf(request):
-    valid_image = "mender-image-full-cmdline-rofs-commercial-%s.ext4" % machine_name
+
+    valid_image = _image(
+        request,
+        "docker-compose.client.rofs.commercial.yml",
+        f"mender-image-full-cmdline-rofs-commercial-{machine_name}.ext4",
+    )
+
     if not os.path.exists(valid_image):
         yield None
         return
@@ -253,6 +400,7 @@ def pytest_exception_interact(node, call, report):
                 "mender-connect",
                 "mender-monitor",
                 "mender-gateway",
+                "mender-client",
             ]:
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)

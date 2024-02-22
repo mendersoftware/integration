@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ def add_mender_conf_and_mender_gateway_conf(d, image, mender_conf, mender_gatewa
         f.write(mender_gateway_conf)
     new_image = os.path.join(d, image)
     shutil.copy(image, new_image)
+
     instr_file = os.path.join(d, "write.instr")
     with open(os.path.join(d, "write.instr"), "w") as f:
         f.write(
@@ -119,6 +120,7 @@ class BaseTestMenderGateway(MenderTesting):
         env,
         valid_image_with_mender_conf,
         image_with_mender_conf_and_mender_gateway_conf,
+        gateway_image,
     ):
         mender_device = env.device
         mender_gateway = env.device_gateway
@@ -139,9 +141,7 @@ class BaseTestMenderGateway(MenderTesting):
         )
 
         mender_gateway_image = image_with_mender_conf_and_mender_gateway_conf(
-            "mender-gateway-image-full-cmdline-%s.ext4" % conftest.machine_name,
-            mender_gateway_mender_conf,
-            mender_gateway_gateway_conf,
+            gateway_image, mender_gateway_mender_conf, mender_gateway_gateway_conf,
         )
 
         def update_device():
@@ -263,7 +263,7 @@ class BaseTestMenderGateway(MenderTesting):
         deploy.check_expected_status("finished", deployment_id_2)
 
     def do_test_deployment_two_devices_parallel_updates_one_failure(
-        self, env, valid_image_with_mender_conf
+        self, env, valid_image_with_mender_conf, broken_update_image,
     ):
         device_group = env.device_group
         mender_device_1 = device_group[0]
@@ -288,7 +288,7 @@ class BaseTestMenderGateway(MenderTesting):
             )
 
             deployment_id_2, expected_image_id_2 = common_update_procedure(
-                "broken_update.ext4",
+                broken_update_image,
                 devices=[device_id_2],
                 devauth=devauth,
                 deploy=deploy,
@@ -443,11 +443,13 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
         standard_setup_one_client_bootstrapped_with_gateway,
         valid_image_with_mender_conf,
         image_with_mender_conf_and_mender_gateway_conf,
+        gateway_image,
     ):
         self.do_test_deployment_gateway_and_one_device(
             standard_setup_one_client_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
             image_with_mender_conf_and_mender_gateway_conf,
+            gateway_image,
         )
 
     @flaky(max_runs=3)
@@ -492,10 +494,12 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
         self,
         standard_setup_two_clients_bootstrapped_with_gateway,
         valid_image_with_mender_conf,
+        broken_update_image,
     ):
         self.do_test_deployment_two_devices_parallel_updates_one_failure(
             standard_setup_two_clients_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
+            broken_update_image,
         )
 
     @flaky(max_runs=3)
@@ -543,11 +547,13 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
         enterprise_one_client_bootstrapped_with_gateway,
         valid_image_with_mender_conf,
         image_with_mender_conf_and_mender_gateway_conf,
+        gateway_image,
     ):
         self.do_test_deployment_gateway_and_one_device(
             enterprise_one_client_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
             image_with_mender_conf_and_mender_gateway_conf,
+            gateway_image,
         )
 
     @flaky(max_runs=3)
@@ -592,10 +598,12 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
         self,
         enterprise_two_clients_bootstrapped_with_gateway,
         valid_image_with_mender_conf,
+        broken_update_image,
     ):
         self.do_test_deployment_two_devices_parallel_updates_one_failure(
             enterprise_two_clients_bootstrapped_with_gateway,
             valid_image_with_mender_conf,
+            broken_update_image,
         )
 
     @flaky(max_runs=3)

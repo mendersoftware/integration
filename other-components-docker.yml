@@ -3,8 +3,8 @@
 # installation (have no docker-compose file).
 services:
     mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:mender-3.7.1
+        image: registry.mender.io/mendersoftware/mtls-ambassador:mender-3.7.2
     mender-ci-workflows:
         image: mendersoftware/mender-ci-tools:mender-master
     mender-client:
-        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.7.1
+        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.7.2

@@ -1,4 +1,4 @@
-cryptography==42.0.2
+cryptography==42.0.4
 docker==7.0.0
 fabric==2.7.1
 filelock==3.13.1

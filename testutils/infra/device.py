@@ -22,21 +22,87 @@ import subprocess
 import time
 from typing import Dict
 
-from fabric import Connection
-from paramiko import SSHException
-from paramiko.ssh_exception import NoValidConnectionsError
-from paramiko.client import MissingHostKeyPolicy
-from invoke.exceptions import UnexpectedExit
-
 logger = logging.getLogger()
 
 
-class IgnorePolicy(MissingHostKeyPolicy):
-    """Custom paramiko-like policy to just accept silently any unknown host key
-    """
+class Result:
+    def __init__(self, stdout, stderr, exited):
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exited = exited
+        self.return_code = exited
 
-    def missing_host_key(self, client, hostname, key):
-        pass
+
+class Connection:
+    def __init__(self, host, user, port, connect_timeout, connect_kwargs={}):
+        self.host = host
+        self.user = user
+        self.port = port
+        self.connect_timeout = connect_timeout
+        self.connect_kwargs = connect_kwargs
+
+        self.key_filename = None
+
+        for k in connect_kwargs.keys():
+            if k == "key_filename":
+                self.key_filename = connect_kwargs[k]
+
+    def get_connect_args(self):
+        if self.key_filename is not None:
+            key_arg = ["-i", self.key_filename]
+        else:
+            key_arg = []
+
+        args = (
+            ["ssh"]
+            + key_arg
+            + [
+                "-p",
+                str(self.port),
+                "-o",
+                f"ConnectTimeout={self.connect_timeout}",
+                "-o",
+                "ServerAliveInterval=60",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                "-o",
+                "StrictHostKeyChecking=no",
+                f"{self.user}@{self.host}",
+            ]
+        )
+
+        return args
+
+    def run(self, command, warn=False, hide=False, echo=False, popen=False):
+        ssh_command = self.get_connect_args() + [command]
+
+        if echo:
+            print(command)
+
+        if popen:
+            return subprocess.Popen(ssh_command)
+        else:
+            try:
+                proc = subprocess.run(ssh_command, check=not warn, capture_output=True)
+                returncode = proc.returncode
+            except subprocess.CalledProcessError as e:
+                returncode = e.returncode
+                if returncode != 255:
+                    raise
+
+            if returncode == 255:
+                raise ConnectionError(
+                    f"Could not connect using command '{ssh_command}'"
+                )
+
+            stdout = proc.stdout.decode()
+            stderr = proc.stderr.decode()
+
+            if not hide:
+                print(stdout)
+                print(stderr)
+
+            return Result(stdout, stderr, returncode)
 
 
 class MenderDevice:
@@ -68,7 +134,6 @@ class MenderDevice:
                 "allow_agent": False,
             },
         )
-        self._conn.client.set_missing_host_key_policy(IgnorePolicy())
         self._service_name = None
 
     @property
@@ -385,19 +450,9 @@ def _run(conn, cmd, **kw):
         try:
             result = conn.run(cmd, **kw)
             break
-        except NoValidConnectionsError as e:
-            logger.info("Could not connect to host %s: %s", conn.host, str(e))
-            continue
-        except SSHException as e:
-            logger.info(
-                "Got SSH exception while connecting to host %s: %s", conn.host, str(e)
-            )
-            if not (
-                "Connection reset by peer" in str(e)
-                or "Error reading SSH protocol banner" in str(e)
-                or "No existing session" in str(e)
-            ):
-                raise e
+        except ConnectionError as e:
+            logger.info(f"Got SSH exception while connecting to host {conn.host}: {e}")
+            time.sleep(60)
             continue
         except OSError as e:
             # The OSError is happening while there is no QEMU instance initialized
@@ -409,24 +464,14 @@ def _run(conn, cmd, **kw):
             if "Cannot assign requested address" not in str(e):
                 raise e
             continue
-        except UnexpectedExit as e:
-            # Many tests rely on the old behaviour of "keep trying until it passes", so
-            # they run commands that may return non 0 for a while
-            logger.info(
-                "Got UnexpectedExit while executing command in host %s: %s",
-                conn.host,
-                str(e),
-            )
-            continue
         except Exception as e:
             logger.exception(
-                "Generic exception happened while connecting to host %s", conn.host
+                f"Generic exception happened while connecting to host {conn.host}"
             )
             raise e
     else:
         raise RuntimeError(
-            "Could not successfully run command after %d seconds on host %s: %s"
-            % (wait, conn.host, cmd)
+            f"Could not successfully run command after {wait} seconds on host {conn.host}: {cmd}"
         )
 
     return result

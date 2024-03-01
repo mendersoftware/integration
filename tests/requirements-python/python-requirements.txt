@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==42.0.4
+cryptography==42.0.5
     # via -r python-requirements.in
 dnspython==2.3.0
     # via pymongo
@@ -58,7 +58,7 @@ packaging==23.1
     #   pytest
 pluggy==1.4.0
     # via pytest
-py3dns==4.0.0
+py3dns==4.0.1
     # via -r python-requirements.in
 pyasn1==0.5.0
     # via
@@ -68,9 +68,9 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pymongo==4.6.1
+pymongo==4.6.2
     # via -r python-requirements.in
-pytest==8.0.0
+pytest==8.0.2
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -79,7 +79,7 @@ pytest==8.0.0
     #   pytest-xdist
 pytest-html==4.1.1
     # via -r python-requirements.in
-pytest-metadata==3.0.0
+pytest-metadata==3.1.1
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -109,7 +109,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==8.0.0
+stripe==8.5.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest

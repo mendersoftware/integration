@@ -3,7 +3,7 @@
 #
 providers:
   file:
-    directory: "/etc/traefik/config"
+    directory: '/etc/traefik/config'
     watch: true
 
 experimental:
@@ -11,7 +11,7 @@ experimental:
 
 entryPoints:
   https:
-    address: ":443"
+    address: :443
     http3:
       advertisedPort: 443
     transport:
@@ -21,7 +21,7 @@ entryPoints:
         writeTimeout: 7200
 
   http:
-    address: ":80"
+    address: :80
     http:
       redirections:
         entryPoint:
@@ -32,3 +32,11 @@ entryPoints:
 accessLog:
   format: json
 
+api:
+  dashboard: true
+  insecure: true
+
+log:
+  level: DEBUG
+
+ping: {}

@@ -24,22 +24,9 @@ services:
     mender-api-gateway:
         ports:
             - 80:80
-            - 443:443
+            - 443:443/tcp
+            - 443:443/udp
             - 8080:8080
-        command:
-            - --accesslog=true
-            - --api.dashboard=true
-            - --api.insecure=true
-            - --entrypoints.http.address=:80
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.https.address=:443
-            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --log.level=DEBUG
-            - --ping=true
-            - --providers.file.directory=/etc/traefik/config
         environment:
             MENDER_DEMO: "true"
             TRAEFIK_API: "true"
@@ -49,6 +36,7 @@ services:
                     - docker.mender.io
                     - s3.docker.mender.io
         volumes:
+            - ./config/traefik/static/traefik.demo.yaml:/etc/traefik/traefik.yaml:ro
             - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
             - ./cert/cert.crt:/etc/traefik/certs/cert.crt
             - ./cert/private.key:/etc/traefik/certs/private.key

@@ -1,4 +1,4 @@
-# Copyright 2023 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -218,6 +218,55 @@ class TestPreauthBase:
 
             aset = outdev["auth_sets"][0]
             assert aset["status"] == "accepted"
+
+        # lets send the preauth requests again and see that when the same devices show new keys
+        # they are immediately accepted with a new authset and the old one is rejected
+
+        # preauth device
+        for i in range(len(devs)):
+            devs[i]["keypair"] = crypto.get_keypair_rsa()
+
+        for d in devs:
+            body = deviceauth.preauth_req(d["id_data"], d["keypair"][1], True)
+            r = devauthm.with_auth(utoken).call(
+                "POST", deviceauth.URL_MGMT_DEVICES, body
+            )
+            assert r.status_code == 201
+
+        for d in devs:
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": d["id"]}
+            )
+            adev = r.json()
+            assert adev["status"] == "accepted"
+            assert len(adev["auth_sets"]) == 2
+
+            # actual device can obtain auth token
+            body, sighdr = deviceauth.auth_req(
+                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token
+            )
+
+            r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
+
+            assert r.status_code == 200
+
+            # device and authset changed status to 'accepted'
+            r = devauthm.with_auth(utoken).call(
+                "GET", deviceauth.URL_DEVICE, path_params={"id": d["id"]}
+            )
+
+            outdev = r.json()
+            assert outdev["status"] == "accepted"
+            assert len(outdev["auth_sets"]) == 2
+
+            found_accepted_auth_set = False
+            for i in range(len(outdev["auth_sets"])):
+                aset = outdev["auth_sets"][i]
+                if aset["status"] == "accepted":
+                    found_accepted_auth_set = True
+                    assert aset["pubkey"] == d["keypair"][1]
+                    break
+            assert found_accepted_auth_set
 
     def do_test_fail_duplicate(self, user, devices):
         useradmm = ApiClient(useradm.URL_MGMT)

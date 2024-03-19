@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -36,8 +36,11 @@ URL_LIMITS_MAX_DEVICES = "/limits/max_devices"
 URL_INTERNAL_LIMITS_MAX_DEVICES = "/tenant/{tid}/limits/max_devices"
 
 
-def preauth_req(id_data, pubkey):
-    return {"identity_data": id_data, "pubkey": pubkey}
+def preauth_req(id_data, pubkey, force=False):
+    if force:
+        return {"force": True, "identity_data": id_data, "pubkey": pubkey}
+    else:
+        return {"identity_data": id_data, "pubkey": pubkey}
 
 
 def req_status(status):

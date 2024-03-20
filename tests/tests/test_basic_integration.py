@@ -89,6 +89,8 @@ class BaseTestBasicIntegration(MenderTesting):
         )
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
+        assert False, "Test error"
+
     def do_test_update_jwt_expired(self, env, valid_image_with_mender_conf):
         """Update a device with a short lived JWT token"""
         devauth = DeviceAuthV2(env.auth)

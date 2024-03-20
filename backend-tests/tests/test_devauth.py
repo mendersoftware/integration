@@ -290,6 +290,8 @@ class TestPreauth(TestPreauthBase):
         r = devauthm.with_auth(utoken).call("POST", deviceauth.URL_MGMT_DEVICES, body)
         assert r.status_code == 400
 
+        assert False, "Test error"
+
 
 class TestPreauthEnterprise(TestPreauthBase):
     def test_ok(self, tenants_users_devices):
@@ -312,6 +314,8 @@ class TestPreauthEnterprise(TestPreauthBase):
         user1 = tenants_users_devices[1].users[0]
         devs1 = tenants_users_devices[1].devices
         self.verify_devices_unmodified(user1, devs1)
+
+        assert False, "Test error"
 
     def verify_devices_unmodified(self, user, in_devices):
         devauthm = ApiClient(deviceauth.URL_MGMT)

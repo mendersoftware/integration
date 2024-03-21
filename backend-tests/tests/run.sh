@@ -38,4 +38,4 @@ fi
 
 chmod 755 /usr/local/bin/mender-artifact
 
-python3 -m pytest -v -s /tests/test_*.py $PYTEST_EXTRA_ARGS "$@"
+python3 -m pytest -v /tests/test_*.py $PYTEST_EXTRA_ARGS "$@"

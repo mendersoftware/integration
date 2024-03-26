@@ -1925,7 +1925,7 @@ def do_license_generation(state, tag_avail):
     print("Output is captured in generated-license-text.txt.")
 
 
-def set_component_version_to(dir, component, tag):
+def set_component_version_to(dir, component, tag, image_repository=None):
     """Modifies yml files in the given directory so that the image label points to
     the given tag. It uses the component type to decide which file to put the
     tag in."""
@@ -1946,12 +1946,32 @@ def set_component_version_to(dir, component, tag):
         old.close()
         os.rename(filename + ".tmp", filename)
 
+    def _replace_repository_in_file(filename, image, repository):
+        old = open(filename)
+        new = open(filename + ".tmp", "w")
+        for line in old:
+            # Replace :version with a new one.
+            line = re.sub(
+                r"^(\s*image:\s*)((.*(?:mendersoftware|mender\.io.*))(/%s))(:\S+(\s*))$"
+                % re.escape(image),
+                r"\g<1>%s\4\5" % repository,
+                line,
+            )
+            new.write(line)
+        new.close()
+        old.close()
+        os.rename(filename + ".tmp", filename)
+
     compose_files_docker = docker_compose_files_list(dir, "docker")
     git_files = docker_compose_files_list(dir, "git")
 
     if component.type == "docker_image":
         for filename in compose_files_docker:
             _replace_version_in_file(filename, component.docker_image(), tag)
+            if image_repository:
+                _replace_repository_in_file(
+                    filename, component.docker_image(), image_repository
+                )
     elif component.type == "git":
         for filename in git_files:
             _replace_version_in_file(filename, component.git(), tag)
@@ -2924,25 +2944,33 @@ def do_set_version_to(args):
 
     elif version_type == "docker":
         component = Component.get_component_of_type("docker_image", args.set_version_of)
-        set_component_version_to(integration_dir(), component, args.version)
+        set_component_version_to(
+            integration_dir(), component, args.version, args.image_repository
+        )
         # Update extra files used in integration tests
         set_component_version_to(
             os.path.join(integration_dir(), "backend-tests", "docker"),
             component,
             args.version,
+            args.image_repository,
         )
         set_component_version_to(
-            os.path.join(integration_dir(), "extra", "mtls"), component, args.version,
+            os.path.join(integration_dir(), "extra", "mtls"),
+            component,
+            args.version,
+            args.image_repository,
         )
         set_component_version_to(
             os.path.join(integration_dir(), "extra", "failover-testing"),
             component,
             args.version,
+            args.image_repository,
         )
         set_component_version_to(
             os.path.join(integration_dir(), "extra", "mender-gateway"),
             component,
             args.version,
+            args.image_repository,
         )
 
 
@@ -3274,7 +3302,7 @@ def select_test_suite():
     """
     # check all known git components for custom revisions
     # answers the question what we're actually building
-    paths = ["..", "../go/src/github.com/mendersoftware"]
+    paths = ["..", "../go/src/github.com/mendersoftware", "../../.."]
 
     built_components = set({})
     for repo in Component.get_components_of_type("git", only_release=True):
@@ -3389,6 +3417,11 @@ def main():
         "--version",
         dest="version",
         help="Version which is used in above two arguments",
+    )
+    parser.add_argument(
+        "--repository",
+        dest="image_repository",
+        help="Optional external repository, for example registry.gitlab.com/northern.tech/mender",
     )
     parser.add_argument(
         "-b",

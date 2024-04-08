@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -14,8 +14,10 @@
 import logging
 import pytest
 import uuid
+import os
 
 import testutils.api.deployments as deployments
+import testutils.api.deployments_v2 as deployments_v2
 import testutils.api.deviceauth as deviceauth
 import testutils.api.inventory as inventory
 import testutils.api.useradm as useradm
@@ -30,6 +32,7 @@ from testutils.common import (
     clean_mongo,
     update_tenant,
     setup_tenant_devices,
+    get_mender_artifact,
 )
 from testutils.util.artifact import Artifact
 from testutils.api.client import ApiClient
@@ -60,7 +63,7 @@ def login(user, use_personal_access_token: bool = False):
         user.token = rsp.text
 
 
-def create_roles(token, roles):
+def create_roles(token, roles, status_code=201):
     """
     Creates roles
     :param token: user JWT token
@@ -70,7 +73,7 @@ def create_roles(token, roles):
     useradm_MGMT = ApiClient(useradm.URL_MGMT_V2)
     for role in roles:
         rsp = useradm_MGMT.with_auth(token).call("POST", useradm.URL_ROLES, role)
-        assert rsp.status_code == 201
+        assert rsp.status_code == status_code
 
 
 class TestRBACIoTManagerEnterprise:
@@ -1508,3 +1511,601 @@ class TestRBACGetEmailsByGroupEnterprise:
             assert email.startswith(test_case["emails_prefix"]) or email.startswith(
                 "admin"
             )
+
+
+class TestRBACReleasesEnterprise:
+    @property
+    def logger(self):
+        return logging.getLogger(self.__class__.__name__)
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "ReadReleases permission set with DeviceGroups scope",
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                        ],
+                    },
+                ],
+                "status_code": 400,
+            },
+            {
+                "name": "ManageReleases permission set with DeviceGroups scope",
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "DeviceGroups", "value": ["test"],},
+                            },
+                        ],
+                    },
+                ],
+                "status_code": 400,
+            },
+            {
+                "name": "ReadReleases and ManageReleases permission sets with ReleaseTags scope",
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["test"],},
+                            },
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["test"],},
+                            },
+                        ],
+                    },
+                ],
+                "status_code": 201,
+            },
+        ],
+    )
+    def test_create_role(self, clean_mongo, test_case):
+        """
+        Tests role creation with releases scope.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "admin+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(
+            tenant.users[0].token,
+            test_case["roles"],
+            status_code=test_case["status_code"],
+        )
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "single tag",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                        ],
+                    },
+                ],
+                "tags": ["foo"],
+                "number_of_allwed_releases": 1,
+            },
+            {
+                "name": "multiple tags",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                        ],
+                    },
+                ],
+                "tags": ["foo", "bar", "baz"],
+                "number_of_allwed_releases": 1,
+            },
+        ],
+    )
+    def test_read_releases_and_artifacts(self, clean_mongo, test_case):
+        """
+        Tests access to releases with releases scope.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "admin+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(
+            tenant.users[0].token, test_case["roles"], status_code=201,
+        )
+        # create and upload artifacts
+        artifacts = (
+            {"artifact_name": "foo", "device_types": ["arm1"], "size": 256},
+            {"artifact_name": "bar", "device_types": ["arm1"], "size": 256},
+        )
+        api_client = ApiClient(deployments.URL_MGMT)
+        api_client_v2 = ApiClient(deployments_v2.URL_MGMT)
+        api_client.headers = {}  # avoid default Content-Type: application/json
+        api_client.with_auth(tenant.users[0].token)
+        for artifact_kw in artifacts:
+            with get_mender_artifact(**artifact_kw) as artifact:
+                r = api_client.call(
+                    "POST",
+                    deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                    files=(
+                        ("description", (None, "description")),
+                        ("size", (None, str(os.path.getsize(artifact)))),
+                        (
+                            "artifact",
+                            (
+                                artifact,
+                                open(artifact, "rb"),
+                                "application/octet-stream",
+                            ),
+                        ),
+                    ),
+                )
+            assert r.status_code == 201
+
+        # get all releases and artifacts
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        all_artifacts = r.json()
+        assert len(all_artifacts) == 2
+
+        api_client_v2.with_auth(tenant.users[0].token)
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        all_releases = r.json()
+        assert len(all_releases) == 2
+
+        # switch to user with limited access
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        artifacts = r.json()
+        assert len(artifacts) == 0
+
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        releases = r.json()
+        assert len(releases) == 0
+
+        # tag the artifact
+        api_client_v2.with_auth(tenant.users[0].token)
+        release_url = deployments_v2.URL_RELEASE_TAGS.replace("{release_name}", "foo")
+        r = api_client_v2.call("PUT", release_url, test_case["tags"])
+        assert r.status_code == 204
+
+        # get artifacts and releases after tagging
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        artifacts = r.json()
+        assert len(artifacts) == test_case["number_of_allwed_releases"]
+        assert artifacts[0]["name"] == "foo"
+
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        releases = r.json()
+        assert len(releases) == test_case["number_of_allwed_releases"]
+        assert releases[0]["name"] == "foo"
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "ok",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                            {"name": "DeployToDevices",},
+                        ],
+                    },
+                ],
+                "tags": ["foo", "bar"],
+            },
+        ],
+    )
+    def test_manage_releases(self, clean_mongo, test_case):
+        """
+        Tests access to releases with releases scope.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "admin+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(
+            tenant.users[0].token, test_case["roles"], status_code=201,
+        )
+        # create and upload artifacts
+        artifacts = (
+            {"artifact_name": "foo", "device_types": ["arm1"], "size": 256},
+            {"artifact_name": "bar", "device_types": ["arm1"], "size": 256},
+        )
+        api_client = ApiClient(deployments.URL_MGMT)
+        api_client_v2 = ApiClient(deployments_v2.URL_MGMT)
+        api_client.headers = {}  # avoid default Content-Type: application/json
+        api_client.with_auth(tenant.users[0].token)
+        for artifact_kw in artifacts:
+            with get_mender_artifact(**artifact_kw) as artifact:
+                r = api_client.call(
+                    "POST",
+                    deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                    files=(
+                        ("description", (None, "description")),
+                        ("size", (None, str(os.path.getsize(artifact)))),
+                        (
+                            "artifact",
+                            (
+                                artifact,
+                                open(artifact, "rb"),
+                                "application/octet-stream",
+                            ),
+                        ),
+                    ),
+                )
+            assert r.status_code == 201
+
+        # get all releases
+        api_client_v2.with_auth(tenant.users[0].token)
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        all_releases = r.json()
+        assert len(all_releases) == 2
+
+        # switch to user with limited access
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        releases = r.json()
+        assert len(releases) == 0
+
+        # tag releases
+        api_client_v2.with_auth(tenant.users[0].token)
+        release_url = deployments_v2.URL_RELEASE_TAGS.replace("{release_name}", "foo")
+        r = api_client_v2.call("PUT", release_url, test_case["tags"])
+        assert r.status_code == 204
+
+        api_client_v2.with_auth(tenant.users[0].token)
+        release_url = deployments_v2.URL_RELEASE_TAGS.replace("{release_name}", "bar")
+        r = api_client_v2.call("PUT", release_url, ["tag1", "tag2"])
+        assert r.status_code == 204
+
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES_ALL_TAGS)
+        assert r.status_code == 200
+        tags = r.json()
+        assert len(tags) == 4
+
+        # switch to test user
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        # try to replace tags
+        release_url = deployments_v2.URL_RELEASE_TAGS.replace("{release_name}", "foo")
+        r = api_client_v2.call("PUT", release_url, ["baz", "bar"])
+        assert r.status_code == 403
+
+        # patch
+        release_url = deployments_v2.URL_RELEASE.replace("{release_name}", "foo")
+        r = api_client_v2.call("PATCH", release_url, {"notes": "foo bar baz"})
+        assert r.status_code == 204
+
+        release_url = deployments_v2.URL_RELEASE.replace("{release_name}", "bar")
+        r = api_client_v2.call("PATCH", release_url, {"notes": "foo bar baz"})
+        assert r.status_code == 404
+
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        releases = r.json()
+        assert len(releases) == 1
+
+        # get all tags
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES_ALL_TAGS)
+        assert r.status_code == 200
+        tags = r.json()
+        assert len(tags) == 2
+
+        # create deployment
+        # will be fixed with MEN-7165
+        # request_body = {
+        #    "name": "dummy-deployment",
+        #    "artifact_name": "bar",
+        #    "devices": ["1"],
+        # }
+        # resp = api_client.call("POST", "/deployments", body=request_body)
+        # assert resp.status_code == 403
+
+        # delete release
+        r = api_client_v2.call(
+            "DELETE", deployments_v2.URL_RELEASES + "?name=foo&name=bar"
+        )
+        assert r.status_code == 204
+
+        # get all releases and check the one test user has no access to
+        # is still there
+        api_client_v2.with_auth(tenant.users[0].token)
+        r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
+        assert r.status_code == 200
+        all_releases = r.json()
+        assert len(all_releases) == 1
+        assert all_releases[0]["name"] == "bar"
+
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "name": "ok",
+                "use_personal_access_token": False,
+                "user": {
+                    "name": "test1-UUID@example.com",
+                    "pwd": "password",
+                    "roles": ["test"],
+                },
+                "roles": [
+                    {
+                        "name": "test",
+                        "permission_sets_with_scope": [
+                            {
+                                "name": "ReadReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                            {
+                                "name": "ManageReleases",
+                                "scope": {"type": "ReleaseTags", "value": ["foo"],},
+                            },
+                        ],
+                    },
+                ],
+                "tags": ["foo", "bar", "baz"],
+                "number_of_allwed_artifacts": 1,
+            },
+        ],
+    )
+    def test_manage_artifacts(self, clean_mongo, test_case):
+        """
+        Tests manage artifacts with releases scope.
+        """
+        self.logger.info("RUN: %s", test_case["name"])
+
+        uuidv4 = str(uuid.uuid4())
+        tenant, username, password = (
+            "test.mender.io-" + uuidv4,
+            "admin+" + uuidv4 + "@example.com",
+            "secretsecret",
+        )
+        tenant = create_org(tenant, username, password, "enterprise")
+        create_roles(
+            tenant.users[0].token, test_case["roles"], status_code=201,
+        )
+        # create and upload artifacts
+        artifacts = (
+            {"artifact_name": "foo", "device_types": ["arm1"], "size": 256},
+            {"artifact_name": "bar", "device_types": ["arm1"], "size": 256},
+        )
+        api_client = ApiClient(deployments.URL_MGMT)
+        api_client_v2 = ApiClient(deployments_v2.URL_MGMT)
+        api_client.headers = {}  # avoid default Content-Type: application/json
+        api_client.with_auth(tenant.users[0].token)
+        for artifact_kw in artifacts:
+            with get_mender_artifact(**artifact_kw) as artifact:
+                r = api_client.call(
+                    "POST",
+                    deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                    files=(
+                        ("description", (None, "description")),
+                        ("size", (None, str(os.path.getsize(artifact)))),
+                        (
+                            "artifact",
+                            (
+                                artifact,
+                                open(artifact, "rb"),
+                                "application/octet-stream",
+                            ),
+                        ),
+                    ),
+                )
+            assert r.status_code == 201
+
+        # get all artifacts
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        all_artifacts = r.json()
+        assert len(all_artifacts) == 2
+        foo_artifact_id = ""
+        bar_artifact_id = ""
+        for a in all_artifacts:
+            if a["name"] == "bar":
+                bar_artifact_id = a["id"]
+            elif a["name"] == "foo":
+                foo_artifact_id = a["id"]
+
+        # switch to user with limited access
+        test_user = create_user(tid=tenant.id, **test_case["user"])
+        login(test_user, test_case["use_personal_access_token"])
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        artifacts = r.json()
+        assert len(artifacts) == 0
+
+        # tag the release
+        api_client_v2.with_auth(tenant.users[0].token)
+        release_url = deployments_v2.URL_RELEASE_TAGS.replace("{release_name}", "foo")
+        r = api_client_v2.call("PUT", release_url, test_case["tags"])
+        assert r.status_code == 204
+
+        # get artifacts after tagging
+        api_client.with_auth(test_user.token)
+        api_client_v2.with_auth(test_user.token)
+
+        r = api_client.call("GET", deployments.URL_DEPLOYMENTS_ARTIFACTS)
+        assert r.status_code == 200
+        artifacts = r.json()
+        assert len(artifacts) == test_case["number_of_allwed_artifacts"]
+        assert artifacts[0]["name"] == "foo"
+
+        # try to upload artifact
+        baz_artifact = {"artifact_name": "baz", "device_types": ["arm1"], "size": 256}
+        api_client.headers = {}  # avoid default Content-Type: application/json
+        api_client.with_auth(test_user.token)
+        with get_mender_artifact(**baz_artifact) as artifact:
+            r = api_client.call(
+                "POST",
+                deployments.URL_DEPLOYMENTS_ARTIFACTS,
+                files=(
+                    ("description", (None, "description")),
+                    ("size", (None, str(os.path.getsize(artifact)))),
+                    (
+                        "artifact",
+                        (artifact, open(artifact, "rb"), "application/octet-stream",),
+                    ),
+                ),
+            )
+        assert r.status_code == 403
+
+        # direct upload
+        r = api_client.call(
+            "POST", deployments.URL_DEPLOYMENTS_ARTIFACTS_DIRECT_UPLOAD,
+        )
+        assert r.status_code == 403
+
+        # generate
+        r = api_client.call("POST", deployments.URL_DEPLOYMENTS_ARTIFACTS_GENERATE,)
+        assert r.status_code == 403
+
+        # get by id
+        r = api_client.call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", foo_artifact_id),
+        )
+        assert r.status_code == 200
+
+        r = api_client.call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", bar_artifact_id),
+        )
+        assert r.status_code == 404
+
+        # put
+        r = api_client.call(
+            "PUT",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", foo_artifact_id),
+            {"description": "foo"},
+        )
+        assert r.status_code == 204
+
+        r = api_client.call(
+            "PUT",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", bar_artifact_id),
+            {"description": "foo"},
+        )
+        assert r.status_code == 404
+
+        # download
+        r = api_client.call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD.replace(
+                "{id}", foo_artifact_id
+            ),
+        )
+        assert r.status_code == 200
+
+        r = api_client.call(
+            "GET",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD.replace(
+                "{id}", bar_artifact_id
+            ),
+        )
+        assert r.status_code == 404
+
+        # delete
+        r = api_client.call(
+            "DELETE",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", foo_artifact_id),
+        )
+        assert r.status_code == 204
+
+        r = api_client.call(
+            "DELETE",
+            deployments.URL_DEPLOYMENTS_ARTIFACTS_GET.replace("{id}", bar_artifact_id),
+        )
+        assert r.status_code == 404

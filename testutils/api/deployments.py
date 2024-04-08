@@ -1,4 +1,4 @@
-# Copyright 2023 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -29,4 +29,5 @@ URL_DEPLOYMENTS_ARTIFACTS = "/artifacts"
 URL_DEPLOYMENTS_ARTIFACTS_GET = "/artifacts/{id}"
 URL_DEPLOYMENTS_ARTIFACTS_DOWNLOAD = "/artifacts/{id}/download"
 URL_DEPLOYMENTS_ARTIFACTS_GENERATE = "/artifacts/generate"
+URL_DEPLOYMENTS_ARTIFACTS_DIRECT_UPLOAD = "/artifacts/directupload"
 URL_INTERNAL_CONFIG = "/tenants/{tenant_id}/config"

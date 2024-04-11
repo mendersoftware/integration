@@ -1580,6 +1580,8 @@ class TestMonitorClientEnterprise:
             + "/' "
             + "-e 's/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S=.*/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S="
             + str(alert_resend_interval_s)
+            + "/' "
+            + "-e 's/SEND_ALERT_MAX_INTERVAL_S=.*/SEND_ALERT_MAX_INTERVAL_S=0"
             + "/' /usr/share/mender-monitor/config/config.sh"
         )
 

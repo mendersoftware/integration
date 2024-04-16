@@ -22,7 +22,7 @@ charset-normalizer==2.1.1
     # via requests
 cryptography==42.0.5
     # via -r python-requirements.in
-dnspython==2.3.0
+dnspython==2.6.1
     # via pymongo
 docker==7.0.0
     # via -r python-requirements.in

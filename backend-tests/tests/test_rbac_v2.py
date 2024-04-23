@@ -215,6 +215,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -239,6 +240,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                             {"name": "ManageTokens",},
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -262,6 +264,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -286,6 +289,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                             {"name": "ManageTokens",},
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -309,6 +313,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -333,6 +338,7 @@ class TestRBACv2DeploymentsEnterprise:
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                             {"name": "ManageTokens",},
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -430,6 +436,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -454,6 +461,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                             {"name": "ManageTokens",},
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -477,6 +485,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "name": "DeployToDevices",
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -501,6 +510,7 @@ class TestRBACv2DeploymentsToGroupEnterprise:
                                 "scope": {"type": "DeviceGroups", "value": ["test"],},
                             },
                             {"name": "ManageTokens",},
+                            {"name": "ReadReleases",},
                         ],
                     },
                 ],
@@ -1883,14 +1893,13 @@ class TestRBACReleasesEnterprise:
         assert len(tags) == 2
 
         # create deployment
-        # will be fixed with MEN-7165
-        # request_body = {
-        #    "name": "dummy-deployment",
-        #    "artifact_name": "bar",
-        #    "devices": ["1"],
-        # }
-        # resp = api_client.call("POST", "/deployments", body=request_body)
-        # assert resp.status_code == 403
+        request_body = {
+            "name": "dummy-deployment",
+            "artifact_name": "bar",
+            "devices": ["1"],
+        }
+        resp = api_client.call("POST", "/deployments", body=request_body)
+        assert resp.status_code == 403
 
         # delete release
         r = api_client_v2.call(

@@ -922,7 +922,6 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
-@pytest.mark.skip(reason="QA-609")
 def test_generate_release_notes_from_master(request, capsys, is_master):
     if not is_master:
         pytest.skip("This test requires master tags in the docker-compose files.")

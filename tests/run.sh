@@ -27,7 +27,7 @@ usage() {
     echo "    --machine-name[=] <machine-name> Specify the machine to test"
     echo "    --no-download                    Do not download the external dependencies"
     echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
-    echo "    --                               Seperates 'run.sh' arguments from pytest arguments"
+    echo "    --                               Separates 'run.sh' arguments from pytest arguments"
     echo "    <pytest-args>                    Passes these arguments along to pytest"
     echo "    tests/<testfile.py>              Name the test-file to run"
     echo "    -k TestNameToRun                 Name of the test class, method, or module to run"

@@ -255,7 +255,7 @@ def prepare_dbus_monitoring(
         mender_device.run("mkdir -p '%s'" % monitor_available_dir)
         mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
         tmpdir = tempfile.mkdtemp()
-        dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
+        dbus_check_file = os.path.join(tmpdir, "dbus_test.sh")
         f = open(dbus_check_file, "w")
         f.write("DBUS_NAME=%s\n" % dbus_name)
         if log_pattern:

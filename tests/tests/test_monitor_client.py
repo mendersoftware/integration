@@ -75,6 +75,7 @@ expected_from = (
     if not isK8S()
     else "Mender <no-reply@staging.hosted.mender.io>"
 )
+daemon_main_loop_sleep_s = 2
 
 
 @retriable(sleeptime=60, attempts=5)
@@ -272,6 +273,8 @@ def prepare_dbus_monitoring(
             "ln -s '%s/dbus_test.sh' '%s/dbus_test.sh'"
             % (monitor_available_dir, monitor_enabled_dir)
         )
+        # Give some time for the new monitor to be enabled
+        time.sleep(daemon_main_loop_sleep_s + 1)
     finally:
         shutil.rmtree(tmpdir)
 

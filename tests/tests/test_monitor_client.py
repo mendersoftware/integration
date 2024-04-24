@@ -1036,13 +1036,31 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
         )
-        prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
-
-        time.sleep(2 * wait_for_alert_interval_s)
-        mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 1
+        prepare_dbus_monitoring(
+            mender_device, dbus_name, log_pattern="JwtTokenStateChange"
         )
-        assert len(messages) > 0
+
+        # Monitoring with only DBUS_PATTERN is buggy and the alert is sometimes missed.
+        # See test_dbus_bus_filter for comparison, where filtering with DBUS_WATCH_EXPRESSION
+        # reliably sends an alert with a single trigger.
+        # Try in a loop for the same amount of time that get_and_parse_email_n would retry
+        tries_left = 10
+        while tries_left > 0:
+            # Call FetchJwtToken to trigger the signal (string "JwtTokenStateChange")
+            mender_device.run(
+                "dbus-send --system --dest=io.mender.AuthenticationManager /io/mender/AuthenticationManager io.mender.Authentication1.FetchJwtToken"
+            )
+            mail, messages = get_and_parse_email(
+                monitor_commercial_setup_no_client, user_name
+            )
+            if len(messages) > 0:
+                break
+            logger.info("test_dbus_pattern_match: got no alerts, retrying in 30s")
+            time.sleep(30)
+            tries_left = tries_left - 1
+        else:
+            pytest.fail("Did not receive any messages")
+
         assert_valid_alert(
             messages[0],
             user_name,

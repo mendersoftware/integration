@@ -262,7 +262,7 @@ def prepare_dbus_monitoring(
         if log_pattern:
             f.write("DBUS_PATTERN=%s\n" % log_pattern)
         if dbus_pattern:
-            f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
+            f.write("DBUS_WATCH_EXPRESSION=%s\n" % dbus_pattern)
         f.close()
         mender_device.put(
             os.path.basename(dbus_check_file),
@@ -1093,6 +1093,11 @@ class TestMonitorClientEnterprise:
             dbus_pattern="type='signal',interface='io.mender.Authentication1'",
         )
 
+        # Call FetchJwtToken to trigger the signal
+        mender_device.run(
+            "dbus-send --system --dest=io.mender.AuthenticationManager /io/mender/AuthenticationManager io.mender.Authentication1.FetchJwtToken"
+        )
+
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1101,7 +1106,7 @@ class TestMonitorClientEnterprise:
         assert_valid_alert(
             messages[0],
             user_name,
-            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus type=signal,interface=io.mender.Authentication1 on "
             + devid,
         )
         assert "${workflow.input" not in mail

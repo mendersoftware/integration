@@ -250,6 +250,7 @@ def prepare_log_monitoring(
 def prepare_dbus_monitoring(
     mender_device, dbus_name, log_pattern=None, dbus_pattern=None
 ):
+    assert not (log_pattern is None and dbus_pattern is None)
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
@@ -1023,31 +1024,6 @@ class TestMonitorClientEnterprise:
         )
         assert len(messages) >= expected_alerts_count
         logger.info("got %d alert messages." % len(messages))
-
-    def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
-        """Test the dbus subsystem"""
-        dbus_name = "test"
-        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
-        devid, _, _, mender_device = self.prepare_env(
-            monitor_commercial_setup_no_client, user_name
-        )
-
-        logger.info("test_dbus_subsystem: email alert on dbus signal scenario.")
-        prepare_dbus_monitoring(mender_device, dbus_name)
-
-        time.sleep(2 * wait_for_alert_interval_s)
-        mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 1
-        )
-        assert len(messages) > 0
-        assert_valid_alert(
-            messages[0],
-            user_name,
-            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid,
-        )
-        assert "${workflow.input" not in mail
-        logger.info("test_dbus_subsystem: got CRITICAL alert email.")
 
     def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""

@@ -15,19 +15,17 @@
 
 set -x -e
 
-MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
 export PYTHONDONTWRITEBYTECODE=1
 
 usage() {
-    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
+    echo "Usage: $ run.sh [-h|--help] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
     echo
     echo "    -h                               Display help"
-    echo "    --machine-name[=] <machine-name> Specify the machine to test"
     echo "    --no-download                    Do not download the external dependencies"
     echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
-    echo "    --                               Seperates 'run.sh' arguments from pytest arguments"
+    echo "    --                               Separates 'run.sh' arguments from pytest arguments"
     echo "    <pytest-args>                    Passes these arguments along to pytest"
     echo "    tests/<testfile.py>              Name the test-file to run"
     echo "    -k TestNameToRun                 Name of the test class, method, or module to run"
@@ -45,13 +43,6 @@ while [ -n "$1" ]; do
         -h|--help)
             set +x
             usage
-            ;;
-        --machine-name=*)
-            MACHINE_NAME="${1#--machine-name=}"
-            ;;
-        --machine-name)
-            shift
-            MACHINE_NAME="$1"
             ;;
         --no-download)
             DOWNLOAD_REQUIREMENTS=""

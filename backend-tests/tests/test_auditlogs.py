@@ -90,7 +90,7 @@ def tenant_users(clean_migrated_mongo):
 
 
 class TestAuditLogsEnterprise:
-    def setup(self):
+    def _init_(self):
         self.useradmm = ApiClient(useradm.URL_MGMT)
         self.devauthd = ApiClient(deviceauth.URL_DEVICES)
         self.devauthm = ApiClient(deviceauth.URL_MGMT)

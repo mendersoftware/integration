@@ -1,7 +1,8 @@
 version: '2.3'
 services:
   mtls-ambassador:
-    image: registry.mender.io/mendersoftware/mtls-ambassador:master
+    image: registry.mender.io/mendersoftware/mender-gateway:master
+    command: --log-level debug
     networks:
       - mender
     volumes:
@@ -9,11 +10,15 @@ services:
       - ${MTLS_KEY:-./extra/mtls/certs/server/server.key}:/etc/mtls/certs/server/server.key:ro
       - ${MTLS_TENANT_CA:-./extra/mtls/certs/tenant-ca/tenant.ca.crt}:/etc/mtls/certs/tenant-ca/tenant.ca.crt:ro
     environment:
-      MTLS_MENDER_USER: "mtls@mender.io"
-      MTLS_MENDER_PASS: "correcthorsebatterystaple"
-      MTLS_MENDER_BACKEND: "https://mender-api-gateway"
-      MTLS_DEBUG_LOG: "true"
-      MTLS_INSECURE_SKIP_VERIFY: "true"
-      MTLS_TENANT_CA_PEM: "/etc/mtls/certs/tenant-ca/tenant.ca.crt"
+      UPSTREAM_SERVER_URL: "https://mender-api-gateway"
+      MTLS_ENABLED: "true"
+      HTTPS_ENABLED: "true"
+      HTTPS_LISTEN: ":8080"
+      MTLS_MENDER_USERNAME: "mtls@mender.io"
+      MTLS_MENDER_PASSWORD: "correcthorsebatterystaple"
+      MTLS_CA_CERTIFICATE: "/etc/mtls/certs/tenant-ca/tenant.ca.crt"
+      HTTPS_SERVER_CERTIFICATE: "/etc/mtls/certs/server/server.crt"
+      HTTPS_SERVER_KEY: "/etc/mtls/certs/server/server.key"
+      UPSTREAM_SERVER_INSECURE_SKIP_VERIFY: "true"
     labels:
         - mender.testprefix=${MENDER_TESTPREFIX:-""}

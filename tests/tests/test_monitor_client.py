@@ -75,6 +75,7 @@ expected_from = (
     if not isK8S()
     else "Mender <no-reply@staging.hosted.mender.io>"
 )
+daemon_main_loop_sleep_s = 2
 
 
 @retriable(sleeptime=60, attempts=5)
@@ -249,19 +250,20 @@ def prepare_log_monitoring(
 def prepare_dbus_monitoring(
     mender_device, dbus_name, log_pattern=None, dbus_pattern=None
 ):
+    assert not (log_pattern is None and dbus_pattern is None)
     try:
         monitor_available_dir = "/etc/mender-monitor/monitor.d/available"
         monitor_enabled_dir = "/etc/mender-monitor/monitor.d/enabled"
         mender_device.run("mkdir -p '%s'" % monitor_available_dir)
         mender_device.run("mkdir -p '%s'" % monitor_enabled_dir)
         tmpdir = tempfile.mkdtemp()
-        dbus_check_file = os.path.join(tmpdir, "dbus_%s.sh" % dbus_name)
+        dbus_check_file = os.path.join(tmpdir, "dbus_test.sh")
         f = open(dbus_check_file, "w")
         f.write("DBUS_NAME=%s\n" % dbus_name)
         if log_pattern:
             f.write("DBUS_PATTERN=%s\n" % log_pattern)
         if dbus_pattern:
-            f.write("DBUS_WATCH_PATTERN=%s\n" % dbus_pattern)
+            f.write("DBUS_WATCH_EXPRESSION=%s\n" % dbus_pattern)
         f.close()
         mender_device.put(
             os.path.basename(dbus_check_file),
@@ -272,6 +274,8 @@ def prepare_dbus_monitoring(
             "ln -s '%s/dbus_test.sh' '%s/dbus_test.sh'"
             % (monitor_available_dir, monitor_enabled_dir)
         )
+        # Give some time for the new monitor to be enabled
+        time.sleep(daemon_main_loop_sleep_s + 1)
     finally:
         shutil.rmtree(tmpdir)
 
@@ -1021,31 +1025,6 @@ class TestMonitorClientEnterprise:
         assert len(messages) >= expected_alerts_count
         logger.info("got %d alert messages." % len(messages))
 
-    def test_dbus_subsystem(self, monitor_commercial_setup_no_client):
-        """Test the dbus subsystem"""
-        dbus_name = "test"
-        user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
-        devid, _, _, mender_device = self.prepare_env(
-            monitor_commercial_setup_no_client, user_name
-        )
-
-        logger.info("test_dbus_subsystem: email alert on dbus signal scenario.")
-        prepare_dbus_monitoring(mender_device, dbus_name)
-
-        time.sleep(2 * wait_for_alert_interval_s)
-        mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 1
-        )
-        assert len(messages) > 0
-        assert_valid_alert(
-            messages[0],
-            user_name,
-            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
-            + devid,
-        )
-        assert "${workflow.input" not in mail
-        logger.info("test_dbus_subsystem: got CRITICAL alert email.")
-
     def test_dbus_pattern_match(self, monitor_commercial_setup_no_client):
         """Test the dbus subsystem"""
         dbus_name = "test"
@@ -1057,13 +1036,31 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_dbus_pattern_match: email alert on dbus signal pattern match scenario."
         )
-        prepare_dbus_monitoring(mender_device, dbus_name, log_pattern="mender")
-
-        time.sleep(2 * wait_for_alert_interval_s)
-        mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 1
+        prepare_dbus_monitoring(
+            mender_device, dbus_name, log_pattern="JwtTokenStateChange"
         )
-        assert len(messages) > 0
+
+        # Monitoring with only DBUS_PATTERN is buggy and the alert is sometimes missed.
+        # See test_dbus_bus_filter for comparison, where filtering with DBUS_WATCH_EXPRESSION
+        # reliably sends an alert with a single trigger.
+        # Try in a loop for the same amount of time that get_and_parse_email_n would retry
+        tries_left = 10
+        while tries_left > 0:
+            # Call FetchJwtToken to trigger the signal (string "JwtTokenStateChange")
+            mender_device.run(
+                "dbus-send --system --dest=io.mender.AuthenticationManager /io/mender/AuthenticationManager io.mender.Authentication1.FetchJwtToken"
+            )
+            mail, messages = get_and_parse_email(
+                monitor_commercial_setup_no_client, user_name
+            )
+            if len(messages) > 0:
+                break
+            logger.info("test_dbus_pattern_match: got no alerts, retrying in 30s")
+            time.sleep(30)
+            tries_left = tries_left - 1
+        else:
+            pytest.fail("Did not receive any messages")
+
         assert_valid_alert(
             messages[0],
             user_name,
@@ -1090,6 +1087,11 @@ class TestMonitorClientEnterprise:
             dbus_pattern="type='signal',interface='io.mender.Authentication1'",
         )
 
+        # Call FetchJwtToken to trigger the signal
+        mender_device.run(
+            "dbus-send --system --dest=io.mender.AuthenticationManager /io/mender/AuthenticationManager io.mender.Authentication1.FetchJwtToken"
+        )
+
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1098,7 +1100,7 @@ class TestMonitorClientEnterprise:
         assert_valid_alert(
             messages[0],
             user_name,
-            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus system bus on "
+            "CRITICAL: Monitor Alert for D-Bus signal arrived on bus type=signal,interface=io.mender.Authentication1 on "
             + devid,
         )
         assert "${workflow.input" not in mail

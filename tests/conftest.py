@@ -145,7 +145,7 @@ def valid_image(request, tmp_path_factory, worker_id):
     filename = f"core-image-full-cmdline-{machine_name}.ext4"
 
     if worker_id == "master":
-        return filename
+        return _image(request, compose_file, filename)
 
     return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
 
@@ -156,7 +156,7 @@ def gateway_image(request, tmp_path_factory, worker_id):
     filename = f"mender-gateway-image-full-cmdline-{machine_name}.ext4"
 
     if worker_id == "master":
-        return filename
+        return _image(request, compose_file, filename)
 
     return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
 

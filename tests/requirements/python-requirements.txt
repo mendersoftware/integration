@@ -4,8 +4,12 @@
 #
 #    pip-compile python-requirements.in
 #
-bcrypt==4.0.1
-    # via paramiko
+aiosmtpd==1.4.4.post2
+    # via -r python-requirements.in
+atpublic==4.0
+    # via aiosmtpd
+attrs==23.2.0
+    # via aiosmtpd
 cachetools==5.3.1
     # via google-auth
 certifi==2023.5.7
@@ -13,24 +17,18 @@ certifi==2023.5.7
     #   kubernetes
     #   requests
 cffi==1.15.1
-    # via
-    #   cryptography
-    #   pynacl
+    # via cryptography
 charset-normalizer==2.1.1
     # via requests
 cryptography==41.0.0
-    # via
-    #   -r python-requirements.in
-    #   paramiko
+    # via -r python-requirements.in
 dnspython==2.3.0
     # via pymongo
 docker==6.0.1
     # via -r python-requirements.in
 execnet==1.9.0
     # via pytest-xdist
-fabric==2.7.1
-    # via -r python-requirements.in
-filelock==3.9.0
+filelock==3.13.1
     # via -r python-requirements.in
 flaky==3.7.0
     # via -r python-requirements.in
@@ -40,10 +38,8 @@ idna==3.4
     # via requests
 iniconfig==2.0.0
     # via pytest
-invoke==1.7.3
-    # via
-    #   -r python-requirements.in
-    #   fabric
+jinja2==3.1.2
+    # via pytest-html
 kubernetes==25.3.0
     # via -r python-requirements.in
 msgpack==1.0.4
@@ -54,12 +50,6 @@ packaging==23.1
     # via
     #   docker
     #   pytest
-paramiko==2.12.0
-    # via
-    #   -r python-requirements.in
-    #   fabric
-pathlib2==2.3.7.post1
-    # via fabric
 pluggy==1.2.0
     # via pytest
 py==1.11.0
@@ -76,8 +66,6 @@ pycparser==2.21
     # via cffi
 pymongo==4.3.3
     # via -r python-requirements.in
-pynacl==1.5.0
-    # via paramiko
 pytest==7.4.0
     # via
     #   -r python-requirements.in
@@ -116,8 +104,6 @@ six==1.16.0
     # via
     #   google-auth
     #   kubernetes
-    #   paramiko
-    #   pathlib2
     #   python-dateutil
 stripe==5.0.0
     # via -r python-requirements.in

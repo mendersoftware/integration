@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -11,45 +11,53 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-
-import asyncore
 import base64
 import email
 import imaplib
 import os
 import pytest
 import time
-import smtpd
 import logging
 
-from threading import Thread, Condition
+from aiosmtpd.controller import Controller
+
+from threading import Condition
 
 from redo import retriable
 
 
 class Message:
-    def __init__(self, peer, mailfrom, rcpttos, subject, data):
+    def __init__(self, peer, mail_from, rcpt_tos, subject, data):
         self.peer = peer
-        self.mailfrom = mailfrom
-        self.rcpttos = rcpttos
+        self.mail_from = mail_from
+        self.rcpt_tos = rcpt_tos
         self.subject = subject
         self.data = data
 
     def __repr__(self):
-        return f"<Message peer={self.peer} mailfrom={self.mailfrom} rcpttos={self.rcpttos} subject={self.subject}>"
+        return f"<Message peer={self.peer} mail_from={self.mail_from} rcpt_tos={self.rcpt_tos} subject={self.subject}>"
 
 
-class SMTPServerMock(smtpd.SMTPServer):
+class SMTPServerMockHandler:
     def __init__(self, *args, **kwargs):
         self.messages = []
-        smtpd.SMTPServer.__init__(self, *args, **kwargs)
         self._msg_cond = Condition()
 
-    def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
-        self.messages.append(Message(peer, mailfrom, rcpttos, None, data))
-        logging.warning("got a message: %s" % mailfrom)
+    # https://aiosmtpd.readthedocs.io/en/stable/handlers.html#handle_DATA
+    async def handle_DATA(self, server, session, envelope):
+        self.messages.append(
+            Message(
+                session.peer,
+                envelope.mail_from,
+                envelope.rcpt_tos,
+                None,
+                envelope.content,
+            )
+        )
+        logging.info(f"got a message from: {envelope.mail_from}")
         with self._msg_cond:
             self._msg_cond.notify_all()
+        return "200 OK"
 
     def wait_for_messages(self, n=1, timeout=None):
         with self._msg_cond:
@@ -61,25 +69,30 @@ class SMTPServerMock(smtpd.SMTPServer):
 
 
 class SMTPMock:
+    def __init__(self):
+        self.handler = SMTPServerMockHandler()
+        self.controller = Controller(
+            self.handler, hostname="0.0.0.0", port=4444, enable_SMTPUTF8=True
+        )
+
     def start(self):
-        self.server = SMTPServerMock(("0.0.0.0", 4444), None, enable_SMTPUTF8=True)
-        asyncore.loop()
+        self.controller.start()
 
     def stop(self):
-        self.server.close()
+        self.controller.stop()
 
-    def await_messages(self, _, n=1, timeout=None) -> None:
-        self.server.wait_for_messages(n, timeout)
+    def await_messages(self, _, n=1, timeout=None):
+        self.handler.wait_for_messages(n, timeout)
 
     def filtered_messages(self, email):
-        return tuple(filter(lambda m: m.rcpttos[0] == email, self.server.messages))
+        return tuple(filter(lambda m: m.rcpt_tos[0] == email, self.handler.messages))
 
     def assert_called(self, email):
         msgs = self.filtered_messages(email)
         assert len(msgs) == 1
         m = msgs[0]
-        assert m.mailfrom.rsplit("@", 1)[-1] == "mender.io"
-        assert m.rcpttos[0] == email
+        assert m.mail_from.rsplit("@", 1)[-1] == "mender.io"
+        assert m.rcpt_tos[0] == email
         assert len(m.data) > 0
 
 
@@ -133,8 +146,8 @@ class SMTPGmail:
         msgs = self.filtered_messages(email)
         assert len(msgs) == 1
         m = msgs[0]
-        assert "@mender.io" in m.mailfrom, m.mailfrom
-        assert email in m.rcpttos[0]
+        assert "@mender.io" in m.mail_from, m.mail_from
+        assert email in m.rcpt_tos[0]
         assert len(m.data) > 0
 
 
@@ -156,16 +169,8 @@ def smtp_server():
         yield smtp
         return
     server = SMTPMock()
-    thread = Thread(target=server.start)
-    thread.daemon = True
-    thread.start()
+    server.start()
     yield server
     server.stop()
     # need to wait for the port to be released
     time.sleep(30)
-
-
-# server = list(smtp_server())[0]
-# messages = server.filtered_messages("ci.email.tests+ae559765-458e-45db-9d2b-2b01135b76c0@mender.io")
-# for m in messages:
-#     print(m)

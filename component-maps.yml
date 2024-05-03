@@ -223,7 +223,7 @@ git:
     - mtls-ambassador
     docker_container:
     - mtls-ambassador
-    release_component: true
+    release_component: false
 
   deviceconnect:
     docker_image:
@@ -532,7 +532,7 @@ docker_image:
     - mtls-ambassador
     docker_container:
     - mtls-ambassador
-    release_component: true
+    release_component: false
 
   deviceconnect:
     git:
@@ -739,7 +739,7 @@ docker_container:
     - mtls-ambassador
     docker_image:
     - mtls-ambassador
-    release_component: true
+    release_component: false
 
   mender-deviceconnect:
     git:

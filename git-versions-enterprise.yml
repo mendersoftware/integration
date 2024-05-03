@@ -31,6 +31,9 @@ services:
     mtls-ambassador:
         image: registry.mender.io/mendersoftware/mtls-ambassador:master
 
+    mender-gateway:
+        image: registry.mender.io/mendersoftware/mender-gateway:master
+
     mender-devicemonitor:
         image: registry.mender.io/mendersoftware/devicemonitor:master
 

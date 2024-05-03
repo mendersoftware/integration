@@ -89,7 +89,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
     MTLS_FILES = [
-        COMPOSE_FILES_PATH + "/extra/mtls/docker-compose.mtls-ambassador-test.yml",
+        COMPOSE_FILES_PATH + "/extra/mtls/docker-compose.mtls-test.yml",
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
@@ -543,7 +543,7 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
     def setup(self):
         host_ip = socket.gethostbyname(socket.gethostname())
         self._docker_compose_cmd(
-            "up -d --scale mtls-ambassador=0 --scale mender-client=0",
+            "up -d --scale mtls-gateway=0 --scale mender-client=0",
             env={"HOST_IP": host_ip},
         )
         self._wait_for_containers()
@@ -554,8 +554,8 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
     def stop_api_gateway(self):
         self._docker_compose_cmd("stop mender-api-gateway")
 
-    def start_mtls_ambassador(self):
-        self._docker_compose_cmd("up -d --scale mtls-ambassador=1 mtls-ambassador")
+    def start_mtls_gateway(self):
+        self._docker_compose_cmd("up -d --scale mtls-gateway=1 mtls-gateway")
         self._wait_for_containers()
 
     def new_mtls_client(self, name, tenant):

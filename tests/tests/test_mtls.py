@@ -51,7 +51,7 @@ def setup_ent_mtls(request):
         container_manager=env,
     )
     env.user = env.tenant.users[0]
-    env.start_mtls_ambassador()
+    env.start_mtls_gateway()
 
     reset_mender_api(env)
 
@@ -197,7 +197,7 @@ module = /usr/lib/ossl-modules/pkcs11.so
             output = env.device.run("cat /etc/mender/mender.conf")
             config = json.loads(output)
             # replace mender.conf with an mTLS enabled one
-            config["ServerURL"] = "https://mtls-ambassador:8080"
+            config["ServerURL"] = "https://mtls-gateway:8080"
             config["SkipVerify"] = True
             if algorithm is not None:
                 if use_hsm is True:

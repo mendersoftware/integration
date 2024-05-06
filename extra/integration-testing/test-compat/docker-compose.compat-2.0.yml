@@ -1,4 +1,3 @@
-version: '2.3'
 services:
   mender-client-2-0:
     image: mendersoftware/mender-client-qemu:2.0

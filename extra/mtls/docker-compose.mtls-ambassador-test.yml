@@ -1,4 +1,3 @@
-version: '2.3'
 services:
   mtls-ambassador:
     image: registry.mender.io/mendersoftware/mtls-ambassador:master

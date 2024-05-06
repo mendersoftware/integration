@@ -2,8 +2,6 @@
 # Mender release, have Docker containers, but are not part a default Mender
 # installation (have no docker-compose file).
 services:
-    mtls-ambassador:
-        image: registry.mender.io/mendersoftware/mtls-ambassador:mender-master
     mender-ci-workflows:
         image: mendersoftware/mender-ci-tools:mender-master
     mender-client:

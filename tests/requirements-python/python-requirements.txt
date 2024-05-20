@@ -4,7 +4,7 @@
 #
 #    pip-compile python-requirements.in
 #
-aiosmtpd==1.4.5
+aiosmtpd==1.4.6
     # via -r python-requirements.in
 atpublic==4.0
     # via aiosmtpd

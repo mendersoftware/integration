@@ -20,11 +20,11 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==42.0.5
+cryptography==42.0.7
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
-docker==7.0.0
+docker==7.1.0
     # via -r python-requirements.in
 exceptiongroup==1.1.3
     # via pytest
@@ -53,9 +53,7 @@ oauthlib==3.2.2
     #   kubernetes
     #   requests-oauthlib
 packaging==23.1
-    # via
-    #   docker
-    #   pytest
+    # via pytest
 pluggy==1.5.0
     # via pytest
 py3dns==4.0.1
@@ -68,9 +66,9 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pymongo==4.7.1
+pymongo==4.7.2
     # via -r python-requirements.in
-pytest==8.2.0
+pytest==8.2.1
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -93,7 +91,7 @@ pyyaml==6.0.1
     # via kubernetes
 redo==2.0.4
     # via -r python-requirements.in
-requests==2.31.0
+requests==2.32.2
     # via
     #   -r python-requirements.in
     #   docker
@@ -109,7 +107,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==9.4.0
+stripe==9.8.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest

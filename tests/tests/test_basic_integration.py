@@ -39,6 +39,7 @@ from ..MenderAPI import (
     get_container_manager,
 )
 from .mendertesting import MenderTesting
+from ..helpers import Helpers
 
 
 class DeviceAuthFailover(DeviceAuthV2):
@@ -319,10 +320,7 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
 
             devauth_failover.accept_devices(1)
 
-            output = mender_device.run(
-                f'journalctl -S"{date}"'
-                + ' | grep -l "successfully received new authorization data"'
-            ).strip()
+            Helpers.check_log_is_authenticated(mender_device, date)
 
             # Old server should have no devices now.
             devices = devauth.get_devices_status(status="accepted")

@@ -258,6 +258,10 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
 
     def setup(self, recreate=True, env=None):
         cmd = "up -d"
+        if any(
+            ["client" in compose_file for compose_file in self.docker_compose_files]
+        ):
+            cmd += " --scale mender-client=%d" % self.num_clients
         if not recreate:
             cmd += " --no-recreate"
         self._docker_compose_cmd(cmd, env=env)

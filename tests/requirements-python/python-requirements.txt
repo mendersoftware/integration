@@ -68,7 +68,7 @@ pycparser==2.21
     # via cffi
 pymongo==4.7.2
     # via -r python-requirements.in
-pytest==8.2.1
+pytest==8.2.2
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -91,7 +91,7 @@ pyyaml==6.0.1
     # via kubernetes
 redo==2.0.4
     # via -r python-requirements.in
-requests==2.32.2
+requests==2.32.3
     # via
     #   -r python-requirements.in
     #   docker
@@ -107,7 +107,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==9.8.0
+stripe==9.9.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest

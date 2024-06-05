@@ -89,3 +89,35 @@ class Helpers:
         assert (
             sleepsec <= MENDER_STORE_TIMEOUT
         ), "timeout for mender-store file exceeded"
+
+    @staticmethod
+    def _check_log_for_message(device, message, since=None):
+        if since:
+            cmd = f"journalctl --unit mender-client --full --since '{since}'"
+        else:
+            # Use systemctl instead of journalctl in order to get only
+            # entries since the last service restart.
+            cmd = f"systemctl status --no-pager --full --lines 100000 mender-client"
+
+        sleepsec = 0
+        timeout = 600
+        while sleepsec < timeout:
+            out = device.run(cmd + "| grep '" + message + "'", warn=True,)
+            if out != "":
+                return
+
+            time.sleep(10)
+            sleepsec += 10
+            logger.info(
+                f"waiting for message '{message}' in mender-client log, waited for: {sleepsec}"
+            )
+
+        assert (
+            sleepsec <= timeout
+        ), f"timeout for waiting for message '{message}' in mender-client log"
+
+    @staticmethod
+    def check_log_is_authenticated(device, since=None):
+        Helpers._check_log_for_message(
+            device, "successfully received new authorization data", since
+        )

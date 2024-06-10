@@ -1044,6 +1044,13 @@ def setup_temp_git_checkout(state, repo_git, ref):
         output = execute_git(
             state, tmpdir, checkout_cmd + [ref], capture=True, capture_stderr=True
         )
+        output = execute_git(
+            state,
+            tmpdir,
+            ["submodule", "update", "--init", "--recursive"],
+            capture=True,
+            capture_stderr=True,
+        )
     except:
         print("Output from previous Git command: %s" % output)
         raise

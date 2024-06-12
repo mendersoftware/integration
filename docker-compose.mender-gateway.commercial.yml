@@ -4,7 +4,7 @@ services:
     # mender-gateway
     #
     mender-gateway:
-        image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:mender-3.7.2
+        image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:mender-3.7.5
         networks:
             - mender
         stdin_open: true

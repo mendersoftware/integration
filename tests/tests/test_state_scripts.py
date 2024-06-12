@@ -809,8 +809,8 @@ class BaseTestStateScripts(MenderTesting):
                     "cat /data/test_state_scripts.log 1>&2",
                     "journalctl --unit mender-updated",
                     "top -n5 -b",
-                    "ls -l /proc/`pgrep mender`/fd",
-                    "for fd in /proc/`pgrep mender`/fdinfo/*; do echo $fd:; cat $fd; done",
+                    "ls -l /proc/`pgrep mender-update`/fd",
+                    "for fd in /proc/`pgrep mender-update`/fdinfo/*; do echo $fd:; cat $fd; done",
                 ]
                 starttime = time.time()
                 while starttime + 10 * 60 >= time.time():

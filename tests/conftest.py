@@ -12,14 +12,13 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import distutils.spawn
 import logging
 import os
 import subprocess
 import shutil
 import tempfile
 import yaml
-from distutils.version import LooseVersion
+import packaging.version
 
 import filelock
 import pytest
@@ -145,7 +144,7 @@ def valid_image(request, tmp_path_factory, worker_id):
     filename = f"core-image-full-cmdline-{machine_name}.ext4"
 
     if worker_id == "master":
-        return filename
+        return _image(request, compose_file, filename)
 
     return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
 
@@ -156,7 +155,7 @@ def gateway_image(request, tmp_path_factory, worker_id):
     filename = f"mender-gateway-image-full-cmdline-{machine_name}.ext4"
 
     if worker_id == "master":
-        return filename
+        return _image(request, compose_file, filename)
 
     return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
 
@@ -420,10 +419,10 @@ def pytest_exception_interact(node, call, report):
 
 def verify_sane_test_environment():
     # check if required tools are in PATH, add any other checks here
-    if distutils.spawn.find_executable("mender-artifact") is None:
+    if shutil.which("mender-artifact") is None:
         raise SystemExit("mender-artifact not found in PATH")
 
-    if distutils.spawn.find_executable("docker") is None:
+    if shutil.which("docker") is None:
         raise SystemExit("docker not found in PATH")
 
     ret = subprocess.call("docker ps > /dev/null", shell=True)
@@ -462,11 +461,10 @@ def mender_client_version():
 
 def version_is_minimum(version, min_version):
     try:
-        if LooseVersion(min_version) > LooseVersion(version):
-            return False
-        else:
-            return True
-    except TypeError:
-        # Type error indicates that 'version' is likely a string (branch
-        # name). Default to always consider them higher than the minimum version.
+        version_parsed = packaging.version.Version(version)
+    except packaging.version.InvalidVersion:
+        # Indicates that 'version' is likely a string (branch name).
+        # Always consider them higher than the minimum version.
         return True
+
+    return version_parsed >= packaging.version.Version(min_version)

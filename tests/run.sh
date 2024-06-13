@@ -15,19 +15,17 @@
 
 set -x -e
 
-MACHINE_NAME=qemux86-64
 DOWNLOAD_REQUIREMENTS="true"
 
 export PYTHONDONTWRITEBYTECODE=1
 
 usage() {
-    echo "Usage: $ run.sh [-h|--help] [--machine-name[=]<machine-name>] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
+    echo "Usage: $ run.sh [-h|--help] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
     echo
     echo "    -h                               Display help"
-    echo "    --machine-name[=] <machine-name> Specify the machine to test"
     echo "    --no-download                    Do not download the external dependencies"
     echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
-    echo "    --                               Seperates 'run.sh' arguments from pytest arguments"
+    echo "    --                               Separates 'run.sh' arguments from pytest arguments"
     echo "    <pytest-args>                    Passes these arguments along to pytest"
     echo "    tests/<testfile.py>              Name the test-file to run"
     echo "    -k TestNameToRun                 Name of the test class, method, or module to run"
@@ -46,13 +44,6 @@ while [ -n "$1" ]; do
             set +x
             usage
             ;;
-        --machine-name=*)
-            MACHINE_NAME="${1#--machine-name=}"
-            ;;
-        --machine-name)
-            shift
-            MACHINE_NAME="$1"
-            ;;
         --no-download)
             DOWNLOAD_REQUIREMENTS=""
             ;;
@@ -64,32 +55,34 @@ while [ -n "$1" ]; do
     shift
 done
 
-MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
-if [[ $? -ne 0 ]]; then
-    echo "Failed to determine mender version using release_tool.py"
-    exit 1
-fi
-
-MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
-if [[ $? -ne 0 ]]; then
-    echo "Failed to determine mender-artifact version using release_tool.py"
-    exit 1
-fi
-
-MENDER_CLI_BRANCH=$(../extra/release_tool.py --version-of mender-cli)
-if [[ $? -ne 0 ]]; then
-    echo "Failed to determine mender-cli version using release_tool.py"
-    exit 1
-fi
-
-echo "Detected Mender branch: $MENDER_BRANCH"
-echo "Detected mender-artifact branch: $MENDER_ARTIFACT_BRANCH"
-echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
-
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
 
+    # Detect the branches from where to download the tools
+    MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to determine mender version using release_tool.py"
+        exit 1
+    fi
+
+    MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to determine mender-artifact version using release_tool.py"
+        exit 1
+    fi
+
+    MENDER_CLI_BRANCH=$(../extra/release_tool.py --version-of mender-cli)
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to determine mender-cli version using release_tool.py"
+        exit 1
+    fi
+
+    echo "Detected Mender branch: $MENDER_BRANCH"
+    echo "Detected mender-artifact branch: $MENDER_ARTIFACT_BRANCH"
+    echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
+
+    # Download the tools
     curl --fail "https://downloads.mender.io/mender-artifact/${MENDER_ARTIFACT_BRANCH}/linux/mender-artifact" \
          -o downloaded-tools/mender-artifact \
          -z downloaded-tools/mender-artifact

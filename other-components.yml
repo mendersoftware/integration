@@ -11,7 +11,7 @@ services:
         image: mendersoftware/mender-cli:1.12.0
 
     mender-binary-delta:
-        image: mendersoftware/mender-binary-delta:1.4.1
+        image: mendersoftware/mender-binary-delta:1.5.0
 
     mender-convert:
         image: mendersoftware/mender-convert:4.1.1

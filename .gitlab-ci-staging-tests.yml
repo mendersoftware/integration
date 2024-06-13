@@ -1,3 +1,25 @@
+variables:
+  CI_JOBS_STAGING_ROLE_ARN:
+    value: "arn:aws:iam::017659451055:role/nt-eks-hm-staging-ci"
+    description: "AWS IAM role which executes the AWS jobs"
+  AWS_DEFAULT_REGION:
+    value: $CI_JOBS_AWS_REGION
+    description: "EKS Staging Cluster Region"
+  AWS_EKS_CLUSTER_NAME:
+    value: $CI_JOBS_AWS_EKS_CLUSTER_NAME
+    description: "EKS Staging Cluster Name"
+
+.setup_eks_cluster_staging: &setup_eks_cluster_staging |
+  # Configure AWS CLI for staging cluster
+  export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+    $(aws sts assume-role-with-web-identity \
+    --role-arn ${CI_JOBS_STAGING_ROLE_ARN} \
+    --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}" \
+    --web-identity-token ${AWS_OIDC_TOKEN} \
+    --duration-seconds ${AWS_OIDC_TOKEN_TIMEOUT:-3600} \
+    --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+    --output text))
+  aws sts get-caller-identity
 
 test:staging:backend-tests:
   image: tiangolo/docker-with-compose
@@ -9,24 +31,20 @@ test:staging:backend-tests:
 
   variables:
     K8S: "staging"
-    AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
-    AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
-    AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
     GATEWAY_HOSTNAME: "staging.hosted.mender.io"
     GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
     GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
     DOCKER_HOST: tcp://docker:2375
     TESTS_IN_PARALLEL_BACKEND_INTEGRATION: "4"
+  id_tokens:
+    AWS_OIDC_TOKEN:
+      aud: https://gitlab.com
 
   before_script:
     - apk add --no-cache aws-cli bash curl python3 py3-pip
     # Install python dependencies
     - pip3 install pyyaml
-    # Export AWS keys, as group takes precedence over yaml specified ones
-    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
-    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
-    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    - *setup_eks_cluster_staging
 
   script:
     - cd backend-tests
@@ -53,10 +71,6 @@ test:staging:integration-tests:
 
   variables:
     K8S: "staging"
-    AWS_ACCESS_KEY_ID: $CI_JOBS_AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY: $CI_JOBS_AWS_SECRET_ACCESS_KEY
-    AWS_DEFAULT_REGION: $CI_JOBS_AWS_REGION
-    AWS_EKS_CLUSTER_NAME: $CI_JOBS_AWS_EKS_CLUSTER_NAME
     GATEWAY_HOSTNAME: "staging.hosted.mender.io"
     GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
     GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
@@ -64,6 +78,9 @@ test:staging:integration-tests:
     COMPOSE_HTTP_TIMEOUT: 300
     SPECIFIC_INTEGRATION_TEST: "Enterprise"
     TESTS_IN_PARALLEL_INTEGRATION: "2"
+  id_tokens:
+    AWS_OIDC_TOKEN:
+      aud: https://gitlab.com
 
   before_script:
     - unset DOCKER_HOST
@@ -90,10 +107,7 @@ test:staging:integration-tests:
     - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
     - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
     - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator
-    # Export AWS keys, as group takes precedence over yaml specified ones
-    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
-    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
-    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
+    - *setup_eks_cluster_staging
     # Login for private repos
     - docker login -u ${DOCKER_HUB_USERNAME} -p ${DOCKER_HUB_PASSWORD}
     - docker login -u ${REGISTRY_MENDER_IO_USERNAME} -p ${REGISTRY_MENDER_IO_PASSWORD} registry.mender.io
@@ -118,6 +132,9 @@ trigger:staging:cleanup-tenants:
   when: always
   variables:
     K8S: "staging"
+  id_tokens:
+    AWS_OIDC_TOKEN:
+      aud: https://gitlab.com
 
   before_script:
     # Install awscli, kubectl and aws-iam-authenticator
@@ -126,12 +143,7 @@ trigger:staging:cleanup-tenants:
     - install -o root -g root -m 0755 kubectl /usr/bin/kubectl
     - curl -LO "https://amazon-eks.s3.us-west-2.amazonaws.com/1.17.9/2020-08-04/bin/linux/amd64/aws-iam-authenticator"
     - install -o root -g root -m 0755 kubectl /usr/bin/aws-iam-authenticator
-    # Export AWS keys, as group takes precedence over yaml specified ones
-    # See https://docs.gitlab.com/ee/ci/variables/#priority-of-cicd-variables
-    - export AWS_ACCESS_KEY_ID=$CI_JOBS_AWS_ACCESS_KEY_ID
-    - export AWS_SECRET_ACCESS_KEY=$CI_JOBS_AWS_SECRET_ACCESS_KEY
-    - export AWS_DEFAULT_REGION=$CI_JOBS_AWS_REGION
-    - export AWS_EKS_CLUSTER_NAME=$CI_JOBS_AWS_EKS_CLUSTER_NAME
+    - *setup_eks_cluster_staging
 
   script:
     - export KUBECONFIG="${HOME}/kubeconfig.${K8S}"

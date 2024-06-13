@@ -1458,6 +1458,7 @@ def find_repo(repo):
     for dir in DIRS:
         if os.path.exists(os.path.join(dir, repo)):
             loc = os.path.join(dir, repo)
+            break
 
     if loc is None:
         raise Exception(

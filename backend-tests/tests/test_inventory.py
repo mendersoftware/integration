@@ -227,9 +227,9 @@ class TestDevicePatchAttributes:
 
             api_dev = r.json()
             # Expected inventory count per scope:
-            # {"inventory": 3, "identity": 1+2, "system": 2}
+            # {"inventory": 3, "identity": 1+2, "system": 3}
             # +2 comes from the id_data see MEN-3637
-            assert len(api_dev["attributes"]) == 8
+            assert len(api_dev["attributes"]) == 9
             # new scopes: identity and system holding authset status and
             #             time-stamp values respectively
 

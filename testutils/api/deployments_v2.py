@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2024 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -15,3 +15,8 @@
 URL_MGMT = "/api/management/v2/deployments"
 
 URL_DEPLOYMENTS = "/deployments"
+URL_RELEASES = "/deployments/releases"
+URL_RELEASE = "/deployments/releases/{release_name}"
+URL_RELEASE_TAGS = "/deployments/releases/{release_name}/tags"
+URL_RELEASES_ALL_TAGS = "/releases/all/tags"
+URL_RELEASES_ALL_TYPES = "/releases/all/types"

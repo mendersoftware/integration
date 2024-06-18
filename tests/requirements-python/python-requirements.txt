@@ -113,7 +113,7 @@ tomli==2.0.1
     # via pytest
 typing-extensions==4.7.1
     # via stripe
-urllib3==1.26.18
+urllib3==1.26.19
     # via
     #   -r python-requirements.in
     #   docker

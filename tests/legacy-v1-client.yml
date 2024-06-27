@@ -4,7 +4,7 @@ services:
     # mender-legacy-client 
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:1.7.0
+        image: lluiscampos/mender-client-qemu:1.7.0-lluis-big
         volumes:
           # Provision demo certificate
           - ./cert/cert.crt:/mnt/config/server.crt

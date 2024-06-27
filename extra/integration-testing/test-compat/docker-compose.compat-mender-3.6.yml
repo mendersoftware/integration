@@ -1,6 +1,6 @@
 services:
   mender-client-3-6:
-    image: mendersoftware/mender-client-qemu:mender-3.6
+    image: lluiscampos/mender-client-qemu:mender-3.6-lluis-big
     networks:
        - mender
     stdin_open: true

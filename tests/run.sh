@@ -161,7 +161,7 @@ if [[ $1 == "--get-requirements" ]]; then
     exit 0
 fi
 
-dd if=/dev/zero of=large_image.dat bs=300M count=0 seek=1
+dd if=/dev/zero of=large_image.dat bs=500M count=0 seek=1
 
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements

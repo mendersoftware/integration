@@ -4,7 +4,8 @@ services:
     # mender-legacy-client 
     #
     mender-client:
-        image: mendersoftware/mender-client-qemu:1.7.0
+        # Testing image based on 1.7.0 with enlarged partitions
+        image: mendersoftware/mender-client-qemu:1.7.0-large-rootfs
         volumes:
           # Provision demo certificate
           - ./cert/cert.crt:/mnt/config/server.crt

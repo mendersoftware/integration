@@ -181,7 +181,7 @@ def large_image(request):
     return _special_image(
         request,
         "large_image.dat",
-        ["dd", "if=/dev/zero", "of=large_image.dat", "bs=300M", "count=1"],
+        ["dd", "if=/dev/zero", "of=large_image.dat", "bs=500M", "count=1"],
     )
 
 

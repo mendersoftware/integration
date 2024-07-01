@@ -56,13 +56,12 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
     LEGACY_V1_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
-        COMPOSE_FILES_PATH + "/tests/legacy-v1-client.yml",
+        COMPOSE_FILES_PATH + "/extra/legacy-clients-testing/legacy-v1-client.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
         COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.testing.yml",
     ]
     LEGACY_V3_CLIENT_FILES = [
-        COMPOSE_FILES_PATH
-        + "/extra/integration-testing/test-compat/docker-compose.compat-mender-3.6.yml",
+        COMPOSE_FILES_PATH + "/extra/legacy-clients-testing/legacy-v3-client.yml",
     ]
     SIGNED_ARTIFACT_CLIENT_FILES = [
         COMPOSE_FILES_PATH

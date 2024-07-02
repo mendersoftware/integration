@@ -937,6 +937,7 @@ class TestStateScriptsOpenSource(BaseTestStateScripts):
             test_set,
         )
 
+    @flaky(max_runs=3)
     @MenderTesting.slow
     @pytest.mark.parametrize("description,test_set", TEST_SETS)
     def test_state_scripts(

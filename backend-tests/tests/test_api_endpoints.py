@@ -33,23 +33,8 @@ logger = logging.getLogger("test_decomission")
 logger.setLevel(logging.INFO)
 
 
-REPO_TO_ENV_VARIABLE = {
-    "auditlogs": "AUDITLOGS_REV",
-    "deployments": "DEPLOYMENTS_REV",
-    "deployments-enterprise": "DEPLOYMENTS_ENTERPRISE_REV",
-    "deviceauth": "DEVICEAUTH_REV",
-    "deviceauth-enterprise": "DEVICEAUTH_ENTERPRISE_REV",
-    "deviceconfig": "DEVICECONFIG_REV",
-    "deviceconnect": "DEVICECONNECT_REV",
-    "inventory": "INVENTORY_REV",
-    "inventory-enterprise": "INVENTORY_ENTERPRISE_REV",
-    "iot-manager": "IOT_MANAGER_REV",
-    "tenantadm": "TENANTADM_REV",
-    "useradm": "USERADM_REV",
-    "useradm-enterprise": "USERADM_ENTERPRISE_REV",
-    "workflows": "WORKFLOWS_REV",
-    "workflows-enterprise": "WORKFLOWS_ENTERPRISE_REV",
-}
+def repo_to_env_variable(repo: str) -> str:
+    return repo.upper().replace("-", "_") + "_REV"
 
 
 def get_api_docs(repo):
@@ -60,7 +45,7 @@ def get_api_docs(repo):
     with tempfile.TemporaryDirectory() as tmp:
         tmp_repo = os.path.join(tmp, repo)
         subprocess.check_output(["git", "clone", git_repository, tmp_repo])
-        env_var_name = REPO_TO_ENV_VARIABLE.get(repo)
+        env_var_name = repo_to_env_variable(repo)
         ref_name = env_var_name and os.getenv(env_var_name) or "master"
         if ref_name != "master":
             tag_match = re.match(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-build[0-9]+)?", ref_name)

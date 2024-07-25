@@ -117,6 +117,10 @@ class CliTenantadm(BaseCli):
         enterprise = Microservice("/usr/bin/tenantadm", "/etc/tenantadm")
         self.choose_binary_and_config_paths([enterprise], self.service_name)
 
+    def __call__(self, *args):
+        cmd = [self.service.bin_path, *args]
+        return self.container_manager.execute(self.cid, cmd)
+
     def create_org(self, name, username, password, plan="os", addons=[]) -> str:
         cmd = [
             self.service.bin_path,

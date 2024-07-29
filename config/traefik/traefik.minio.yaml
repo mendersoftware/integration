@@ -5,8 +5,8 @@ http:
       # Use sprig flavored Go template
       rule: >-
         {{with env "STORAGE_URL" | default "s3.docker.mender.io" -}}
-        Host(`{{.}}`)||Headers(`X-Forwarded-Host`,`{{.}}`) ||
-        HeadersRegexp(`X-Amz-Date`, `.+`) ||
+        Host(`{{.}}`)||Header(`X-Forwarded-Host`,`{{.}}`) ||
+        HeaderRegexp(`X-Amz-Date`, `.+`) ||
         PathPrefix(`/mender-artifact-storage`)
         {{- end}}
       tls: true

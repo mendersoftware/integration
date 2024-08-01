@@ -45,6 +45,9 @@ ltsChecks = {
     # from 3.5 all even releases are assumed to be LTS
     "from-3.5": lambda minorVersion, minorValue: minorVersion >= "3.5"
     and not int(minorValue) % 2,
+    # from 3.7 all odd releases are assumed to be LTS
+    "from-3.7": lambda minorVersion, minorValue: minorVersion >= "3.7"
+    and int(minorValue) % 2,
 }
 
 

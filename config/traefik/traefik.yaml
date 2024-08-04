@@ -32,7 +32,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/iot-manager`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/iot-manager`)"
       service: azureiotmanager
       tls: true
 
@@ -49,7 +49,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments`)"
       service: deployments
       tls: true
 
@@ -61,7 +61,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deployments/download`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments/download`)"
       service: deployments
       tls: true
 
@@ -73,7 +73,7 @@ http:
         - compression
         - json-error-responder1
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deployments`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deployments`)"
       service: deployments
       tls: true
 
@@ -85,7 +85,7 @@ http:
       middlewares: #{{- template "circuit-breaker"}}
         - sec-headers
         - compression
-      rule: "PathPrefix(`/api/devices/{(v[0-9]+)}/authentication`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/authentication`)"
       service: deviceauth
       tls: true
 
@@ -97,7 +97,7 @@ http:
         - compression
         - json-error-responder1
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devauth`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/devauth`)"
       service: deviceauth
       tls: true
 
@@ -113,7 +113,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/`)"
+      rule: "PathPrefix(`/ui`)"
       service: gui
       tls: true
 
@@ -187,7 +187,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/reporting`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/reporting`)"
       service: reporting
       tls: true
 
@@ -202,7 +202,7 @@ http:
         - compression
         - json-error-responder1
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/useradm`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/useradm`)"
       service: useradm
       tls: true
 
@@ -212,7 +212,9 @@ http:
         - sec-headers
         - compression
         - json-error-responder4
-      rule: '!Path(`/api/management/{ver:v[0-9]+}/useradm/auth/logout`)&&PathPrefix(`/api/management/{ver:v[0-9]+}/useradm/{ep:(auth|oauth2|oidc)}`)'
+      rule: >-
+        !PathRegexp(`^/api/management/v[0-9]+/useradm/auth/logout`) &&
+        PathRegexp(`^/api/management/v[0-9]+/useradm/(auth|oauth2|oidc)`)
       service: useradm
       tls: true
 
@@ -229,7 +231,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deviceconnect`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconnect`)"
       service: deviceconnect
       tls: true
 
@@ -243,7 +245,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deviceconnect`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconnect`)"
       service: deviceconnect
       tls: true
 
@@ -260,7 +262,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/deviceconfig`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconfig`)"
       service: deviceconfig
       tls: true
 
@@ -272,7 +274,7 @@ http:
         - compression
         - json-error-responder1
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/deviceconfig`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconfig`)"
       service: deviceconfig
       tls: true
 

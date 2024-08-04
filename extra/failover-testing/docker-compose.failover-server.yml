@@ -71,12 +71,12 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway-2:
-        image: traefik:v2.10
+        image: traefik:v3.1
         extends:
             file: common.yml
             service: mender-base
         # Enables the web UI and tells Traefik to listen to docker
-        command: 
+        command:
             - --accesslog=true
             - --entrypoints.http.address=:80
             - --entrypoints.http.http.redirections.entryPoint.scheme=https

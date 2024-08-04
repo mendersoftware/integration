@@ -14,7 +14,7 @@ http:
         - userauth
         - sec-headers
         - compression
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/tenantadm`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/tenantadm`)"
       service: tenantadm
       tls: true
 
@@ -24,8 +24,8 @@ http:
         - sec-headers
         - compression
       rule: >-
-        Method(`OPTIONS`,`POST`) && Path(`/api/management/{version:v[0-9]+}/tenantadm/tenants/trial`) ||
-        Method(`OPTIONS`,`POST`) && PathPrefix(`/api/management/{version:v[0-9]+}/tenantadm/tenants/signup`)
+        (Method(`OPTIONS`) || Method(`POST`)) && PathRegexp(`/api/management/v[0-9]+/tenantadm/tenants`) ||
+        (Method(`OPTIONS`) || Method(`POST`)) && PathRegexp(`/api/management/v[0-9]+/tenantadm/tenants/trial`)
       service: tenantadm
       tls: true
 
@@ -40,7 +40,7 @@ http:
         - compression
         - json-error-responder1
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/auditlogs`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/auditlogs`)"
       service: auditlogs
       tls: true
 
@@ -57,7 +57,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/devices/{version:v[0-9]+}/devicemonitor`)"
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/devicemonitor`)"
       service: devicemonitor
       tls: true
 
@@ -71,7 +71,7 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/api/management/{version:v[0-9]+}/devicemonitor`)"
+      rule: "PathRegexp(`^/api/management/v[0-9]+/devicemonitor`)"
       service: devicemonitor
       tls: true
 

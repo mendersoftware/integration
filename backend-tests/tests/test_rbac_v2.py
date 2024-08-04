@@ -1912,7 +1912,13 @@ class TestRBACReleasesEnterprise:
         api_client_v2.with_auth(tenant.users[0].token)
         r = api_client_v2.call("GET", deployments_v2.URL_RELEASES)
         assert r.status_code == 200
-        all_releases = r.json()
+        # this list includes the demo artifact
+        assert len(all_releases) == 2
+        # remove the demo artifact and verify the bar release
+        excluded_artifact_prefix = "mender-demo-artifact"
+        all_releases = [
+            x for x in r.json() if not x["name"].startswith(excluded_artifact_prefix)
+        ]
         assert len(all_releases) == 1
         assert all_releases[0]["name"] == "bar"
 

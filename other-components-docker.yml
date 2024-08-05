@@ -9,4 +9,4 @@ services:
     mender-ci-workflows:
         image: mendersoftware/mender-ci-tools:mender-master
     mender-client:
-        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.7.5
+        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:mender-3.7.6

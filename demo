@@ -322,7 +322,9 @@ maybe_launch_enterprise_client() {
 }
 
 maybe_upload_artifact() {
-    if [[ $UPLOAD_ARTIFACT -eq 1 ]]; then
+    if [[ $UPLOAD_ARTIFACT -eq 1 ]] && [[ $ENTERPRISE -eq 0 ]]; then
+        # For Enterprise setup, the demo Artifact uploaded by workflows-enterprise unconditionally
+        echo "Uploading demo Artifact..."
 
         local RETRIES=0
         local retval=0

@@ -64,8 +64,5 @@ services:
     monitor-client:
         image: mendersoftware/monitor-client:master
 
-    mender-gateway:
-        image: mendersoftware/mender-gateway:master
-
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

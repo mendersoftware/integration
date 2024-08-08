@@ -113,7 +113,8 @@ http:
         - json-error-responder2
         - json-error-responder3
         - json-error-responder4
-      rule: "PathPrefix(`/ui`)"
+      priority: 1
+      rule: "PathPrefix(`/`)"
       service: gui
       tls: true
 

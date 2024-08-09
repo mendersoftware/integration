@@ -43,31 +43,7 @@ http:
       forwardAuth:
         address: "http://mender-useradm:8080/api/internal/v1/useradm/auth/verify"
         authResponseHeaders: "X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups,X-MEN-RBAC-Releases-Tags"
-  
-    json-error-responder1:
-      errors:
-        service: error-responder
-        query: "/{status}.json"
-        status: "401-404"
-  
-    json-error-responder2:
-      errors:
-        service: error-responder
-        query: "/{status}.json"
-        status: "500-504"
-  
-    json-error-responder3:
-      errors:
-        service: error-responder
-        query: "/{status}.json"
-        status: "408"
-  
-    json-error-responder4:
-      errors:
-        service: error-responder
-        query: "/{status}.json"
-        status: "429"
-  
+
     inventoryV1-replacepathregex:
       replacepathregex:
         regex: "^/api/devices/v1/inventory/(.*)"

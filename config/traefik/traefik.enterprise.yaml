@@ -38,8 +38,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/auditlogs`)"
       service: auditlogs
       tls: true
@@ -53,10 +51,6 @@ http:
         - devauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/devices/v[0-9]+/devicemonitor`)"
       service: devicemonitor
       tls: true
@@ -67,10 +61,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/devicemonitor`)"
       service: devicemonitor
       tls: true

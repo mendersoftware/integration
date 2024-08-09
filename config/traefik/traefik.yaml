@@ -28,10 +28,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/iot-manager`)"
       service: azureiotmanager
       tls: true
@@ -45,10 +41,6 @@ http:
         - devauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments`)"
       service: deployments
       tls: true
@@ -57,10 +49,6 @@ http:
       entrypoints: https
       middlewares: #{{- template "circuit-breaker"}}
         - sec-headers
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments/download`)"
       service: deployments
       tls: true
@@ -71,8 +59,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/deployments`)"
       service: deployments
       tls: true
@@ -95,8 +81,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/devauth`)"
       service: deviceauth
       tls: true
@@ -109,10 +93,6 @@ http:
       middlewares: #{{- template "circuit-breaker"}}
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       priority: 1
       rule: "PathPrefix(`/`)"
       service: gui
@@ -128,10 +108,6 @@ http:
         - inventoryV1-replacepathregex
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathPrefix(`/api/devices/v1/inventory`)"
       service: inventory
       tls: true
@@ -142,10 +118,6 @@ http:
         - devauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathPrefix(`/api/devices/v2/inventory`)"
       service: inventory
       tls: true
@@ -157,8 +129,6 @@ http:
         - inventoryMgmtV1-replacepathregex
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathPrefix(`/api/management/v1/inventory`)"
       service: inventory
       tls: true
@@ -169,8 +139,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathPrefix(`/api/management/v2/inventory`)"
       service: inventory
       tls: true
@@ -184,10 +152,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/reporting`)"
       service: reporting
       tls: true
@@ -201,8 +165,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/useradm`)"
       service: useradm
       tls: true
@@ -212,7 +174,6 @@ http:
       middlewares: #{{- template "circuit-breaker"}}
         - sec-headers
         - compression
-        - json-error-responder4
       rule: >-
         !PathRegexp(`^/api/management/v[0-9]+/useradm/auth/logout`) &&
         PathRegexp(`^/api/management/v[0-9]+/useradm/(auth|oauth2|oidc)`)
@@ -228,10 +189,6 @@ http:
         - devauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconnect`)"
       service: deviceconnect
       tls: true
@@ -242,10 +199,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconnect`)"
       service: deviceconnect
       tls: true
@@ -259,10 +212,6 @@ http:
         - devauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder2
-        - json-error-responder3
-        - json-error-responder4
       rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconfig`)"
       service: deviceconfig
       tls: true
@@ -273,8 +222,6 @@ http:
         - userauth
         - sec-headers
         - compression
-        - json-error-responder1
-        - json-error-responder4
       rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconfig`)"
       service: deviceconfig
       tls: true

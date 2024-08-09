@@ -1564,17 +1564,17 @@ class TestMonitorClientEnterprise:
         """Tests the removal of older alerts from the persistent store"""
         alert_resend_interval_s = 4
         alert_max_age = 16
-        hostname = os.environ.get("GATEWAY_HOSTNAME", "docker.mender.io")
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
-        devid, _, auth, mender_device = self.prepare_env(
+        _, _, _, mender_device = self.prepare_env(
             monitor_commercial_setup_no_client, user_name
         )
 
         logger.info(
             "test_monitorclient_remove_old_alerts: remove old alerts from store scenario."
         )
-        mender_device.run("sed -i.backup -e '$a127.2.0.1 %s' /etc/hosts" % hostname)
-        mender_device.run("systemctl restart mender-authd")
+
+        # Stop mender-auth so that mender-monitor cannot send alerts
+        mender_device.run("systemctl stop mender-authd")
 
         mender_device.run(
             "sed -i.backup -e 's/ALERT_STORE_MAX_RECORD_AGE_S=.*/ALERT_STORE_MAX_RECORD_AGE_S="
@@ -1587,20 +1587,46 @@ class TestMonitorClientEnterprise:
             + "/' /usr/share/mender-monitor/config/config.sh"
         )
 
+        # Insert 4 alerts: 2 and 2 separated 8s.
+        # Then check the expiration with good tolerance margins.
+        # Stop and start mender-monitor to remove [part of] the restart latency
+        #
+        # 0   4   8   12  16  20  24  28
+        # |---|---|---|---|---|---|---|---|
+        # ^       ^       ^       ^
+        # |-------|------>        |
+        #         |-------------->
+        #
+        # T0:  insert alerts key1, key2
+        # T8:  insert alerts key3, key4
+        # T16: key1, key2 expired
+        # T24: key3, key4 expired
+        mender_device.run("systemctl stop mender-monitor")
         mender_device.run(
-            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; for i in {1..4}; do fixlenstore_put key${i}; sleep 2; done;'"
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
+            + "fixlenstore_put key1; fixlenstore_put key2;"
+            + "sleep 8; "
+            + "fixlenstore_put key3; fixlenstore_put key4;'"
         )
-        mender_device.run("systemctl restart mender-monitor")
+        mender_device.run("systemctl start mender-monitor")
+
+        # T8: mender-monitor started
         time.sleep(alert_resend_interval_s)
+        time.sleep(alert_resend_interval_s)
+        # T16: key1, key2 expired
         output = mender_device.run(
-            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; keys_nolock | wc -l;'"
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
+            + "keys_nolock | wc -l;'"
         )
         logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
         assert output == "2\n"
 
         time.sleep(alert_resend_interval_s)
+        time.sleep(alert_resend_interval_s)
+        # T24 key3, key4 expired
         output = mender_device.run(
-            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh; keys_nolock | wc -l;'"
+            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
+            + "keys_nolock | wc -l;'"
         )
         logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
         assert output == "0\n"

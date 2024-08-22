@@ -119,10 +119,6 @@ publish:image:mender:
     DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
     DOCKER_DIR: extra/mender-client-docker-addons
 
-trigger:saas:sync-staging-component:
-  rules:
-    - when: never
-
 publish:image:saas:
   rules:
     - when: never

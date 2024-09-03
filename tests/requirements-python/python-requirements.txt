@@ -107,13 +107,13 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==10.6.0
+stripe==10.9.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
 typing-extensions==4.7.1
     # via stripe
-urllib3==1.26.19
+urllib3==1.26.20
     # via
     #   -r python-requirements.in
     #   docker
@@ -122,5 +122,5 @@ urllib3==1.26.19
     #   requests
 websocket-client==1.6.1
     # via kubernetes
-websockets==12.0
+websockets==13.0.1
     # via -r python-requirements.in

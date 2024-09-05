@@ -96,7 +96,6 @@ class TestClientMTLSEnterprise:
         key = f"/var/lib/mender/client.1.{algorithm}.key"
         script = f"""\
 #!/bin/bash
-echo "module: /usr/lib/softhsm/libsofthsm2.so" > /usr/share/p11-kit/modules/softhsm2.module
 softhsm2-util --init-token --free --label unittoken1 --pin {pin} --so-pin 0002
 pkcs11-tool --module /usr/lib/softhsm/libsofthsm2.so --login --pin {pin} --write-object "{key}" --type privkey --id 0909 --label privatekey
 """
@@ -140,9 +139,13 @@ default = default_sect
 pkcs11 = pkcs11_sect
 
 [pkcs11_sect]
-activate = 1
 module = /usr/lib/ossl-modules/pkcs11.so
-            """
+pkcs11-module-path = /usr/lib/softhsm/libsofthsm2.so
+activate = 1
+
+[default_sect]
+activate = 1
+          """
             device.run(f'echo -ne "{conf}" >> /etc/ssl/openssl.cnf')
 
     def hsm_get_key_uri(self, pin, ssl_engine_id, device):
@@ -159,7 +162,9 @@ module = /usr/lib/ossl-modules/pkcs11.so
     def hsm_cleanup(self, device):
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
-    def common_test_mtls_enterprise(self, env, algorithm=None, use_hsm=False):
+    def common_test_mtls_enterprise(
+        self, env, algorithm=None, use_hsm=False, use_engine=True
+    ):
         # upload the certificates
         basedir = os.path.join(os.path.dirname(__file__), "..", "..",)
         certs = os.path.join(basedir, "extra", "mtls", "certs",)
@@ -186,7 +191,9 @@ module = /usr/lib/ossl-modules/pkcs11.so
         env.device.run("systemctl stop mender-authd")
         tmpdir = tempfile.mkdtemp()
 
-        ssl_engine_id = "pkcs11"
+        ssl_engine_id = ""
+        if use_engine:
+            ssl_engine_id = "pkcs11"
         pin = "0001"
         if algorithm is not None and use_hsm is True:
             self.hsm_setup(pin, ssl_engine_id, env.device)
@@ -286,16 +293,7 @@ module = /usr/lib/ossl-modules/pkcs11.so
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     @pytest.mark.parametrize(
-        "hsm_implementation",
-        [
-            "engine",
-            pytest.param(
-                "provider",
-                marks=pytest.mark.skip(
-                    reason="QA-587 - Meta-mender currently does not support the OpenSSL version required to build the provider"
-                ),
-            ),
-        ],
+        "hsm_implementation", ["engine", "provider"],
     )
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
         # Check if the client has has SoftHSM (from yocto dunfell forward)
@@ -308,7 +306,12 @@ module = /usr/lib/ossl-modules/pkcs11.so
         self.setup_openssl_conf(setup_ent_mtls.device, hsm_implementation)
 
         try:
-            self.common_test_mtls_enterprise(setup_ent_mtls, algorithm, use_hsm=True)
+            self.common_test_mtls_enterprise(
+                setup_ent_mtls,
+                algorithm,
+                use_hsm=True,
+                use_engine=("engine" == hsm_implementation),
+            )
 
             # prepare a test artifact
             with tempfile.NamedTemporaryFile() as tf:

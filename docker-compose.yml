@@ -4,7 +4,7 @@ services:
     # mender-iot-manager
     #
     mender-iot-manager:
-        image: mendersoftware/iot-manager:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/iot-manager:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -19,7 +19,7 @@ services:
     # mender-deployments
     #
     mender-deployments:
-        image: mendersoftware/deployments:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deployments:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -34,7 +34,7 @@ services:
     # mender-gui
     #
     mender-gui:
-        image: mendersoftware/gui:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/gui:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -89,7 +89,7 @@ services:
     # mender-device-auth
     #
     mender-device-auth:
-        image: mendersoftware/deviceauth:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceauth:${MENDER_TAG}
         environment:
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -107,7 +107,7 @@ services:
     # mender-inventory
     #
     mender-inventory:
-        image: mendersoftware/inventory:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/inventory:${MENDER_TAG}
         environment:
             INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -124,7 +124,7 @@ services:
     # mender-useradm
     #
     mender-useradm:
-        image: mendersoftware/useradm:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/useradm:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -139,7 +139,7 @@ services:
     # mender-workflows-server
     #
     mender-workflows-server:
-        image: mendersoftware/workflows:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows:${MENDER_TAG}
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
         extends:
@@ -157,8 +157,11 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker:
-        image: mendersoftware/workflows-worker:mender-master
-        command: worker --excluded-workflows generate_artifact,generate_delta_artifact
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-worker}:${MENDER_TAG}
+        command:
+         - worker
+         - --excluded-workflows=generate_artifact,generate_delta_artifact
+         - --automigrate
         environment:
             WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
             DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
@@ -178,7 +181,7 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/create-artifact-worker:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -194,7 +197,7 @@ services:
     # mender-deviceconnect
     #
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconnect:${MENDER_TAG}
         command: server --automigrate
         extends:
             file: common.yml
@@ -214,7 +217,7 @@ services:
     # mender-deviceconfig
     #
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:mender-master
+        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconfig:${MENDER_TAG}
         extends:
             file: common.yml
             service: mender-base

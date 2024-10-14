@@ -1,6 +1,7 @@
 bash
 cmake
 curl
+dpkg
 e2fsprogs-extra
 g++
 gcompat

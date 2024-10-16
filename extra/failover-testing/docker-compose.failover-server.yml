@@ -8,6 +8,7 @@ services:
     # mender-iot-manager
     #
     mender-iot-manager-2:
+        command: [server, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-iot-manager
@@ -17,11 +18,14 @@ services:
                     - mender-iot-manager
         depends_on:
             - mender-mongo-2
+        environment:
+          IOT_MANAGER_MONGO_URL: "mongodb://mender-mongo-2"
 
     #
     # mender-deployments
     #
     mender-deployments-2:
+        command: [server, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-deployments
@@ -34,6 +38,7 @@ services:
         volumes:
             - ./cert/cert.crt:/etc/ssl/certs/docker.mender.io.crt
         environment:
+            DEPLOYMENTS_MONGO_URL: "mongodb://mender-mongo-2"
             STORAGE_BACKEND_CERT: /etc/ssl/certs/docker.mender.io.crt
             DEPLOYMENTS_AWS_AUTH_KEY: minio
             DEPLOYMENTS_AWS_AUTH_SECRET: minio123
@@ -94,9 +99,11 @@ services:
     # mender-device-auth
     #
     mender-device-auth-2:
+        command: [server, --automigrate]
         volumes:
             - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
         environment:
+            DEVICEAUTH_MONGO: "mongodb://mender-mongo-2"
             DEVICEAUTH_SERVER_PRIV_KEY_PATH: /etc/deviceauth/rsa/private.pem
             DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
         extends:
@@ -114,9 +121,12 @@ services:
     # mender-inventory
     #
     mender-inventory-2:
+        command: [server, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-inventory
+        environment:
+          INVENTORY_MONGO: "mongodb://mender-mongo-2"
         networks:
             mender-failover:
                 aliases:
@@ -128,9 +138,13 @@ services:
     # mender-useradm
     #
     mender-useradm-2:
+        command: [server, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-useradm
+        environment:
+          USERADM_MONGO: "mongodb://mender-mongo-2"
+          USERADM_SERVER_PRIV_KEY_PATH: /etc/useradm/rsa/private.pem
         networks:
             mender-failover:
                 aliases:
@@ -139,16 +153,18 @@ services:
             - mender-mongo-2
         volumes:
             - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
-        environment:
-            USERADM_SERVER_PRIV_KEY_PATH: /etc/useradm/rsa/private.pem
 
     #
     # mender-workflows-server
     #
     mender-workflows-server-2:
+        command: [server, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-workflows-server
+        environment:
+          WORKFLOWS_MONGO_URL: "mongodb://mender-mongo-2"
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
         networks:
             mender-failover:
                 aliases:
@@ -161,9 +177,13 @@ services:
     # mender-workflows-worker
     #
     mender-workflows-worker-2:
+        command: [worker, --automigrate]
         extends:
             file: docker-compose.yml
             service: mender-workflows-worker
+        environment:
+          WORKFLOWS_MONGO_URL: "mongodb://mender-mongo-2"
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
         networks:
             mender-failover:
                 aliases:
@@ -176,14 +196,16 @@ services:
     # mender-create-artifact-worker
     #
     mender-create-artifact-worker-2:
+        command: [--automigrate]
         extends:
             file: docker-compose.yml
             service: mender-create-artifact-worker
         environment:
-            - WORKFLOWS_MONGO_URL=mongodb://mender-mongo:27017
-            - CREATE_ARTIFACT_GATEWAY_URL=https://mender-api-gateway
-            - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
-            - CREATE_ARTIFACT_SKIPVERIFY=1
+          WORKFLOWS_MONGO_URL: mongodb://mender-mongo-2:27017
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
+          CREATE_ARTIFACT_GATEWAY_URL: https://mender-api-gateway
+          CREATE_ARTIFACT_DEPLOYMENTS_URL: http://mender-deployments:8080
+          CREATE_ARTIFACT_SKIPVERIFY: "1"
         networks:
             mender-failover:
                 aliases:
@@ -215,25 +237,6 @@ services:
             mender-failover:
                 aliases:
                     - mender-nats
-
-    #
-    # minio
-    #
-    minio-2:
-        # DO NOT upgrade this to any version "2021.05" or later.
-        # We want to stay on Apache license for now.
-        image: minio/minio:RELEASE.2019-04-23T23-50-36Z
-        restart: on-failure
-        networks:
-            mender-failover:
-                aliases:
-                    - minio.s3.docker.mender.io
-                    - minio
-        environment:
-            MINIO_HTTP_TRACE: /dev/stdout
-            MINIO_ACCESS_KEY: minio
-            MINIO_SECRET_KEY: minio123
-        command: server /export
 
 networks:
     mender-failover:

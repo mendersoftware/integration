@@ -194,7 +194,7 @@ http:
     gui:
       loadBalancer:
         servers:
-          - url: "http://mender-gui-2"
+          - url: "http://mender-gui-2:8090"
 
     inventory:
       loadBalancer:

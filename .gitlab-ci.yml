@@ -37,9 +37,12 @@ variables:
     description: "Docker version to use in jobs"
     value: "27"
 
-  MENDER_TAG:
-    description: "Docker tag for running integration tests"
+  MENDER_SERVER_TAG:
+    description: "Mender Server Docker tag for running integration tests"
     value: main
+  MENDER_CLIENT_TAG:
+    description: "Mender Client Docker tag for running integration tests"
+    value: mender-master
 
 .publish:versions:
   stage: publish

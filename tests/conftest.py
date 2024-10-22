@@ -88,9 +88,21 @@ def _extract_fs_from_image(request, client_compose_file, filename):
     if "gateway" in client_compose_file:
         image_type = "mender-gateway"
 
-    with open(client_compose_file) as f:
-        data = yaml.safe_load(f)
-        image = data["services"][image_type]["image"]
+    image = (
+        subprocess.check_output(
+            [
+                "docker-compose",
+                "-f",
+                client_compose_file,
+                "config",
+                "--images",
+                image_type,
+            ]
+        )
+        .decode("UTF-8")
+        .strip()
+        .split("\n")[0]
+    )
 
     subprocess.run(
         [

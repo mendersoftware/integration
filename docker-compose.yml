@@ -1,254 +1,253 @@
 services:
+  #
+  # mender-iot-manager
+  #
+  mender-iot-manager:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/iot-manager:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/iot-manager/health"
 
-    #
-    # mender-iot-manager
-    #
-    mender-iot-manager:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/iot-manager:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/iot-manager/health"
+  #
+  # mender-deployments
+  #
+  mender-deployments:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deployments:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/deployments/health"
 
-    #
-    # mender-deployments
-    #
-    mender-deployments:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deployments:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/deployments/health"
+  #
+  # mender-gui
+  #
+  mender-gui:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/gui:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    environment:
+      - GATEWAY_IP
+      - INTEGRATION_VERSION
+      - MENDER_ARTIFACT_VERSION
+      - MENDER_VERSION
+      - MENDER_DEB_PACKAGE_VERSION
+      - HAVE_DEVICECONNECT=1
+      - HAVE_DEVICECONFIG=1
 
-    #
-    # mender-gui
-    #
-    mender-gui:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/gui:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        environment:
-            - GATEWAY_IP
-            - INTEGRATION_VERSION
-            - MENDER_ARTIFACT_VERSION
-            - MENDER_VERSION
-            - MENDER_DEB_PACKAGE_VERSION
-            - HAVE_DEVICECONNECT=1
-            - HAVE_DEVICECONFIG=1
+  #
+  # mender-api-gateway
+  #
+  mender-api-gateway:
+    image: traefik:v3.1
+    extends:
+      file: common.yml
+      service: mender-base
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - --accesslog=true
+      - --entrypoints.http.address=:80
+      - --entrypoints.http.http.redirections.entryPoint.scheme=https
+      - --entrypoints.http.http.redirections.entryPoint.to=https
+      - --entrypoints.https.address=:443
+      - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
+      - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
+      - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
+      - --providers.file.directory=/etc/traefik/config
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Dynamic configuration files
+      - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
+      - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
 
-    #
-    # mender-api-gateway
-    #
-    mender-api-gateway:
-        image: traefik:v3.1
-        extends:
-            file: common.yml
-            service: mender-base
-        # Enables the web UI and tells Traefik to listen to docker
-        command:
-            - --accesslog=true
-            - --entrypoints.http.address=:80
-            - --entrypoints.http.http.redirections.entryPoint.scheme=https
-            - --entrypoints.http.http.redirections.entryPoint.to=https
-            - --entrypoints.https.address=:443
-            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
-            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
-            - --providers.file.directory=/etc/traefik/config
-        volumes:
-            # So that Traefik can listen to the Docker events
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-            # Dynamic configuration files
-            - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
-            - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
+    networks:
+      - mender
+    # critical - otherwise nginx may not detect
+    # these servers and exits with 'upstream server not found'
+    depends_on:
+      - mender-device-auth
+      - mender-gui
+      - mender-useradm
+      - mender-inventory
 
-        networks:
-            - mender
-        # critical - otherwise nginx may not detect
-        # these servers and exits with 'upstream server not found'
-        depends_on:
-            - mender-device-auth
-            - mender-gui
-            - mender-useradm
-            - mender-inventory
+  #
+  # mender-device-auth
+  #
+  mender-device-auth:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceauth:${MENDER_TAG}
+    environment:
+      DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+      - mender-workflows-server
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/devauth/health"
 
-    #
-    # mender-device-auth
-    #
-    mender-device-auth:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceauth:${MENDER_TAG}
-        environment:
-            DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-            - mender-workflows-server
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/devauth/health"
+  #
+  # mender-inventory
+  #
+  mender-inventory:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/inventory:${MENDER_TAG}
+    environment:
+      INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/inventory/health"
 
-    #
-    # mender-inventory
-    #
-    mender-inventory:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/inventory:${MENDER_TAG}
-        environment:
-            INVENTORY_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/inventory/health"
+  #
+  # mender-useradm
+  #
+  mender-useradm:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/useradm:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/useradm/health"
 
-    #
-    # mender-useradm
-    #
-    mender-useradm:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/useradm:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/useradm/health"
+  #
+  # mender-workflows-server
+  #
+  mender-workflows-server:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows:${MENDER_TAG}
+    environment:
+      WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+      - mender-nats
+    labels:
+      mender.healthcheck.path: "/health"
 
-    #
-    # mender-workflows-server
-    #
-    mender-workflows-server:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows:${MENDER_TAG}
-        environment:
-            WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-            - mender-nats
-        labels:
-            mender.healthcheck.path: "/health"
+  #
+  # mender-workflows-worker
+  #
+  mender-workflows-worker:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-worker}:${MENDER_TAG}
+    command:
+      - worker
+      - --excluded-workflows=generate_artifact,generate_delta_artifact
+      - --automigrate
+    environment:
+      WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
+      DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
+      HAVE_DEVICECONNECT: 1
+      HAVE_DEVICECONFIG: 1
+      DEVICECONFIG_ADDR: "mender-deviceconfig:8080"
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+      - mender-nats
 
-    #
-    # mender-workflows-worker
-    #
-    mender-workflows-worker:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-worker}:${MENDER_TAG}
-        command:
-         - worker
-         - --excluded-workflows=generate_artifact,generate_delta_artifact
-         - --automigrate
-        environment:
-            WORKFLOWS_MONGO_URL: mongodb://mender-mongo:27017
-            DEVICECONNECT_ADDR: "mender-deviceconnect:8080"
-            HAVE_DEVICECONNECT: 1
-            HAVE_DEVICECONFIG: 1
-            DEVICECONFIG_ADDR: "mender-deviceconfig:8080"
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-            - mender-nats
+  #
+  # mender-create-artifact-worker
+  #
+  mender-create-artifact-worker:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/create-artifact-worker:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    environment:
+      - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+      - mender-nats
 
-    #
-    # mender-create-artifact-worker
-    #
-    mender-create-artifact-worker:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/create-artifact-worker:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        environment:
-            - CREATE_ARTIFACT_DEPLOYMENTS_URL=http://mender-deployments:8080
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-            - mender-nats
+  #
+  # mender-deviceconnect
+  #
+  mender-deviceconnect:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconnect:${MENDER_TAG}
+    command: server --automigrate
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+      - mender-nats
+    environment:
+      DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
+      DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
 
-    #
-    # mender-deviceconnect
-    #
-    mender-deviceconnect:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconnect:${MENDER_TAG}
-        command: server --automigrate
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-            - mender-nats
-        environment:
-            DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
-            DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
+  #
+  # mender-deviceconfig
+  #
+  mender-deviceconfig:
+    image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconfig:${MENDER_TAG}
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      - mender
+    depends_on:
+      - mender-mongo
+    command: server --automigrate
+    labels:
+      mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
 
-    #
-    # mender-deviceconfig
-    #
-    mender-deviceconfig:
-        image: ${MENDER_REGISTRY}/${MENDER_REPOSITORY}/deviceconfig:${MENDER_TAG}
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            - mender
-        depends_on:
-            - mender-mongo
-        command: server --automigrate
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
+  mender-mongo:
+    image: mongo:6.0
+    extends:
+      file: common.yml
+      service: mender-base
+    networks:
+      mender:
+        aliases:
+          - mongo-tenantadm
+          - mongo-deployments
+          - mongo-device-auth
+          - mongo-inventory
+          - mongo-useradm
+          - mongo-workflows
 
-    mender-mongo:
-        image: mongo:6.0
-        extends:
-            file: common.yml
-            service: mender-base
-        networks:
-            mender:
-                aliases:
-                    - mongo-tenantadm
-                    - mongo-deployments
-                    - mongo-device-auth
-                    - mongo-inventory
-                    - mongo-useradm
-                    - mongo-workflows
-
-    mender-nats:
-        image: nats:2.7.4-scratch
-        command: -js
-        networks:
-            - mender
+  mender-nats:
+    image: nats:2.7.4-scratch
+    command: -js
+    networks:
+      - mender
 
 networks:
-    mender: null
+  mender: {}

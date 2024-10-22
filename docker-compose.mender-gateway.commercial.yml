@@ -1,15 +1,16 @@
 services:
-
-    #
-    # mender-gateway
-    #
-    mender-gateway:
-        image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:mender-master
-        networks:
-            - mender
-        stdin_open: true
-        tty: true
-        privileged: true
-        environment:
-            - SERVER_URL=$SERVER_URL
-            - TENANT_TOKEN=$TENANT_TOKEN
+  #
+  # mender-gateway
+  #
+  mender-gateway:
+    image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:mender-master
+    networks:
+      - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      - SERVER_URL=$SERVER_URL
+      - TENANT_TOKEN=$TENANT_TOKEN
+networks:
+  mender: {}

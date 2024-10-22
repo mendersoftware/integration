@@ -1,10 +1,9 @@
 services:
-
-    mender-client:
-        # Needs to be built in mender client's test directory.
-        image: mendersoftware/mender-client-docker:${MENDER_CLIENT_TAG}
-        networks:
-            - mender
+  mender-client:
+    # Needs to be built in mender client's test directory.
+    image: mendersoftware/mender-client-docker:${MENDER_CLIENT_TAG}
+    networks:
+      - mender
 
 networks:
-    mender:
+  mender: {}

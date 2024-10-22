@@ -13,11 +13,10 @@
 #    limitations under the License.
 
 import logging
+import os
 import socket
 import subprocess
 import time
-
-from os import walk
 
 from testutils.common import wait_until_healthy
 
@@ -97,6 +96,10 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH
         + "/extra/recaptcha-testing/tenantadm-test-recaptcha-conf.yml",
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
+    ]
+
+    COMPAT_FILES = [
+        COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat/docker-compose.yml"
     ]
     COMPAT_FILES_ROOT = COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat"
     COMPAT_FILES_TEMPLATE = COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"
@@ -465,35 +468,21 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
 
 
 class DockerComposeCompatibilitySetup(DockerComposeNamespace):
-    def __init__(self, name, tag, enterprise=False):
+    def __init__(self, name, client_service, enterprise=False):
         self._enterprise = enterprise
-        extra_files = [self.COMPAT_FILES_TEMPLATE.format(tag=tag)]
+        extra_files = self.COMPAT_FILES
         if self._enterprise:
             extra_files += self.ENTERPRISE_FILES
+        self.client_service = client_service
         super().__init__(name, extra_files)
 
-    def client_services(self):
-        # In order for `ps --services` to return the services, the must have
-        # been created, but they don't need to be running.
-        self._docker_compose_cmd("up --no-start")
-        services = self._docker_compose_cmd("ps --services --all").split()
-        clients = []
-        for service in services:
-            if service.startswith("mender-client"):
-                clients.append(service)
-        return clients
-
     def setup(self):
-        compose_args = "up -d " + " ".join(
-            ["--scale %s=0" % service for service in self.client_services()]
-        )
+        compose_args = "up -d"
         self._docker_compose_cmd(compose_args)
         self._wait_for_containers()
 
     def populate_clients(self, name=None, tenant_token=""):
-        compose_cmd = "up -d " + " ".join(
-            ["--scale %s=1" % service for service in self.client_services()]
-        )
+        compose_cmd = f"up -d --scale {self.client_service}=1"
         if name is not None:
             compose_cmd += " --name '{name}'".format(name=name)
 
@@ -524,18 +513,24 @@ class DockerComposeCompatibilitySetup(DockerComposeNamespace):
 
     @staticmethod
     def get_versions():
-        compose_file_prefix = "docker-compose.compat-"
-        compose_file_suffix = ".yml"
-        files = []
-        for (dirpath, dirnames, filenames) in walk(
-            DockerComposeNamespace.COMPAT_FILES_ROOT
-        ):
-            for f in filenames:
-                f = f[len(compose_file_prefix) :]
-                f = f[: -len(compose_file_suffix)]
-                files.append(f)
-            break
-        return files
+        services = subprocess.check_output(
+            ["docker-compose", "config", "--services"],
+            env=dict(
+                {
+                    "COMPOSE_FILE": ":".join(
+                        DockerComposeNamespace.BASE_FILES
+                        + DockerComposeNamespace.COMPAT_FILES
+                    )
+                },
+                **os.environ,
+            ),
+        )
+        return sorted(
+            filter(
+                lambda s: s.startswith("mender-client"),
+                services.decode("UTF-8").strip().split("\n"),
+            )
+        )
 
 
 class DockerComposeMTLSSetup(DockerComposeNamespace):

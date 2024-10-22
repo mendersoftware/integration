@@ -44,8 +44,8 @@ COMPAT_MENDER_VERSIONS = factory.DockerComposeCompatibilitySetup.get_versions()
 
 @pytest.fixture(scope="function")
 def setup_os_compat():
-    def create(tag):
-        env = container_factory.get_compatibility_setup(tag=tag)
+    def create(client_service):
+        env = container_factory.get_compatibility_setup(client_service=client_service)
         env.setup()
 
         env.user = create_user(
@@ -67,8 +67,10 @@ def setup_os_compat():
 
 @pytest.fixture(scope="function")
 def setup_ent_compat():
-    def create(tag):
-        env = container_factory.get_compatibility_setup(tag=tag, enterprise=True)
+    def create(client_service):
+        env = container_factory.get_compatibility_setup(
+            client_service=client_service, enterprise=True
+        )
         env.setup()
 
         env.tenant = create_org(
@@ -197,34 +199,6 @@ def assert_successful_deployment(api_deployments, deployment_id, timeout=TIMEOUT
             time.sleep(1)
 
 
-class RebootDetectorThread(threading.Thread):
-    def __init__(self, host_ip, client, timeout, barrier, **kwargs):
-        super().__init__(**kwargs)
-        self._host_ip = host_ip
-        self._client = client
-        self._timeout = timeout
-        self._exception_q = queue.Queue(maxsize=1)
-        self.detector = self._client.get_reboot_detector(self._host_ip)
-        self.barrier = barrier
-
-    def run(self):
-        try:
-            # Setup the individual reboot-detectors
-            with self.detector as rd:
-                # Possibly move this to after the reboot-detector accepts connections (?)
-                self.barrier.wait()
-                rd.verify_reboot_performed(max_wait=self._timeout.total_seconds())
-        except Exception as e:
-            self._exception_q.put_nowait(e)
-
-    def join(self, timeout=None):
-        super().join(timeout)
-        if not self._exception_q.empty():
-            exc = self._exception_q.get_nowait()
-            if isinstance(exc, Exception):
-                raise exc
-
-
 class TestClientCompatibilityBase:
     """
     This class contains compatibility tests implementation for assessing
@@ -281,7 +255,7 @@ class TestClientCompatibilityBase:
 
         with NamedTemporaryFile(suffix="testcompat") as tf:
 
-            cmd = f"single-file-artifact-gen -n {path.basename(tf.name)} -t qemux86-64 -o {tf.name} -d /tmp/test_file_compat tests/test_compat.py -- --no-default-software-version --no-default-clears-provides"
+            cmd = f"single-file-artifact-gen -n {path.basename(tf.name)} -t qemux86-64 -t docker-client -o {tf.name} -d /tmp/test_file_compat tests/test_compat.py -- --no-default-software-version --no-default-clears-provides"
             subprocess.check_call(cmd, shell=True)
 
             rsp = api_deployments.call(
@@ -290,7 +264,7 @@ class TestClientCompatibilityBase:
                 files={
                     (
                         "artifact",
-                        (tf.name, open(tf.name, "rb"), "application/octet-stream",),
+                        (tf.name, open(tf.name, "rb"), "application/octet-stream"),
                     ),
                 },
             )
@@ -312,20 +286,29 @@ class TestClientCompatibilityBase:
             assert_successful_deployment(api_deployments, deployment_id)
 
 
+@pytest.mark.skipif(
+    isK8S(), reason="not relevant in a staging or production environment"
+)
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
-    def test_compatibility(self, setup_os_compat):
-        for version in COMPAT_MENDER_VERSIONS:
-            env = setup_os_compat(tag=version)
-            self.compatibility_test_impl(env)
-            env.teardown()
+    @pytest.mark.parametrize(
+        "version",
+        [pytest.param(version, id=version) for version in COMPAT_MENDER_VERSIONS],
+    )
+    def test_compatibility(self, setup_os_compat, version):
+        env = setup_os_compat(client_service=version)
+        self.compatibility_test_impl(env)
+        env.teardown()
 
 
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
 class TestClientCompatibilityEnterprise(TestClientCompatibilityBase):
-    def test_enterprise_compatibility(self, setup_ent_compat):
-        for version in COMPAT_MENDER_VERSIONS:
-            env = setup_ent_compat(tag=version)
-            self.compatibility_test_impl(env)
-            env.teardown()
+    @pytest.mark.parametrize(
+        "version",
+        [pytest.param(version, id=version) for version in COMPAT_MENDER_VERSIONS],
+    )
+    def test_enterprise_compatibility(self, setup_ent_compat, version):
+        env = setup_ent_compat(client_service=version)
+        self.compatibility_test_impl(env)
+        env.teardown()

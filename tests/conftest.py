@@ -119,7 +119,7 @@ def _extract_fs_from_image(request, client_compose_file, filename):
     )
 
     if not os.path.exists(os.path.join(THIS_DIR, filename)):
-        shutil.copy(os.path.join(d, filename), THIS_DIR)
+        shutil.move(os.path.join(d, filename), THIS_DIR)
 
     def cleanup():
         shutil.rmtree(d, ignore_errors=True)

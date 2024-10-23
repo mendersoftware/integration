@@ -56,30 +56,6 @@ def pytest_addoption(parser):
     )
 
 
-def _remove_ports(file, output_file):
-    with open(file, "r") as f, open(output_file, "w") as out:
-        file = yaml.safe_load(f)
-        for key in file["services"]:
-            services = file["services"][key]
-            if services.get("ports", False):
-                del services["ports"]
-        yaml.safe_dump(file, out, sort_keys=False)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def modify_compose_for_testing(request):
-    demo = "../docker-compose.demo.yml"
-    storage_proxy_demo = "../storage-proxy/docker-compose.storage-proxy.demo.yml"
-    # Output files after modifying for testing
-    testing = "../docker-compose.testing.yml"
-    storage_proxy_testing = "../storage-proxy/docker-compose.storage-proxy.testing.yml"
-
-    # Remove published ports from docker-compose-demo
-    _remove_ports(demo, testing)
-    # Remove published ports from docker-compose.storage-proxy.demo
-    _remove_ports(storage_proxy_demo, storage_proxy_testing)
-
-
 def _extract_fs_from_image(request, client_compose_file, filename):
     if os.path.exists(os.path.join(THIS_DIR, filename)):
         return filename
@@ -97,7 +73,8 @@ def _extract_fs_from_image(request, client_compose_file, filename):
                 "config",
                 "--images",
                 image_type,
-            ]
+            ],
+            env=os.environ,
         )
         .decode("UTF-8")
         .strip()

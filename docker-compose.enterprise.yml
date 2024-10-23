@@ -10,28 +10,28 @@ services:
             - mender
 
     mender-create-artifact-worker:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/create-artifact-worker:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/create-artifact-worker:${MENDER_SERVER_TAG}
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/deployments${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/deployments${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1
 
     mender-inventory:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/inventory${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/inventory${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
         environment:
             INVENTORY_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             INVENTORY_REDIS_LIMITS_EXPIRE_SEC: "1800"
 
     mender-iot-manager:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/iot-manager:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/iot-manager:${MENDER_SERVER_TAG}
 
     mender-workflows-server:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
 
     mender-workflows-worker:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-enterprise-worker}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/workflows${MENDER_LEGACY_IMAGE:+-enterprise-worker}:${MENDER_SERVER_TAG}
         environment:
             HAVE_AUDITLOGS: 1
             HAVE_DEVICECONFIG: 1
@@ -39,7 +39,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/tenantadm:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/tenantadm:${MENDER_SERVER_TAG}
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
             TENANTADM_ENABLE_SELF_SERVICE_SIGN_UP: 1
@@ -53,7 +53,7 @@ services:
 
     # configure the rest
     mender-device-auth:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/deviceauth${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/deviceauth${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
         environment:
             DEVICEAUTH_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             DEVICEAUTH_REDIS_LIMITS_EXPIRE_SEC: "3600"
@@ -62,7 +62,7 @@ services:
             DEVICEAUTH_ENABLE_AUDIT: 1
 
     mender-useradm:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/useradm${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/useradm${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
         environment:
             USERADM_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"
@@ -71,7 +71,7 @@ services:
             USERADM_ENABLE_AUDIT: 1
 
     mender-auditlogs:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/auditlogs:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/auditlogs:${MENDER_SERVER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -88,7 +88,7 @@ services:
             - ./config/traefik/traefik.enterprise.yaml:/etc/traefik/config/traefik.enterprise.yaml:ro
 
     mender-gui:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/gui:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/gui:${MENDER_SERVER_TAG}
         environment:
             HAVE_MULTITENANT: 1
             HAVE_ENTERPRISE: 1
@@ -97,17 +97,17 @@ services:
             HAVE_MONITOR: 1
 
     mender-deviceconfig:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/deviceconfig:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/deviceconfig:${MENDER_SERVER_TAG}
         environment:
             DEVICECONFIG_ENABLE_AUDIT: 1
 
     mender-deviceconnect:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/deviceconnect:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/deviceconnect:${MENDER_SERVER_TAG}
         environment:
             DEVICECONNECT_ENABLE_AUDIT: 1
 
     mender-generate-delta-worker:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/generate-delta-worker:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/generate-delta-worker:${MENDER_SERVER_TAG}
         extends:
             file: common.yml
             service: mender-base
@@ -121,7 +121,7 @@ services:
             - mender-nats
 
     mender-devicemonitor:
-        image: ${MENDER_ENTERPRISE_REGISTRY}/${MENDER_ENTERPRISE_REPOSITORY}/devicemonitor:${MENDER_TAG}
+        image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/devicemonitor:${MENDER_SERVER_TAG}
         command: server --automigrate
         extends:
             file: common.yml

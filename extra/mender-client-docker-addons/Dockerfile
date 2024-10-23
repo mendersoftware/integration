@@ -59,7 +59,7 @@ RUN mkdir -p /mender-install/var/lib/mender && echo device_type=generic-x86_64 >
 FROM ubuntu:24.04
 
 RUN mkdir -p /run/dbus && apt-get update && apt-get install -y \
-    liblzma5 dbus openssh-server liblmdb0 libarchive13 libboost-log1.83.0
+    liblzma5 dbus openssh-server sudo liblmdb0 libarchive13 libboost-log1.83.0
 
 # Set no password
 RUN sed -ie 's/^root:[^:]*:/root::/' /etc/shadow

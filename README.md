@@ -28,31 +28,7 @@ section in [the Mender documentation](https://docs.mender.io/).
 
 ## Running the demo server
 
-Start the Mender demo server with the following command:
-
-```
-./demo up
-```
-
-Access the Mender server on `https://localhost` using the user and password created by the script.
-Save the credentials for later re-use.
-
-For consequent runs of the script to create a new password, delete first all volumes with:
-
-```
-./demo down -v
-```
-
-### Virtual client
-
-The setup comes with a predefined client service (mender-client) that runs a
-qemu VM in a container. The client will connect to the backend by accessing
-`docker.mender.io` host (an alias assigned to the API gateway service). The
-client container will not run by default. You can manually launch it with:
-
-```
-docker-compose --client up
-```
+For evaluating the Mender Server, please see the [mender-server](https://github.com/mendersoftware/mender-server) repository.
 
 ## Contributing
 

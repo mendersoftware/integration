@@ -55,6 +55,8 @@ while [ -n "$1" ]; do
     shift
 done
 
+source ../.env
+
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
@@ -63,12 +65,6 @@ function get_requirements() {
     MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
     if [[ $? -ne 0 ]]; then
         echo "Failed to determine mender version using release_tool.py"
-        exit 1
-    fi
-
-    MENDER_ARTIFACT_BRANCH=$(../extra/release_tool.py --version-of mender-artifact)
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to determine mender-artifact version using release_tool.py"
         exit 1
     fi
 
@@ -86,7 +82,7 @@ function get_requirements() {
     #       As a workaround, we're installing the debian package (noble distribution).
     EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
     curl --fail \
-        "https://downloads.mender.io/repos/debian/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION:-3.11.2}-1%2bubuntu%2bnoble_amd64.deb" \
+        "https://downloads.mender.io/repos/debian/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
         -o "$EXTRACT_DIR/mender-artifact.deb"
     if [ $? -ne 0 ]; then
         echo "failed to download mender-artifact"

@@ -87,6 +87,7 @@ def run_main_assert_result(capsys, args, expect=None):
     return captured
 
 
+@pytest.mark.skip(reason="QA-673 - New release process for Mender Server")
 def test_version_of(capsys, is_master):
     if not is_master:
         pytest.skip("This test requires master tags in the docker-compose files.")
@@ -389,6 +390,7 @@ def test_version_of_with_in_integration_version(capsys):
     )
 
 
+@pytest.mark.skip(reason="QA-673 - New release process for Mender Server")
 def test_set_version_of(capsys, is_staging):
     try:
         shutil.copyfile(
@@ -922,6 +924,7 @@ def test_generate_release_notes(request, capsys):
         del os.environ["TEST_RELEASE_TOOL_LIST_OPEN_SOURCE_ONLY"]
 
 
+@pytest.mark.skip(reason="QA-673 - New release process for Mender Server")
 def test_generate_release_notes_from_master(request, capsys, is_master):
     if not is_master:
         pytest.skip("This test requires master tags in the docker-compose files.")

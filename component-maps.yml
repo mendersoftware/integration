@@ -797,4 +797,4 @@ docker_container:
     - mender-ci-workflows
     docker_image:
     - mender-ci-tools
-    release_component: true
+    release_component: false

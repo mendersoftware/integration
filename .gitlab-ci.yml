@@ -1,13 +1,19 @@
-
 include:
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-github-status-updates.yml'
+  - project: "Northern.tech/Mender/mendertesting"
+    file: ".gitlab-ci-github-status-updates.yml"
   - local: .gitlab-ci-staging-tests.yml
     rules:
       - if: $RUN_TESTS_STAGING == "true"
   - local: .gitlab-ci-default-pipeline.yml
     rules:
-      - if: $RUN_TESTS_STAGING != "true"
+      - if: $RUN_TESTS_STAGING == "true"
+        when: never
+      - if: $RUN_TESTS_FULL_INTEGRATION == "true"
+        when: never
+      - when: always
+  - local: .gitlab-ci-full-integration.yml
+    rules:
+      - if: $RUN_TESTS_FULL_INTEGRATION == "true"
 
 stages:
   - test
@@ -15,7 +21,28 @@ stages:
   - publish
 
 variables:
-  RUN_TESTS_STAGING: "false"
+  RUN_TESTS_STAGING:
+    description: "Run staging integration tests"
+    value: "false"
+  RUN_TESTS_FULL_INTEGRATION:
+    description: |
+      Run full integration tests.
+      NOTE: Can only run on protected branches
+    value: "false"
+    options:
+      - "false"
+      - "true"
+
+  DOCKER_VERSION:
+    description: "Docker version to use in jobs"
+    value: "27"
+
+  MENDER_SERVER_TAG:
+    description: "Mender Server Docker tag for running integration tests"
+    value: main
+  MENDER_CLIENT_TAG:
+    description: "Mender Client Docker tag for running integration tests"
+    value: mender-master
 
 .publish:versions:
   stage: publish
@@ -51,9 +78,14 @@ variables:
 
 publish:versions:tags:
   rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
     - if: $CI_COMMIT_TAG
   extends: .publish:versions
 
 publish:versions:manual:
   when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
   extends: .publish:versions

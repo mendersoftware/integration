@@ -1,0 +1,57 @@
+test:integration:
+  rules:
+    - if: $RUN_TESTS_FULL_INTEGRATION == "true"
+  image: docker:${DOCKER_VERSION}-dind
+  stage: test
+  tags:
+    - mender-qa-worker-integration-tests
+  timeout: 10h
+  variables:
+    PYTEST_XDIST_AUTO_NUM_WORKERS: "4"
+  before_script:
+    - |
+      docker login registry.mender.io \
+      --username $REGISTRY_MENDER_IO_USERNAME \
+      --password $REGISTRY_MENDER_IO_PASSWORD
+    - |
+      docker login docker.io \
+      --username $DOCKER_HUB_USERNAME \
+      --password $DOCKER_HUB_PASSWORD
+    - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
+    - apk add py3-virtualenv screen
+    - python -m virtualenv /.venv
+    - source /.venv/bin/activate
+    - pip3 install -r ./tests/requirements-python/python-requirements.txt
+    # Gitlab CI tends to set these DOCKER_ variables internally.
+    # dind also creates the unix socket at /var/run/docker.sock
+    - unset DOCKER_HOST DOCKER_TLS_VERIFY DOCKER_CERT_PATH
+    # Run dockerd and wait it to start
+    # https://github.com/krallin/tini#subreaping
+    - screen -d -m /usr/bin/env TINI_SUBREAPER=true dockerd-entrypoint.sh
+    - |
+      MAX_WAIT=300
+      while [ ${MAX_WAIT} -gt 0 ]; do
+        echo "[$(date +%F_%T)] MAX_WAIT=${MAX_WAIT}"; ps # Debug information
+        if docker version &>/dev/null; then
+          docker version # Verify that the dockerd is up and running
+          break
+        fi
+        MAX_WAIT=$((${MAX_WAIT} - 1))
+        sleep 1
+      done
+      if test $MAX_WAIT -lt 1; then
+        echo "Timeout waiting for docker to start"
+        exit 1;
+      fi
+  script:
+    - cd tests
+    - ./run.sh
+  artifacts:
+    expire_in: 2w
+    when: always
+    paths:
+      - tests/mender_test_logs
+      - tests/results_full_integration.xml
+      - tests/report_full_integration.html
+    reports:
+      junit: results_full_integration.xml

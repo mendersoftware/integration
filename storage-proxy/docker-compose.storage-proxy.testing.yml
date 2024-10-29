@@ -1,0 +1,3 @@
+services:
+  storage-proxy:
+    ports: !reset []

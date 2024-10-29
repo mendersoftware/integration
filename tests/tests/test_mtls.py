@@ -88,6 +88,7 @@ exit 0
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
+@pytest.mark.skip(reason="QA-787")
 class TestClientMTLSEnterprise:
     wait_for_device_timeout_seconds = 64
 

@@ -1,19 +1,17 @@
 services:
-
-    #
-    # mender-client
-    #
-    mender-client:
-        image: mendersoftware/mender-client-qemu:mender-master
-        networks:
-            - mender
-        stdin_open: true
-        tty: true
-        privileged: true
-        environment:
-            SERVER_URL:
-            TENANT_TOKEN:
-
+  #
+  # mender-client
+  #
+  mender-client:
+    image: mendersoftware/mender-client-qemu:${MENDER_CLIENT_TAG}
+    networks:
+      - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      SERVER_URL:
+      TENANT_TOKEN:
 
 networks:
-    mender:
+  mender: {}

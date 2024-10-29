@@ -291,7 +291,9 @@ class Deployments:
             headers=self.auth.get_auth_token(auth_create_new_user),
             verify=False,
         )
-        assert r.status_code == requests.status_codes.codes.ok
+        assert (
+            r.status_code == requests.status_codes.codes.ok
+        ), f"Unexpected status code {r.status_code} (expected: {requests.status_codes.codes.ok})"
         return r.json()
 
     def abort(self, deployment_id):

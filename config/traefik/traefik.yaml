@@ -253,7 +253,7 @@ http:
     gui:
       loadBalancer:
         servers:
-          - url: "http://mender-gui"
+          - url: http://mender-gui:{{ if (env "MENDER_LEGACY_IMAGE") }}80{{ else }}8090{{ end }}
 
     inventory:
       loadBalancer:

@@ -56,30 +56,6 @@ def pytest_addoption(parser):
     )
 
 
-def _remove_ports(file, output_file):
-    with open(file, "r") as f, open(output_file, "w") as out:
-        file = yaml.safe_load(f)
-        for key in file["services"]:
-            services = file["services"][key]
-            if services.get("ports", False):
-                del services["ports"]
-        yaml.safe_dump(file, out, sort_keys=False)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def modify_compose_for_testing(request):
-    demo = "../docker-compose.demo.yml"
-    storage_proxy_demo = "../storage-proxy/docker-compose.storage-proxy.demo.yml"
-    # Output files after modifying for testing
-    testing = "../docker-compose.testing.yml"
-    storage_proxy_testing = "../storage-proxy/docker-compose.storage-proxy.testing.yml"
-
-    # Remove published ports from docker-compose-demo
-    _remove_ports(demo, testing)
-    # Remove published ports from docker-compose.storage-proxy.demo
-    _remove_ports(storage_proxy_demo, storage_proxy_testing)
-
-
 def _extract_fs_from_image(request, client_compose_file, filename):
     if os.path.exists(os.path.join(THIS_DIR, filename)):
         return filename
@@ -88,9 +64,22 @@ def _extract_fs_from_image(request, client_compose_file, filename):
     if "gateway" in client_compose_file:
         image_type = "mender-gateway"
 
-    with open(client_compose_file) as f:
-        data = yaml.safe_load(f)
-        image = data["services"][image_type]["image"]
+    image = (
+        subprocess.check_output(
+            [
+                "docker-compose",
+                "-f",
+                client_compose_file,
+                "config",
+                "--images",
+                image_type,
+            ],
+            env=os.environ,
+        )
+        .decode("UTF-8")
+        .strip()
+        .split("\n")[0]
+    )
 
     subprocess.run(
         [
@@ -107,7 +96,7 @@ def _extract_fs_from_image(request, client_compose_file, filename):
     )
 
     if not os.path.exists(os.path.join(THIS_DIR, filename)):
-        shutil.copy(os.path.join(d, filename), THIS_DIR)
+        shutil.move(os.path.join(d, filename), THIS_DIR)
 
     def cleanup():
         shutil.rmtree(d, ignore_errors=True)
@@ -400,11 +389,14 @@ def pytest_exception_interact(node, call, report):
                 "mender-monitor",
                 "mender-gateway",
                 "mender-client",
+                "mender",
             ]:
                 try:
                     logger.info("Printing %s systemd log, if possible:" % service)
                     run_remote_command(
-                        devices, "journalctl --unit %s || true" % service
+                        devices,
+                        "journalctl --unit=%s --output=cat --no-tail --no-pager || true"
+                        % service,
                     )
                 except:
                     logger.info("Not able to print %s systemd log" % service)

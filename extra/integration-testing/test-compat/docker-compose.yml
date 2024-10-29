@@ -1,0 +1,83 @@
+services:
+  mender-client-2-0:
+    image: mendersoftware/mender-client-docker:2.0
+    scale: 0
+    networks:
+      - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    volumes:
+      - ./cert/cert.crt:/etc/mender/server.crt
+    configs:
+      - source: client_json
+        target: /etc/mender/mender.conf
+
+  mender-client-2-1:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.1
+  mender-client-2-2:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.2
+  mender-client-2-3:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.3
+  mender-client-2-4:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.4
+  mender-client-2-5:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.5
+  mender-client-2-6:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:2.6
+  mender-client-3-0:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:3.0
+  mender-client-3-1:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:3.1
+  mender-client-3-2:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.2
+  mender-client-3-3:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.3
+  mender-client-3-4:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.4
+  mender-client-3-5:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.5
+  mender-client-3-6:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.6
+  mender-client-3-7:
+    extends:
+      service: mender-client-2-0
+    image: mendersoftware/mender-client-docker:mender-3.7
+
+configs:
+  client_json:
+    content: |
+      {
+        "InventoryPollIntervalSeconds": 5,
+        "RetryPollIntervalSeconds": 30,
+        "ServerURL": "https://docker.mender.io/",
+        "TenantToken": "${TENANT_TOKEN:-}",
+        "UpdatePollIntervalSeconds": 5,
+        "ServerCertificate": "/etc/mender/server.crt"
+      }

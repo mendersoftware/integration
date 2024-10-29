@@ -251,6 +251,7 @@ def test_version_of(capsys, is_master):
     )
 
 
+@pytest.mark.skip(reason="QA-673 - New release process for Mender Server")
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master
     run_main_assert_result(

@@ -700,9 +700,14 @@ def do_version_of(args):
         version_type = "git"
     else:
         version_type = args.version_type
-    assert version_type in ["docker", "git"], (
-        "%s is not a valid name type for --version-of!" % version_type
-    )
+
+    if args.in_integration_version is None:
+        # Already checked in main()
+        assert version_type == "git"
+    else:
+        assert version_type in ["docker", "git"], (
+            "%s is not a valid name type for --version-of!" % version_type
+        )
 
     comp = None
     try:
@@ -1953,13 +1958,9 @@ def set_component_version_to(dir, component, tag):
         old.close()
         os.rename(filename + ".tmp", filename)
 
-    compose_files_docker = docker_compose_files_list(dir, "docker")
     git_files = docker_compose_files_list(dir, "git")
 
-    if component.type == "docker_image":
-        for filename in compose_files_docker:
-            _replace_version_in_file(filename, component.docker_image(), tag)
-    elif component.type == "git":
+    if component.type == "git":
         for filename in git_files:
             _replace_version_in_file(filename, component.git(), tag)
     else:
@@ -2887,70 +2888,9 @@ def do_release(release_state_file, args):
 def do_set_version_to(args):
     """Handles --set-version-of argument."""
 
-    if args.version is None:
-        print("--set-version-of requires --version")
-        sys.exit(1)
-
-    if args.version_type is None:
-        version_type = "all"
-    else:
-        version_type = args.version_type
-    assert version_type in ["all", "docker", "git"], (
-        "%s is not a valid name type for --set-version-of!" % version_type
-    )
-
-    if version_type == "all":
-        component = Component.get_component_of_any_type(args.set_version_of)
-        for assoc in component.associated_components_of_type("git"):
-            set_component_version_to(integration_dir(), assoc, args.version)
-        for assoc in component.associated_components_of_type("docker_image"):
-            set_component_version_to(integration_dir(), assoc, args.version)
-            # Update extra files used in integration tests
-            set_component_version_to(
-                os.path.join(integration_dir(), "backend-tests", "docker"),
-                assoc,
-                args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "mtls"), assoc, args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "failover-testing"),
-                assoc,
-                args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "mender-gateway"),
-                assoc,
-                args.version,
-            )
-
-    elif version_type == "git":
-        component = Component.get_component_of_type("git", args.set_version_of)
-        set_component_version_to(integration_dir(), component, args.version)
-
-    elif version_type == "docker":
-        component = Component.get_component_of_type("docker_image", args.set_version_of)
-        set_component_version_to(integration_dir(), component, args.version)
-        # Update extra files used in integration tests
-        set_component_version_to(
-            os.path.join(integration_dir(), "backend-tests", "docker"),
-            component,
-            args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "mtls"), component, args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "failover-testing"),
-            component,
-            args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "mender-gateway"),
-            component,
-            args.version,
-        )
+    # We only modify the git files
+    component = Component.get_component_of_type("git", args.set_version_of)
+    set_component_version_to(integration_dir(), component, args.version)
 
 
 def is_marked_as_releaseable_in_integration_version(
@@ -3224,11 +3164,10 @@ def main():
         "--version-type",
         dest="version_type",
         metavar="git|docker|all",
+        default="git",
         help="Used together with --version-of and --set-version-of to specify "
         "the type of version to query. "
-        'For --version-of, the default is "git", for --set-version-of, the '
-        'default is "all". '
-        '"all" is only valid with --set-version-of.',
+        'Only "git" is supported, the other values are only allowed in combination with --in-integration-version.',
     )
     parser.add_argument(
         "-i",
@@ -3375,6 +3314,10 @@ def main():
     if operations > 1:
         print("--version-of, --set-version-of and --release are mutually exclusive!")
         sys.exit(1)
+
+    # Check legacy options.
+    if args.version_type != "git" and not args.in_integration_version:
+        raise Exception('Only "--version-type git" is supported!.')
 
     if args.simulate_push:
         global PUSH

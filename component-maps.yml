@@ -44,28 +44,28 @@ git:
     - generate-delta-worker
     docker_container:
     - mender-generate-delta-worker
-    release_component: true
+    release_component: false
 
   iot-manager:
     docker_image:
     - iot-manager
     docker_container:
     - mender-iot-manager
-    release_component: true
+    release_component: false
 
   deployments:
     docker_image:
     - deployments
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deployments-enterprise:
     docker_image:
     - deployments-enterprise
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deviceadm:
     docker_image: []
@@ -77,21 +77,21 @@ git:
     - deviceauth
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   deviceauth-enterprise:
     docker_image:
     - deviceauth-enterprise
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   gui:
     docker_image:
     - gui
     docker_container:
     - mender-gui
-    release_component: true
+    release_component: false
 
   integration:
     docker_image:
@@ -106,14 +106,14 @@ git:
     - inventory
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   inventory-enterprise:
     docker_image:
     - inventory-enterprise
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   mender:
     docker_image:
@@ -171,21 +171,21 @@ git:
     - tenantadm
     docker_container:
     - mender-tenantadm
-    release_component: true
+    release_component: false
 
   useradm:
     docker_image:
     - useradm
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   useradm-enterprise:
     docker_image:
     - useradm-enterprise
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   workflows:
     docker_image:
@@ -194,7 +194,7 @@ git:
     docker_container:
     - mender-workflows-server
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   workflows-enterprise:
     docker_image:
@@ -203,21 +203,21 @@ git:
     docker_container:
     - mender-workflows-server
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   create-artifact-worker:
     docker_image:
     - create-artifact-worker
     docker_container:
     - mender-create-artifact-worker
-    release_component: true
+    release_component: false
 
   auditlogs:
     docker_image:
     - auditlogs
     docker_container:
     - mender-auditlogs
-    release_component: true
+    release_component: false
 
   mtls-ambassador:
     docker_image:
@@ -231,14 +231,14 @@ git:
     - deviceconnect
     docker_container:
     - mender-deviceconnect
-    release_component: true
+    release_component: false
 
   devicemonitor:
     docker_image:
     - devicemonitor
     docker_container:
     - mender-devicemonitor
-    release_component: true
+    release_component: false
 
   mender-connect:
     docker_image:
@@ -280,7 +280,7 @@ git:
     - deviceconfig
     docker_container:
     - mender-deviceconfig
-    release_component: true
+    release_component: false
 
   monitor-client:
     docker_image:
@@ -325,63 +325,63 @@ docker_image:
     - iot-manager
     docker_container:
     - mender-iot-manager
-    release_component: true
+    release_component: false
 
   deployments:
     git:
     - deployments
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deployments-enterprise:
     git:
     - deployments-enterprise
     docker_container:
     - mender-deployments
-    release_component: true
+    release_component: false
 
   deviceauth:
     git:
     - deviceauth
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   deviceauth-enterprise:
     git:
     - deviceauth-enterprise
     docker_container:
     - mender-device-auth
-    release_component: true
+    release_component: false
 
   generate-delta-worker:
     git:
     - generate-delta-worker
     docker_container:
     - mender-generate-delta-worker
-    release_component: true
+    release_component: false
 
   gui:
     git:
     - gui
     docker_container:
     - mender-gui
-    release_component: true
+    release_component: false
 
   inventory:
     git:
     - inventory
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   inventory-enterprise:
     git:
     - inventory-enterprise
     docker_container:
     - mender-inventory
-    release_component: true
+    release_component: false
 
   mender-client-docker:
     git:
@@ -470,63 +470,63 @@ docker_image:
     - tenantadm
     docker_container:
     - mender-tenantadm
-    release_component: true
+    release_component: false
 
   useradm:
     git:
     - useradm
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   useradm-enterprise:
     git:
     - useradm-enterprise
     docker_container:
     - mender-useradm
-    release_component: true
+    release_component: false
 
   workflows:
     git:
     - workflows
     docker_container:
     - mender-workflows-server
-    release_component: true
+    release_component: false
 
   workflows-enterprise:
     git:
     - workflows-enterprise
     docker_container:
     - mender-workflows-server
-    release_component: true
+    release_component: false
 
   workflows-worker:
     git:
     - workflows
     docker_container:
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   workflows-enterprise-worker:
     git:
     - workflows-enterprise
     docker_container:
     - mender-workflows-worker
-    release_component: true
+    release_component: false
 
   create-artifact-worker:
     git:
     - create-artifact-worker
     docker_container:
     - mender-create-artifact-worker
-    release_component: true
+    release_component: false
 
   auditlogs:
     git:
     - auditlogs
     docker_container:
     - mender-auditlogs
-    release_component: true
+    release_component: false
 
   mtls-ambassador:
     git:
@@ -540,21 +540,21 @@ docker_image:
     - deviceconnect
     docker_container:
     - mender-deviceconnect
-    release_component: true
+    release_component: false
 
   devicemonitor:
     git:
     - devicemonitor
     docker_container:
     - mender-devicemonitor
-    release_component: true
+    release_component: false
 
   deviceconfig:
     git:
     - deviceconfig
     docker_container:
     - mender-deviceconfig
-    release_component: true
+    release_component: false
 
   mender-monitor-qemu-commercial:
     git:
@@ -605,7 +605,7 @@ docker_container:
     - iot-manager
     docker_image:
     - iot-manager
-    release_component: true
+    release_component: false
 
   mender-deployments:
     git:
@@ -614,7 +614,7 @@ docker_container:
     docker_image:
     - deployments
     - deployments-enterprise
-    release_component: true
+    release_component: false
 
   mender-device-auth:
     git:
@@ -623,21 +623,21 @@ docker_container:
     docker_image:
     - deviceauth
     - deviceauth-enterprise
-    release_component: true
+    release_component: false
 
   mender-generate-delta-worker:
     git:
     - generate-delta-worker
     docker_image:
     - generate-delta-worker
-    release_component: true
+    release_component: false
 
   mender-gui:
     git:
     - gui
     docker_image:
     - gui
-    release_component: true
+    release_component: false
 
   mender-inventory:
     git:
@@ -646,7 +646,7 @@ docker_container:
     docker_image:
     - inventory
     - inventory-enterprise
-    release_component: true
+    release_component: false
 
   mender-client:
     git:
@@ -699,7 +699,7 @@ docker_container:
     - tenantadm
     docker_image:
     - tenantadm
-    release_component: true
+    release_component: false
 
   mender-useradm:
     git:
@@ -708,7 +708,7 @@ docker_container:
     docker_image:
     - useradm
     - useradm-enterprise
-    release_component: true
+    release_component: false
 
   mender-workflows-server:
     git:
@@ -717,7 +717,7 @@ docker_container:
     docker_image:
     - workflows
     - workflows-enterprise
-    release_component: true
+    release_component: false
 
   mender-workflows-worker:
     git:
@@ -726,21 +726,21 @@ docker_container:
     docker_image:
     - workflows-worker
     - workflows-enterprise-worker
-    release_component: true
+    release_component: false
 
   mender-create-artifact-worker:
     git:
     - create-artifact-worker
     docker_image:
     - create-artifact-worker
-    release_component: true
+    release_component: false
 
   mender-auditlogs:
     git:
     - auditlogs
     docker_image:
     - auditlogs
-    release_component: true
+    release_component: false
 
   mtls-ambassador:
     git:
@@ -754,21 +754,21 @@ docker_container:
     - deviceconnect
     docker_image:
     - deviceconnect
-    release_component: true
+    release_component: false
 
   mender-devicemonitor:
     git:
     - devicemonitor
     docker_image:
     - devicemonitor
-    release_component: true
+    release_component: false
 
   mender-deviceconfig:
     git:
     - deviceconfig
     docker_image:
     - deviceconfig
-    release_component: true
+    release_component: false
 
   mender-reporting:
     git:
@@ -797,4 +797,4 @@ docker_container:
     - mender-ci-workflows
     docker_image:
     - mender-ci-tools
-    release_component: true
+    release_component: false

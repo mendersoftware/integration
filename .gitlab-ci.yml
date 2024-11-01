@@ -24,6 +24,7 @@ variables:
   RUN_TESTS_STAGING:
     description: "Run staging integration tests"
     value: "false"
+
   RUN_TESTS_FULL_INTEGRATION:
     description: |
       Run full integration tests.

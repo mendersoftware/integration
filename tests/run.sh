@@ -163,7 +163,9 @@ if [ -n "$K8S" ]; then
     export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
 fi
-
+if test ${CI_NODE_TOTAL:-1} -gt 1; then
+  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$(python .gitlab-ci-parallel.py \"$@\")'"
+fi
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \

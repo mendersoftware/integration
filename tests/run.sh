@@ -34,7 +34,6 @@ usage() {
     echo "Recognized Environment Variables:"
     echo
     echo "TESTS_IN_PARALLEL_INTEGRATION        The number of parallel jobs for pytest-xdist"
-    echo "SPECIFIC_INTEGRATION_TEST            The ability to pass <testname-regexp> to pytest -k"
     exit 0
 }
 
@@ -155,21 +154,16 @@ if ! python3 -m pip show pytest-html >/dev/null; then
     echo "WARNING: install pytest-html for html results report"
 fi
 
-if [[ -n $SPECIFIC_INTEGRATION_TEST ]]; then
-    SPECIFIC_INTEGRATION_TEST_FLAG="-k"
-fi
-
 if [ -n "$K8S" ]; then
     export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
 fi
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
-  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$(python .gitlab-ci-parallel.py \"$@\")'"
+  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$(python ci-parallel-pytest-plugin.py $@)'"
 fi
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \
-    "$@" \
-    $SPECIFIC_INTEGRATION_TEST_FLAG ${SPECIFIC_INTEGRATION_TEST:+"$SPECIFIC_INTEGRATION_TEST"}
+    "$@"

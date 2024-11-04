@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==43.0.1
+cryptography==43.0.3
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
@@ -68,7 +68,7 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pymongo==4.10.0
+pymongo==4.10.1
     # via -r python-requirements.in
 pytest==8.3.3
     # via
@@ -109,7 +109,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==10.12.0
+stripe==11.2.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest

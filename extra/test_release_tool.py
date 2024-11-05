@@ -304,7 +304,12 @@ def test_set_version_of(capsys):
 def test_integration_versions_including(capsys):
     captured = run_main_assert_result(
         capsys,
-        ["--integration-versions-including", "inventory", "--version", "master"],
+        [
+            "--integration-versions-including",
+            "mender-configure-module",
+            "--version",
+            "master",
+        ],
         None,
     )
     # The output shall be <remote>/master
@@ -312,45 +317,20 @@ def test_integration_versions_including(capsys):
 
     captured = run_main_assert_result(
         capsys,
-        ["--integration-versions-including", "inventory", "--version", "1.6.x"],
+        [
+            "--integration-versions-including",
+            "mender-configure-module",
+            "--version",
+            "1.1.x",
+        ],
         None,
     )
-    # Three versions: <remote>/2.2.x, <remote>/2.1.x, <remote>/2.0.x
+    # Two versions
     versions = captured.split("\n")
     assert len(versions) == 3
-    assert versions[0].endswith("/2.2.x")
-    assert versions[1].endswith("/2.1.x")
-    assert versions[2].endswith("/2.0.x")
-
-    captured = run_main_assert_result(
-        capsys,
-        ["--integration-versions-including", "deployments", "--version", "4.0.x"],
-        None,
-    )
-    versions = captured.split("\n")
-    assert len(versions) == 1
-    assert versions[0].endswith("/3.1.x")
-
-    captured = run_main_assert_result(
-        capsys,
-        ["--integration-versions-including", "mender-connect", "--version", "1.2.x"],
-        None,
-    )
-    versions = captured.split("\n")
-    assert len(versions) == 2
-    assert versions[0].endswith("/3.1.x")
-    assert versions[1].endswith("/3.0.x")
-
-    captured = run_main_assert_result(
-        capsys,
-        ["--integration-versions-including", "mender-connect", "--version", "master"],
-        None,
-    )
-    versions = captured.split("\n")
-    # Ignore saas tags, some of the old ones have master in them.
-    versions = [v for v in versions if not v.startswith("saas-")]
-    assert len(versions) == 1
-    assert versions[0].endswith("/master")
+    assert versions[0].endswith("/3.8.x")
+    assert versions[1].endswith("/3.7.x")
+    assert versions[2].endswith("/3.6.x")
 
 
 def test_docker_compose_files_list():

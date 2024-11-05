@@ -8,22 +8,22 @@ services:
     # Active repositories
     #
     mender:
-        image: mendersoftware/mender:master
+        image: mendersoftware/mender:4.1.x
 
     mender-connect:
-        image: mendersoftware/mender-connect:master
+        image: mendersoftware/mender-connect:2.3.x
 
     mender-setup:
-        image: mendersoftware/mender-setup:master
+        image: mendersoftware/mender-setup:1.0.x
 
     mender-snapshot:
-        image: mendersoftware/mender-snapshot:master
+        image: mendersoftware/mender-snapshot:1.0.x
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:master
+        image: mendersoftware/mender-configure-module:1.1.x
 
     monitor-client:
-        image: mendersoftware/monitor-client:master
+        image: mendersoftware/monitor-client:1.4.x
 
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

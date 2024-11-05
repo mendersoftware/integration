@@ -8,7 +8,7 @@ services:
     # Active repositories
     #
     mender-gateway:
-        image: registry.mender.io/mendersoftware/mender-gateway:master
+        image: registry.mender.io/mendersoftware/mender-gateway:2.0.x
 
     #
     # DEPRECATED: these are not released with release_tool anymore

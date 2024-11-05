@@ -5,7 +5,31 @@
 services:
 
     #
-    # backend open source services
+    # Active repositories
+    #
+    mender:
+        image: mendersoftware/mender:master
+
+    mender-connect:
+        image: mendersoftware/mender-connect:master
+
+    mender-setup:
+        image: mendersoftware/mender-setup:master
+
+    mender-snapshot:
+        image: mendersoftware/mender-snapshot:master
+
+    mender-configure-module:
+        image: mendersoftware/mender-configure-module:master
+
+    monitor-client:
+        image: mendersoftware/monitor-client:master
+
+    mender-ci-workflows:
+        image: mendersoftware/mender-ci-workflows:master
+
+    #
+    # DEPRECATED: these are not released with release_tool anymore
     #
     mender-iot-manager:
         image: mendersoftware/iot-manager:master
@@ -42,27 +66,3 @@ services:
 
     mender-create-artifact-worker:
         image: mendersoftware/create-artifact-worker:master
-
-    #
-    # client repositories - container and image names are placeholders
-    #
-    mender:
-        image: mendersoftware/mender:master
-
-    mender-connect:
-        image: mendersoftware/mender-connect:master
-
-    mender-setup:
-        image: mendersoftware/mender-setup:master
-
-    mender-snapshot:
-        image: mendersoftware/mender-snapshot:master
-
-    mender-configure-module:
-        image: mendersoftware/mender-configure-module:master
-
-    monitor-client:
-        image: mendersoftware/monitor-client:master
-
-    mender-ci-workflows:
-        image: mendersoftware/mender-ci-workflows:master

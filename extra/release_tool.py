@@ -700,9 +700,14 @@ def do_version_of(args):
         version_type = "git"
     else:
         version_type = args.version_type
-    assert version_type in ["docker", "git"], (
-        "%s is not a valid name type for --version-of!" % version_type
-    )
+
+    if args.in_integration_version is None:
+        # Already checked in main()
+        assert version_type == "git"
+    else:
+        assert version_type in ["docker", "git"], (
+            "%s is not a valid name type for --version-of!" % version_type
+        )
 
     comp = None
     try:
@@ -1953,13 +1958,9 @@ def set_component_version_to(dir, component, tag):
         old.close()
         os.rename(filename + ".tmp", filename)
 
-    compose_files_docker = docker_compose_files_list(dir, "docker")
     git_files = docker_compose_files_list(dir, "git")
 
-    if component.type == "docker_image":
-        for filename in compose_files_docker:
-            _replace_version_in_file(filename, component.docker_image(), tag)
-    elif component.type == "git":
+    if component.type == "git":
         for filename in git_files:
             _replace_version_in_file(filename, component.git(), tag)
     else:
@@ -2887,70 +2888,9 @@ def do_release(release_state_file, args):
 def do_set_version_to(args):
     """Handles --set-version-of argument."""
 
-    if args.version is None:
-        print("--set-version-of requires --version")
-        sys.exit(1)
-
-    if args.version_type is None:
-        version_type = "all"
-    else:
-        version_type = args.version_type
-    assert version_type in ["all", "docker", "git"], (
-        "%s is not a valid name type for --set-version-of!" % version_type
-    )
-
-    if version_type == "all":
-        component = Component.get_component_of_any_type(args.set_version_of)
-        for assoc in component.associated_components_of_type("git"):
-            set_component_version_to(integration_dir(), assoc, args.version)
-        for assoc in component.associated_components_of_type("docker_image"):
-            set_component_version_to(integration_dir(), assoc, args.version)
-            # Update extra files used in integration tests
-            set_component_version_to(
-                os.path.join(integration_dir(), "backend-tests", "docker"),
-                assoc,
-                args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "mtls"), assoc, args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "failover-testing"),
-                assoc,
-                args.version,
-            )
-            set_component_version_to(
-                os.path.join(integration_dir(), "extra", "mender-gateway"),
-                assoc,
-                args.version,
-            )
-
-    elif version_type == "git":
-        component = Component.get_component_of_type("git", args.set_version_of)
-        set_component_version_to(integration_dir(), component, args.version)
-
-    elif version_type == "docker":
-        component = Component.get_component_of_type("docker_image", args.set_version_of)
-        set_component_version_to(integration_dir(), component, args.version)
-        # Update extra files used in integration tests
-        set_component_version_to(
-            os.path.join(integration_dir(), "backend-tests", "docker"),
-            component,
-            args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "mtls"), component, args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "failover-testing"),
-            component,
-            args.version,
-        )
-        set_component_version_to(
-            os.path.join(integration_dir(), "extra", "mender-gateway"),
-            component,
-            args.version,
-        )
+    # We only modify the git files
+    component = Component.get_component_of_type("git", args.set_version_of)
+    set_component_version_to(integration_dir(), component, args.version)
 
 
 def is_marked_as_releaseable_in_integration_version(
@@ -3115,135 +3055,6 @@ def do_map_name(args):
             print(result.name)
 
 
-def get_next_hosted_release_version(state):
-    """Return next tag like "saas-vYYYY.MM.DD" (saas-vYEAR.MONTH.DAY)
-
-    If no tag for the current month exists, returns saas-vYYYY.MM.DD
-    If a tag like saas-vYYYY.MM.DD, returns saas-vYYYY.MM.DD.02
-    If a tag like saas-vYYYY.MM.DD.NN exists, returns saas-vYYYY.MM.DD.(NN+1)
-    """
-    today = datetime.datetime.today()
-    version = "saas-v{y}.{m:02d}.{d:02d}".format(
-        y=today.year, m=today.month, d=today.day
-    )
-
-    highest = -1
-    for repo in Component.get_components_of_type("git"):
-        tags = execute_git(state, repo.git(), ["tag"], capture=True)
-        for tag in tags.split("\n"):
-            match = re.match(r"^%s(?:\.([0-9]{2}))?$" % re.escape(version), tag)
-            if match is not None:
-                if match.group(1) is None:
-                    highest = 1
-                else:
-                    if int(match.group(1)) > highest:
-                        highest = int(match.group(1))
-
-    if highest != -1:
-        version += ".{a:02d}".format(a=highest + 1)
-
-    return version
-
-
-def do_hosted_release(version=None):
-    """Carry out the full release flow:
-
-    * Figure out next tag
-    * Create tags in all repos
-    * Update yaml files in integration
-    """
-
-    # Only allowed to be run from stating branch
-    ref = execute_git(
-        None,
-        integration_dir(),
-        ["symbolic-ref", "--short", "HEAD"],
-        capture=True,
-        capture_stderr=True,
-    )
-    if ref != "staging":
-        print(
-            "do_hosted_release can only be called from staging branch; current branch is %s"
-            % ref
-        )
-        sys.exit(2)
-
-    # Recreate state dict for the function helpers
-    state = {}
-    state["integration"] = {}
-    state["integration"]["following"] = "staging"
-
-    reply = ask("Which directory contains all the Git repositories? ")
-    reply = re.sub("~", os.environ["HOME"], reply)
-    state["repo_dir"] = reply
-
-    # Recommend to fetch all tags
-    input = ask(
-        "Do you want to fetch all the latest tags and branches in all repositories (will not change checked-out branch)? "
-    )
-    if input.startswith("Y") or input.startswith("y"):
-        refresh_repos(state)
-
-    # Figure out next version
-    if version is None:
-        version = get_next_hosted_release_version(state)
-        input = ask("Autogenerated version is %s Continue? " % version)
-        if not (input.startswith("Y") or input.startswith("y")):
-            sys.exit(2)
-    else:
-        print("Tagging version " + version)
-    state["version"] = version
-
-    # Client components will not change
-    non_backend_versions = {}
-    for non_backend_comp in Component.get_components_of_type(
-        "git", only_independent_component=True
-    ):
-        docker_component = non_backend_comp.associated_components_of_type(
-            "docker_image"
-        )[0]
-
-        non_backend_versions[non_backend_comp.git()] = version_of(
-            integration_dir(), docker_component
-        )
-
-    # Figure out Git sha for the tags
-    tags = {}
-    tags["image_tag"] = version
-    for repo in Component.get_components_of_type("git"):
-        tags[repo.git()] = {}
-
-        if repo.git() in non_backend_versions.keys():
-            tags[repo.git()]["already_released"] = True
-            tags[repo.git()]["build_tag"] = non_backend_versions[repo.git()]
-        else:
-            tags[repo.git()]["already_released"] = False
-            tags[repo.git()]["build_tag"] = version
-
-            remote = find_upstream_remote(state, repo.git())
-            sha = execute_git(
-                state,
-                repo.git(),
-                ["rev-parse", "--short", remote + "/staging"],
-                capture=True,
-            )
-            tags[repo.git()]["sha"] = sha
-
-    # Tag and push, same method as for regular releases
-    retval = tag_and_push(state, None, tags, True)
-    if retval is None:
-        return
-
-    # Recommend to merge into staging branch
-    reply = ask('Merge "integration" release tag into version branch (recommended)? ')
-    if reply.startswith("Y") or reply.startswith("y"):
-        merge_release_tag(
-            state, tags, Component.get_component_of_type("git", "integration"),
-        )
-
-    print("Tags for release %s successfully created" % version)
-
-
 def is_repo_on_known_branch(path):
     """Check if we're on the most recent commit in a well known branch, 'master' or
     a version branch."""
@@ -3353,11 +3164,10 @@ def main():
         "--version-type",
         dest="version_type",
         metavar="git|docker|all",
+        default="git",
         help="Used together with --version-of and --set-version-of to specify "
         "the type of version to query. "
-        'For --version-of, the default is "git", for --set-version-of, the '
-        'default is "all". '
-        '"all" is only valid with --set-version-of.',
+        'Only "git" is supported, the other values are only allowed in combination with --in-integration-version.',
     )
     parser.add_argument(
         "-i",
@@ -3473,12 +3283,6 @@ def main():
         help="State file for releases, default is release-state.yml",
     )
     parser.add_argument(
-        "--hosted-release",
-        action="store_true",
-        help="Tag versions from staging for production release. "
-        + "If --version is not suplied, the tags will be 'saas-v<YYYY>.<MM>.<DD>'",
-    )
-    parser.add_argument(
         "--simulate-push", action="store_true", help="Simulate (don't do) pushes"
     )
     parser.add_argument(
@@ -3511,14 +3315,9 @@ def main():
         print("--version-of, --set-version-of and --release are mutually exclusive!")
         sys.exit(1)
 
-    # Check conflicting options.
-    operations = 0
-    for operation in [args.release, args.hosted_release]:
-        if operation:
-            operations = operations + 1
-    if operations > 1:
-        print("--release and --hosted-release are mutually exclusive!")
-        sys.exit(1)
+    # Check legacy options.
+    if args.version_type != "git" and not args.in_integration_version:
+        raise Exception('Only "--version-type git" is supported!.')
 
     if args.simulate_push:
         global PUSH
@@ -3549,8 +3348,6 @@ def main():
         if args.release_state_file:
             release_state_file = args.release_state_file
         do_release(release_state_file, args)
-    elif args.hosted_release:
-        do_hosted_release(args.version)
     elif args.select_test_suite:
         do_select_test_suite()
     elif args.generate_release_notes:

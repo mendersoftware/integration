@@ -344,6 +344,51 @@ def pytest_exception_interact(node, call, report):
             ]
             if len(dev_candidates) >= 1:
                 devices = dev_candidates
+            if hasattr(env, "docker_compose_files"):
+                logger.info("dumping database...")
+                try:
+                    subprocess.run(
+                        [
+                            "docker",
+                            "compose",
+                            "-p",
+                            env.name,
+                            "exec",
+                            "mender-mongo",
+                            "mongodump",
+                            f"--archive=/{node.name}.bson",
+                        ],
+                        env=dict(
+                            **os.environ,
+                            COMPOSE_FILE=":".join(env.docker_compose_files),
+                        ),
+                        check=True,
+                        capture_output=True,
+                    )
+                except subprocess.CalledProcessError as ex:
+                    logger.warning("failed to dump database: %s" % ex)
+                    logger.warning("output follows: %s" % ex.output)
+                else:
+                    subprocess.run(
+                        [
+                            "docker",
+                            "compose",
+                            "-p",
+                            env.name,
+                            "cp",
+                            f"mender-mongo:/{node.name}.bson",
+                            f"{log.TEST_LOGS_PATH}/{node.name}.bson",
+                        ],
+                        env=dict(
+                            **os.environ,
+                            COMPOSE_FILE=":".join(env.docker_compose_files),
+                        ),
+                        check=True,
+                        capture_output=True,
+                    )
+                    logger.info(
+                        f"database snapshot captured; import using: mongorestore --archive={log.TEST_LOGS_PATH}/{node.name}.bson"
+                    )
 
         # If we have devices (or groups) try to print deployment and systemd logs
         if devices is []:

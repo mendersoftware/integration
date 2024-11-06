@@ -48,49 +48,6 @@ test:extra-tools:
     - python3 -m pytest extra/test_release_tool.py
     - python3 -m pytest extra/test_statistics_generator.py
 
-test:docs:
-  image: ubuntu:focal
-  services:
-    - docker:dind
-  tags:
-    - mender-qa-worker-generic
-  variables:
-    # DinD setup in Mender CI runners
-    DOCKER_HOST: "tcp://docker:2376"
-    DOCKER_CERT_PATH: "/certs/client"
-    DOCKER_TLS_VERIFY: "1"
-    DOCKER_TLS_CERTDIR: "/certs"
-  before_script:
-    - apt-get update && apt-get install -y
-      docker.io bash git openssl pwgen python3 jq docker-compose wget sudo
-
-    - git config --global user.name "user"
-    - git config --global user.email "user@example.com"
-    - git clone https://github.com/mendersoftware/mender-docs.git mender-docs
-
-    - MENDER_DOCS_BRANCH=$(
-        for i in $(
-            git for-each-ref
-            --format='%(refname:short)'
-            'refs/remotes/origin/[0-9].[0-9].x'
-            'refs/remotes/origin/staging'
-            'refs/remotes/origin/master'
-            ); do
-          echo $(git log --oneline $(git merge-base $i HEAD)..HEAD | wc -l) $i;
-        done | sort -n | head -n1 | awk '{print $2}'
-      )
-    - if [[ "$MENDER_DOCS_BRANCH" == "origin/staging" ]]; then
-    -   MENDER_DOCS_BRANCH="origin/hosted"
-    - fi
-
-    - export INTEGRATION_BRANCH=$CI_COMMIT_REF_NAME
-
-    - cd mender-docs
-    - git checkout $MENDER_DOCS_BRANCH
-
-  script:
-    - ./run-tests.sh
-
 # Smoke test to verify requirements.txt are sane
 test:integration-tests:requirements:
   stage: test

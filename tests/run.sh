@@ -159,7 +159,12 @@ if [ -n "$K8S" ]; then
     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
 fi
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
-  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$(python ci-parallel-pytest-plugin.py $@)'"
+  PYTEST_FILTER="$(python ci-parallel-pytest-plugin.py $@)"
+  if test -z "$PYTEST_FILTER"; then
+    echo "No tests to run for current node"
+    exit 0
+  fi
+  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$PYTEST_FILTER'"
 fi
 python3 -m pytest \
     $EXTRA_TEST_ARGS \

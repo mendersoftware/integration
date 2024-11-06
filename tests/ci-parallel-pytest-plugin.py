@@ -40,8 +40,8 @@ n_rest = len(classes) % TOTAL
 offset = n_batch * (INDEX - 1)
 if INDEX <= n_rest:
     n_batch += 1
-    offset += INDEX
+    offset += INDEX - 1
 else:
     offset += n_rest
 
-print(" or ".join(classes[offset : offset + n_batch]))
+print(" or ".join(classes[offset : offset + n_batch]), end="")

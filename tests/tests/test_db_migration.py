@@ -242,7 +242,6 @@ done
             shutil.rmtree(tmpdir)
 
 
-@pytest.mark.skip(reason="QA-793")
 class TestDBMigrationOpenSource(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
         self, setup_with_legacy_v1_client, valid_image_with_mender_conf
@@ -259,7 +258,6 @@ class TestDBMigrationOpenSource(BaseTestDBMigration):
         )
 
 
-@pytest.mark.skip(reason="QA-793")
 class TestDBMigrationEnterprise(BaseTestDBMigration):
     def test_migrate_from_legacy_mender_v1_failure(
         self, enterprise_with_legacy_v1_client, valid_image_with_mender_conf

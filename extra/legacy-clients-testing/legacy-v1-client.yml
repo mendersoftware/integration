@@ -9,3 +9,4 @@ services:
         volumes:
           # Provision demo certificate
           - ./cert/cert.crt:/mnt/config/server.crt
+          - ./extra/legacy-clients-testing/mender-qemu-more-ram:/mender-qemu

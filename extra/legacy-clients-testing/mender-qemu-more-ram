@@ -1,0 +1,146 @@
+#!/bin/sh
+
+# usage:
+#  mender-qemu [<image-name>]
+#  mender-qemu core-image-minimal
+#
+# if image name is not provided, the script will attempt to run
+# core-image-full-cmdline
+#
+
+# NOTE: current settings forward
+#           ssh: port 8822
+#           VNC: port 5923
+#           serial console: stdio
+
+set -e
+set -x
+
+TMPDIR=${TMPDIR:-$(mktemp -d /tmp/mender-qemu.XXXXXXXX)}
+trap cleanup 1 15
+
+cleanup() {
+  if [ -n "$TMPDIR" -a -e "$TMPDIR" ]; then
+    rm -rf $TMPDIR
+  fi
+}
+
+# if called under Yocto/OE shell, BUILDDIR will already be set correctly
+if [ -z "$BUILDDIR" ]; then
+  # try to guess BUILDDIR
+  BUILDDIR="$(dirname $0)"/../../build
+fi
+
+IMAGE_NAME=$1
+# check if it's named like an image
+if [ -n "$IMAGE_NAME" ] && echo "$IMAGE_NAME" | grep "image" >/dev/null 2>&1; then
+  # IMAGE name was passed in command line, skip the argument
+  shift
+else
+  IMAGE_NAME=core-image-full-cmdline
+fi
+
+if [ -d ${BUILDDIR}/tmp ]; then
+  BUILDTMP=${BUILDDIR}/tmp
+else
+  BUILDTMP=${BUILDDIR}/tmp-glibc
+fi
+
+QEMU_ARGS=""
+
+# Extract certain variables from build, with "EXTRACTED_" prefix.
+eval "$(cd $BUILDDIR && bitbake -e core-image-minimal | egrep '^(export )?(MENDER_MACHINE|DISTRO_FEATURES|MENDER_DEVICE_TYPE)=')"
+MACHINE="${MACHINE:-$MENDER_MACHINE}"
+
+case "$MACHINE" in
+*x86*)
+  case "$MACHINE" in
+  *x86-64*)
+    QEMU_SYSTEM=${QEMU_SYSTEM:-"qemu-system-x86_64"}
+    ;;
+  *86*)
+    QEMU_SYSTEM=${QEMU_SYSTEM:-"qemu-system-i386"}
+    ;;
+  esac
+  if echo "$DISTRO_FEATURES" | grep -q mender-image-bios; then
+    BOOTLOADER_ARG=""
+    DISK_IMG=${DISK_IMG:-"${BUILDTMP}/deploy/images/${MACHINE}/${IMAGE_NAME}-${MENDER_DEVICE_TYPE}.biosimg"}
+  elif echo "$DISTRO_FEATURES" | grep -q mender-image-gpt; then
+    BOOTLOADER_ARG=""
+    DISK_IMG=${DISK_IMG:-"${BUILDTMP}/deploy/images/${MACHINE}/${IMAGE_NAME}-${MENDER_DEVICE_TYPE}.gptimg"}
+  else
+    BOOTLOADER="${BOOTLOADER:-${BUILDTMP}/deploy/images/${MACHINE}/ovmf.qcow2}"
+    BOOTLOADER_DATA="${BOOTLOADER_DATA:-${BUILDTMP}/deploy/images/${MACHINE}/ovmf.vars.qcow2}"
+    BOOTLOADER_ARG="${BOOTLOADER_ARG:--drive file=${BOOTLOADER},if=pflash,format=qcow2,unit=0,readonly=on -drive file=${BOOTLOADER_DATA},if=pflash,format=qcow2,unit=1}"
+    DISK_IMG=${DISK_IMG:-"${BUILDTMP}/deploy/images/${MACHINE}/${IMAGE_NAME}-${MENDER_DEVICE_TYPE}.uefiimg"}
+  fi
+  STORAGE_TYPE=ide
+  ;;
+*vexpress*)
+  QEMU_SYSTEM=${QEMU_SYSTEM:-"qemu-system-arm"}
+  QEMU_ARGS="$QEMU_ARGS -M vexpress-a9"
+  BOOTLOADER="${BOOTLOADER:-${BUILDTMP}/deploy/images/${MACHINE}/u-boot.elf}"
+  BOOTLOADER_ARG="${BOOTLOADER_ARG:--kernel ${BOOTLOADER}}"
+  if echo "$DISTRO_FEATURES" | grep -q mender-grub; then
+    DISK_IMG=${DISK_IMG:-"${BUILDTMP}/deploy/images/${MACHINE}/${IMAGE_NAME}-${MENDER_DEVICE_TYPE}.uefiimg"}
+  else
+    DISK_IMG=${DISK_IMG:-"${BUILDTMP}/deploy/images/${MACHINE}/${IMAGE_NAME}-${MENDER_DEVICE_TYPE}.sdimg"}
+  fi
+  STORAGE_TYPE=sd
+  ;;
+*)
+  echo "Unable to determine proper MACHINE"
+  exit 1
+  ;;
+esac
+RANDOM_MAC=${RANDOM_MAC:-"52:54:00$(od -txC -An -N3 /dev/urandom | tr \  :)"}
+# use to pass -drive .. parameters directly
+QEMU_DRIVE=${QEMU_DRIVE:-""}
+
+case $DISK_IMG in
+*.uefiimg | *.biosimg | *.sdimg | *.gptimg)
+  QEMU_ARGS="$QEMU_ARGS -drive file=$DISK_IMG,if=$STORAGE_TYPE,format=raw "
+  ;;
+*.vexpress-nor)
+  tar -C $TMPDIR -xvf $DISK_IMG
+  QEMU_ARGS="$QEMU_ARGS -drive file=${TMPDIR}/nor0,if=pflash,format=raw -drive file=${TMPDIR}/nor1,if=pflash,format=raw "
+  ;;
+*)
+  if [ -n "$QEMU_DRIVE" ]; then
+    QEMU_ARGS="$QEMU_ARGS $QEMU_DRIVE "
+  else
+    echo "unsupported image $DISK_IMG"
+    exit 1
+  fi
+  ;;
+esac
+
+echo "--- qemu version"
+$QEMU_SYSTEM --version
+
+echo "--- starting qemu"
+
+ret=0
+for maybe_kvm in -enable-kvm ""; do
+  if QEMU_AUDIO_DRV=none \
+    $QEMU_SYSTEM \
+    -m 384M \
+    $BOOTLOADER_ARG \
+    -net nic,macaddr="$RANDOM_MAC" \
+    -net user,hostfwd=tcp::8822-:22 \
+    -display vnc=:23 \
+    -nographic \
+    $maybe_kvm \
+    $QEMU_ARGS \
+    "$@"; then
+    ret=$?
+    break
+  else
+    ret=$?
+    continue
+  fi
+done
+
+cleanup
+
+exit $ret

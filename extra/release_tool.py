@@ -1853,57 +1853,6 @@ def do_license_generation(state, tag_avail):
                 stdout=fd,
             )
 
-        gui_tag = "mendersoftware/gui:tmp"
-        for tmpdir in tmpdirs:
-            if os.path.basename(tmpdir) == "gui":
-                query_execute_list(
-                    [
-                        [
-                            "docker",
-                            "build",
-                            "-t",
-                            "mendersoftware/gui:base",
-                            "-f",
-                            os.path.join(tmpdir, "Dockerfile"),
-                            "--target",
-                            "base",
-                            tmpdir,
-                        ],
-                        [
-                            "docker",
-                            "build",
-                            "-t",
-                            gui_tag,
-                            "-f",
-                            os.path.join(tmpdir, "Dockerfile"),
-                            "--target",
-                            "disclaim",
-                            tmpdir,
-                        ],
-                    ],
-                    env={"DOCKER_BUILDKIT": "1"},
-                )
-                break
-
-        executed = query_execute_list(
-            [
-                [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "--entrypoint",
-                    "/bin/sh",
-                    "-v",
-                    os.getcwd() + ":/extract",
-                    gui_tag,
-                    "-c",
-                    "mv disclaimer.txt /extract/gui-licenses.txt",
-                ],
-            ]
-        )
-        if not executed:
-            return
-
     except subprocess.CalledProcessError:
         print()
         print("Command failed with the above error.")
@@ -1911,15 +1860,6 @@ def do_license_generation(state, tag_avail):
     finally:
         for tmpdir in tmpdirs:
             cleanup_temp_git_checkout(tmpdir)
-
-    with open("generated-license-text.txt", "a") as fd, open(
-        "gui-licenses.txt"
-    ) as gui_licenses:
-        fd.write(
-            "--------------------------------------------------------------------------------\n"
-        )
-        fd.write(gui_licenses.read())
-    os.remove("gui-licenses.txt")
 
     print_line()
     print("License overview successfully generated!")

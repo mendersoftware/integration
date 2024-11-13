@@ -85,6 +85,7 @@ exit 0
     return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
+@pytest.mark.mender_gateway
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )

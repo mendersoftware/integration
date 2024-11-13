@@ -1467,17 +1467,6 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
             )
 
-            # Set docker version.
-            for docker in repo.associated_components_of_type("docker_image"):
-                if docker.is_independent_component():
-                    set_component_version_to(
-                        tmpdir, docker, next_tag_avail[repo.git()]["build_tag"]
-                    )
-                else:
-                    set_component_version_to(
-                        tmpdir, docker, next_tag_avail["image_tag"],
-                    )
-
             if prev_version:
                 try:
                     prev_repo_version = version_of(

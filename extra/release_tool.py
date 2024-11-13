@@ -1467,17 +1467,6 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
                 tmpdir, repo, next_tag_avail[repo.git()]["build_tag"]
             )
 
-            # Set docker version.
-            for docker in repo.associated_components_of_type("docker_image"):
-                if docker.is_independent_component():
-                    set_component_version_to(
-                        tmpdir, docker, next_tag_avail[repo.git()]["build_tag"]
-                    )
-                else:
-                    set_component_version_to(
-                        tmpdir, docker, next_tag_avail["image_tag"],
-                    )
-
             if prev_version:
                 try:
                     prev_repo_version = version_of(
@@ -1864,57 +1853,6 @@ def do_license_generation(state, tag_avail):
                 stdout=fd,
             )
 
-        gui_tag = "mendersoftware/gui:tmp"
-        for tmpdir in tmpdirs:
-            if os.path.basename(tmpdir) == "gui":
-                query_execute_list(
-                    [
-                        [
-                            "docker",
-                            "build",
-                            "-t",
-                            "mendersoftware/gui:base",
-                            "-f",
-                            os.path.join(tmpdir, "Dockerfile"),
-                            "--target",
-                            "base",
-                            tmpdir,
-                        ],
-                        [
-                            "docker",
-                            "build",
-                            "-t",
-                            gui_tag,
-                            "-f",
-                            os.path.join(tmpdir, "Dockerfile"),
-                            "--target",
-                            "disclaim",
-                            tmpdir,
-                        ],
-                    ],
-                    env={"DOCKER_BUILDKIT": "1"},
-                )
-                break
-
-        executed = query_execute_list(
-            [
-                [
-                    "docker",
-                    "run",
-                    "--rm",
-                    "--entrypoint",
-                    "/bin/sh",
-                    "-v",
-                    os.getcwd() + ":/extract",
-                    gui_tag,
-                    "-c",
-                    "mv disclaimer.txt /extract/gui-licenses.txt",
-                ],
-            ]
-        )
-        if not executed:
-            return
-
     except subprocess.CalledProcessError:
         print()
         print("Command failed with the above error.")
@@ -1922,15 +1860,6 @@ def do_license_generation(state, tag_avail):
     finally:
         for tmpdir in tmpdirs:
             cleanup_temp_git_checkout(tmpdir)
-
-    with open("generated-license-text.txt", "a") as fd, open(
-        "gui-licenses.txt"
-    ) as gui_licenses:
-        fd.write(
-            "--------------------------------------------------------------------------------\n"
-        )
-        fd.write(gui_licenses.read())
-    os.remove("gui-licenses.txt")
 
     print_line()
     print("License overview successfully generated!")
@@ -2250,10 +2179,10 @@ def create_release_branches(state, tag_avail):
 
     if any_repo_needs_branch:
         reply = ask(
-            "Do you want to update all the docker-compose files to new branch values in integration? "
+            "Do you want to update all git-versions files to new branch values in integration? "
         )
         if reply.upper().startswith("Y"):
-            do_docker_compose_branches_from_follows(state)
+            do_git_version_branches_from_follows(state)
     else:
         # Matches the beginning text above.
         print("No.")
@@ -2270,7 +2199,7 @@ def do_beta_to_final_transition(state):
     update_state(state, ["version"], version)
 
 
-def do_docker_compose_branches_from_follows(state):
+def do_git_version_branches_from_follows(state):
     remote = find_upstream_remote(state, "integration")
     checkout = setup_temp_git_checkout(
         state, "integration", state["integration"]["following"]
@@ -2290,29 +2219,6 @@ def do_docker_compose_branches_from_follows(state):
                 bare_branch = branch
 
             set_component_version_to(checkout, repo, bare_branch)
-
-            for docker in repo.associated_components_of_type("docker_image"):
-                if docker.is_independent_component():
-                    set_component_version_to(checkout, docker, bare_branch)
-                else:
-                    set_component_version_to(
-                        checkout, docker, mender_branch,
-                    )
-
-                # Update extra files used in integration tests
-                set_component_version_to(
-                    os.path.join(checkout, "extra", "mtls"), docker, mender_branch,
-                )
-                set_component_version_to(
-                    os.path.join(checkout, "extra", "failover-testing"),
-                    docker,
-                    mender_branch,
-                )
-                set_component_version_to(
-                    os.path.join(checkout, "extra", "mender-gateway"),
-                    docker,
-                    mender_branch,
-                )
 
         print("This is the diff:")
         execute_git(state, checkout, ["diff"])
@@ -2812,7 +2718,7 @@ def do_release(release_state_file, args):
             "  C) Create new series branch (A.B.x style) for each repository that lacks one"
         )
         print(
-            "  I) Put currently followed branch names into integration's docker-compose "
+            "  I) Put currently followed branch names into integration's git-versions "
         )
         print(
             "     files. Use this to update the integration repository to new branch names"
@@ -2880,7 +2786,7 @@ def do_release(release_state_file, args):
             do_beta_to_final_transition(state)
             tag_avail = check_tag_availability(state)
         elif reply.lower() == "i":
-            do_docker_compose_branches_from_follows(state)
+            do_git_version_branches_from_follows(state)
         else:
             print("Invalid choice!")
 

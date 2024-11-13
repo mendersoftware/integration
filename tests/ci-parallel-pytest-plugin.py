@@ -16,32 +16,31 @@
 # pytest classes into a Gitlab Parallel matrix.
 
 import os
-import re
 import subprocess
 import sys
 
-INDEX = int(os.environ.get("CI_NODE_INDEX", "1"))
-TOTAL = int(os.environ.get("CI_NODE_TOTAL", "1"))
+if __name__ == "__main__":
+    INDEX = int(os.environ.get("CI_NODE_INDEX", "1"))
+    TOTAL = int(os.environ.get("CI_NODE_TOTAL", "1"))
 
-output = subprocess.check_output(["pytest", "--co", "tests"] + sys.argv[1:])
+    output = subprocess.check_output(["pytest", "--co", "tests", "-q"] + sys.argv[1:])
 
-classes = []
-expr = re.compile("<Class ([^>]+)>")
-for line in output.decode("UTF-8").splitlines():
-    match = expr.search(line)
-    if match:
-        classes.append(match.group(1))
-classes.sort()
+    node_ids = []
+    for line in output.decode("UTF-8").splitlines():
+        if line:
+            node_ids.append(line)
+        else:
+            break
+    node_ids.sort()
 
+    n_batch = len(node_ids) // TOTAL
+    n_rest = len(node_ids) % TOTAL
 
-n_batch = len(classes) // TOTAL
-n_rest = len(classes) % TOTAL
+    offset = n_batch * (INDEX - 1)
+    if INDEX <= n_rest:
+        n_batch += 1
+        offset += INDEX - 1
+    else:
+        offset += n_rest
 
-offset = n_batch * (INDEX - 1)
-if INDEX <= n_rest:
-    n_batch += 1
-    offset += INDEX
-else:
-    offset += n_rest
-
-print(" or ".join(classes[offset : offset + n_batch]))
+    print("\n".join(node_ids[offset : offset + n_batch]), end="")

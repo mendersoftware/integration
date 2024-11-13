@@ -1,6 +1,6 @@
 services:
   mtls-gateway:
-    image: registry.mender.io/mendersoftware/mender-gateway:master
+    image: ${MENDER_GATEWAY_REGISTRY}/${MENDER_GATEWAY_REPOSITORY}/mender-gateway:${MENDER_GATEWAY_TAG}
     networks:
       - mender
     volumes:

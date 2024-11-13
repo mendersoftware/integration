@@ -54,8 +54,6 @@ while [ -n "$1" ]; do
     shift
 done
 
-source ../.env
-
 function get_requirements() {
     # Download what we need.
     mkdir -p downloaded-tools
@@ -80,9 +78,12 @@ function get_requirements() {
     #FIXME: The distributed binaries are compiled for OpenSSL 1.1
     #       As a workaround, we're installing the debian package (noble distribution).
     EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
-    curl --fail \
-        "https://downloads.mender.io/repos/debian/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
-        -o "$EXTRACT_DIR/mender-artifact.deb"
+    (
+        test -z "$MENDER_ARTIFACT_VERSION" && source ../.env
+        curl --fail \
+            "https://downloads.mender.io/repos/debian/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
+            -o "$EXTRACT_DIR/mender-artifact.deb"
+    )
     if [ $? -ne 0 ]; then
         echo "failed to download mender-artifact"
         exit 1
@@ -159,7 +160,12 @@ if [ -n "$K8S" ]; then
     aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
 fi
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
-  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS -k '$(python ci-parallel-pytest-plugin.py $@)'"
+  PYTEST_NODES=$(python ci-parallel-pytest-plugin.py | tr '\n' ' ')
+  if test -z "$PYTEST_NODES"; then
+    echo "No tests to run for current node"
+    exit 0
+  fi
+  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
 python3 -m pytest \
     $EXTRA_TEST_ARGS \

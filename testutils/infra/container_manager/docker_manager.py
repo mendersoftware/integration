@@ -28,8 +28,21 @@ class DockerNamespace(BaseContainerManagerNamespace):
 
     def execute(self, container_id, cmd):
         cmd = ["docker", "exec", "{}".format(container_id)] + cmd
-        ret = subprocess.check_output(cmd).decode("utf-8").strip()
-        return ret
+        try:
+            ret = subprocess.check_output(
+                cmd, stderr=subprocess.STDOUT,
+            ).decode("utf-8").strip()
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                "Failed to execute command: {}, exit code: {}, stdout: {}, stderr: {}".format(
+                    " ".join(e.cmd),
+                    e.returncode,
+                    e.stdout.decode("utf-8") if e.stdout else None,
+                    e.stderr.decode("utf-8") if e.stderr else None,
+                )
+            )
+        else:
+            return ret
 
     def cmd(self, container_id, docker_cmd, cmd=[]):
         cmd = ["docker", docker_cmd] + [str(container_id)] + cmd

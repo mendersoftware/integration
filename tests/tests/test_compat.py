@@ -28,6 +28,7 @@ from testutils.infra.device import MenderDevice
 from testutils.common import create_org, create_user
 from testutils.api.client import ApiClient
 from testutils.api import deviceauth, useradm, inventory, deployments
+import uuid
 
 
 container_factory = factory.get_factory()
@@ -48,8 +49,9 @@ def setup_os_compat():
         env = container_factory.get_compatibility_setup(client_service=client_service)
         env.setup()
 
+        uuid_val = str(uuid.uuid4())
         env.user = create_user(
-            "test@mender.io", "correcthorse", containers_namespace=env.name
+            f"test-{uuid_val}@mender.io", "correcthorse", containers_namespace=env.name
         )
         env.populate_clients()
 
@@ -73,9 +75,10 @@ def setup_ent_compat():
         )
         env.setup()
 
+        uuid_val = str(uuid.uuid4())
         env.tenant = create_org(
             "Mender",
-            "test@mender.io",
+            "test-%s@mender.io" % uuid_val,
             "correcthorse",
             containers_namespace=env.name,
             container_manager=env,

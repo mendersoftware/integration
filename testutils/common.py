@@ -177,7 +177,17 @@ def create_org(
     )
     user_id = None
     tenant_id = cli.create_org(name, username, password, plan=plan, addons=addons)
-    tenant_token = json.loads(cli.get_tenant(tenant_id))["tenant_token"]
+
+    tenant_token = None
+    for _ in retrier(attempts=10, sleepscale=1, sleeptime=1):
+        try:
+            tenant = json.loads(cli.get_tenant(tenant_id))
+            if "tenant_token" in tenant:
+                tenant_token = tenant["tenant_token"]
+        except RuntimeError:
+            pass
+
+    assert tenant_token is not None, "Error retrieving tenant token."
 
     host = GATEWAY_HOSTNAME
     if container_manager is not None:

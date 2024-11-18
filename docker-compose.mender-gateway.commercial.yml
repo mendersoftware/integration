@@ -3,7 +3,7 @@ services:
   # mender-gateway
   #
   mender-gateway:
-    image: ${MENDER_GATEWAY_QEMU_REGISTRY}/${MENDER_GATEWAY_QEMU_REPOSITORY}/mender-gateway-qemu-commercial:${MENDER_GATEWAY_QEMU_TAG}
+    image: registry.mender.io/mendersoftware/mender-gateway-qemu-commercial:${MENDER_GATEWAY_QEMU_TAG}
     networks:
       - mender
     stdin_open: true

@@ -34,6 +34,7 @@ usage() {
     echo "Recognized Environment Variables:"
     echo
     echo "TESTS_IN_PARALLEL_INTEGRATION        The number of parallel jobs for pytest-xdist"
+    echo "TESTS_SELECTION                      The pytest selector to use for selecting tests"
     exit 0
 }
 
@@ -167,6 +168,11 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
   fi
   export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
+
+if [ -n "$TESTS_SELECTION" ]; then
+    EXTRA_TEST_ARGS="$EXTRA_TEST_ARGS -k $TESTS_SELECTION"
+fi
+
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --verbose \

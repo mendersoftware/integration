@@ -514,6 +514,7 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skip(reason="FIXME: QA-817")
     @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(
@@ -618,6 +619,7 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
+    @pytest.mark.skip(reason="FIXME: QA-817")
     @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(

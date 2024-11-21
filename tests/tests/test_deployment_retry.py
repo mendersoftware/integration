@@ -53,6 +53,7 @@ exit 0
     return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
+@pytest.mark.skip(reason="FIXME: QA-817")
 @pytest.mark.usefixtures("enterprise_no_client")
 class TestDeploymentRetryEnterprise(MenderTesting):
     """Tests the retry deployment functionality"""

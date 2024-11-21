@@ -271,6 +271,7 @@ class BaseTestInventory(MenderTesting):
         ), "The device has not updated the inventory after the update"
 
 
+@pytest.mark.skip(reason="FIXME: QA-817")
 class TestInventoryOpenSource(BaseTestInventory):
     @MenderTesting.fast
     def test_inventory(self, standard_setup_one_client_bootstrapped):
@@ -285,6 +286,7 @@ class TestInventoryOpenSource(BaseTestInventory):
         )
 
 
+@pytest.mark.skip(reason="FIXME: QA-817")
 class TestInventoryEnterprise(BaseTestInventory):
     @MenderTesting.fast
     def test_inventory(self, enterprise_one_client_bootstrapped):

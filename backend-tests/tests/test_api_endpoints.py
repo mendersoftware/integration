@@ -100,6 +100,9 @@ def get_api_endpoints(repo):
                 returns_401 = (
                     len(definition.get("security") or ()) > 0
                     or len(data.get("security") or ()) > 0
+                    or path.rstrip("/").endswith("/auth_requests")  # device auth endpoint,
+                                                                    # the way we do these tests will return 400 before
+                                                                    # 401 so it cannot be tested here like that
                     or path.rstrip("/").endswith("/verify")  # JWT token verifications
                     or path.rstrip("/").endswith("/2faqr")  # 2FA QR code
                     or path.rstrip("/").endswith("/2faverify")  # 2FA code verification

@@ -44,6 +44,8 @@ test:integration:
         echo "Timeout waiting for docker to start"
         exit 1;
       fi
+    # increase limit for number of open files
+    - ulimit -n 9999
   script:
     - cd tests
     - ./run.sh

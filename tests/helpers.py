@@ -96,3 +96,10 @@ class Helpers:
         Helpers._check_log_for_message(
             device, "Failed to authorize with the server", since
         )
+
+    @staticmethod
+    def install_community_update_module(device, module):
+        url = f"https://raw.githubusercontent.com/mendersoftware/mender-update-modules/master/{module}/module/{module}"
+        device.run("mkdir -p /usr/share/mender/modules/v3")
+        device.run(f"wget -P /usr/share/mender/modules/v3 {url}")
+        device.run(f"chmod +x /usr/share/mender/modules/v3/{module}")

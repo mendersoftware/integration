@@ -368,6 +368,10 @@ class BaseTestMenderGateway(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
+        # Install the script update module required for this test
+        Helpers.install_community_update_module(mender_device_1, "script")
+        Helpers.install_community_update_module(mender_device_2, "script")
+
         host_ip = env.get_virtual_network_host_ip()
         mender_conf = mender_device_1.run("cat /etc/mender/mender.conf")
         valid_image = valid_image_with_mender_conf(mender_conf)
@@ -514,7 +518,6 @@ class TestMenderGatewayOpenSource(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
-    @pytest.mark.skip(reason="FIXME: QA-817")
     @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(
@@ -619,7 +622,6 @@ class TestMenderGatewayEnterprise(BaseTestMenderGateway):
             valid_image_with_mender_conf,
         )
 
-    @pytest.mark.skip(reason="FIXME: QA-817")
     @flaky(max_runs=3)
     @MenderTesting.fast
     def test_deployment_two_devices_parallel_updates_multiple_deployments(

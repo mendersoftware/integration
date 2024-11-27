@@ -21,6 +21,7 @@ import uuid
 from .. import conftest
 from ..common_setup import enterprise_no_client
 from ..MenderAPI import logger, Authentication, DeviceAuthV2, Deployments
+from ..helpers import Helpers
 from testutils.infra.cli import CliTenantadm
 from testutils.common import Tenant, User, new_tenant_client
 from .common_artifact import get_script_artifact
@@ -53,7 +54,6 @@ exit 0
     return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
-@pytest.mark.skip(reason="FIXME: QA-817")
 @pytest.mark.usefixtures("enterprise_no_client")
 class TestDeploymentRetryEnterprise(MenderTesting):
     """Tests the retry deployment functionality"""
@@ -99,6 +99,9 @@ class TestDeploymentRetryEnterprise(MenderTesting):
             enterprise_no_client, "mender-client", tenant.tenant_token
         )
         devauth.accept_devices(1)
+
+        # Install the script update module required for this test
+        Helpers.install_community_update_module(device, "script")
 
         with tempfile.NamedTemporaryFile() as tf:
 

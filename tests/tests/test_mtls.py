@@ -28,6 +28,7 @@ from testutils.infra.device import MenderDevice
 
 from .. import conftest
 from ..MenderAPI import reset_mender_api, auth, deploy, devauth, logger
+from ..helpers import Helpers
 from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 
@@ -85,7 +86,6 @@ exit 0
     return get_script_artifact(script, artifact_name, device_type, output_path)
 
 
-@pytest.mark.skip(reason="FIXME: QA-817")
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
@@ -199,6 +199,9 @@ activate = 1
         if algorithm is not None and use_hsm is True:
             self.hsm_setup(pin, ssl_engine_id, env.device)
             key_uri = self.hsm_get_key_uri(pin, ssl_engine_id, env.device)
+
+        # Install the script update module required for this test
+        Helpers.install_community_update_module(env.device, "script")
 
         try:
             # retrieve the original configuration file

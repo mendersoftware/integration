@@ -23,6 +23,7 @@ from ..common_setup import (
     enterprise_one_client_bootstrapped,
 )
 from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, logger
+from ..helpers import Helpers
 from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 
@@ -46,6 +47,9 @@ class BaseTestInventory(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
         inv = Inventory(env.auth)
+
+        # Install the script update module required for this test
+        Helpers.install_community_update_module(env.device, "script")
 
         def deploy_simple_artifact(artifact_name, extra_args):
             # create a simple artifact (script) which doesn't do anything
@@ -226,6 +230,9 @@ class BaseTestInventory(MenderTesting):
         )
         mender_device.run(sedcmd)
         mender_device.run("systemctl restart mender-updated")
+
+        # Install the script update module required for this test
+        Helpers.install_community_update_module(mender_device, "script")
 
         # Get the inventory sent after first boot
         initial_inv_json = inv.get_devices()

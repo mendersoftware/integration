@@ -56,6 +56,11 @@ services:
     extends:
       file: common.yml
       service: mender-base
+    # Avoid Too many open files error
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     # Enables the web UI and tells Traefik to listen to docker
     command:
       - --accesslog=true

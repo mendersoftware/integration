@@ -34,6 +34,12 @@ variables:
       - "false"
       - "true"
 
+  TESTS_IN_PARALLEL_INTEGRATION:
+    description: |
+      Number of parallel tests per CI job.
+      NOTE: We run 4 CI jobs in parallel, so the default is 4x4=16 parallel tests
+    value: "4"
+
   DOCKER_VERSION:
     description: "Docker version to use in jobs"
     value: "27"

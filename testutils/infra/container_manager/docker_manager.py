@@ -12,9 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import subprocess
+import logging
 
 from .base import BaseContainerManagerNamespace
 
+logger = logging.getLogger("root")
 
 class DockerNamespace(BaseContainerManagerNamespace):
     def __init__(self, name):
@@ -28,7 +30,9 @@ class DockerNamespace(BaseContainerManagerNamespace):
 
     def execute(self, container_id, cmd):
         cmd = ["docker", "exec", "{}".format(container_id)] + cmd
+        logger.info(f'Executing command: {cmd}')
         ret = subprocess.check_output(cmd).decode("utf-8").strip()
+        logger.info(f'Command output: {ret}')
         return ret
 
     def cmd(self, container_id, docker_cmd, cmd=[]):

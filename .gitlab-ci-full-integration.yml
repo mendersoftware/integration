@@ -18,6 +18,10 @@ test:integration:
       docker login docker.io \
       --username $DOCKER_HUB_USERNAME \
       --password $DOCKER_HUB_PASSWORD
+    - |
+      docker login $CI_REGISTRY \
+      --username $CI_REGISTRY_USER \
+      --password $CI_REGISTRY_PASSWORD
     - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
     - apk add py3-virtualenv screen
     - python -m virtualenv /.venv

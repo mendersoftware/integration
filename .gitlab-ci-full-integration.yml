@@ -6,9 +6,7 @@ test:integration:
   tags:
     - mender-qa-worker-integration-tests
   timeout: 10h
-  parallel: 4
-  variables:
-    PYTEST_XDIST_AUTO_NUM_WORKERS: "4"
+  parallel: $CI_JOBS_IN_PARALLEL_INTEGRATION
   before_script:
     - |
       docker login registry.mender.io \

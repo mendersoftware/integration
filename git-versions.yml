@@ -8,64 +8,64 @@ services:
     # backend open source services
     #
     mender-iot-manager:
-        image: mendersoftware/iot-manager:1.3.x
+        image: mendersoftware/iot-manager:1.3.1
 
     mender-deployments:
-        image: mendersoftware/deployments:4.6.x
+        image: mendersoftware/deployments:4.6.2
 
     mender-gui:
-        image: mendersoftware/gui:3.7.x
+        image: mendersoftware/gui:3.7.3
 
     mender-device-auth:
-        image: mendersoftware/deviceauth:3.6.x
+        image: mendersoftware/deviceauth:3.6.1
 
     mender-inventory:
-        image: mendersoftware/inventory:4.4.x
+        image: mendersoftware/inventory:4.4.3
 
     mender-useradm:
-        image: mendersoftware/useradm:1.22.x
+        image: mendersoftware/useradm:1.22.4
 
     mender-deviceconnect:
-        image: mendersoftware/deviceconnect:1.5.x
+        image: mendersoftware/deviceconnect:1.5.1
 
     mender-deviceconfig:
-        image: mendersoftware/deviceconfig:1.4.x
+        image: mendersoftware/deviceconfig:1.4.1
 
     mender-reporting:
         image: mendersoftware/reporting:master
 
     mender-workflows-server:
-        image: mendersoftware/workflows:2.6.x
+        image: mendersoftware/workflows:2.6.2
 
     mender-workflows-worker:
         image: mendersoftware/workflows-worker:master
 
     mender-create-artifact-worker:
-        image: mendersoftware/create-artifact-worker:1.4.x
+        image: mendersoftware/create-artifact-worker:1.4.0
 
     #
     # client repositories - container and image names are placeholders
     #
     mender:
-        image: mendersoftware/mender:4.0.x
+        image: mendersoftware/mender:4.0.5
 
     mender-connect:
-        image: mendersoftware/mender-connect:2.2.x
+        image: mendersoftware/mender-connect:2.2.1
 
     mender-setup:
-        image: mendersoftware/mender-setup:1.0.x
+        image: mendersoftware/mender-setup:1.0.0
 
     mender-snapshot:
-        image: mendersoftware/mender-snapshot:1.0.x
+        image: mendersoftware/mender-snapshot:1.0.0
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:1.1.x
+        image: mendersoftware/mender-configure-module:1.1.2
 
     monitor-client:
-        image: mendersoftware/monitor-client:1.3.x
+        image: mendersoftware/monitor-client:1.3.0
 
     mender-gateway:
-        image: mendersoftware/mender-gateway:1.2.x
+        image: mendersoftware/mender-gateway:1.2.1
 
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

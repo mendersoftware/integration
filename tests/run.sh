@@ -33,7 +33,7 @@ usage() {
     echo
     echo "Recognized Environment Variables:"
     echo
-    echo "TESTS_IN_PARALLEL_INTEGRATION        The number of parallel jobs for pytest-xdist"
+    echo "XDIST_JOBS_IN_PARALLEL_INTEGRATION   The number of parallel jobs for pytest-xdist"
     exit 0
 }
 
@@ -147,7 +147,7 @@ if ! python3 -m pip show pytest-xdist >/dev/null; then
     echo "WARNING: install pytest-xdist for running tests in parallel"
 else
     # run all tests when running in parallel
-    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${TESTS_IN_PARALLEL_INTEGRATION:-auto}}"
+    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_JOBS_IN_PARALLEL_INTEGRATION:-auto}}"
 fi
 
 if ! python3 -m pip show pytest-html >/dev/null; then

@@ -118,4 +118,5 @@ publish:versions:manual:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
+    - when: manual
   extends: .publish:versions

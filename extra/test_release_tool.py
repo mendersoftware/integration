@@ -250,6 +250,9 @@ def test_version_of(capsys, is_master):
     )
 
 
+@pytest.mark.skip(
+    reason="Test is irrelevant from the legacy branch 3.7.x, release_tool in master been repurposed"
+)
 def test_version_of_with_in_integration_version(capsys):
     # In remote master, shall be master
     run_main_assert_result(
@@ -638,6 +641,9 @@ def test_set_version_of(capsys, is_staging):
         )
 
 
+@pytest.mark.skip(
+    reason="Test is irrelevant from the legacy branch 3.7.x, release_tool in master been repurposed"
+)
 def test_integration_versions_including(capsys):
     captured = run_main_assert_result(
         capsys,

@@ -2,9 +2,5 @@
 
 _Released 07.13.2021_
 
-### Statistics
-
-A total of 0 lines added, 0 removed (delta 0)
-
 ### Changelogs
 

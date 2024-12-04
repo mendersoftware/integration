@@ -39,7 +39,7 @@ class Websocket:
 
         async def connect():
             self.ws = await websockets.connect(
-                self.url, extra_headers=self.headers, ssl=ssl_context
+                self.url, additional_headers=self.headers, ssl=ssl_context
             )
 
         attempts = 15

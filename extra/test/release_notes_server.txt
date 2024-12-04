@@ -2,59 +2,6 @@
 
 _Released 09.28.2021_
 
-### Statistics
-
-A total of 10247 lines added, 5174 removed (delta 5073)
-
-| Developers with the most changesets | |
-|---|---|
-| Manuel Zedel | 123 (63.1%) |
-| Fabio Tranchitella | 40 (20.5%) |
-| Alf-Rune Siqveland | 9 (4.6%) |
-| Lluis Campos | 8 (4.1%) |
-| Alex Miliukov | 6 (3.1%) |
-| Krzysztof Jaskiewicz | 3 (1.5%) |
-| Marcin Chalczynski | 2 (1.0%) |
-| Prashanth Joseph Babu | 1 (0.5%) |
-| Kristian Amlie | 1 (0.5%) |
-| Michael Clelland | 1 (0.5%) |
-
-| Developers with the most changed lines | |
-|---|---|
-| Manuel Zedel | 5132 (45.2%) |
-| Fabio Tranchitella | 2224 (19.6%) |
-| Alf-Rune Siqveland | 1592 (14.0%) |
-| Alex Miliukov | 1333 (11.7%) |
-| Krzysztof Jaskiewicz | 721 (6.3%) |
-| Lluis Campos | 253 (2.2%) |
-| Marcin Chalczynski | 61 (0.5%) |
-| Michael Clelland | 25 (0.2%) |
-| Peter Grzybowski | 12 (0.1%) |
-| Prashanth Joseph Babu | 2 (0.0%) |
-
-| Developers with the most lines removed | |
-|---|---|
-| Lluis Campos | 72 (1.4%) |
-| Marcin Chalczynski | 13 (0.3%) |
-
-| Top changeset contributors by employer | |
-|---|---|
-| Northern.tech | 189 (96.9%) |
-| RnDity | 5 (2.6%) |
-| prashanthjbabu@gmail.com | 1 (0.5%) |
-
-| Top lines changed by employer | |
-|---|---|
-| Northern.tech | 10572 (93.1%) |
-| RnDity | 782 (6.9%) |
-| prashanthjbabu@gmail.com | 2 (0.0%) |
-
-| Employers with the most hackers (total 11) | |
-|---|---|
-| Northern.tech | 8 (72.7%) |
-| RnDity | 2 (18.2%) |
-| prashanthjbabu@gmail.com | 1 (9.1%) |
-
 ### Changelogs
 
 #### deployments (4.0.0)

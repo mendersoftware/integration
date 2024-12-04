@@ -2,34 +2,6 @@
 
 _Released 09.28.2021_
 
-### Statistics
-
-A total of 38 lines added, 7 removed (delta 31)
-
-| Developers with the most changesets | |
-|---|---|
-| Lluis Campos | 3 (60.0%) |
-| Ole Petter Orhagen | 1 (20.0%) |
-| Kristian Amlie | 1 (20.0%) |
-
-| Developers with the most changed lines | |
-|---|---|
-| Lluis Campos | 28 (73.7%) |
-| Ole Petter Orhagen | 8 (21.1%) |
-| Kristian Amlie | 2 (5.3%) |
-
-| Top changeset contributors by employer | |
-|---|---|
-| Northern.tech | 5 (100.0%) |
-
-| Top lines changed by employer | |
-|---|---|
-| Northern.tech | 38 (100.0%) |
-
-| Employers with the most hackers (total 3) | |
-|---|---|
-| Northern.tech | 3 (100.0%) |
-
 ### Changelogs
 
 #### mender-artifact (3.6.1)

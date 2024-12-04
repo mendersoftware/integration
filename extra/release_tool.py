@@ -2503,10 +2503,10 @@ double check this.
     return True
 
 
-def run_and_combine_statistics_and_changelog(
+def generate_release_changelog(
     workdir, single_repo, from_version, to_version, output_file
 ):
-    """Generate statistics and changelogs and combine them in a single file"""
+    """Generate changelog and write it to a file"""
 
     release_date = execute_git(
         None,
@@ -2539,20 +2539,15 @@ def run_and_combine_statistics_and_changelog(
     changelog_tool = os.path.join(
         integration_dir(), "extra/changelog-generator/changelog-generator"
     )
-    statistics_tool = os.path.join(integration_dir(), "extra/statistics-generator")
 
     def log_and_run_cmd(cmd, workdir):
         print("Running in workdir %s command: %s" % (workdir, " ".join(cmd)))
         return subprocess.check_output(cmd, cwd=workdir)
 
     changelog_out = log_and_run_cmd([changelog_tool] + command_args, workdir)
-    statistics_out = log_and_run_cmd([statistics_tool] + command_args, workdir)
-
     print("Writing Release Notes for %s in %s" % (release_name, output_file))
     with open(output_file, "w") as fd:
         fd.write(release_header)
-        fd.write(statistics_out.decode())
-        fd.write("\n")
         fd.write(changelog_out.decode())
 
 
@@ -2577,7 +2572,7 @@ def do_generate_release_notes(
         prev_of_integration = find_prev_version(tag_list, version_of_integration)
 
     # Release notes for Mender (server)
-    run_and_combine_statistics_and_changelog(
+    generate_release_changelog(
         base_dir,
         False,
         prev_of_integration,
@@ -2603,9 +2598,7 @@ def do_generate_release_notes(
         )
         workdir = os.path.join(base_dir, repo.git())
         output_file = "release_notes_%s.txt" % repo.git()
-        run_and_combine_statistics_and_changelog(
-            workdir, True, prev_version, version, output_file
-        )
+        generate_release_changelog(workdir, True, prev_version, version, output_file)
 
 
 def do_release(release_state_file, args):

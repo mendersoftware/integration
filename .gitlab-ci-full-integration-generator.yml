@@ -1,0 +1,35 @@
+#
+# Ideally we would have used "parallel: $CI_JOBS_IN_PARALLEL_INTEGRATION" to run the tests, but it
+# is not supported to use an integer variable here. Do a blame on these lines for more context.
+#
+# To workaround this issue, we set up "Dynamic child pipelines" to control how many CI jobs to
+# run tests (iow how many child pipelines) to launch. For an overview of this features see:
+# https://docs.gitlab.com/ee/ci/pipelines/downstream_pipelines.html#dynamic-child-pipelines
+#
+# And how is really implemented? Using envsubst to set the values of CI_NODE_TOTAL and CI_NODE_INDEX
+# in the template pipeline file for each desired child job, and concatenate all of them.
+#
+test:integration:generator:
+  image: debian:12-slim
+  stage: test-gen
+  script:
+  - apt-get update && apt-get install -y gettext-base
+  - touch gitlab-ci-full-integration-jobs.yml
+  - CI_NODE_TOTAL=$CI_JOBS_IN_PARALLEL_INTEGRATION
+  - export CI_NODE_TOTAL CI_NODE_INDEX
+  - for CI_NODE_INDEX in $(seq $CI_JOBS_IN_PARALLEL_INTEGRATION); do
+  -   envsubst '$CI_NODE_TOTAL,$CI_NODE_INDEX' < .gitlab-ci-full-integration-template.yml >> gitlab-ci-full-integration-jobs.yml
+  - done
+  artifacts:
+    paths:
+      - gitlab-ci-full-integration-jobs.yml
+
+test:integration:trigger:
+  stage: test
+  trigger:
+    strategy: depend
+    include:
+      - artifact: gitlab-ci-full-integration-jobs.yml
+        job: test:integration:generator
+    forward:
+      pipeline_variables: true

@@ -1,4 +1,4 @@
-cryptography==43.0.3
+cryptography==44.0.0
 docker==7.1.0
 filelock==3.16.1
 kubernetes==31.0.0
@@ -13,7 +13,7 @@ pytest-xdist==3.6.1
 redo==3.0.0
 requests==2.32.3
 urllib3==1.26.20
-websockets==13.1
+websockets==14.1
 flaky==3.8.1
-stripe==11.2.0
+stripe==11.3.0
 aiosmtpd==1.4.6

@@ -1,4 +1,5 @@
-test:integration:
+# The CI job name will be unique after substitution from the generator.
+test:integration:$CI_NODE_INDEX:
   rules:
     - if: $RUN_TESTS_FULL_INTEGRATION == "true"
   image: docker:${DOCKER_VERSION}-dind
@@ -6,10 +7,11 @@ test:integration:
   tags:
     - mender-qa-worker-integration-tests
   timeout: 10h
-  parallel: 4
-  variables:
-    PYTEST_XDIST_AUTO_NUM_WORKERS: "4"
   before_script:
+    # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
+    # plugin to split the tests among the CI jobs. They get substituted by the generator.
+    - export CI_NODE_INDEX=$CI_NODE_INDEX
+    - export CI_NODE_TOTAL=$CI_NODE_TOTAL
     - |
       docker login registry.mender.io \
       --username $REGISTRY_MENDER_IO_USERNAME \
@@ -18,6 +20,10 @@ test:integration:
       docker login docker.io \
       --username $DOCKER_HUB_USERNAME \
       --password $DOCKER_HUB_PASSWORD
+    - |
+      docker login $CI_REGISTRY \
+      --username $CI_REGISTRY_USER \
+      --password $CI_REGISTRY_PASSWORD
     - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
     - apk add py3-virtualenv screen
     - python -m virtualenv /.venv

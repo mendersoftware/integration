@@ -77,7 +77,7 @@ test:staging:integration-tests:
     DOCKER_CLIENT_TIMEOUT: 300
     COMPOSE_HTTP_TIMEOUT: 300
     SPECIFIC_INTEGRATION_TEST: "Enterprise"
-    TESTS_IN_PARALLEL_INTEGRATION: "2"
+    XDIST_JOBS_IN_PARALLEL_INTEGRATION: "2"
   id_tokens:
     AWS_OIDC_TOKEN:
       aud: https://gitlab.com

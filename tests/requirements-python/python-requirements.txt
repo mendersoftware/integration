@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==43.0.3
+cryptography==44.0.0
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
@@ -109,7 +109,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==11.2.0
+stripe==11.3.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
@@ -124,5 +124,5 @@ urllib3==1.26.20
     #   requests
 websocket-client==1.6.1
     # via kubernetes
-websockets==13.1
+websockets==14.1
     # via -r python-requirements.in

@@ -50,6 +50,12 @@ test:integration:$CI_NODE_INDEX:
         echo "Timeout waiting for docker to start"
         exit 1;
       fi
+    # Increase system limits to make sure the tests are not limited while
+    # running with high parallelism on a single VM
+    - sysctl -w fs.inotify.max_user_instances=1024
+    - sysctl -w fs.file-max=600000
+    - ulimit -n 524288
+
   script:
     - cd tests
     - ./run.sh

@@ -63,6 +63,8 @@ test:integration-tests:requirements:
     - pip install -r tests/requirements-python/python-requirements.txt
 
 build:docker:
+  tags:
+    - hetzner-amd-beefy
   variables:
     DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
     DOCKER_DIR: extra/mender-client-docker-addons

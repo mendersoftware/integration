@@ -27,7 +27,8 @@ test:staging:backend-tests:
   timeout: 4h
 
   services:
-    - docker:dind
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:${DOCKER_VERSION}-dind
+      alias: docker
 
   variables:
     K8S: "staging"

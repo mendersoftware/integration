@@ -298,6 +298,10 @@ module = /usr/lib/ossl-modules/pkcs11.so
         ],
     )
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
+        # QA-824: temporary disabling the test for this configuration
+        if algorithm == "rsa" and hsm_implementation == "engine":
+            pytest.skip("Test fails with latest libp11. See QA-824")
+
         # Check if the client has has SoftHSM (from yocto dunfell forward)
         output = setup_ent_mtls.device.run(
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True

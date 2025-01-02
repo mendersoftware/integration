@@ -70,7 +70,7 @@ pycparser==2.21
     # via cffi
 pymongo==4.10.1
     # via -r python-requirements.in
-pytest==8.3.3
+pytest==8.3.4
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -109,7 +109,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==11.3.0
+stripe==11.4.1
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest

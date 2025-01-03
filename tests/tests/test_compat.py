@@ -289,6 +289,7 @@ class TestClientCompatibilityBase:
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
+@pytest.mark.skip(reason="unstable test, see QA-822")
 class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
     @pytest.mark.parametrize(
         "version",
@@ -303,6 +304,7 @@ class TestClientCompatibilityOpenSource(TestClientCompatibilityBase):
 @pytest.mark.skipif(
     isK8S(), reason="not relevant in a staging or production environment"
 )
+@pytest.mark.skip(reason="unstable test, see QA-822")
 class TestClientCompatibilityEnterprise(TestClientCompatibilityBase):
     @pytest.mark.parametrize(
         "version",

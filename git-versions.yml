@@ -26,10 +26,10 @@ services:
     # Independent repositories
     #
     mender-setup:
-        image: mendersoftware/mender-setup:1.0.x
+        image: mendersoftware/mender-setup:master
 
     mender-snapshot:
-        image: mendersoftware/mender-snapshot:1.0.x
+        image: mendersoftware/mender-snapshot:master
 
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

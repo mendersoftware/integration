@@ -5,7 +5,7 @@
 services:
 
     #
-    # Active repositories
+    # Mender Client LTS
     #
     mender:
         image: mendersoftware/mender:master
@@ -13,17 +13,23 @@ services:
     mender-connect:
         image: mendersoftware/mender-connect:master
 
-    mender-setup:
-        image: mendersoftware/mender-setup:master
-
-    mender-snapshot:
-        image: mendersoftware/mender-snapshot:master
-
     mender-configure-module:
         image: mendersoftware/mender-configure-module:master
 
     monitor-client:
         image: mendersoftware/monitor-client:master
+
+    mender-binary-delta:
+        image: mendersoftware/mender-binary-delta:master
+
+    #
+    # Independent repositories
+    #
+    mender-setup:
+        image: mendersoftware/mender-setup:master
+
+    mender-snapshot:
+        image: mendersoftware/mender-snapshot:master
 
     mender-ci-workflows:
         image: mendersoftware/mender-ci-workflows:master

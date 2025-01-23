@@ -34,7 +34,6 @@ from .docker_compose_manager import (
     DockerComposeEnterpriseRofsClientSetup,
     DockerComposeEnterpriseRofsCommercialClientSetup,
     DockerComposeCustomSetup,
-    DockerComposeCompatibilitySetup,
     DockerComposeMTLSSetup,
 )
 from .kubernetes_manager import (
@@ -205,9 +204,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseRofsCommercialClientSetup(name, num_clients)
-
-    def get_compatibility_setup(self, name=None, **kwargs):
-        return DockerComposeCompatibilitySetup(name, **kwargs)
 
     def get_mtls_setup(self, name=None, **kwargs):
         return DockerComposeMTLSSetup(name, **kwargs)

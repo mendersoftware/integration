@@ -5,13 +5,13 @@
 # 'services' tag.
 services:
     mender-artifact:
-        image: mendersoftware/mender-artifact:4.0.x
+        image: mendersoftware/mender-artifact:master
 
     mender-cli:
-        image: mendersoftware/mender-cli:1.12.x
+        image: mendersoftware/mender-cli:master
 
     mender-convert:
-        image: mendersoftware/mender-convert:4.3.x
+        image: mendersoftware/mender-convert:master
 
     meta-mender:
         image: mendersoftware/meta-mender:scarthgap

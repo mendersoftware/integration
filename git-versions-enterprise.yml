@@ -5,7 +5,7 @@
 services:
 
     #
-    # Active repositories
+    # Mender Gateway LTS
     #
     mender-gateway:
         image: registry.mender.io/mendersoftware/mender-gateway:2.0.x

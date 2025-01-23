@@ -10,9 +10,6 @@ services:
     mender-cli:
         image: mendersoftware/mender-cli:1.12.x
 
-    mender-binary-delta:
-        image: mendersoftware/mender-binary-delta:1.5.x
-
     mender-convert:
         image: mendersoftware/mender-convert:4.3.x
 

@@ -1,4 +1,4 @@
-# Copyright 2023 Northern.tech AS
+# Copyright 2025 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -98,11 +98,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
     ]
 
-    COMPAT_FILES = [
-        COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat/docker-compose.yml"
-    ]
-    COMPAT_FILES_ROOT = COMPOSE_FILES_PATH + "/extra/integration-testing/test-compat"
-    COMPAT_FILES_TEMPLATE = COMPAT_FILES_ROOT + "/docker-compose.compat-{tag}.yml"
     MENDER_GATEWAY_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.commercial.yml",
         COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.test.yml",
@@ -465,72 +460,6 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
             "up -d --scale mender-client=1", env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(5)
-
-
-class DockerComposeCompatibilitySetup(DockerComposeNamespace):
-    def __init__(self, name, client_service, enterprise=False):
-        self._enterprise = enterprise
-        extra_files = self.COMPAT_FILES
-        if self._enterprise:
-            extra_files += self.ENTERPRISE_FILES
-        self.client_service = client_service
-        super().__init__(name, extra_files)
-
-    def setup(self):
-        compose_args = "up -d"
-        self._docker_compose_cmd(compose_args)
-        self._wait_for_containers()
-
-    def populate_clients(self, name=None, tenant_token=""):
-        compose_cmd = f"up -d --scale {self.client_service}=1"
-        if name is not None:
-            compose_cmd += " --name '{name}'".format(name=name)
-
-        self._docker_compose_cmd(
-            compose_cmd, env={"TENANT_TOKEN": "%s" % tenant_token},
-        )
-
-    def get_mender_clients(self, network="mender"):
-        cmd = [
-            "docker",
-            "ps",
-            "--filter=label=com.docker.compose.project=" + self.name,
-            '--format={{.Label "com.docker.compose.service"}}',
-        ]
-
-        services = subprocess.check_output(cmd).decode().split()
-        clients = []
-        for service in services:
-            if service.startswith("mender-client"):
-                clients.append(service)
-
-        addrs = []
-        for client in clients:
-            for ip in self.get_ip_of_service(client, network=network):
-                addrs.append(ip + ":8822")
-
-        return addrs
-
-    @staticmethod
-    def get_versions():
-        services = subprocess.check_output(
-            ["docker-compose", "config", "--services"],
-            env=dict(
-                {
-                    "COMPOSE_FILE": ":".join(
-                        DockerComposeNamespace.BASE_FILES
-                        + DockerComposeNamespace.COMPAT_FILES
-                    )
-                },
-                **os.environ,
-            ),
-        )
-        return sorted(
-            filter(
-                lambda s: s.startswith("mender-client"),
-                services.decode("UTF-8").strip().split("\n"),
-            )
-        )
 
 
 class DockerComposeMTLSSetup(DockerComposeNamespace):

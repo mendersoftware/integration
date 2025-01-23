@@ -30,12 +30,18 @@ RELEASE_TOOL = os.path.join(THIS_DIR, "release_tool.py")
 INTEGRATION_DIR = os.path.normpath(os.path.join(THIS_DIR, ".."))
 
 # Samples of the different "types" of repos for listing tests
-SAMPLE_REPOS_NON_BACKEND = [
-    "mender-cli",
-    "mender-artifact",
-    "mender-convert",
+# QA-840 Historical note,
+# This list used to contain both client and independent components. However in the context of the
+# release split we have been repurposing the tool (for now, we will likely deprecate it later) so
+# that we can do "feature releases" inc independent components and "client bundle releases" during
+# the maintenance phase of the LTS.
+# In other words, test only for client repos which is the most important as per today
+SAMPLE_REPOS_CLIENT = [
     "mender",
     "mender-connect",
+    "mender-configure-module",
+    "monitor-client",
+    "mender-binary-delta",
 ]
 SAMPLE_REPOS_DEPRECATED = [
     "deviceadm",
@@ -380,19 +386,19 @@ def test_get_components_of_type(integration_dir_func,):
     # standard query (only_release=None)
     repos_comp = Component.get_components_of_type("git")
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_name for r in SAMPLE_REPOS_CLIENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
     # only_release=False
     repos_comp = Component.get_components_of_type("git", only_release=False)
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_name for r in SAMPLE_REPOS_CLIENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
     # only_non_release=True
     repos_comp = Component.get_components_of_type("git", only_non_release=True)
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_CLIENT])
     assert all([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
     # only_independent_component=True
@@ -400,7 +406,7 @@ def test_get_components_of_type(integration_dir_func,):
         "git", only_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert all([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_name for r in SAMPLE_REPOS_CLIENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
     # only_non_independent_component=True
@@ -408,7 +414,7 @@ def test_get_components_of_type(integration_dir_func,):
         "git", only_non_independent_component=True
     )
     repos_name = [r.name for r in repos_comp]
-    assert not any([r in repos_name for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_name for r in SAMPLE_REPOS_CLIENT])
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
 
@@ -417,19 +423,19 @@ def test_list_repos(capsys,):
     # release_tool.py --list
     captured = run_main_assert_result(capsys, ["--list"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_list for r in SAMPLE_REPOS_CLIENT])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
 
     # release_tool.py --list --only-backend
     captured = run_main_assert_result(capsys, ["--list", "--only-backend"], None)
     repos_list = captured.split("\n")
-    assert not any([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert not any([r in repos_list for r in SAMPLE_REPOS_CLIENT])
     assert not any([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
 
     # release_tool.py --list --all
     captured = run_main_assert_result(capsys, ["--list", "--all"], None)
     repos_list = captured.split("\n")
-    assert all([r in repos_list for r in SAMPLE_REPOS_NON_BACKEND])
+    assert all([r in repos_list for r in SAMPLE_REPOS_CLIENT])
     assert all([r in repos_list for r in SAMPLE_REPOS_DEPRECATED])
     assert "mender-binary-delta" in repos_list
     assert "mender-convert" in repos_list

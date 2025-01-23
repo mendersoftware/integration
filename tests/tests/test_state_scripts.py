@@ -202,7 +202,7 @@ TEST_SETS = [
         "Failure_in_Download_Enter_script",
         {
             "FailureScript": ["Download_Enter_12"],
-            "ExpectedStatus": None,
+            "ExpectedStatus": "failure",
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",

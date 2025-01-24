@@ -202,7 +202,7 @@ TEST_SETS = [
         "Failure_in_Download_Enter_script",
         {
             "FailureScript": ["Download_Enter_12"],
-            "ExpectedStatus": None,
+            "ExpectedStatus": "failure",
             "ScriptOrder": [
                 "Idle_Enter_08_testing",
                 "Idle_Enter_09",
@@ -907,12 +907,14 @@ class BaseTestStateScripts(MenderTesting):
 
             # Test cases with an expectation of success/failure shall do only 1 iteration
             # Test cases with None expectation will loop through the error sequence in a loop, but still
-            # we want to make sure that it is reasonable (i.e. looping with the correct time intervals).
-            # For these cases we set a max. of 50 iterations to accomodate for slow running of the framework
+            # we want to make sure that it is reasonable.
+            # For these cases we set a min. of 4 iterations to ensure that the state machine is
+            # indeed looping and a max. of of 50 iterations to accommodate for slow running of the
+            # framework.
             if test_set["ExpectedStatus"] is not None:
                 assert num_iterations == 1
             else:
-                assert num_iterations < 50
+                assert num_iterations > 4 and num_iterations < 50
 
         except:
             logger.error(

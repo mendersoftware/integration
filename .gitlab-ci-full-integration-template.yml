@@ -55,7 +55,9 @@ test:integration:$CI_NODE_INDEX:
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
     - ulimit -n 524288
-
+    - QEMU_IMAGE=registry.gitlab.com/northern.tech/mender/mender-qa:${PARENT_PIPELINE_ID}-mender-client-qemu
+    - docker pull ${QEMU_IMAGE}
+    - docker tag ${QEMU_IMAGE} mendersoftware/mender-client-qemu:${MENDER_CLIENT_TAG}
   script:
     - cd tests
     - ./run.sh

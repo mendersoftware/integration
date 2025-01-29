@@ -89,6 +89,8 @@ pytest-xdist==3.6.1
     # via -r python-requirements.in
 python-dateutil==2.8.2
     # via kubernetes
+python-dotenv==1.0.1
+    # via -r python-requirements.in
 pyyaml==6.0.1
     # via kubernetes
 redo==3.0.0

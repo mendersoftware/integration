@@ -51,7 +51,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.client.rofs.commercial.yml",
     ]
     DOCKER_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.docker-client.addons.yml",
     ]
     LEGACY_V1_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
@@ -83,7 +83,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
     MT_DOCKER_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.docker-client.yml",
+        COMPOSE_FILES_PATH + "/docker-compose.docker-client.addons.yml",
         COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
     ]
     MTLS_FILES = [

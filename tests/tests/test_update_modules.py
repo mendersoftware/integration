@@ -45,7 +45,7 @@ class BaseTestUpdateModules(MenderTesting):
             def make_artifact(artifact_file, artifact_id):
                 cmd = (
                     "mender-artifact write module-image "
-                    + "-o %s -n %s -t docker-client -T nonexisting-module -f %s"
+                    + "-o %s -n %s -t generic-x86_64 -T nonexisting-module -f %s"
                     % (artifact_file, artifact_id, file1)
                 )
                 logger.info("Executing: " + cmd)

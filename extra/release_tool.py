@@ -24,6 +24,8 @@ import sys
 import traceback
 import datetime
 
+from dotenv import load_dotenv
+
 try:
     import yaml
 except ImportError:
@@ -454,8 +456,13 @@ def get_docker_compose_data_from_json_list(json_list):
     data = {}
     for json_str in json_list:
         json_elem = yaml.safe_load(json_str)
+
+        # Load the environment set in .env
+        load_dotenv(os.path.join(integration_dir(), ".env"))
         for container, cont_info in json_elem["services"].items():
-            full_image = cont_info.get("image")
+            # Expand the variables in cont_info with the loaded variables
+            expanded_cont_info = json.loads(os.path.expandvars(json.dumps(cont_info)))
+            full_image = expanded_cont_info.get("image")
             if full_image is None or (
                 "mendersoftware" not in full_image and "mender.io" not in full_image
             ):

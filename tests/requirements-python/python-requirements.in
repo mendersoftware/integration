@@ -1,10 +1,10 @@
 cryptography==44.0.0
 docker==7.1.0
-filelock==3.16.1
-kubernetes==31.0.0
+filelock==3.17.0
+kubernetes==32.0.0
 msgpack==1.1.0
 py3dns==4.0.2
-pymongo==4.10.1
+pymongo==4.11
 pytest==8.3.4
 pytest-html==4.1.1
 pytest-metadata==3.1.1
@@ -13,7 +13,7 @@ pytest-xdist==3.6.1
 redo==3.0.0
 requests==2.32.3
 urllib3==1.26.20
-websockets==14.1
+websockets==14.2
 flaky==3.8.1
-stripe==11.4.1
+stripe==11.5.0
 aiosmtpd==1.4.6

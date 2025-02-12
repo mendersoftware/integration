@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==44.0.0
+cryptography==44.0.1
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo

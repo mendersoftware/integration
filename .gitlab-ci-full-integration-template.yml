@@ -13,14 +13,6 @@ test:integration:$CI_NODE_INDEX:
     - export CI_NODE_INDEX=$CI_NODE_INDEX
     - export CI_NODE_TOTAL=$CI_NODE_TOTAL
     - |
-      docker login registry.mender.io \
-      --username $REGISTRY_MENDER_IO_USERNAME \
-      --password $REGISTRY_MENDER_IO_PASSWORD
-    - |
-      docker login docker.io \
-      --username $DOCKER_HUB_USERNAME \
-      --password $DOCKER_HUB_PASSWORD
-    - |
       docker login $CI_REGISTRY \
       --username $CI_REGISTRY_USER \
       --password $CI_REGISTRY_PASSWORD

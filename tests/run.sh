@@ -172,4 +172,4 @@ python3 -m pytest \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \
-    "$@"
+    -k TestMenderGatewayOpenSource

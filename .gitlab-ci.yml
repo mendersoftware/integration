@@ -56,6 +56,9 @@ variables:
     value: main
 
   # Artifacts from mender-gateway
+  MENDER_GATEWAY_IMAGE:
+    description: "Mender Gateway Docker Image for running integration tests"
+    value: mender-gateway
   MENDER_GATEWAY_REGISTRY:
     description: "Mender Gateway Docker registry for running integration tests"
     value: registry.mender.io
@@ -66,12 +69,64 @@ variables:
     description: "Mender Gateway Docker tag for running integration tests"
     value: master
 
+  MENDER_CLIENT_REGISTRY:
+    description: "Docker registry for Mender Client images"
+    value: docker.io
+  MENDER_CLIENT_ENTERPRISE_REGISTRY:
+    description: "Enterprise Docker registry for Mender Client images"
+    value: registry.mender.io
+  MENDER_CLIENT_REPOSITORY:
+    description: "Docker repository for Mender Client images"
+    value: mendersoftware
+
   # Virtual devices, built from mender-qa
-  MENDER_CLIENT_TAG:
-    description: "Mender Client (all) Docker tag for running integration tests"
+  MENDER_CLIENT_DOCKER_IMAGE:
+    description: "Mender Client Docker image for for running integration test"
+    value: mender-client-docker
+  MENDER_CLIENT_DOCKER_TAG:
+    description: "Mender Client Docker tag for running integration tests"
     value: mender-master
-  MENDER_GATEWAY_QEMU_TAG:
-    description: "Mender Gateway (QEMU) Docker tag for running integration tests"
+
+  MENDER_CLIENT_DOCKER_ADDONS_IMAGE:
+    description: "Mender Client Docker image with addons for running integration tests"
+    value: mender-client-docker-addons
+  MENDER_CLIENT_DOCKER_ADDONS_TAG:
+    description: "Mender Client Docker addons image tag"
+    value: mender-master
+
+  MENDER_CLIENT_QEMU_IMAGE:
+    description: "Mender Client QEMU image for running integration tests"
+    value: mender-client-qemu
+  MENDER_CLIENT_QEMU_TAG:
+    description: "Mender Client QEMU image tag"
+    value: mender-master
+
+  MENDER_CLIENT_QEMU_ROFS_IMAGE:
+    description: "Mender Client QEMU image with read-only filesystem for running integration tests"
+    value: mender-client-qemu-rofs
+  MENDER_CLIENT_QEMU_ROFS_TAG:
+    description: "Mender Client QEMU read-only filesystem image tag"
+    value: mender-master
+
+  MENDER_GATEWAY_QEMU_COMMERCIAL_IMAGE:
+    description: "Mender Gateway QEMU commercial image for running integration tests"
+    value: mender-gateway-qemu-commercial
+  MENDER_GATEWAY_QEMU_COMMERCIAL_TAG:
+    description: "Mender Gateway QEMU commercial image tag"
+    value: mender-master
+
+  MENDER_MONITOR_QEMU_COMMERCIAL_IMAGE:
+    description: "Mender Monitor QEMU commercial image for running integration tests"
+    value: mender-monitor-qemu-commercial
+  MENDER_MONITOR_QEMU_COMMERCIAL_TAG:
+    description: "Mender Monitor QEMU commercial image tag"
+    value: mender-master
+
+  MENDER_QEMU_ROFS_COMMERCIAL_IMAGE:
+    description: "Mender QEMU commercial image with read-only filesystem for running integration tests"
+    value: mender-qemu-rofs-commercial
+  MENDER_QEMU_ROFS_COMMERCIAL_TAG:
+    description: "Mender QEMU commercial read-only filesystem image tag"
     value: mender-master
 
 .publish:versions:

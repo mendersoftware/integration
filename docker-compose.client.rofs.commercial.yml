@@ -4,4 +4,4 @@ services:
     # mender-client
     #
     mender-client:
-        image: registry.mender.io/mendersoftware/mender-qemu-rofs-commercial:${MENDER_CLIENT_TAG}
+        image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_QEMU_ROFS_COMMERCIAL_IMAGE}:${MENDER_QEMU_ROFS_COMMERCIAL_TAG}

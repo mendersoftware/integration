@@ -4,7 +4,7 @@ services:
     # mender-client
     #
     mender-client:
-        image: ${MENDER_CLIENT_ENTERPRISE_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_IMAGE}:${MENDER_CLIENT_QEMU_TAG}
+        image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_IMAGE}:${MENDER_CLIENT_QEMU_TAG}
         networks:
             - mender_local
         stdin_open: true

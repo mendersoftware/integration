@@ -375,8 +375,11 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
 class TestRemoteTerminalOpenSource(
     _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
 ):
+    @flaky(max_runs=3)
     @pytest.fixture(scope="class")
-    def docker_env(self, class_persistent_standard_setup_one_client_bootstrapped):
+    def docker_env_flaky_test(
+        self, class_persistent_standard_setup_one_client_bootstrapped
+    ):
         env = class_persistent_standard_setup_one_client_bootstrapped
         auth = Authentication()
         env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))

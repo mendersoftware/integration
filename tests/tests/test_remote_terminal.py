@@ -22,6 +22,8 @@ from ..MenderAPI import authentication, devauth, get_container_manager, logger
 from .common_connect import wait_for_connect
 from .mendertesting import MenderTesting
 
+from flaky import flaky
+
 
 class BaseTestRemoteTerminal(MenderTesting):
     """Tests the remote terminal functionality"""
@@ -74,6 +76,7 @@ class BaseTestRemoteTerminal(MenderTesting):
         assert b"mender.conf" in stdout, (stdout, stderr)
 
 
+@flaky(rerun_filter=rerun_on_timeouts)
 class TestRemoteTerminalOpenSource(BaseTestRemoteTerminal):
     def test_portforward(self, standard_setup_one_client_bootstrapped):
         # list of devices

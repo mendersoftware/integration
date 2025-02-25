@@ -76,7 +76,6 @@ class BaseTestRemoteTerminal(MenderTesting):
         assert b"mender.conf" in stdout, (stdout, stderr)
 
 
-@flaky(rerun_filter=rerun_on_timeouts)
 class TestRemoteTerminalOpenSource(BaseTestRemoteTerminal):
     def test_portforward(self, standard_setup_one_client_bootstrapped):
         # list of devices

@@ -154,7 +154,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "docker-compose -p %s %s %s" % (self.name, files_args, arg_list)
+        cmd = "docker compose -p %s %s %s" % (self.name, files_args, arg_list)
 
         logger.info("running with: %s" % cmd)
 
@@ -180,7 +180,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 logger.info("sleeping %d seconds and retrying" % (count * 30))
                 time.sleep(count * 30)
 
-        raise Exception("failed to start docker-compose (called: %s)" % cmd)
+        raise Exception("failed to start docker compose (called: %s)" % cmd)
 
     def _stop_docker_compose(self):
         with docker_lock:

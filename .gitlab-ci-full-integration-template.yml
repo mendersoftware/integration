@@ -64,7 +64,7 @@ test:integration:$CI_NODE_INDEX:
     when: always
     paths:
       - tests/mender_test_logs
-      - tests/results_full_integration.xml
-      - tests/report_full_integration.html
+      - tests/results.xml
+      - tests/report.html
     reports:
-      junit: results_full_integration.xml
+      junit: tests/results.xml

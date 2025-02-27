@@ -11,7 +11,7 @@ include:
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
         when: never
       - when: always
-  - local: .gitlab-ci-full-integration-generator.yml
+  - local: .gitlab-ci-full-integration.yml
     rules:
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
 

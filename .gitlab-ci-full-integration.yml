@@ -1,12 +1,12 @@
-# The CI job name will be unique after substitution from the generator.
-test:integration:$CI_NODE_INDEX:
+test:integration:
   rules:
     - if: $RUN_TESTS_FULL_INTEGRATION == "true"
   image: docker:${DOCKER_VERSION}-dind
   stage: test
   tags:
     - mender-qa-worker-integration-tests
-  timeout: 10h
+  timeout: 2h
+  parallel: 4
   before_script:
     # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
     # plugin to split the tests among the CI jobs. They get substituted by the generator.
@@ -55,7 +55,6 @@ test:integration:$CI_NODE_INDEX:
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
     - ulimit -n 524288
-
   script:
     - cd tests
     - ./run.sh

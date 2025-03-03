@@ -355,7 +355,6 @@ class _TestRemoteTerminalBase:
 
 
 class _TestRemoteTerminalBaseBogusProtoMessage:
-    @pytest.mark.skip("QA-916")
     def test_bogus_proto_message(self, docker_env):
         with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(12345)

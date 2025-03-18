@@ -52,7 +52,7 @@ services:
   # mender-api-gateway
   #
   mender-api-gateway:
-    image: traefik:v3.1
+    image: traefik:v3.3
     extends:
       file: common.yml
       service: mender-base
@@ -249,7 +249,7 @@ services:
           - mongo-workflows
 
   mender-nats:
-    image: nats:2.7.4-scratch
+    image: nats:2.10.24-scratch
     command: -js
     networks:
       - mender

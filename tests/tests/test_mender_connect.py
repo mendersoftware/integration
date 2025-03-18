@@ -356,6 +356,8 @@ class _TestRemoteTerminalBase:
 
 class _TestRemoteTerminalBaseBogusProtoMessage:
     def test_bogus_proto_message(self, docker_env):
+        self.assert_env(docker_env)
+
         with docker_env.devconnect.get_websocket() as ws:
             prot = protomsg.ProtoMsg(12345)
 

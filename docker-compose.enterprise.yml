@@ -12,21 +12,21 @@ services:
 
     # subsitute services with 'enterprise' versions
     mender-deployments:
-        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-3.7.x
+        image: registry.mender.io/mendersoftware/deployments-enterprise:mender-3.7.10
         environment:
             DEPLOYMENTS_ENABLE_AUDIT: 1
 
     mender-inventory:
-        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-3.7.x
+        image: registry.mender.io/mendersoftware/inventory-enterprise:mender-3.7.10
         environment:
             INVENTORY_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             INVENTORY_REDIS_LIMITS_EXPIRE_SEC: "1800"
 
     mender-workflows-server:
-        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-3.7.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise:mender-3.7.10
 
     mender-workflows-worker:
-        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-3.7.x
+        image: registry.mender.io/mendersoftware/workflows-enterprise-worker:mender-3.7.10
         environment:
             HAVE_AUDITLOGS: 1
             HAVE_DEVICECONFIG: 1
@@ -34,7 +34,7 @@ services:
 
     # add services
     mender-tenantadm:
-        image: registry.mender.io/mendersoftware/tenantadm:mender-3.7.x
+        image: registry.mender.io/mendersoftware/tenantadm:mender-3.7.10
         environment:
             TENANTADM_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
             TENANTADM_ENABLE_SELF_SERVICE_SIGN_UP: 1
@@ -48,7 +48,7 @@ services:
 
     # configure the rest
     mender-device-auth:
-        image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-3.7.x
+        image: registry.mender.io/mendersoftware/deviceauth-enterprise:mender-3.7.10
         environment:
             DEVICEAUTH_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             DEVICEAUTH_REDIS_LIMITS_EXPIRE_SEC: "3600"
@@ -57,7 +57,7 @@ services:
             DEVICEAUTH_ENABLE_AUDIT: 1
 
     mender-useradm:
-        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-3.7.x
+        image: registry.mender.io/mendersoftware/useradm-enterprise:mender-3.7.10
         environment:
             USERADM_REDIS_CONNECTION_STRING: "redis://mender-redis:6379"
             USERADM_REDIS_LIMITS_EXPIRE_SEC: "3600"
@@ -66,7 +66,7 @@ services:
             USERADM_ENABLE_AUDIT: 1
 
     mender-auditlogs:
-        image: registry.mender.io/mendersoftware/auditlogs:mender-3.7.x
+        image: registry.mender.io/mendersoftware/auditlogs:mender-3.7.10
         extends:
             file: common.yml
             service: mender-base
@@ -99,7 +99,7 @@ services:
             DEVICECONNECT_ENABLE_AUDIT: 1
 
     mender-generate-delta-worker:
-        image: registry.mender.io/mendersoftware/generate-delta-worker:mender-3.7.x
+        image: registry.mender.io/mendersoftware/generate-delta-worker:mender-3.7.10
         extends:
             file: common.yml
             service: mender-base
@@ -113,7 +113,7 @@ services:
             - mender-nats
 
     mender-devicemonitor:
-        image: registry.mender.io/mendersoftware/devicemonitor:mender-3.7.x
+        image: registry.mender.io/mendersoftware/devicemonitor:mender-3.7.10
         command: server --automigrate
         extends:
             file: common.yml

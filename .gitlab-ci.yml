@@ -129,6 +129,10 @@ variables:
     description: "Mender QEMU commercial read-only filesystem image tag"
     value: mender-master
 
+  MENDER_ARTIFACT_VERSION:
+    description: "mender-artifact tool version"
+    value: 3.11.2
+
 .publish:versions:
   stage: publish
   image: python:slim

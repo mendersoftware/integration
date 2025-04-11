@@ -75,8 +75,6 @@ function get_requirements() {
     echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
 
     # Download the tools
-    #FIXME: The distributed binaries are compiled for OpenSSL 1.1
-    #       As a workaround, we're installing the debian package (noble distribution).
     EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
     (
         test -z "$MENDER_ARTIFACT_VERSION" && source ../.env

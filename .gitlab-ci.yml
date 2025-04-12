@@ -131,7 +131,7 @@ variables:
 
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"
-    value: 3.11.2
+    value: 4.1.0
 
 .publish:versions:
   stage: publish

@@ -98,14 +98,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH + "/extra/smtp-testing/smtp.mock.yml",
     ]
 
-    MENDER_GATEWAY_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.commercial.yml",
-        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.test.yml",
-    ]
-    MENDER_GATEWAY_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.client.yml",
-    ]
-
     def setup(self):
         self._docker_compose_cmd("up -d")
         self._wait_for_containers()
@@ -138,18 +130,6 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
         super().__init__(name, self.QEMU_CLIENT_FILES)
-
-    def setup(self):
-        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
-        self._wait_for_containers()
-
-
-class DockerComposeStandardSetupWithGateway(DockerComposeNamespace):
-    def __init__(self, name, num_clients=1):
-        self.num_clients = num_clients
-        DockerComposeNamespace.__init__(
-            self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
-        )
 
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
@@ -300,44 +280,6 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(5)
-
-
-class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
-    def __init__(self, name, num_clients=0):
-        self.num_clients = num_clients
-        if self.num_clients > 0:
-            raise NotImplementedError(
-                "Clients not implemented on setup time, use new_tenant_client"
-            )
-        else:
-            DockerComposeNamespace.__init__(
-                self,
-                name,
-                self.ENTERPRISE_FILES
-                + self.MENDER_GATEWAY_FILES
-                + self.MENDER_GATEWAY_CLIENT_FILES,
-            )
-
-    def setup(self, mender_clients=0, mender_gateways=0):
-        """Bring up the Docker composition"""
-        self._docker_compose_cmd(
-            f"up -d --scale mender-gateway={mender_gateways} --scale mender-client={mender_clients}",
-        )
-        self._wait_for_containers()
-
-    def new_tenant_client(self, name, tenant):
-        logger.info("creating client connected to tenant: " + tenant)
-        self._docker_compose_cmd(
-            "run -d --name=%s_%s mender-client" % (self.name, name),
-            env={"TENANT_TOKEN": "%s" % tenant},
-        )
-        time.sleep(45)
-
-    def start_tenant_mender_gateway(self, tenant):
-        self._docker_compose_cmd(
-            "up -d mender-gateway", env={"TENANT_TOKEN": "%s" % tenant},
-        )
-        time.sleep(45)
 
 
 class DockerComposeEnterpriseSignedArtifactClientSetup(DockerComposeEnterpriseSetup):

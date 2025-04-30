@@ -60,9 +60,6 @@ def _extract_fs_from_image(request, client_compose_file, filename):
     if os.path.exists(os.path.join(THIS_DIR, filename)):
         return filename
     d = os.path.join(THIS_DIR, "output")
-    image_type = "mender-client"
-    if "gateway" in client_compose_file:
-        image_type = "mender-gateway"
 
     image = (
         subprocess.check_output(
@@ -72,7 +69,7 @@ def _extract_fs_from_image(request, client_compose_file, filename):
                 client_compose_file,
                 "config",
                 "--images",
-                image_type,
+                "mender-client",
             ],
             env=os.environ,
         )
@@ -131,17 +128,6 @@ def run_if_non_existent(request, tmp_path_factory, compose_file, filename):
 def valid_image(request, tmp_path_factory, worker_id):
     compose_file = "docker-compose.client.yml"
     filename = f"core-image-full-cmdline-{machine_name}.ext4"
-
-    if worker_id == "master":
-        return _image(request, compose_file, filename)
-
-    return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
-
-
-@pytest.fixture(scope="session")
-def gateway_image(request, tmp_path_factory, worker_id):
-    compose_file = "docker-compose.mender-gateway.commercial.yml"
-    filename = f"mender-gateway-image-full-cmdline-{machine_name}.ext4"
 
     if worker_id == "master":
         return _image(request, compose_file, filename)

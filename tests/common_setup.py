@@ -82,47 +82,6 @@ def class_persistent_standard_setup_one_client_bootstrapped(request):
 
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client_bootstrapped_with_gateway(request):
-    env = container_factory.get_standard_setup_with_gateway(num_clients=1)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-
-    env.device = MenderDevice(env.get_mender_clients(network="mender_local")[0])
-    env.device.ssh_is_opened()
-    env.device_gateway = MenderDevice(env.get_mender_gateways(network="mender")[0])
-    env.device_gateway.ssh_is_opened()
-
-    reset_mender_api(env)
-    # Two devices: the client device and the gateway device (which also runs mender client)
-    devauth.accept_devices(2)
-
-    env.auth = auth
-    return env
-
-
-@pytest.fixture(scope="function")
-def standard_setup_two_clients_bootstrapped_with_gateway(request):
-    env = container_factory.get_standard_setup_with_gateway(num_clients=2)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-
-    env.device_group = MenderDeviceGroup(env.get_mender_clients(network="mender_local"))
-    env.device_group.ssh_is_opened()
-
-    env.device_gateway = MenderDevice(env.get_mender_gateways(network="mender")[0])
-    env.device_gateway.ssh_is_opened()
-
-    reset_mender_api(env)
-    # Three devices: two client devices and the gateway device (which also runs mender client)
-    devauth.accept_devices(3)
-
-    env.auth = auth
-    return env
-
-
-@pytest.fixture(scope="function")
 def standard_setup_one_rofs_client_bootstrapped(request):
     env = container_factory.get_rofs_client_setup()
     request.addfinalizer(env.teardown)
@@ -357,65 +316,6 @@ def enterprise_one_client_bootstrapped(request):
 @pytest.fixture(scope="class")
 def class_persistent_enterprise_one_client_bootstrapped(request):
     return enterprise_one_client_bootstrapped_impl(request)
-
-
-@pytest.fixture(scope="class")
-def enterprise_one_client_bootstrapped_with_gateway(request):
-    env = container_factory.get_enterprise_setup_with_gateway(num_clients=0)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-    reset_mender_api(env)
-
-    tenant = create_tenant(env)
-    new_tenant_client(
-        env, "mender-client", tenant["tenant_token"], network="mender_local"
-    )
-
-    env.start_tenant_mender_gateway(tenant["tenant_token"])
-    env.device_gateway = MenderDevice(env.get_mender_gateways(network="mender").pop())
-
-    env.device_group.ssh_is_opened()
-    env.device_gateway.ssh_is_opened()
-
-    devauth_tenant = DeviceAuthV2(env.auth)
-    # Two devices: the client device and the gateway device (which also runs mender client)
-    devauth_tenant.accept_devices(2)
-    devices = devauth_tenant.get_devices_status("accepted")
-    assert 2 == len(devices)
-
-    return env
-
-
-@pytest.fixture(scope="class")
-def enterprise_two_clients_bootstrapped_with_gateway(request):
-    env = container_factory.get_enterprise_setup_with_gateway(num_clients=0)
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-    reset_mender_api(env)
-
-    tenant = create_tenant(env)
-    tenant = create_tenant(env)
-    new_tenant_client(
-        env, "mender-client-1", tenant["tenant_token"], network="mender_local"
-    )
-    new_tenant_client(
-        env, "mender-client-2", tenant["tenant_token"], network="mender_local"
-    )
-    env.device_group.ssh_is_opened()
-
-    env.start_tenant_mender_gateway(tenant["tenant_token"])
-    env.device_gateway = MenderDevice(env.get_mender_gateways(network="mender").pop())
-    env.device_gateway.ssh_is_opened()
-
-    devauth_tenant = DeviceAuthV2(env.auth)
-    # Three devices: two client devices and the gateway device (which also runs mender client)
-    devauth_tenant.accept_devices(3)
-    devices = devauth_tenant.get_devices_status("accepted")
-    assert 3 == len(devices)
-
-    return env
 
 
 @pytest.fixture(scope="function")

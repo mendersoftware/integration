@@ -56,14 +56,6 @@ class DockerComposeBaseNamespace(DockerNamespace):
         ]
         return clients
 
-    def get_mender_gateways(self, network="mender"):
-        """Returns IP address(es) of mender-gateway container(s)"""
-        clients = [
-            ip + ":8822"
-            for ip in self.get_ip_of_service("mender-gateway", network=network)
-        ]
-        return clients
-
     def get_mender_client_by_container_name(self, image_name):
         cmd = (
             "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' %s_%s"

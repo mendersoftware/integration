@@ -74,7 +74,7 @@ test:integration:$CI_NODE_INDEX:
       /usr/local/bin/mantra_post_test_results --ensure \
         "$MANTRA_PROJECT_ID" \
         "$MANTRA_BUILD_NAME" \
-        tests/results.xml || true   # never fail the job if Mantra is down
+        results.xml || true   # never fail the job if Mantra is down
 
   artifacts:
     expire_in: 2w

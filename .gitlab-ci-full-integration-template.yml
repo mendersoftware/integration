@@ -55,11 +55,10 @@ test:integration:$CI_NODE_INDEX:
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
     - ulimit -n 524288
-    # ────────────────────────────── Mantra uploader ─────────────────────────────
-    # Pull the helper script from mender-qa once.  It’s tiny (<1 KiB).
+    # Mantra uploader: pull the helper script from mender-qa once. It’s tiny (<1 KiB).
     - |
       curl -sSfL \
-        https://raw.githubusercontent.com/mendersoftware/mender-qa/refs/heads/master/scripts/mantra_post_test_results \
+        https://raw.githubusercontent.com/mendersoftware/mender-qa/refs/heads/parallel_test_to_mantra/scripts/mantra_post_test_results \
         -o /usr/local/bin/mantra_post_test_results
       chmod +x /usr/local/bin/mantra_post_test_results
     # Alpine’s default base64 (BusyBox) lacks -w, so install coreutils’ one
@@ -68,30 +67,15 @@ test:integration:$CI_NODE_INDEX:
   script:
     - cd tests
     - ./run.sh
-    # ────────────────────────────── Post results to Mantra ──────────────────────
+    # Post results to Mantra
     - |
-      # Only run once to avoid duplicate uploads (node 0 == first parallel shard)
-      echo "Node index: $CI_NODE_INDEX"
-      if [ "$CI_NODE_INDEX" = "0" ]; then
-          if [ "$NIGHTLY_BUILD" = "true" ]; then
-            build_name="nightly-$(date +%Y-%m-%d)"
-          else
-            build_name="pullreq-$(date +%Y-%m-%d)-${CI_PIPELINE_ID}"
-          fi
+      echo "Uploading to Mantra with id=$MANTRA_PROJECT_ID build=$BUILD_NAME"
 
-          # Choose open-source vs enterprise ID by the edition under test
-          if [ "$ENTERPRISE" = "true" ]; then
-            mantra_id="$MANTRA_ID_full_integration_enterprise"
-          else
-            mantra_id="$MANTRA_ID_full_integration_open_source"
-          fi
+      /usr/local/bin/mantra_post_test_results --ensure \
+        "$MANTRA_PROJECT_ID" \
+        "$MANTRA_BUILD_NAME" \
+        tests/results.xml || true   # never fail the job if Mantra is down
 
-          echo "Uploading to Mantra with id=$mantra_id build=$build_name"
-          /usr/local/bin/mantra_post_test_results \
-            "$mantra_id" \
-            "$build_name" \
-            tests/results.xml || true   # never fail the job if Mantra is down
-      fi
   artifacts:
     expire_in: 2w
     when: always

@@ -82,58 +82,6 @@ class KubernetesNamespace(DockerComposeBaseNamespace):
         return os.environ.get("GATEWAY_HOSTNAME")
 
 
-class KubernetesEnterpriseSetupWithGateway(KubernetesNamespace):
-    COMPOSE_FILES_PATH = os.path.realpath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..")
-    )
-    MENDER_GATEWAY_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.mender-gateway.commercial.yml",
-        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.test.yml",
-    ]
-    MENDER_GATEWAY_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/extra/mender-gateway/docker-compose.client.yml",
-    ]
-    MT_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.mt.client.yml",
-    ]
-
-    def __init__(self, name, num_clients=1):
-        self.num_clients = num_clients
-        if self.num_clients == 0:
-            KubernetesNamespace.__init__(self, name, self.MENDER_GATEWAY_FILES)
-        else:
-            KubernetesNamespace.__init__(
-                self, name, self.MENDER_GATEWAY_FILES + self.MENDER_GATEWAY_CLIENT_FILES
-            )
-
-    def _wait_for_containers(self):
-        self.wait_until_healthy(self.name, timeout=60 * 5)
-
-    def new_tenant_client(self, name: str, tenant_token: str):
-        if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
-            self.extra_files += self.MT_CLIENT_FILES
-        logger.info("creating client connected to tenant: " + tenant_token)
-        self._docker_compose_cmd(
-            f"run -d --name={self.name}_{name} mender-client",
-            env={
-                "SERVER_URL": f"https://{self.get_mender_gateway()}",
-                "TENANT_TOKEN": tenant_token,
-            },
-        )
-        time.sleep(30)
-
-    def start_tenant_mender_gateway(self, tenant_token: str):
-        self._docker_compose_cmd(
-            "up -d --scale mender-gateway=1 --scale mender-client=0",
-            env={
-                "SERVER_URL": f"https://{self.get_mender_gateway()}",
-                "TENANT_TOKEN": tenant_token,
-            },
-        )
-        time.sleep(30)
-
-
 class KubernetesEnterpriseSetup(KubernetesNamespace):
     COMPOSE_FILES_PATH = DockerComposeBaseNamespace.COMPOSE_FILES_PATH
     MT_CLIENT_FILES = [

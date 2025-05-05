@@ -15,7 +15,6 @@
 
 from .docker_compose_manager import (
     DockerComposeStandardSetup,
-    DockerComposeStandardSetupWithGateway,
     DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
@@ -26,7 +25,6 @@ from .docker_compose_manager import (
     DockerComposeShortLivedTokenSetup,
     DockerComposeFailoverServerSetup,
     DockerComposeEnterpriseSetup,
-    DockerComposeEnterpriseSetupWithGateway,
     DockerComposeEnterpriseSignedArtifactClientSetup,
     DockerComposeEnterpriseShortLivedTokenSetup,
     DockerComposeEnterpriseLegacyV1ClientSetup,
@@ -38,7 +36,6 @@ from .docker_compose_manager import (
 )
 from .kubernetes_manager import (
     KubernetesEnterpriseSetup,
-    KubernetesEnterpriseSetupWithGateway,
     KubernetesEnterpriseMonitorCommercialSetup,
     isK8S,
 )
@@ -47,13 +44,6 @@ from .kubernetes_manager import (
 class ContainerManagerFactory:
     def get_standard_setup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
-
-        The num_clients define how many QEMU Mender clients will be spawn.
-        """
-        pass
-
-    def get_standard_setup_with_gateway(self, name=None, num_clients=1):
-        """Standard setup with the Mender Gateway
 
         The num_clients define how many QEMU Mender clients will be spawn.
         """
@@ -102,10 +92,6 @@ class ContainerManagerFactory:
         """Setup with enterprise versions for the applicable services"""
         pass
 
-    def get_enterprise_setup_with_gateway(self, name=None, num_clients=0):
-        """Setup with enterprise versions and the Mender Gateway"""
-        pass
-
     def get_enterprise_signed_artifact_client_setup(self, name=None):
         """Enterprise setup with pre-installed verification key in the client"""
         pass
@@ -151,9 +137,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_standard_setup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
 
-    def get_standard_setup_with_gateway(self, name=None, num_clients=1):
-        return DockerComposeStandardSetupWithGateway(name, num_clients)
-
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return DockerComposeMonitorCommercialSetup(name, num_clients)
 
@@ -180,9 +163,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def get_enterprise_setup(self, name=None, num_clients=0):
         return DockerComposeEnterpriseSetup(name, num_clients)
-
-    def get_enterprise_setup_with_gateway(self, name=None, num_clients=0):
-        return DockerComposeEnterpriseSetupWithGateway(name, num_clients)
 
     def get_enterprise_signed_artifact_client_setup(self, name=None):
         return DockerComposeEnterpriseSignedArtifactClientSetup(name)
@@ -218,9 +198,6 @@ class KubernetesManagerFactory(ContainerManagerFactory):
 
     def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseSetup(name, num_clients)
-
-    def get_enterprise_setup_with_gateway(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetupWithGateway(name, num_clients)
 
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return KubernetesEnterpriseMonitorCommercialSetup(name, num_clients)

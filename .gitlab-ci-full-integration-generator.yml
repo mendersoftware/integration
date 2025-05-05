@@ -9,6 +9,10 @@
 # And how is really implemented? Using envsubst to set the values of CI_NODE_TOTAL and CI_NODE_INDEX
 # in the template pipeline file for each desired child job, and concatenate all of them.
 #
+# TODO: move to the test result upload script for consistency
+variables:
+  MANTRA_ID_full_integration: "9"
+
 test:integration:generator:
   image: debian:12-slim
   stage: test-gen

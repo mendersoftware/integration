@@ -55,10 +55,27 @@ test:integration:$CI_NODE_INDEX:
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
     - ulimit -n 524288
+    # Mantra uploader: pull the helper script from mender-qa once. It’s tiny (<1 KiB).
+    - |
+      curl -sSfL \
+        https://raw.githubusercontent.com/mendersoftware/mender-qa/refs/heads/parallel_test_to_mantra/scripts/mantra_post_test_results \
+        -o /usr/local/bin/mantra_post_test_results
+      chmod +x /usr/local/bin/mantra_post_test_results
+    # Alpine’s default base64 (BusyBox) lacks -w, so install coreutils’ one
+    - apk add --no-cache coreutils
 
   script:
     - cd tests
     - ./run.sh
+    # Post results to Mantra
+    - |
+      echo "Uploading to Mantra with project=$MANTRA_PROJECT_NAME build=$MANTRA_BUILD_NAME"
+
+      /usr/local/bin/mantra_post_test_results --ensure \
+        "$MANTRA_PROJECT_NAME" \
+        "$MANTRA_BUILD_NAME" \
+        results.xml || true   # never fail the job if Mantra is down
+
   artifacts:
     expire_in: 2w
     when: always

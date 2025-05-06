@@ -9,16 +9,28 @@
 # And how is really implemented? Using envsubst to set the values of CI_NODE_TOTAL and CI_NODE_INDEX
 # in the template pipeline file for each desired child job, and concatenate all of them.
 #
+
 test:integration:generator:
   image: debian:12-slim
   stage: test-gen
   script:
   - apt-get update && apt-get install -y gettext-base
+  - |
+    if [ "$NIGHTLY_BUILD" = "true" ]; then
+      MANTRA_BUILD_NAME="nightly-$(date +%Y-%m-%d)"
+    else
+      MANTRA_BUILD_NAME="pullreq-$(date +%Y-%m-%d)-${CI_PIPELINE_ID}"
+    fi
+    MANTRA_PROJECT_NAME="full_integration"
+
+    # Export for envsubst
+    export MANTRA_BUILD_NAME MANTRA_PROJECT_NAME
+
   - touch gitlab-ci-full-integration-jobs.yml
   - CI_NODE_TOTAL=$CI_JOBS_IN_PARALLEL_INTEGRATION
   - export CI_NODE_TOTAL CI_NODE_INDEX
   - for CI_NODE_INDEX in $(seq $CI_JOBS_IN_PARALLEL_INTEGRATION); do
-  -   envsubst '$CI_NODE_TOTAL,$CI_NODE_INDEX' < .gitlab-ci-full-integration-template.yml >> gitlab-ci-full-integration-jobs.yml
+  -   envsubst '$CI_NODE_TOTAL,$CI_NODE_INDEX,$MANTRA_BUILD_NAME,$MANTRA_PROJECT_NAME' < .gitlab-ci-full-integration-template.yml >> gitlab-ci-full-integration-jobs.yml
   - done
   artifacts:
     paths:

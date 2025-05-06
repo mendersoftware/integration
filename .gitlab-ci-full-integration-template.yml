@@ -69,10 +69,10 @@ test:integration:$CI_NODE_INDEX:
     - ./run.sh
     # Post results to Mantra
     - |
-      echo "Uploading to Mantra with id=$MANTRA_PROJECT_ID build=$MANTRA_BUILD_NAME"
+      echo "Uploading to Mantra with project=$MANTRA_PROJECT_NAME build=$MANTRA_BUILD_NAME"
 
       /usr/local/bin/mantra_post_test_results --ensure \
-        "$MANTRA_PROJECT_ID" \
+        "$MANTRA_PROJECT_NAME" \
         "$MANTRA_BUILD_NAME" \
         results.xml || true   # never fail the job if Mantra is down
 

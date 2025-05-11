@@ -65,6 +65,8 @@ test:integration:$CI_NODE_INDEX:
   script:
     - cd tests
     - ./run.sh
+
+  after_script:
     # Post results to Mantra
     - |
       echo "Uploading to Mantra with project=$MANTRA_PROJECT_NAME build=$MANTRA_BUILD_NAME"

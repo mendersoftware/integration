@@ -81,7 +81,7 @@ class BaseTestTcpTeardown:
               /io/mender/AuthenticationManager \\
               io.mender.Authentication1.FetchJwtToken"""
         )
-        time.sleep(1)
+        time.sleep(5)
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         # To test mender-update, set long intervals and manually trigger operations
@@ -92,12 +92,12 @@ class BaseTestTcpTeardown:
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         mender_device.run("mender-update check-update")
-        time.sleep(1)
+        time.sleep(5)
         assert get_opened_tcp_connections(mender_device, "mender-update") == 0
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         mender_device.run("mender-update send-inventory")
-        time.sleep(1)
+        time.sleep(5)
         assert get_opened_tcp_connections(mender_device, "mender-update") == 0
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 

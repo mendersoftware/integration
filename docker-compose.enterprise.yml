@@ -2,7 +2,7 @@ services:
 
     # redis cache
     mender-redis:
-        image: redis:6.0.5-alpine
+        image: redis:8-alpine
         extends:
             file: common.yml
             service: mender-base

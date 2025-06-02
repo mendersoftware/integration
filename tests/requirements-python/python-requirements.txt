@@ -20,7 +20,7 @@ cffi==1.15.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==44.0.2
+cryptography==45.0.3
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
@@ -83,9 +83,9 @@ pytest-metadata==3.1.1
     # via
     #   -r python-requirements.in
     #   pytest-html
-pytest-timeout==2.3.1
+pytest-timeout==2.4.0
     # via -r python-requirements.in
-pytest-xdist==3.6.1
+pytest-xdist==3.7.0
     # via -r python-requirements.in
 python-dateutil==2.8.2
     # via kubernetes

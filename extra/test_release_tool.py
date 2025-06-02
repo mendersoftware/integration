@@ -42,6 +42,7 @@ SAMPLE_REPOS_CLIENT = [
     "mender-configure-module",
     "monitor-client",
     "mender-binary-delta",
+    "mender-flash",
 ]
 SAMPLE_REPOS_DEPRECATED = [
     "deviceadm",
@@ -102,6 +103,17 @@ def test_version_of(capsys, is_master):
         run_main_assert_result(
             capsys,
             ["--version-of", "mender-connect", "--version-type", "docker"],
+            "mender-master",
+        )
+
+    run_main_assert_result(capsys, ["--version-of", "mender-flash"], "master")
+    run_main_assert_result(
+        capsys, ["--version-of", "mender-flash", "--version-type", "git"], "master"
+    )
+    with pytest.raises(Exception):
+        run_main_assert_result(
+            capsys,
+            ["--version-of", "mender-flash", "--version-type", "docker"],
             "mender-master",
         )
 
@@ -487,6 +499,7 @@ def test_git_to_buildparam():
         "deviceconfig": "DEVICECONFIG_REV",
         "devicemonitor": "DEVICEMONITOR_REV",
         "monitor-client": "MONITOR_CLIENT_REV",
+        "mender-flash": "MENDER_FLASH_REV",
         "reporting": "REPORTING_REV",
     }
 

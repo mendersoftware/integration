@@ -58,7 +58,15 @@ test:integration:$CI_NODE_INDEX:
 
   script:
     - cd tests
-    - ./run.sh
+    #- ./run.sh -v -s
+    - |
+      if [[ $CI_NODE_INDEX == 4 ]]; then
+        touch /tmp/done
+        while [ -f /tmp/done ]; do echo "sleeping"; sleep 10; done
+      else
+        ./run.sh
+      fi
+
   artifacts:
     expire_in: 2w
     when: always

@@ -13,6 +13,7 @@ OTHER_REPOS = [
     "mender-api-gateway-docker",
     "integration",
     "monitor-client",
+    "mender-flash",
     "mender-binary-delta",
     "mender-configure-module",
     "mender-convert",

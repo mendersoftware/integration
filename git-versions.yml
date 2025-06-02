@@ -22,6 +22,9 @@ services:
     mender-binary-delta:
         image: mendersoftware/mender-binary-delta:master
 
+    mender-flash:
+        image: mendersoftware/mender-flash:master
+
     #
     # Independent repositories
     #

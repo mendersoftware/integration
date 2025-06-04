@@ -8,17 +8,12 @@ RUN apt-get update && apt-get install -y make git build-essential golang liblzma
     libarchive-dev libdbus-1-dev libsystemd-dev
 
 ARG MENDER_CLIENT_REV=master
-ARG MENDER_FLASH_REV=master
 ARG MENDER_CONNECT_REV=master
 ARG MENDER_SETUP_REV=master
 
 RUN git clone https://github.com/mendersoftware/mender /src/mender
 RUN (cd /src/mender && git fetch origin $MENDER_CLIENT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CLIENT_REV)
 RUN cd /src/mender && git submodule update --init
-
-RUN git clone https://github.com/mendersoftware/mender-flash /src/mender-flash
-RUN (cd /src/mender-flash && git fetch origin $MENDER_FLASH_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_FLASH_REV)
-RUN cd /src/mender-flash && git submodule update --init
 
 RUN git clone https://github.com/mendersoftware/mender-connect /src/mender-connect
 RUN (cd /src/mender-connect && git fetch origin $MENDER_CONNECT_REV && git checkout FETCH_HEAD || git checkout -f $MENDER_CONNECT_REV)
@@ -39,10 +34,6 @@ RUN cmake -D CMAKE_INSTALL_PREFIX:PATH=/usr -S .
 RUN DESTDIR=/mender-install make --jobs=$(nproc --all) install
 RUN jq ".ServerCertificate=\"/usr/share/doc/mender-auth/examples/demo.crt\" | .ServerURL=\"https://docker.mender.io/\"" \
     < examples/mender.conf.demo > /mender-install/etc/mender/mender.conf
-
-WORKDIR /src/mender-flash
-RUN cmake -D CMAKE_INSTALL_PREFIX:PATH=/usr -S .
-RUN DESTDIR=/mender-install make --jobs=$(nproc --all) install
 
 # Install mender-artifact from upstream
 RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.gpg.d/mender.asc && \

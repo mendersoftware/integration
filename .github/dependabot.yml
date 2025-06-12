@@ -11,8 +11,6 @@ updates:
       python-test-dependencies:
         patterns:
           - "*"
-    reviewers:
-      - "mendersoftware/qa-dependabot-reviewers"
   - commit-message:
       prefix: chore
     directory: /extra/
@@ -20,8 +18,6 @@ updates:
     schedule:
       interval: monthly
       day: saturday
-    reviewers:
-      - "mendersoftware/qa-dependabot-reviewers"
   - commit-message:
       prefix: chore
     directory: /extra/mender-client-docker-addons/
@@ -29,5 +25,3 @@ updates:
     schedule:
       interval: weekly
       day: saturday
-    reviewers:
-      - "mendersoftware/qa-dependabot-reviewers"

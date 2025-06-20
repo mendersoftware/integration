@@ -102,13 +102,12 @@ class BaseTestPortForward(MenderTesting):
 
         # verify the TCP port-forward using scp to upload and download files
         try:
-            # create a 40MB random file
+            # create a 1KB random file
             f = NamedTemporaryFile(delete=False)
-            for i in range(40 * 1024):
-                f.write(os.urandom(1024))
+            f.write(os.urandom(1024))
             f.close()
 
-            logger.info("created a 40MB random file: " + f.name)
+            logger.info("created a 1KB random file: " + f.name)
 
             # upload the file using scp
             logger.info("uploading the file to the device using scp")

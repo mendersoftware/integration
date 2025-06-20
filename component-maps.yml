@@ -38,6 +38,17 @@ git:
     release_component: true
     independent_component: true
 
+  mender-flash:
+    docker_image:
+    - mender-client-qemu
+    - mender-client-qemu-rofs
+    - mender-qemu-rofs-commercial
+    - mender-monitor-qemu-commercial
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: true
+
   generate-delta-worker:
     docker_image:
     - generate-delta-worker
@@ -404,6 +415,7 @@ docker_image:
   mender-client-qemu:
     git:
     - mender
+    - mender-flash
     - mender-connect
     docker_container:
     - mender-client
@@ -413,6 +425,7 @@ docker_image:
   mender-client-qemu-rofs:
     git:
     - mender
+    - mender-flash
     - mender-connect
     docker_container:
     - mender-client
@@ -422,6 +435,7 @@ docker_image:
   mender-qemu-rofs-commercial:
     git:
     - mender
+    - mender-flash
     - mender-connect
     - mender-binary-delta
     docker_container:
@@ -560,6 +574,7 @@ docker_image:
     - monitor-client
     - mender
     - mender-connect
+    - mender-flash
     docker_container:
     - mender-client
     release_component: true
@@ -647,6 +662,7 @@ docker_container:
     - monitor-client
     - mender-connect
     - mender-binary-delta
+    - mender-flash
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons

@@ -5,7 +5,7 @@ kubernetes==33.1.0
 msgpack==1.1.1
 py3dns==4.0.2
 pymongo==4.13.2
-pytest==8.4.0
+pytest==8.4.1
 pytest-html==4.1.1
 pytest-metadata==3.1.1
 pytest-timeout==2.4.0

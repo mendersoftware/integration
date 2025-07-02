@@ -72,7 +72,7 @@ pygments==2.19.1
     # via pytest
 pymongo==4.13.2
     # via -r python-requirements.in
-pytest==8.4.0
+pytest==8.4.1
     # via
     #   -r python-requirements.in
     #   pytest-html

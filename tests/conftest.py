@@ -78,7 +78,7 @@ def _extract_fs_from_image(request, client_compose_file, filename):
         .split("\n")[0]
     )
 
-    subprocess.run(
+    ret = subprocess.run(
         [
             "docker",
             "run",
@@ -89,8 +89,14 @@ def _extract_fs_from_image(request, client_compose_file, filename):
             "--volume",
             d + ":/output",
             image,
-        ]
+        ],
+        capture_output=True,
     )
+    try:
+        ret.check_returncode()
+    except subprocess.CalledProcessError as ex:
+        logger.error(ex.stderr)
+        raise ex
 
     if not os.path.exists(os.path.join(THIS_DIR, filename)):
         shutil.move(os.path.join(d, filename), THIS_DIR)

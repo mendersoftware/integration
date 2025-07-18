@@ -215,7 +215,7 @@ services:
             - mender-nats-2
 
     mender-mongo-2:
-        image: mongo:6.0
+        image: mongo:8.0
         extends:
             file: common.yml
             service: mender-base

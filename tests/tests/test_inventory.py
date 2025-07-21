@@ -194,6 +194,12 @@ class BaseTestInventory(MenderTesting):
                             "artifact_name",
                             "kernel",
                             "os",
+                            "geo-ip",
+                            "geo-city",
+                            "geo-country",
+                            "geo-lat",
+                            "geo-lon",
+                            "geo-timezone",
                         ]
                         for key in expected_keys:
                             if type(key) is list:

@@ -30,23 +30,23 @@ from .common import md5sum
 from .mendertesting import MenderTesting
 
 # Function must be defined outside of class so it can be pickled
-def port_forward(server_url, dev_id, port_mapping, *port_mappings):
-    p = subprocess.Popen(
+def port_forward(auth_token, server_url, dev_id, port_mapping, *port_mappings):
+    return subprocess.run(
         [
             "mender-cli",
             "--skip-verify",
             "--server",
             server_url,
+            "--token-value",
+            auth_token,
             "port-forward",
-            devid,
+            dev_id,
             port_mapping,
         ]
         + list(port_mappings),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        check=True,
+        capture_output=True,
     )
-    stdout, stderr = p.communicate()
-    p.wait()
 
 
 class BaseTestPortForward(MenderTesting):
@@ -56,32 +56,12 @@ class BaseTestPortForward(MenderTesting):
         # wait for the device to connect via websocket
         wait_for_connect(auth, devid)
 
-        # authenticate with mender-cli
         server_url = "https://" + get_container_manager().get_mender_gateway()
-        username = auth.username
-        password = auth.password
-        p = subprocess.Popen(
-            [
-                "mender-cli",
-                "--skip-verify",
-                "--server",
-                server_url,
-                "login",
-                "--username",
-                username,
-                "--password",
-                password,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        stdout, stderr = p.communicate()
-        exit_code = p.wait()
-        assert exit_code == 0, (stdout, stderr)
+        auth_token = auth.get_auth_token()["Authorization"].split()[1]
 
         pfw = Process(
             target=port_forward,
-            args=(server_url, devid, "9922:22", "udp/9953:8.8.8.8:53"),
+            args=(auth_token, server_url, devid, "9922:22", "udp/9953:8.8.8.8:53"),
         )
         pfw.start()
 
@@ -111,7 +91,7 @@ class BaseTestPortForward(MenderTesting):
 
             # upload the file using scp
             logger.info("uploading the file to the device using scp")
-            p = subprocess.Popen(
+            proc = subprocess.run(
                 [
                     "scp",
                     "-O",
@@ -124,16 +104,14 @@ class BaseTestPortForward(MenderTesting):
                     f.name,
                     "root@localhost:/tmp/random.bin",
                 ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                check=True,
+                capture_output=True,
             )
-            stdout, stderr = p.communicate()
-            exit_code = p.wait()
-            assert exit_code == 0, (stdout, stderr)
+            assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
             # download the file using scp
             logger.info("download the file from the device using scp")
-            p = subprocess.Popen(
+            proc = subprocess.run(
                 [
                     "scp",
                     "-O",
@@ -146,12 +124,10 @@ class BaseTestPortForward(MenderTesting):
                     "root@localhost:/tmp/random.bin",
                     f.name + ".download",
                 ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                check=True,
+                capture_output=True,
             )
-            stdout, stderr = p.communicate()
-            exit_code = p.wait()
-            assert exit_code == 0, (stdout, stderr)
+            assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
             # assert the files are not corrupted
             logger.info("checking the checksums of the uploaded and downloaded files")

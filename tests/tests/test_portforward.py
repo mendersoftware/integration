@@ -17,8 +17,12 @@ import os
 import subprocess
 import time
 
+from contextlib import contextmanager
 from multiprocessing import Process
 from tempfile import NamedTemporaryFile
+
+import filelock
+from filelock import FileLock
 
 from DNS import DnsRequest
 
@@ -49,6 +53,23 @@ def port_forward(auth_token, server_url, dev_id, port_mapping, *port_mappings):
     )
 
 
+@contextmanager
+def port_forward_process(auth_token, server_url, dev_id, port_mapping, *port_mappings):
+    pfw = Process(
+        target=port_forward,
+        args=(auth_token, server_url, dev_id, port_mapping) + port_mappings,
+    )
+    try:
+        pfw.start()
+        yield pfw
+    finally:
+        if pfw.is_alive():
+            pfw.terminate()
+            pfw.join(timeout=5)
+            if pfw.is_alive():
+                pfw.kill()
+
+
 class BaseTestPortForward(MenderTesting):
     """Tests the port forward functionality"""
 
@@ -59,86 +80,94 @@ class BaseTestPortForward(MenderTesting):
         server_url = "https://" + get_container_manager().get_mender_gateway()
         auth_token = auth.get_auth_token()["Authorization"].split()[1]
 
-        pfw = Process(
-            target=port_forward,
-            args=(auth_token, server_url, devid, "9922:22", "udp/9953:8.8.8.8:53"),
-        )
-        pfw.start()
+        # Acquire lock to avoid enterprise and open-source to bind the same port
+        with filelock.FileLock(".test_portforward_lock"):
+            tcp_port = 9922
+            udp_port = 9953
+            with port_forward_process(
+                auth_token,
+                server_url,
+                devid,
+                f"{tcp_port}:22",
+                f"udp/{udp_port}:8.8.8.8:53",
+            ) as pfw:
+                # wait a few seconds to let the port-forward start
+                logger.info("port-forward started, waiting a few seconds")
+                time.sleep(10)
 
-        # wait a few seconds to let the port-forward start
-        logger.info("port-forward started, waiting a few seconds")
-        time.sleep(10)
+                # verify the UDP port-forward querying the Google's DNS server
+                logger.info("resolve mender.io (A record)")
+                req = DnsRequest(
+                    name="mender.io", qtype="A", server="localhost", port=udp_port
+                )
+                response = req.req()
+                assert len(response.answers) >= 1, response.show()
 
-        # verify the UDP port-forward querying the Google's DNS server
-        logger.info("resolve mender.io (A record)")
-        req = DnsRequest(name="mender.io", qtype="A", server="localhost", port=9953)
-        response = req.req()
-        assert len(response.answers) >= 1, response.show()
+                logger.info("resolve mender.io (MX record)")
+                req = DnsRequest(
+                    name="mender.io", qtype="MX", server="localhost", port=udp_port
+                )
+                response = req.req()
+                assert len(response.answers) >= 1, response.show()
 
-        logger.info("resolve mender.io (MX record)")
-        req = DnsRequest(name="mender.io", qtype="MX", server="localhost", port=9953)
-        response = req.req()
-        assert len(response.answers) >= 1, response.show()
+                # verify the TCP port-forward using scp to upload and download files
+                try:
+                    # create a 1KB random file
+                    f = NamedTemporaryFile(delete=False)
+                    f.write(os.urandom(1024))
+                    f.close()
 
-        # verify the TCP port-forward using scp to upload and download files
-        try:
-            # create a 1KB random file
-            f = NamedTemporaryFile(delete=False)
-            f.write(os.urandom(1024))
-            f.close()
+                    logger.info("created a 1KB random file: " + f.name)
 
-            logger.info("created a 1KB random file: " + f.name)
+                    # upload the file using scp
+                    logger.info("uploading the file to the device using scp")
+                    proc = subprocess.run(
+                        [
+                            "scp",
+                            "-O",
+                            "-o",
+                            "StrictHostKeyChecking=no",
+                            "-o",
+                            "UserKnownHostsFile=/dev/null",
+                            "-P",
+                            str(tcp_port),
+                            f.name,
+                            f"root@localhost:{f.name}",
+                        ],
+                        check=True,
+                        capture_output=True,
+                    )
+                    assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
-            # upload the file using scp
-            logger.info("uploading the file to the device using scp")
-            proc = subprocess.run(
-                [
-                    "scp",
-                    "-O",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-P",
-                    "9922",
-                    f.name,
-                    "root@localhost:/tmp/random.bin",
-                ],
-                check=True,
-                capture_output=True,
-            )
-            assert proc.returncode == 0, (proc.stdout, proc.stderr)
+                    # download the file using scp
+                    logger.info("download the file from the device using scp")
+                    proc = subprocess.run(
+                        [
+                            "scp",
+                            "-O",
+                            "-o",
+                            "StrictHostKeyChecking=no",
+                            "-o",
+                            "UserKnownHostsFile=/dev/null",
+                            "-P",
+                            str(tcp_port),
+                            f"root@localhost:{f.name}",
+                            f.name + ".download",
+                        ],
+                        check=True,
+                        capture_output=True,
+                    )
+                    assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
-            # download the file using scp
-            logger.info("download the file from the device using scp")
-            proc = subprocess.run(
-                [
-                    "scp",
-                    "-O",
-                    "-o",
-                    "StrictHostKeyChecking=no",
-                    "-o",
-                    "UserKnownHostsFile=/dev/null",
-                    "-P",
-                    "9922",
-                    "root@localhost:/tmp/random.bin",
-                    f.name + ".download",
-                ],
-                check=True,
-                capture_output=True,
-            )
-            assert proc.returncode == 0, (proc.stdout, proc.stderr)
-
-            # assert the files are not corrupted
-            logger.info("checking the checksums of the uploaded and downloaded files")
-            assert md5sum(f.name) == md5sum(f.name + ".download")
-        finally:
-            os.unlink(f.name)
-            if os.path.isfile(f.name + ".download"):
-                os.unlink(f.name + ".download")
-
-        # stop the port-forwarding
-        pfw.kill()
+                    # assert the files are not corrupted
+                    logger.info(
+                        "checking the checksums of the uploaded and downloaded files"
+                    )
+                    assert md5sum(f.name) == md5sum(f.name + ".download")
+                finally:
+                    os.unlink(f.name)
+                    if os.path.isfile(f.name + ".download"):
+                        os.unlink(f.name + ".download")
 
 
 class TestPortForwardOpenSource(BaseTestPortForward):

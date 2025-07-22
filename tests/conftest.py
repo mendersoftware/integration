@@ -58,27 +58,24 @@ def pytest_addoption(parser):
     )
 
 
-def _extract_fs_from_image(request, client_compose_file, filename):
-    if os.path.exists(os.path.join(THIS_DIR, filename)):
+def _extract_fs_from_image(client_compose_file, filename):
+    dst_path = os.path.join(THIS_DIR, filename)
+    if os.path.exists(dst_path):
         return filename
-    d = os.path.join(THIS_DIR, "output")
 
-    image = (
-        subprocess.check_output(
-            [
-                "docker-compose",
-                "-f",
-                client_compose_file,
-                "config",
-                "--images",
-                "mender-client",
-            ],
-            env=os.environ,
-        )
-        .decode("UTF-8")
-        .strip()
-        .split("\n")[0]
-    )
+    image = subprocess.check_output(
+        [
+            "docker",
+            "compose",
+            "-f",
+            client_compose_file,
+            "config",
+            "--images",
+            "mender-client",
+        ],
+        env=os.environ,
+        text=True,
+    ).strip("\n")
 
     ret = subprocess.run(
         [
@@ -89,89 +86,69 @@ def _extract_fs_from_image(request, client_compose_file, filename):
             "--entrypoint",
             "/extract_fs",
             "--volume",
-            d + ":/output",
+            f"{THIS_DIR}:/output",
             image,
         ],
         capture_output=True,
     )
-    try:
-        ret.check_returncode()
-    except subprocess.CalledProcessError as ex:
-        logger.error(ex.stderr)
-        raise ex
 
-    if not os.path.exists(os.path.join(THIS_DIR, filename)):
-        shutil.move(os.path.join(d, filename), THIS_DIR)
+    if ret.returncode != 0:
+        logger.error(f"extract_fs failed with code {ret.returncode}")
+        logger.error(f"stdout:\n{ret.stdout}")
+        logger.error(f"stderr:\n{ret.stderr}")
+        raise subprocess.CalledProcessError(
+            ret.returncode, ret.args, output=ret.stdout, stderr=ret.stderr
+        )
 
-    def cleanup():
-        shutil.rmtree(d, ignore_errors=True)
+    if not os.path.exists(dst_path):
+        raise FileNotFoundError(f"Expected ext4 not found: {dst_path}")
 
-    request.addfinalizer(cleanup)
-
-    return filename
-
-
-def _image(request, compose_file, filename):
-    return _extract_fs_from_image(
-        request, os.path.join(THIS_DIR, "..", compose_file), filename
-    )
+    yield filename
+    shutil.rmtree(dst_path, ignore_errors=True)
 
 
-# https://pytest-xdist.readthedocs.io/en/latest/how-to.html#making-session-scoped-fixtures-execute-only-once
-def run_if_non_existent(request, tmp_path_factory, compose_file, filename):
-    """
-    Makes session scoped fixtures only run once
-    to avoid conflict while running multiple workers with xdist
-    """
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
-    file_lock = root_tmp_dir / filename
-
-    with FileLock(f"{file_lock}.lock"):
-        if file_lock.is_file() and os.path.exists(os.path.join(THIS_DIR, filename)):
+def image(compose_file, filename):
+    with FileLock(f".extract_fs_lock.lock"):
+        if os.path.exists(os.path.join(THIS_DIR, filename)):
             return filename
-    return _image(request, compose_file, filename)
+        return next(
+            _extract_fs_from_image(os.path.join(THIS_DIR, "..", compose_file), filename)
+        )
 
 
 @pytest.fixture(scope="session")
-def valid_image(request, tmp_path_factory, worker_id):
+def valid_image():
     compose_file = "docker-compose.client.yml"
     filename = f"core-image-full-cmdline-{machine_name}.ext4"
 
-    if worker_id == "master":
-        return _image(request, compose_file, filename)
-
-    return run_if_non_existent(request, tmp_path_factory, compose_file, filename)
+    return image(compose_file, filename)
 
 
-def _special_image(request, image, command):
+def _special_image(image, command):
     subprocess.run(command, check=True)
     return image
 
 
 @pytest.fixture(scope="session")
-def broken_network_image(request, valid_image):
+def broken_network_image(valid_image):
     image = f"core-image-full-cmdline-{machine_name}-broken-network.ext4"
     shutil.copy(valid_image, image)
     return _special_image(
-        request,
-        image,
-        ["debugfs", "-w", "-R", "rm /lib/systemd/systemd-networkd", image],
+        image, ["debugfs", "-w", "-R", "rm /lib/systemd/systemd-networkd", image],
     )
 
 
 @pytest.fixture(scope="session")
-def large_image(request):
+def large_image():
     return _special_image(
-        request,
         "large_image.dat",
         ["dd", "if=/dev/zero", "of=large_image.dat", "bs=500M", "count=1"],
     )
 
 
 @pytest.fixture(scope="session")
-def broken_update_image(request):
+def broken_update_image():
     return _special_image(
-        request,
         "broken_update.ext4",
         ["dd", "if=/dev/urandom", "of=broken_update.ext4", "bs=10M", "count=5"],
     )
@@ -216,22 +193,16 @@ def add_mender_conf_to_image(image, d, mender_conf):
 
 
 @pytest.fixture(scope="session")
-def valid_image_with_mender_conf(request, valid_image):
+def valid_image_with_mender_conf(valid_image):
     """Insert the given mender_conf into a valid_image"""
     with tempfile.TemporaryDirectory() as d:
-
-        def cleanup():
-            shutil.rmtree(d, ignore_errors=True)
-
-        request.addfinalizer(cleanup)
         yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
 @pytest.fixture(scope="session")
-def valid_image_rofs_with_mender_conf(request):
+def valid_image_rofs_with_mender_conf():
 
-    valid_image = _image(
-        request,
+    valid_image = image(
         "docker-compose.client.rofs.yml",
         f"mender-image-full-cmdline-rofs-{machine_name}.ext4",
     )
@@ -241,19 +212,13 @@ def valid_image_rofs_with_mender_conf(request):
         return
 
     with tempfile.TemporaryDirectory() as d:
-
-        def cleanup():
-            shutil.rmtree(d, ignore_errors=True)
-
-        request.addfinalizer(cleanup)
         yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 
 @pytest.fixture(scope="session")
-def valid_image_rofs_commercial_with_mender_conf(request):
+def valid_image_rofs_commercial_with_mender_conf():
 
-    valid_image = _image(
-        request,
+    valid_image = image(
         "docker-compose.client.rofs.commercial.yml",
         f"mender-image-full-cmdline-rofs-commercial-{machine_name}.ext4",
     )
@@ -263,11 +228,6 @@ def valid_image_rofs_commercial_with_mender_conf(request):
         return
 
     with tempfile.TemporaryDirectory() as d:
-
-        def cleanup():
-            shutil.rmtree(d, ignore_errors=True)
-
-        request.addfinalizer(cleanup)
         yield lambda conf: add_mender_conf_to_image(valid_image, d, conf)
 
 

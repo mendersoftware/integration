@@ -29,6 +29,25 @@ from .common_connect import wait_for_connect
 from .common import md5sum
 from .mendertesting import MenderTesting
 
+# Function must be defined outside of class so it can be pickled
+def port_forward(server_url, dev_id, port_mapping, *port_mappings):
+    p = subprocess.Popen(
+        [
+            "mender-cli",
+            "--skip-verify",
+            "--server",
+            server_url,
+            "port-forward",
+            devid,
+            port_mapping,
+        ]
+        + list(port_mappings),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, stderr = p.communicate()
+    p.wait()
+
 
 class BaseTestPortForward(MenderTesting):
     """Tests the port forward functionality"""
@@ -59,25 +78,6 @@ class BaseTestPortForward(MenderTesting):
         stdout, stderr = p.communicate()
         exit_code = p.wait()
         assert exit_code == 0, (stdout, stderr)
-
-        # start the port forwarding session in a different thread
-        def port_forward(server_url, dev_id, port_mapping, *port_mappings):
-            p = subprocess.Popen(
-                [
-                    "mender-cli",
-                    "--skip-verify",
-                    "--server",
-                    server_url,
-                    "port-forward",
-                    devid,
-                    port_mapping,
-                ]
-                + list(port_mappings),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            stdout, stderr = p.communicate()
-            p.wait()
 
         pfw = Process(
             target=port_forward,

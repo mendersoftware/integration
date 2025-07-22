@@ -20,6 +20,8 @@ import tempfile
 import yaml
 import packaging.version
 
+import multiprocessing
+
 import filelock
 import pytest
 from filelock import FileLock
@@ -271,6 +273,12 @@ def valid_image_rofs_commercial_with_mender_conf(request):
 
 def pytest_configure(config):
     verify_sane_test_environment()
+
+    # Forking is not safe with multithreading
+    # As of python 3.12, python will raise a deprecation warning
+    # if it detects os.fork() and multithreading
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing.set_start_method
+    multiprocessing.set_start_method("spawn")
 
     global machine_name
     machine_name = config.getoption("--machine-name")

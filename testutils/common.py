@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import json
+import logging
 import pytest
 import random
 import time
@@ -39,6 +40,8 @@ from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
+
+logger = logging.getLogger()
 
 
 @pytest.fixture(scope="session")
@@ -407,6 +410,50 @@ def get_mender_artifact(
         os.path.exists(artifact) and os.unlink(artifact)
 
 
+def wait_for_api_gateway(
+    api_gateway_ip: str,
+    api_gateway_port: int = 8080,
+    router_to_check: str = "useradm@file",  # one of the routers loaded from dynamic configuration
+    delay_seconds: int = 5,
+    timeout_seconds: int = 180,
+):
+    api_gateway_url = f"http://{api_gateway_ip}:{api_gateway_port}/api/http/routers"
+    start_time = time.time()
+
+    logger.debug(
+        f"Waiting for mender-api-gateway to be ready. Polling {api_gateway_url} for router '{router_to_check}'..."
+    )
+    attempt = 0
+    while True:
+        attempt += 1
+        if time.time() - start_time > timeout_seconds:
+            raise TimeoutError(
+                f"Timeout ({timeout_seconds}s) reached while waiting for mender-api-gateway. Giving up."
+            )
+
+        try:
+            rsp = requests.get(api_gateway_url, timeout=delay_seconds)
+            rsp.raise_for_status()
+            routers_data = rsp.json()
+            router_names = [router.get("name") for router in routers_data]
+
+            if router_to_check in router_names:
+                logger.info(
+                    f"mender-api-gateway is ready. Router '{router_to_check}' found after {attempt} attempts."
+                )
+                break
+            else:
+                logger.debug(
+                    f"Attempt {attempt}: Router '{router_to_check}' not yet found. Current routers: {router_names}"
+                )
+        except Exception as e:
+            logger.warning(
+                f"Attempt {attempt}: An unexpected error occurred: {e}. Retrying in {delay_seconds}s..."
+            )
+
+        time.sleep(delay_seconds)
+
+
 def wait_until_healthy(compose_project: str = "", timeout: int = 60):
     """
     wait_until_healthy polls all running containers health check
@@ -468,6 +515,15 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
                 f"Timed out waiting for service '{service}' to become healthy"
             )
 
+        # Additional handling for mender-api-gateway initialization: Make sure we have routings from
+        # dynamic configuration in mender-api-gateway loaded before starting any tests.
+        # Without it, we can have mender-api-gateway not initalized fully and see errors e.g. on
+        # connecting to /useradm/auth/login, which is unintuitive. In the past, if starting too many
+        # containers simultanously, mender-api-gateway has run out of limit on open files, which
+        # caused configuration not to be loaded.
+        if service.startswith("mender-api-gateway"):
+            wait_for_api_gateway(container_ip, router_to_check="useradm@file")
+
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):
     """Call internal PUT tenantadm/tenants/{tid}"""
@@ -521,7 +577,7 @@ def new_tenant_client(
 
 
 def create_tenant_test_setup() -> Tenant:
-    """ Creates a tenant and a user belonging to the tenant (both tenant and user are created with random names). """
+    """Creates a tenant and a user belonging to the tenant (both tenant and user are created with random names)."""
     uuidv4 = str(uuid.uuid4())
     tenant, username, password = (
         "test.mender.io-" + uuidv4,
@@ -543,7 +599,7 @@ def create_tenant_test_setup() -> Tenant:
 
 
 def create_user_test_setup() -> User:
-    """Create a user with random name, log user in. """
+    """Create a user with random name, log user in."""
     uuidv4 = str(uuid.uuid4())
     user_name, password = (
         "some.user+" + uuidv4 + "@example.com",

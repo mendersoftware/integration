@@ -9,3 +9,5 @@ services:
         environment:
             - SERVER_URL=$SERVER_URL
             - TENANT_TOKEN=$TENANT_TOKEN
+        blkio_config:
+            weight: 100

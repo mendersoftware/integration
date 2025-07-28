@@ -12,8 +12,11 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 import subprocess
+import logging
 
 from .base import BaseContainerManagerNamespace
+
+logger = logging.getLogger()
 
 
 class DockerNamespace(BaseContainerManagerNamespace):
@@ -28,7 +31,18 @@ class DockerNamespace(BaseContainerManagerNamespace):
 
     def execute(self, container_id, cmd):
         cmd = ["docker", "exec", "{}".format(container_id)] + cmd
-        ret = subprocess.check_output(cmd).decode("utf-8").strip()
+        try:
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            ret = result.stdout.strip()
+        except subprocess.CalledProcessError as e:
+            logger.error(
+                f"Command failed with exit code {e.returncode}. "
+                f"Command attempted: {e.cmd}\n"
+                f"Captured STDOUT:\n{e.stdout}\n"
+                f"Captured STDERR:\n{e.stderr}\n"
+                f"-------------------------"
+            )
+            raise  # re-raise as we want the test to end with an error
         return ret
 
     def cmd(self, container_id, docker_cmd, cmd=[]):

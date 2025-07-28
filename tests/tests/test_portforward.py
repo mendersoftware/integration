@@ -71,6 +71,7 @@ def port_forward_process(auth_token, server_url, dev_id, port_mapping, *port_map
                 pfw.kill()
 
 
+@redo.retriable(sleeptime=10, attempts=6)
 def dns_request(name, qtype, server, port):
     logger.info(f"resolve mender.io ({qtype} record)")
     req = DnsRequest(name=name, qtype=qtype, server=server, port=port)
@@ -79,6 +80,12 @@ def dns_request(name, qtype, server, port):
         assert len(response.answers) >= 1, response.show()
     except SocketError as err:
         raise err
+
+
+@redo.retriable(sleeptime=10, attempts=6)
+def run_scp(command):
+    proc = subprocess.run(command, check=True, capture_output=True)
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
 
 class BaseTestPortForward(MenderTesting):
@@ -104,20 +111,11 @@ class BaseTestPortForward(MenderTesting):
             ) as pfw:
 
                 # verify the UDP port-forward querying the Google's DNS server
-                redo.retry(
-                    lambda: dns_request(
-                        name="mender.io", qtype="A", server="localhost", port=udp_port
-                    ),
-                    sleeptime=10,
-                    attempts=6,
+                dns_request(
+                    name="mender.io", qtype="A", server="localhost", port=udp_port
                 )
-
-                redo.retry(
-                    lambda: dns_request(
-                        name="mender.io", qtype="MX", server="localhost", port=udp_port
-                    ),
-                    sleeptime=10,
-                    attempts=6,
+                dns_request(
+                    name="mender.io", qtype="MX", server="localhost", port=udp_port
                 )
 
                 # verify the TCP port-forward using scp to upload and download files
@@ -131,7 +129,7 @@ class BaseTestPortForward(MenderTesting):
 
                     # upload the file using scp
                     logger.info("uploading the file to the device using scp")
-                    proc = subprocess.run(
+                    run_scp(
                         [
                             "scp",
                             "-O",
@@ -143,15 +141,12 @@ class BaseTestPortForward(MenderTesting):
                             str(tcp_port),
                             f.name,
                             f"root@localhost:{f.name}",
-                        ],
-                        check=True,
-                        capture_output=True,
+                        ]
                     )
-                    assert proc.returncode == 0, (proc.stdout, proc.stderr)
 
                     # download the file using scp
                     logger.info("download the file from the device using scp")
-                    proc = subprocess.run(
+                    run_scp(
                         [
                             "scp",
                             "-O",
@@ -163,12 +158,8 @@ class BaseTestPortForward(MenderTesting):
                             str(tcp_port),
                             f"root@localhost:{f.name}",
                             f.name + ".download",
-                        ],
-                        check=True,
-                        capture_output=True,
+                        ]
                     )
-                    assert proc.returncode == 0, (proc.stdout, proc.stderr)
-
                     # assert the files are not corrupted
                     logger.info(
                         "checking the checksums of the uploaded and downloaded files"

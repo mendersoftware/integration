@@ -14,6 +14,7 @@
 #
 
 import os
+import redo
 import subprocess
 import time
 
@@ -24,7 +25,7 @@ from tempfile import NamedTemporaryFile
 import filelock
 from filelock import FileLock
 
-from DNS import DnsRequest
+from DNS import DnsRequest, SocketError
 
 from ..common_setup import standard_setup_one_client_bootstrapped, enterprise_no_client
 from .common_connect import prepare_env_for_connect
@@ -70,6 +71,16 @@ def port_forward_process(auth_token, server_url, dev_id, port_mapping, *port_map
                 pfw.kill()
 
 
+def dns_request(name, qtype, server, port):
+    logger.info(f"resolve mender.io ({qtype} record)")
+    req = DnsRequest(name=name, qtype=qtype, server=server, port=port)
+    try:
+        response = req.req()
+        assert len(response.answers) >= 1, response.show()
+    except SocketError as err:
+        raise err
+
+
 class BaseTestPortForward(MenderTesting):
     """Tests the port forward functionality"""
 
@@ -91,24 +102,23 @@ class BaseTestPortForward(MenderTesting):
                 f"{tcp_port}:22",
                 f"udp/{udp_port}:8.8.8.8:53",
             ) as pfw:
-                # wait a few seconds to let the port-forward start
-                logger.info("port-forward started, waiting a few seconds")
-                time.sleep(10)
 
                 # verify the UDP port-forward querying the Google's DNS server
-                logger.info("resolve mender.io (A record)")
-                req = DnsRequest(
-                    name="mender.io", qtype="A", server="localhost", port=udp_port
+                redo.retry(
+                    lambda: dns_request(
+                        name="mender.io", qtype="A", server="localhost", port=udp_port
+                    ),
+                    sleeptime=10,
+                    attempts=6,
                 )
-                response = req.req()
-                assert len(response.answers) >= 1, response.show()
 
-                logger.info("resolve mender.io (MX record)")
-                req = DnsRequest(
-                    name="mender.io", qtype="MX", server="localhost", port=udp_port
+                redo.retry(
+                    lambda: dns_request(
+                        name="mender.io", qtype="MX", server="localhost", port=udp_port
+                    ),
+                    sleeptime=10,
+                    attempts=6,
                 )
-                response = req.req()
-                assert len(response.answers) >= 1, response.show()
 
                 # verify the TCP port-forward using scp to upload and download files
                 try:

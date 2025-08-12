@@ -6,3 +6,5 @@ services:
     mender-client:
         ports:
             - "85:85"
+        blkio_config:
+            weight: 100

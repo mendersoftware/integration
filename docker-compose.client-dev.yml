@@ -6,3 +6,5 @@ services:
     mender-client:
         volumes:
             - ${BUILDDIR}:/mnt/build:ro
+        blkio_config:
+            weight: 100

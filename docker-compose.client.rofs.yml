@@ -5,3 +5,5 @@ services:
     #
     mender-client:
         image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_ROFS_IMAGE}:${MENDER_CLIENT_QEMU_ROFS_TAG}
+        blkio_config:
+            weight: 100

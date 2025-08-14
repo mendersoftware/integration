@@ -3,16 +3,10 @@
 # therefore point to the internal Git tags/branches. We keep this information as a
 # docker-compose YAML file for parsing purposes.
 services:
-
-    #
-    # Mender Gateway LTS
-    #
+    # DEPRECATED: these are not released with release_tool anymore
     mender-gateway:
         image: registry.mender.io/mendersoftware/mender-gateway:master
 
-    #
-    # DEPRECATED: these are not released with release_tool anymore
-    #
     mender-deployments:
         image: registry.mender.io/mendersoftware/deployments-enterprise:master
 

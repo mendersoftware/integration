@@ -9,6 +9,7 @@ test:integration:$CI_NODE_INDEX:
   timeout: 10h
   before_script:
     - |
+      echo $CI_COMMIT_REF_PROTECTED
       if $CI_COMMIT_REF_PROTECTED == "false"; then
         echo "Tests can only be run on protected branches. This branch is not protected."
         exit 1

@@ -8,6 +8,11 @@ test:integration:$CI_NODE_INDEX:
     - mender-qa-worker-integration-tests
   timeout: 10h
   before_script:
+    - |
+      if $CI_COMMIT_REF_PROTECTED == "false"; then
+        echo "Tests can only be run on protected branches. This branch is not protected."
+        exit 1
+      fi
     # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
     # plugin to split the tests among the CI jobs. They get substituted by the generator.
     - export CI_NODE_INDEX=$CI_NODE_INDEX

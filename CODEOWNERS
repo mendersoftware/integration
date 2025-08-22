@@ -1,7 +1,10 @@
-# Default owners for everything
-* @mendersoftware/qa-dependabot-reviewers
+# Dependency updates
+go.mod @mendersoftware/qa-dependabot-reviewers
+go.sum @mendersoftware/qa-dependabot-reviewers
+Dockerfile* @mendersoftware/qa-dependabot-reviewers
+*requirements*.txt @mendersoftware/qa-dependabot-reviewers
+package.json @mendersoftware/qa-dependabot-reviewers
+package-lock.json @mendersoftware/qa-dependabot-reviewers
 
-# Test and extra directories
-/tests/ @mendersoftware/qa-dependabot-reviewers
-/extra/ @mendersoftware/qa-dependabot-reviewers
-/extra/mender-client-docker-addons/ @mendersoftware/qa-dependabot-reviewers
+# Git submodules
+extra/gitdm/gitdm/ @mendersoftware/qa-dependabot-reviewers

@@ -26,19 +26,16 @@ from .mendertesting import MenderTesting
 
 class BaseTestDeploymentAborting(MenderTesting):
     def abort_deployment(
-        self,
-        container_manager,
-        install_image,
-        abort_step=None,
-        mender_performs_reboot=False,
+        self, container_manager, install_image, abort_step=None, number_of_reboots=0,
     ):
         """
         Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
         Args:
-            mender_performs_reboot: if set to False, a manual reboot is performed and
-                                        checks are performed.
-                                    if set to True, wait until device is rebooted.
+            number_of_reboots: if set to 0, a manual reboot is performed and
+                                   checks are performed.
+                               if set to > 0, wait until device is rebooted
+                               number_of_reboots times.
         """
 
         mender_device = container_manager.device
@@ -55,7 +52,9 @@ class BaseTestDeploymentAborting(MenderTesting):
             )
 
             if abort_step is not None:
-                deploy.check_expected_statistics(deployment_id, abort_step, 1)
+                deploy.check_expected_statistics(
+                    deployment_id, abort_step, 1, polling_frequency=0
+                )
 
             deploy.abort(deployment_id)
 
@@ -68,10 +67,10 @@ class BaseTestDeploymentAborting(MenderTesting):
             for d in devauth.get_devices():
                 deploy.get_logs(d["id"], deployment_id, expected_status=404)
 
-            if mender_performs_reboot:
+            if number_of_reboots > 0:
                 # If Mender performs reboot, we need to wait for it to reboot
                 # back into the original filesystem.
-                reboot.verify_reboot_performed(number_of_reboots=2)
+                reboot.verify_reboot_performed(number_of_reboots=number_of_reboots)
             else:
                 # Else we reboot ourselves, just to make sure that we have not
                 # unintentionally switched to the new partition.
@@ -89,7 +88,9 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
     def test_deployment_abortion_instantly(
         self, standard_setup_one_client_bootstrapped, valid_image
     ):
-        self.abort_deployment(standard_setup_one_client_bootstrapped, valid_image)
+        self.abort_deployment(
+            standard_setup_one_client_bootstrapped, valid_image, number_of_reboots=0
+        )
 
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
@@ -99,7 +100,18 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
             standard_setup_one_client_bootstrapped,
             valid_image,
             "downloading",
-            mender_performs_reboot=True,
+            number_of_reboots=0,
+        )
+
+    @MenderTesting.fast
+    def test_deployment_abortion_installing(
+        self, standard_setup_one_client_bootstrapped, valid_image
+    ):
+        self.abort_deployment(
+            standard_setup_one_client_bootstrapped,
+            valid_image,
+            "installing",
+            number_of_reboots=1,
         )
 
     @MenderTesting.fast
@@ -110,7 +122,7 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
             standard_setup_one_client_bootstrapped,
             valid_image,
             "rebooting",
-            mender_performs_reboot=True,
+            number_of_reboots=2,
         )
 
 
@@ -119,7 +131,9 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
     def test_deployment_abortion_instantly(
         self, enterprise_one_client_bootstrapped, valid_image
     ):
-        self.abort_deployment(enterprise_one_client_bootstrapped, valid_image)
+        self.abort_deployment(
+            enterprise_one_client_bootstrapped, valid_image, number_of_reboots=0
+        )
 
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
@@ -129,7 +143,18 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
             enterprise_one_client_bootstrapped,
             valid_image,
             "downloading",
-            mender_performs_reboot=True,
+            number_of_reboots=0,
+        )
+
+    @MenderTesting.fast
+    def test_deployment_abortion_installing(
+        self, enterprise_one_client_bootstrapped, valid_image
+    ):
+        self.abort_deployment(
+            enterprise_one_client_bootstrapped,
+            valid_image,
+            "installing",
+            number_of_reboots=1,
         )
 
     @MenderTesting.fast
@@ -140,5 +165,5 @@ class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
             enterprise_one_client_bootstrapped,
             valid_image,
             "rebooting",
-            mender_performs_reboot=True,
+            number_of_reboots=2,
         )

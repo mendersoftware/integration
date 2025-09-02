@@ -301,12 +301,20 @@ activate = 1
         "hsm_implementation", ["engine", "provider"],
     )
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
-        # Check if the client has has SoftHSM (from yocto dunfell forward)
+        # Check if the device has SoftHSM (from yocto dunfell forward)
         output = setup_ent_mtls.device.run(
             "test -e /usr/lib/softhsm/libsofthsm2.so && echo true", hide=True
         )
         if output.rstrip() != "true":
             pytest.fail("Needs SoftHSM to run this test")
+
+        # Check if the device has PKCS#11 module to interface as provider
+        # yocto kirkstone and older cannot run this test. Skip instead of fail.
+        output = setup_ent_mtls.device.run(
+            "test -e /usr/lib/ossl-modules/pkcs11.so && echo true", hide=True
+        )
+        if output.rstrip() != "true" and hsm_implementation == "provider":
+            pytest.skip("Needs PKCS#11 module. Skipping")
 
         self.setup_openssl_conf(setup_ent_mtls.device, hsm_implementation)
 

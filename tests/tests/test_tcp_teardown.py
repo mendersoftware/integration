@@ -14,7 +14,6 @@
 #
 
 import json
-import pytest
 import os.path
 import tempfile
 import time
@@ -103,11 +102,9 @@ class BaseTestTcpTeardown:
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
 
-@pytest.mark.xfail(reason="QA-1076 and QA-1056")
 class TestTcpTeardownOpenSource(BaseTestTcpTeardown):
     pass
 
 
-@pytest.mark.xfail(reason="QA-1076 and QA-1056")
 class TestTcpTeardownEnterprise(BaseTestTcpTeardown):
     pass

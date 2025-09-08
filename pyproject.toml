@@ -1,3 +1,61 @@
+[build-system]
+requires = ["setuptools>=80.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mender-integration"
+version = "0.1.0"
+description = "Mender Integration Tests Suite"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+
+requires-python = ">=3.12"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "cryptography==45.0.7",
+    "docker==7.1.0",
+    "filelock==3.19.1",
+    "kubernetes==33.1.0",
+    "msgpack==1.1.1",
+    "py3dns==4.0.2",
+    "pymongo==4.14.1",
+    "pytest==8.4.1",
+    "pytest-html==4.1.1",
+    "pytest-metadata==3.1.1",
+    "pytest-timeout==2.4.0",
+    "pytest-xdist==3.8.0",
+    "redo==3.0.0",
+    "requests==2.32.5",
+    "urllib3==1.26.20",
+    "websockets==15.0.1",
+    "flaky==3.8.1",
+    "stripe==12.5.0",
+    "aiosmtpd==1.4.6",
+]
+
+[tool.setuptools]
+include-package-data = true
+packages = [
+    "integration_tests",
+    "integration_tests.data",
+    "integration_tests.data.compose",
+    "integration_tests.MenderAPI",
+    "integration_tests.requirements-python",
+    "integration_tests.requirements-system",
+    "integration_tests.tests",
+    "integration_testutils",
+    "integration_testutils.api",
+    "integration_testutils.infra",
+    "integration_testutils.infra.container_manager",
+    "integration_testutils.integration",
+    "integration_testutils.util",
+]
 
 [tool.black]
 target-version = ['py38']

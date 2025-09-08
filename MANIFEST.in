@@ -1,0 +1,1 @@
+recursive-include integration_tests/data/compose *.yml

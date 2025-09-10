@@ -4,7 +4,6 @@ target-version = ['py38']
 include = '''
 (
   /(
-      backend-tests
     | testutils
     | tests
     | extra

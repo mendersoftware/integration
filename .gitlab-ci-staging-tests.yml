@@ -21,46 +21,6 @@ variables:
     --output text))
   aws sts get-caller-identity
 
-test:staging:backend-tests:
-  image: tiangolo/docker-with-compose
-  stage: test
-  timeout: 4h
-
-  services:
-    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:${DOCKER_VERSION}-dind
-      alias: docker
-
-  variables:
-    K8S: "staging"
-    GATEWAY_HOSTNAME: "staging.hosted.mender.io"
-    GMAIL_PASSWORD: $CI_GMAIL_PASSWORD
-    GMAIL_ADDRESS: $CI_GMAIL_ADDRESS
-    DOCKER_HOST: tcp://docker:2375
-    TESTS_IN_PARALLEL_BACKEND_INTEGRATION: "4"
-  id_tokens:
-    AWS_OIDC_TOKEN:
-      aud: https://gitlab.com
-
-  before_script:
-    - apk add --no-cache aws-cli bash curl python3 py3-pip
-    # Install python dependencies
-    - pip3 install pyyaml
-    - *setup_eks_cluster_staging
-
-  script:
-    - cd backend-tests
-    - ./run -s enterprise
-
-  artifacts:
-    expire_in: 2w
-    when: always
-    paths:
-      - backend-tests/acceptance.*
-      - backend-tests/results_backend_integration_*.xml
-      - backend-tests/report_backend_integration_*.html
-    reports:
-      junit: backend-tests/results_backend_integration_*.xml
-
 test:staging:integration-tests:
   # Integration tests depends on running ssh to containers, we're forced to
   # run dockerd on the same host.

@@ -7,4 +7,4 @@ package.json @mendersoftware/qa-dependabot-reviewers
 package-lock.json @mendersoftware/qa-dependabot-reviewers
 
 # Git submodules
-extra/gitdm/gitdm/ @mendersoftware/qa-dependabot-reviewers
+/extra/gitdm/gitdm @mendersoftware/qa-dependabot-reviewers

@@ -218,10 +218,10 @@ class GitHubQuerier(GitQueryInterface):
         # class.
         import github
 
+        auth = None
         if os.getenv("GITHUB_TOKEN"):
-            self.github = github.Github(os.getenv("GITHUB_TOKEN"))
-        else:
-            self.github = github.Github()
+            auth = github.Auth.Token(os.getenv("GITHUB_TOKEN"))
+        self.github = github.Github(auth=auth)
 
     def get_commits_for_range(self, repo, range):
         base, head = range.split("..", 1)

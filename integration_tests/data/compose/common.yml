@@ -1,0 +1,5 @@
+services:
+    mender-base:
+        stdin_open: false
+        tty: false
+        restart: on-failure

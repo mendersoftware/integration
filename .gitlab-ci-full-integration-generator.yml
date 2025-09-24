@@ -58,7 +58,7 @@ test:integration:start:
     - job: test:integration:generator
       artifacts: false
   script:
-    - send_status success "Pipeline passed on Gitlab"
+    - send_status pending "Pipeline running on Gitlab"
 
 test:integration:success:
   extends: .github_status_template

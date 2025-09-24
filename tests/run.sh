@@ -65,14 +65,7 @@ function get_requirements() {
         exit 1
     fi
 
-    MENDER_CLI_BRANCH=$(../extra/release_tool.py --version-of mender-cli)
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to determine mender-cli version using release_tool.py"
-        exit 1
-    fi
-
     echo "Detected Mender branch: $MENDER_BRANCH"
-    echo "Detected mender-cli branch: $MENDER_CLI_BRANCH"
 
     # Download the tools
     EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
@@ -90,17 +83,6 @@ function get_requirements() {
     dpkg -x "$EXTRACT_DIR/mender-artifact.deb" "$EXTRACT_DIR"
     mv $EXTRACT_DIR/usr/bin/mender-artifact downloaded-tools/mender-artifact
     rm -rf $EXTRACT_DIR
-
-    curl --fail "https://downloads.mender.io/mender-cli/${MENDER_CLI_BRANCH}/linux/mender-cli" \
-         -o downloaded-tools/mender-cli \
-         -z downloaded-tools/mender-cli
-
-    if [ $? -ne 0 ]; then
-        echo "failed to download mender-cli"
-        exit 1
-    fi
-
-    chmod +x downloaded-tools/mender-cli
 
     curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
          -o downloaded-tools/directory-artifact-gen \

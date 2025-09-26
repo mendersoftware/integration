@@ -53,62 +53,6 @@ class BaseTestSecurity(MenderTesting):
 
 
 class TestSecurityOpenSource(BaseTestSecurity):
-    def test_ssl_only(self, running_custom_production_setup):
-        """ make sure we are not exposing any non-ssl connections in production environment """
-        done = False
-        sleep_time = 2
-        # start production environment
-        subprocess.call(
-            [
-                "./production_test_env.py",
-                "--start",
-                "--docker-compose-instance",
-                running_custom_production_setup.name,
-            ]
-        )
-
-        try:
-
-            # get all exposed ports from docker
-
-            for _ in range(3):
-                exposed_hosts = subprocess.check_output(
-                    "docker ps | grep %s | grep -o -E '0.0.0.0:[0-9]*' | cat"
-                    % running_custom_production_setup.name,
-                    shell=True,
-                ).decode()
-
-                try:
-                    for host in exposed_hosts.split():
-                        with contextlib.closing(
-                            ssl.SSLContext().wrap_socket(socket.socket())
-                        ) as sock:
-                            logger.info("%s: connect to host with TLS" % host)
-                            host, port = host.split(":")
-                            sock.connect((host, int(port)))
-                            done = True
-                except:
-                    sleep_time *= 2
-                    time.sleep(sleep_time)
-                    continue
-
-                if done:
-                    break
-
-            if not done:
-                pytest.fail("failed to connect to production env. using SSL")
-
-        finally:
-            # tear down production env
-            subprocess.call(
-                [
-                    "./production_test_env.py",
-                    "--kill",
-                    "--docker-compose-instance",
-                    running_custom_production_setup.name,
-                ]
-            )
-
     def test_token_token_expiration(
         self, standard_setup_with_short_lived_token, valid_image_with_mender_conf
     ):

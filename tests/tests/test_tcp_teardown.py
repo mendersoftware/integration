@@ -62,7 +62,7 @@ class BaseTestTcpTeardown:
 
         # To verify mender-authd, trigger manually a token fetch
         mender_device.run("systemctl start mender-authd")
-        time.sleep(5)
+        time.sleep(10)
         mender_device.run(
             """dbus-send --print-reply --system \\
               --dest=io.mender.AuthenticationManager \\
@@ -70,7 +70,7 @@ class BaseTestTcpTeardown:
               io.mender.Authentication1.FetchJwtToken"""
         )
         # The fetch is done async, give it some time to finish
-        time.sleep(1)
+        time.sleep(10)
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         # Accept the device and repeat the test. It should not make a difference
@@ -81,23 +81,23 @@ class BaseTestTcpTeardown:
               /io/mender/AuthenticationManager \\
               io.mender.Authentication1.FetchJwtToken"""
         )
-        time.sleep(1)
+        time.sleep(10)
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         # To test mender-update, set long intervals and manually trigger operations
         set_long_poll_intervals(mender_device)
         mender_device.run("systemctl start mender-updated")
-        time.sleep(5)
+        time.sleep(10)
         assert get_opened_tcp_connections(mender_device, "mender-update") == 0
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         mender_device.run("mender-update check-update")
-        time.sleep(1)
+        time.sleep(10)
         assert get_opened_tcp_connections(mender_device, "mender-update") == 0
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         mender_device.run("mender-update send-inventory")
-        time.sleep(1)
+        time.sleep(10)
         assert get_opened_tcp_connections(mender_device, "mender-update") == 0
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 

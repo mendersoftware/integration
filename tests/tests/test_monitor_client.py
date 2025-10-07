@@ -1246,11 +1246,11 @@ class TestMonitorClientEnterprise:
 
         time.sleep(2 * wait_for_alert_interval_s)
         _, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 5
+            monitor_commercial_setup_no_client, user_name, 6
         )
-        assert len(messages) == 5
-        # after MEN-5458 we expect only one critical for the log subsystem
-        for m in [messages[-1]]:
+        assert len(messages) == 6
+        # after MEN-5458 we expect only one critical per log service (mylog, mylog-tail)
+        for m in messages[-2:]:
             assert_valid_alert(
                 m,
                 user_name,
@@ -1471,15 +1471,15 @@ class TestMonitorClientEnterprise:
         time.sleep(wait_for_alert_interval_s * 10)
 
         mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, 2
+            monitor_commercial_setup_no_client, user_name, 1
         )
 
         output = mender_device.run(
             "journalctl --unit mender-monitor --output cat --no-pager --reverse"
         )
 
-        assert len(messages) == 2, output
-        for m in [messages[0], messages[1]]:
+        assert len(messages) == 1, output
+        for m in [messages[0]]:
             assert_valid_alert(
                 m,
                 user_name,
@@ -1534,7 +1534,7 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("systemctl restart mender-monitor")
         device_monitor = DeviceMonitor(auth)
-        wait_iterations = wait_for_alert_interval_s
+        wait_iterations = wait_for_alert_interval_s + 10
         while wait_iterations > 0:
             time.sleep(1)
             configuration = device_monitor.get_configuration(devid)

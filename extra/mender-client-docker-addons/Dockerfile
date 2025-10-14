@@ -37,7 +37,7 @@ RUN jq ".ServerCertificate=\"/usr/share/doc/mender-auth/examples/demo.crt\" | .S
 
 # Install mender-artifact from upstream
 RUN curl -fsSL https://downloads.mender.io/repos/debian/gpg > /etc/apt/trusted.gpg.d/mender.asc && \
-    echo "deb [arch=$(dpkg --print-architecture)] https://downloads.mender.io/repos/debian ubuntu/$(. /etc/lsb-release && echo $DISTRIB_CODENAME)/experimental main" > \
+    echo "deb [arch=$(dpkg --print-architecture)] https://downloads.mender.io/repos/workstation-tools ubuntu/$(. /etc/lsb-release && echo $DISTRIB_CODENAME)/stable main" > \
         /etc/apt/sources.list.d/mender.list && \
     apt-get update && apt-get install -y mender-artifact
 RUN mender-artifact write bootstrap-artifact \

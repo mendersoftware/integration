@@ -21,6 +21,9 @@ fi
 if [ -n "$TENANT_TOKEN" ]; then
     sed -i -e "s/\"TenantToken\": *\"[^\"]*\"/\"TenantToken\": \"$TENANT_TOKEN\"/" /etc/mender/mender.conf
 fi
+if [ -n "$SERVER_URL" ] && [ -n "$SERVER_IP" ];  then
+    echo "$SERVER_IP ${SERVER_URL#*//}" >> /etc/hosts
+fi
 
 /etc/init.d/ssh start
 cp /usr/share/dbus-1/system.d/io.mender.AuthenticationManager.conf /etc/dbus-1/system-local.conf

@@ -80,13 +80,6 @@ variables:
     value: mendersoftware
 
   # Virtual devices, built from mender-qa
-  MENDER_CLIENT_DOCKER_IMAGE:
-    description: "Mender Client Docker image for for running integration test"
-    value: mender-client-docker
-  MENDER_CLIENT_DOCKER_TAG:
-    description: "Mender Client Docker tag for running integration tests"
-    value: mender-master
-
   MENDER_CLIENT_DOCKER_ADDONS_IMAGE:
     description: "Mender Client Docker image with addons for running integration tests"
     value: mender-client-docker-addons

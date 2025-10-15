@@ -363,7 +363,6 @@ def test_docker_compose_files_list():
     assert "docker-compose.mt.client.yml" not in list_git_filenames
     assert "docker-compose.demo.yml" not in list_git_filenames
     assert "docker-compose.client.yml" not in list_git_filenames
-    assert "docker-compose.docker-client.yml" not in list_git_filenames
     assert "docker-compose.yml" not in list_git_filenames
     assert "docker-compose.enterprise.yml" not in list_git_filenames
 
@@ -382,7 +381,6 @@ def test_docker_compose_files_list():
     assert "docker-compose.mt.client.yml" in list_docker_filenames
     assert "docker-compose.demo.yml" in list_docker_filenames
     assert "docker-compose.client.yml" in list_docker_filenames
-    assert "docker-compose.docker-client.yml" in list_docker_filenames
     assert "docker-compose.yml" in list_docker_filenames
     assert "docker-compose.enterprise.yml" in list_docker_filenames
 

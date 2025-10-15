@@ -80,47 +80,51 @@ variables:
     value: mendersoftware
 
   # Virtual devices, built from mender-qa
+  MENDER_VIRTUAL_DEVICE_TAG:
+    description: "Virtual Device Docker image tag used for all images, by default"
+    value: mender-master
+
   MENDER_CLIENT_DOCKER_ADDONS_IMAGE:
     description: "Mender Client Docker image with addons for running integration tests"
     value: mender-client-docker-addons
   MENDER_CLIENT_DOCKER_ADDONS_TAG:
     description: "Mender Client Docker addons image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_CLIENT_QEMU_IMAGE:
     description: "Mender Client QEMU image for running integration tests"
     value: mender-client-qemu
   MENDER_CLIENT_QEMU_TAG:
     description: "Mender Client QEMU image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_CLIENT_QEMU_ROFS_IMAGE:
     description: "Mender Client QEMU image with read-only filesystem for running integration tests"
     value: mender-client-qemu-rofs
   MENDER_CLIENT_QEMU_ROFS_TAG:
     description: "Mender Client QEMU read-only filesystem image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_GATEWAY_QEMU_COMMERCIAL_IMAGE:
     description: "Mender Gateway QEMU commercial image for running integration tests"
     value: mender-gateway-qemu-commercial
   MENDER_GATEWAY_QEMU_COMMERCIAL_TAG:
     description: "Mender Gateway QEMU commercial image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_MONITOR_QEMU_COMMERCIAL_IMAGE:
     description: "Mender Monitor QEMU commercial image for running integration tests"
     value: mender-monitor-qemu-commercial
   MENDER_MONITOR_QEMU_COMMERCIAL_TAG:
     description: "Mender Monitor QEMU commercial image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_QEMU_ROFS_COMMERCIAL_IMAGE:
     description: "Mender QEMU commercial image with read-only filesystem for running integration tests"
     value: mender-qemu-rofs-commercial
   MENDER_QEMU_ROFS_COMMERCIAL_TAG:
     description: "Mender QEMU commercial read-only filesystem image tag"
-    value: mender-master
+    value: $MENDER_VIRTUAL_DEVICE_TAG
 
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"

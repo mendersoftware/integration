@@ -29,6 +29,7 @@ test:integration:$CI_NODE_INDEX:
     - python -m virtualenv /.venv
     - source /.venv/bin/activate
     - pip3 install -r ./tests/requirements-python/python-requirements.txt
+    - pip3 install pyyaml
     # Gitlab CI tends to set these DOCKER_ variables internally.
     # dind also creates the unix socket at /var/run/docker.sock
     - unset DOCKER_HOST DOCKER_TLS_VERIFY DOCKER_CERT_PATH

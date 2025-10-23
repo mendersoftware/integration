@@ -22,7 +22,6 @@ from . import get_container_manager
 from .requests_helpers import requests_retry
 
 from testutils.infra.cli import CliUseradm, CliTenantadm
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
 class Authentication:
@@ -32,9 +31,7 @@ class Authentication:
     username = "admin@admin.net"
     password = "averyverystrongpasswordthatyouwillneverguess!haha!"
 
-    multitenancy = isK8S()
-    if isK8S():
-        plan = "enterprise"
+    multitenancy = False
     current_tenant = {}
 
     def __init__(self, name=org_name, username=username, password=password):

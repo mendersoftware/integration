@@ -22,7 +22,6 @@ from flaky import flaky
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
 from testutils.infra.container_manager import factory
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.device import MenderDevice
 from ..common_setup import (
     class_persistent_standard_setup_one_client_bootstrapped,
@@ -155,9 +154,6 @@ class _TestRemoteTerminalBase:
             # Nothing to do, just connecting successfully is enough.
             pass
 
-    @pytest.mark.skipif(
-        isK8S(), reason="not testable in a staging or production environment"
-    )
     def test_websocket_reconnect(self, docker_env):
         self.assert_env(docker_env)
 

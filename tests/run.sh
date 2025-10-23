@@ -135,10 +135,6 @@ if ! python3 -m pip show pytest-html >/dev/null; then
     echo "WARNING: install pytest-html for html results report"
 fi
 
-if [ -n "$K8S" ]; then
-    export KUBECONFIG="${HOME}/kubeconfig.${K8S}"
-    aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $AWS_EKS_CLUSTER_NAME --kubeconfig ${HOME}/kubeconfig.${K8S}
-fi
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
   PYTEST_NODES=$(python ci-parallel-pytest-plugin.py | tr '\n' ' ')
   if test -z "$PYTEST_NODES"; then

@@ -41,7 +41,6 @@ from ..MenderAPI import (
 from testutils.api import useradm
 from testutils.api.client import ApiClient
 from testutils.infra.container_manager import factory
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra import smtpd_mock
 from testutils.common import User, new_tenant_client
 from testutils.infra.cli import CliTenantadm
@@ -68,13 +67,9 @@ message_mail_options_prefix = "mail options:"
 
 # tests constants
 mailbox_path = "/var/spool/mail/local"
-wait_for_alert_interval_s = 8 if not isK8S() else 32
-alert_expiration_time_seconds = 32 if not isK8S() else 64
-expected_from = (
-    "no-reply@hosted.mender.io"
-    if not isK8S()
-    else "Mender <no-reply@staging.hosted.mender.io>"
-)
+wait_for_alert_interval_s = 8
+alert_expiration_time_seconds = 32
+expected_from = "no-reply@hosted.mender.io"
 daemon_main_loop_sleep_s = 2
 
 
@@ -86,59 +81,45 @@ def get_and_parse_email_n(env, address, n):
 
 
 def get_and_parse_email(env, address):
-    # get the message from gmail
-    if isK8S():
-        smtp = smtpd_mock.smtp_server_gmail()
-        mail = ""
-        headers = []
-        messages = smtp.filtered_messages(address)
-        messages.reverse()
-        for m in messages:
-            data = m.data.decode("utf-8")
-            mail += data + "\n"
-            headers.append(Parser(policy=default).parsestr(data))
-        logger.info([(x["Date"], x["Subject"]) for x in headers])
-        return mail, headers
     # get the email from the SMTP server
-    else:
-        mail = env.get_file("local-smtp", mailbox_path)
-        logger.debug("got mail: '%s'", mail)
-        # read spool line by line, eval(line).decode('utf-8') for each line in lines
-        # between start and end of message
-        # concat and create header object for each
-        headers = []
-        message_string = ""
-        device_date = None
-        for line in mail.splitlines():
-            if line.startswith(message_mail_options_prefix):
-                continue
-            if message_start == line:
-                message_string = ""
-                device_date = None
-                continue
-            if message_end == line:
-                if device_date is not None:
-                    logger.debug(f"using device_date {device_date}")
-                    message_string = (
-                        device_date.strftime("Date: %a, %m %b %Y %H:%M:%S +0200")
-                        + "\n"
-                        + message_string
-                    )
-                    logger.debug("msg:%s" % message_string)
-                h = Parser(policy=default).parsestr(message_string)
-                headers.append(h)
-                continue
-            # extra safety, we are supposed to only eval b'string' lines
-            if not line.startswith("b'"):
-                continue
-            line_string = eval(line).decode("utf-8")
-            message_string = message_string + line_string + "\n"
-            # get the date from b'Time on device: Thu, 01 Dec 2022 14:01:01 UTC' line
-            if line_string.startswith("Time on device: "):
-                device_date = datetime.datetime.strptime(
-                    line_string, "Time on device: %a, %d %b %Y %H:%M:%S %Z"
+    mail = env.get_file("local-smtp", mailbox_path)
+    logger.debug("got mail: '%s'", mail)
+    # read spool line by line, eval(line).decode('utf-8') for each line in lines
+    # between start and end of message
+    # concat and create header object for each
+    headers = []
+    message_string = ""
+    device_date = None
+    for line in mail.splitlines():
+        if line.startswith(message_mail_options_prefix):
+            continue
+        if message_start == line:
+            message_string = ""
+            device_date = None
+            continue
+        if message_end == line:
+            if device_date is not None:
+                logger.debug(f"using device_date {device_date}")
+                message_string = (
+                    device_date.strftime("Date: %a, %m %b %Y %H:%M:%S +0200")
+                    + "\n"
+                    + message_string
                 )
-                logger.debug(f"parsed device_date {device_date}")
+                logger.debug("msg:%s" % message_string)
+            h = Parser(policy=default).parsestr(message_string)
+            headers.append(h)
+            continue
+        # extra safety, we are supposed to only eval b'string' lines
+        if not line.startswith("b'"):
+            continue
+        line_string = eval(line).decode("utf-8")
+        message_string = message_string + line_string + "\n"
+        # get the date from b'Time on device: Thu, 01 Dec 2022 14:01:01 UTC' line
+        if line_string.startswith("Time on device: "):
+            device_date = datetime.datetime.strptime(
+                line_string, "Time on device: %a, %d %b %Y %H:%M:%S %Z"
+            )
+            logger.debug(f"parsed device_date {device_date}")
 
     # log all messages for debug
     for m in headers:
@@ -152,10 +133,10 @@ def get_and_parse_email(env, address):
 
 
 def assert_valid_alert(message, bcc, subject):
-    assert isK8S() or "Bcc" in message
+    assert "Bcc" in message
     assert "From" in message
     assert "Subject" in message
-    assert isK8S() or message["Bcc"] == bcc
+    assert message["Bcc"] == bcc
     assert message["From"] == expected_from
     assert message["Subject"].startswith(subject)
 
@@ -681,7 +662,7 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
-        wait_for_alert_interval_s = 120 if not isK8S() else 240
+        wait_for_alert_interval_s = 120
         service_name = "crond"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -946,15 +927,8 @@ class TestMonitorClientEnterprise:
 
         assert len(messages) > 1
 
-        # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
-        # sort the emails by subject to avoid wrong-order issues because of delivery time
-        # with QA-510, we bring the sorting of emails according to an alert time as noted
-        # on a device. the staging could use the same, leaving it as is, since the staging
-        # tests need some attention in other places.
-        if isK8S():
-            messages.sort(key=lambda x: x["Subject"])
-        else:
-            messages.sort(key=lambda x: x["Date"])
+        # Sort emails by date
+        messages.sort(key=lambda x: x["Date"])
 
         assert_valid_alert(
             messages[0],
@@ -1158,15 +1132,8 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input." not in mail
         assert len(messages) == 4
 
-        # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
-        # sort the emails by subject to avoid wrong-order issues because of delivery time
-        # with QA-510, we bring the sorting of emails according to an alert time as noted
-        # on a device. the staging could use the same, leaving it as is, since the staging
-        # tests need some attention in other places.
-        if isK8S():
-            messages.sort(key=lambda x: x["Subject"])
-        else:
-            messages.sort(key=lambda x: x["Date"])
+        # Sort emails by date
+        messages.sort(key=lambda x: x["Date"])
 
         i = 0
         for service_name in ["crond", "mender-connect"]:
@@ -1766,15 +1733,8 @@ class TestMonitorClientEnterprise:
         )
         assert len(messages) >= expected_alerts_count
 
-        # if running on Kubernetes, therefore using a real mailbox, we need to explicitly
-        # sort the emails by subject to avoid wrong-order issues because of delivery time
-        # with QA-510, we bring the sorting of emails according to an alert time as noted
-        # on a device. the staging could use the same, leaving it as is, since the staging
-        # tests need some attention in other places.
-        if isK8S():
-            messages.sort(key=lambda x: x["Subject"])
-        else:
-            messages.sort(key=lambda x: x["Date"])
+        # Sort emails by date
+        messages.sort(key=lambda x: x["Date"])
 
         assert "${workflow.input" not in mail
         assert_valid_alert(

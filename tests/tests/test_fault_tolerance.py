@@ -27,12 +27,8 @@ from ..common_setup import (
 from .common_update import common_update_procedure, update_image_failed
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 
-@pytest.mark.skipif(
-    isK8S(), reason="This test suite is not supposed to be run on staging environment"
-)
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(
         self,

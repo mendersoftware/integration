@@ -34,11 +34,6 @@ from .docker_compose_manager import (
     DockerComposeCustomSetup,
     DockerComposeMTLSSetup,
 )
-from .kubernetes_manager import (
-    KubernetesEnterpriseSetup,
-    KubernetesEnterpriseMonitorCommercialSetup,
-    isK8S,
-)
 
 
 class ContainerManagerFactory:
@@ -192,25 +187,5 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
         return DockerComposeCustomSetup(name)
 
 
-class KubernetesManagerFactory(ContainerManagerFactory):
-    def get_enterprise_setup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetup(name, num_clients)
-
-    def get_enterprise_docker_client_setup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetup(name, num_clients)
-
-    def get_monitor_commercial_setup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseMonitorCommercialSetup(name, num_clients)
-
-    def get_enterprise_signed_artifact_client_setup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetup(name, num_clients)
-
-    def get_enterprise_short_lived_token_setup(self, name=None, num_clients=0):
-        return KubernetesEnterpriseSetup(name, num_clients)
-
-
 def get_factory():
-    if isK8S():
-        return KubernetesManagerFactory()
-    else:
-        return DockerComposeManagerFactory()
+    return DockerComposeManagerFactory()

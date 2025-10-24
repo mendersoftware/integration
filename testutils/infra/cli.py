@@ -21,10 +21,6 @@ from contextlib import contextmanager
 from typing import List
 
 from testutils.infra.container_manager.docker_manager import DockerNamespace
-from testutils.infra.container_manager.kubernetes_manager import (
-    KubernetesNamespace,
-    isK8S,
-)
 
 Microservice = namedtuple("Service", "bin_path data_path")
 
@@ -33,10 +29,7 @@ class BaseCli:
     def __init__(
         self, microservice, containers_namespace="backend-tests", container_manager=None
     ):
-        if isK8S():
-            self.container_manager = KubernetesNamespace()
-            base_filter = microservice
-        elif container_manager is None:
+        if container_manager is None:
             self.container_manager = DockerNamespace(containers_namespace)
             base_filter = microservice + "[_-]1"
         else:
@@ -96,9 +89,6 @@ class CliUseradm(BaseCli):
         return uid
 
     def migrate(self, tenant_id=None):
-        if isK8S():
-            return
-
         cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
@@ -147,9 +137,6 @@ class CliTenantadm(BaseCli):
         return tenant
 
     def migrate(self):
-        if isK8S():
-            return
-
         cmd = [self.service.bin_path, "migrate"]
 
         self.container_manager.execute(self.cid, cmd)
@@ -173,9 +160,6 @@ class CliDeviceauth(BaseCli):
         )
 
     def migrate(self, tenant_id=None):
-        if isK8S():
-            return
-
         cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
@@ -227,9 +211,6 @@ class CliDeviceauth(BaseCli):
                 os.unlink(container_config)
 
     def propagate_inventory_statuses(self, tenant_id=None):
-        if isK8S():
-            return
-
         cmd = [self.service.bin_path, "propagate-inventory-statuses"]
 
         if tenant_id is not None:
@@ -255,9 +236,6 @@ class CliDeployments(BaseCli):
         )
 
     def migrate(self, tenant_id=None):
-        if isK8S():
-            return
-
         cmd = [self.service.bin_path, "migrate"]
 
         if tenant_id is not None:
@@ -272,7 +250,4 @@ class CliDeviceMonitor(BaseCli):
         self.path = "/usr/bin/devicemonitor"
 
     def migrate(self):
-        if isK8S():
-            return
-
         self.container_manager.execute(self.cid, [self.path, "migrate"])

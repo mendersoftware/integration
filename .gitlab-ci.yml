@@ -1,13 +1,8 @@
 include:
   - project: "Northern.tech/Mender/mendertesting"
     file: ".gitlab-ci-github-status-updates.yml"
-  - local: .gitlab-ci-staging-tests.yml
-    rules:
-      - if: $RUN_TESTS_STAGING == "true"
   - local: .gitlab-ci-default-pipeline.yml
     rules:
-      - if: $RUN_TESTS_STAGING == "true"
-        when: never
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
         when: never
       - when: always
@@ -22,10 +17,6 @@ stages:
   - publish
 
 variables:
-  RUN_TESTS_STAGING:
-    description: "Run staging integration tests"
-    value: "false"
-
   RUN_TESTS_FULL_INTEGRATION:
     description: |
       Run full integration tests.

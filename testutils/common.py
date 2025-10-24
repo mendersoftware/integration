@@ -36,7 +36,6 @@ import testutils.api.tenantadm as tenantadm
 import testutils.api.useradm as useradm
 import testutils.util.crypto
 from testutils.api.client import ApiClient, GATEWAY_HOSTNAME
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.infra.mongo import MongoClient
 from testutils.infra.cli import CliUseradm, CliTenantadm
 from testutils.infra.device import MenderDevice, MenderDeviceGroup
@@ -536,7 +535,7 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
 
     tenantadm_host = (
         tenantadm.HOST
-        if isK8S() or container_manager is None
+        if container_manager is None
         else container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"
     )
     tadm = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm_host, schema="http://")

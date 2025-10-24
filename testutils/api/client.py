@@ -15,15 +15,12 @@ import os
 import os.path
 import socket
 import socketserver
-import subprocess
 import warnings
 
 import requests
 import time
 
 from urllib3.exceptions import InsecureRequestWarning
-
-from testutils.infra.container_manager.kubernetes_manager import isK8S
 
 GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "mender-api-gateway"
 
@@ -61,39 +58,19 @@ class ApiClient:
     ):
         url = self.__make_url(url)
         url = self.__subst_path_params(url, path_params)
-        try:
-            p = None
-            if isK8S() and url.startswith("http://mender-"):
-                host_forward_port = get_free_tcp_port()
-                host = self.host.split(":", 1)[0]
-                port = self.host.split(":", 1)[1] if ":" in self.host else "80"
-                cmd = [
-                    "kubectl",
-                    "port-forward",
-                    "service/" + host,
-                    "%d:%s" % (host_forward_port, port),
-                ]
-                p = subprocess.Popen(cmd, stdout=subprocess.DEVNULL)
-                url = ("http://localhost:%d/" % host_forward_port) + url.split("/", 3)[
-                    -1
-                ]
-                wait_for_port(port=host_forward_port, host="localhost", timeout=10.0)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=InsecureRequestWarning)
-                return requests.request(
-                    method,
-                    url,
-                    json=body,
-                    data=data,
-                    params=qs_params,
-                    headers=self.__make_headers(headers),
-                    auth=auth,
-                    verify=False,
-                    files=files,
-                )
-        finally:
-            if p is not None:
-                p.terminate()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=InsecureRequestWarning)
+            return requests.request(
+                method,
+                url,
+                json=body,
+                data=data,
+                params=qs_params,
+                headers=self.__make_headers(headers),
+                auth=auth,
+                verify=False,
+                files=files,
+            )
 
     def post(self, url, *pargs, **kwargs):
         return self.call("POST", url, *pargs, **kwargs)

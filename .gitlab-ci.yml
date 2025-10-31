@@ -103,13 +103,6 @@ variables:
     description: "Mender Client QEMU read-only filesystem image tag"
     value: $MENDER_VIRTUAL_DEVICE_TAG
 
-  MENDER_GATEWAY_QEMU_COMMERCIAL_IMAGE:
-    description: "Mender Gateway QEMU commercial image for running integration tests"
-    value: mender-gateway-qemu-commercial
-  MENDER_GATEWAY_QEMU_COMMERCIAL_TAG:
-    description: "Mender Gateway QEMU commercial image tag"
-    value: $MENDER_VIRTUAL_DEVICE_TAG
-
   MENDER_MONITOR_QEMU_COMMERCIAL_IMAGE:
     description: "Mender Monitor QEMU commercial image for running integration tests"
     value: mender-monitor-qemu-commercial

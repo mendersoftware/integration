@@ -17,7 +17,6 @@ import os
 import subprocess
 import shutil
 import tempfile
-import yaml
 import packaging.version
 
 import multiprocessing

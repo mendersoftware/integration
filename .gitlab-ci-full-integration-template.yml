@@ -1,4 +1,9 @@
 # The CI job name will be unique after substitution from the generator.
+include:
+  - project: "Northern.tech/Mender/mendertesting"
+    file: "qa-common/send-results-to-mantra.yml"
+    ref: "master"
+
 test:integration:$CI_NODE_INDEX:
   rules:
     - if: $RUN_TESTS_FULL_INTEGRATION == "true"
@@ -56,12 +61,6 @@ test:integration:$CI_NODE_INDEX:
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
     - ulimit -n 524288
-    # Mantra uploader: pull the helper script from mender-qa once. It’s tiny (<1 KiB).
-    - |
-      curl -sSfL \
-        https://raw.githubusercontent.com/mendersoftware/mender-qa/074b590110e1793ada4acac7bb7b1add8fe40981/scripts/mantra_post_test_results \
-        -o /usr/local/bin/mantra_post_test_results
-      chmod +x /usr/local/bin/mantra_post_test_results
 
   script:
     - cd tests
@@ -69,13 +68,7 @@ test:integration:$CI_NODE_INDEX:
 
   after_script:
     # Post results to Mantra
-    - |
-      echo "Uploading to Mantra with project=$MANTRA_PROJECT_NAME build=$MANTRA_BUILD_NAME"
-
-      /usr/local/bin/mantra_post_test_results --ensure \
-        "$MANTRA_PROJECT_NAME" \
-        "$MANTRA_BUILD_NAME" \
-        tests/results.xml || true   # never fail the job if Mantra is down
+    - !reference [.mantra-push-results]
 
   artifacts:
     expire_in: 2w

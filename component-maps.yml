@@ -398,7 +398,7 @@ docker_image:
     - mender
     docker_container:
     - mender-client
-    release_component: true
+    release_component: false
     independent_component: false
 
   mender-client-docker-addons:

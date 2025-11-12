@@ -47,7 +47,7 @@ variables:
 
   DOCKER_VERSION:
     description: "Docker version to use in jobs"
-    value: "27.3"
+    value: "28"
 
   MENDER_SERVER_TAG:
     description: "Mender Server Docker tag for running integration tests"

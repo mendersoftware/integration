@@ -2,3 +2,4 @@ docker
 docker-compose
 python-pip
 python3-pip
+skopeo

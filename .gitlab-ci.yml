@@ -117,6 +117,13 @@ variables:
     description: "Mender QEMU commercial read-only filesystem image tag"
     value: $MENDER_VIRTUAL_DEVICE_TAG
 
+  MENDER_CLIENT_QEMU_EXTENDED_IMAGE:
+    description: "Mender Client QEMU image with virtualization/Docker support for running integration tests"
+    value: mender-client-qemu-extended
+  MENDER_CLIENT_QEMU_EXTENDED_TAG:
+    description: "Mender Client QEMU virtualization image tag"
+    value: $MENDER_VIRTUAL_DEVICE_TAG
+
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"
     value: 4.1.0

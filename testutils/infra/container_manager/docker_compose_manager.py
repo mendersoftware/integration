@@ -39,6 +39,9 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     QEMU_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
     ]
+    QEMU_EXTENDED_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.extended.yml",
+    ]
     MONITOR_CLIENT_COMMERCIAL_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.monitor-client.commercial.yml",
     ]
@@ -134,6 +137,21 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
     def setup(self):
         self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
         self._wait_for_containers()
+
+
+class DockerComposeExtendedSetup(DockerComposeNamespace):
+    def __init__(self, name, num_clients=1):
+        self.num_clients = num_clients
+        super().__init__(name, self.QEMU_EXTENDED_FILES)
+
+    def setup(self):
+        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
+        self._wait_for_containers()
+
+    def get_mender_clients(self, network="mender"):
+        return super().get_mender_clients(
+            network=network, client_service_name="mender-client"
+        )
 
 
 class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):

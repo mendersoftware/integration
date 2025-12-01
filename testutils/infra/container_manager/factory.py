@@ -15,6 +15,7 @@
 
 from .docker_compose_manager import (
     DockerComposeStandardSetup,
+    DockerComposeExtendedSetup,
     DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
     DockerComposeRofsClientSetup,
@@ -131,6 +132,9 @@ class ContainerManagerFactory:
 class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_standard_setup(self, name=None, num_clients=1):
         return DockerComposeStandardSetup(name, num_clients)
+
+    def get_extended_setup(self, name=None, num_clients=1):
+        return DockerComposeExtendedSetup(name, num_clients)
 
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return DockerComposeMonitorCommercialSetup(name, num_clients)

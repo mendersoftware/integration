@@ -26,6 +26,7 @@ from ..common_setup import standard_setup_extended
 from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
+from testutils.common import requests_get
 
 
 @pytest.fixture(scope="session")
@@ -48,9 +49,10 @@ def artifact_gen_script():
 
         url = f"{base_url}/{ref_path}/{file_path}"
 
-        subprocess.check_call(
-            ["curl", "--fail", "--output", script_path, url,]
-        )
+        req = requests_get(url)
+        with open(script_path, "w") as f:
+            f.write(req.text)
+
         os.chmod(script_path, 0o755)
         yield script_path
 

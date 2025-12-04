@@ -658,3 +658,10 @@ def setup_tenant_devices(tenant, device_groups):
             tenant.devices.append(device)
 
     return grouped_devices
+
+
+@redo.retriable(sleeptime=5, attempts=3)
+def requests_get(url):
+    req = requests.get(url, timeout=30)
+    req.raise_for_status()
+    return req

@@ -31,6 +31,7 @@ git:
   mender-configure-module:
     docker_image:
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-client-docker-addons
     - mender-monitor-qemu-commercial
@@ -41,6 +42,7 @@ git:
   mender-flash:
     docker_image:
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-qemu-rofs-commercial
     - mender-monitor-qemu-commercial
@@ -128,6 +130,7 @@ git:
   mender:
     docker_image:
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-qemu-rofs-commercial
     - mender-client-docker
@@ -175,6 +178,14 @@ git:
     - mender-conductor
     - mender-org-welcome-email-preparer
     release_component: false
+
+  mender-container-modules:
+    docker_image:
+    - mender-client-qemu-extended
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: true
 
   tenantadm:
     docker_image:
@@ -253,6 +264,7 @@ git:
   mender-connect:
     docker_image:
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-qemu-rofs-commercial
     - mender-client-docker-addons
@@ -277,6 +289,7 @@ git:
   mender-snapshot:
     docker_image:
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-qemu-rofs-commercial
     - mender-monitor-qemu-commercial
@@ -417,6 +430,19 @@ docker_image:
     - mender
     - mender-flash
     - mender-connect
+    docker_container:
+    - mender-client
+    release_component: true
+    independent_component: false
+
+  mender-client-qemu-extended:
+    git:
+    - mender
+    - mender-flash
+    - mender-snapshot
+    - mender-connect
+    - mender-configure-module
+    - mender-container-modules
     docker_container:
     - mender-client
     release_component: true
@@ -663,10 +689,12 @@ docker_container:
     - mender-connect
     - mender-binary-delta
     - mender-flash
+    - mender-container-modules
     docker_image:
     - mender-client-docker
     - mender-client-docker-addons
     - mender-client-qemu
+    - mender-client-qemu-extended
     - mender-client-qemu-rofs
     - mender-monitor-qemu-commercial
     - mender-qemu-rofs-commercial

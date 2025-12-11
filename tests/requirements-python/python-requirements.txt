@@ -50,9 +50,9 @@ pycparser==2.21
     # via cffi
 pygments==2.19.1
     # via pytest
-pymongo==4.15.3
+pymongo==4.15.5
     # via -r python-requirements.in
-pytest==8.4.2
+pytest==9.0.2
     # via
     #   -r python-requirements.in
     #   pytest-html
@@ -76,7 +76,7 @@ requests==2.32.5
     #   -r python-requirements.in
     #   docker
     #   stripe
-stripe==13.1.1
+stripe==14.0.1
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
@@ -84,7 +84,7 @@ typing-extensions==4.15.0
     # via
     #   cryptography
     #   stripe
-urllib3==2.5.0
+urllib3==2.6.1
     # via
     #   -r python-requirements.in
     #   docker

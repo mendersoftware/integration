@@ -25,6 +25,9 @@ services:
     mender-flash:
         image: mendersoftware/mender-flash:master
 
+    mender-container-modules:
+        image: mendersoftware/mender-container-modules:main
+
     #
     # Independent repositories
     #

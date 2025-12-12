@@ -1,0 +1,1 @@
+Container image moved to [mender-client-subcomponents](https://github.com/mendersoftware/mender-client-subcomponents/tree/main/virtual-device)

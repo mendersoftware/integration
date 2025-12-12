@@ -28,6 +28,9 @@ services:
     mender-container-modules:
         image: mendersoftware/mender-container-modules:main
 
+    mender-client-subcomponents:
+        image: mendersoftware/mender-client-subcomponents:main
+
     #
     # Independent repositories
     #

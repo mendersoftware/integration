@@ -6,8 +6,6 @@ include:
     file: '.gitlab-ci-check-license.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-python3-format.yml'
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-docker-build.yml'
 
 variables:
   LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
@@ -61,24 +59,3 @@ test:integration-tests:requirements:
     # Get and install the integration test requirements
     - apk add $(cat tests/requirements-system/apk-requirements.txt)
     - pip install -r tests/requirements-python/python-requirements.txt
-
-build:docker:
-  tags:
-    - hetzner-amd-beefy
-  variables:
-    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
-    DOCKER_DIR: extra/mender-client-docker-addons
-
-publish:image:
-  variables:
-    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
-    DOCKER_DIR: extra/mender-client-docker-addons
-
-publish:image:mender:
-  variables:
-    DOCKER_REPOSITORY: mendersoftware/mender-client-docker-addons
-    DOCKER_DIR: extra/mender-client-docker-addons
-
-publish:image:saas:
-  rules:
-    - when: never

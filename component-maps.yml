@@ -17,7 +17,7 @@ git:
   mender-convert:
     docker_image: []
     docker_container: []
-    release_component: true
+    release_component: false
     independent_component: true
 
   mender-binary-delta:
@@ -106,10 +106,8 @@ git:
     release_component: false
 
   integration:
-    docker_image:
-    - mender-client-docker-addons
-    docker_container:
-    - mender-client
+    docker_image: []
+    docker_container: []
     release_component: true
     independent_component: false
 
@@ -152,12 +150,20 @@ git:
   mender-artifact:
     docker_image: []
     docker_container: []
-    release_component: true
+    release_component: false
     independent_component: true
 
   mender-cli:
     docker_image: []
     docker_container: []
+    release_component: false
+    independent_component: true
+
+  mender-client-subcomponents:
+    docker_image:
+    - mender-client-docker-addons
+    docker_container:
+    - mender-client
     release_component: true
     independent_component: true
 
@@ -279,11 +285,10 @@ git:
     - mender-client-qemu
     - mender-client-qemu-rofs
     - mender-qemu-rofs-commercial
-    - mender-client-docker-addons
     - mender-monitor-qemu-commercial
     docker_container:
       - mender-client
-    release_component: true
+    release_component: false
     independent_component: true
 
   mender-snapshot:
@@ -295,7 +300,7 @@ git:
     - mender-monitor-qemu-commercial
     docker_container:
       - mender-client
-    release_component: true
+    release_component: false
     independent_component: true
 
   deviceconfig:
@@ -416,7 +421,7 @@ docker_image:
 
   mender-client-docker-addons:
     git:
-    - integration
+    - mender-client-subcomponents
     - mender
     - mender-connect
     - mender-configure-module
@@ -612,7 +617,7 @@ docker_image:
     - mender
     docker_container:
     - mender-gateway
-    release_component: true
+    release_component: false
     independent_component: false
 
   reporting:

@@ -434,3 +434,142 @@ exit 0
         logger.info(f"docker ps output after failed deployment:\n{docker_ps}")
         assert "test-container-image1" in docker_ps
         assert "test-container-image2" not in docker_ps
+
+    def test_healthcheck(self, standard_setup_extended, artifact_gen_script):
+        env = standard_setup_extended
+        mender_device = env.device
+
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        devices = devauth.get_devices_status("accepted")
+        assert len(devices) == 1
+        device_id = devices[0]["id"]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifests_dir = os.path.join(temp_dir, "manifests")
+            images_dir = os.path.join(temp_dir, "images")
+            os.makedirs(manifests_dir)
+            os.makedirs(images_dir)
+
+            # Build and save the image
+            dockerfile = os.path.join(temp_dir, "Dockerfile.test1")
+            with open(dockerfile, "w") as f:
+                f.write(
+                    f'FROM busybox:latest\nRUN echo "{uuid.uuid4()}" > /image_id\nCMD ["sleep", "infinity"]\n'
+                )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "build",
+                    "-t",
+                    "test-container-image1",
+                    "-f",
+                    dockerfile,
+                    temp_dir,
+                ]
+            )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "save",
+                    "-o",
+                    os.path.join(images_dir, "test-container-image1.tar"),
+                    "test-container-image1",
+                ]
+            )
+
+            # Create manifest with passing healthcheck
+            with open(os.path.join(manifests_dir, "docker-compose.yml"), "w") as f:
+                f.write("services:\n")
+                f.write("  test1:\n")
+                f.write("    image: test-container-image1\n")
+                f.write("    network_mode: bridge\n")
+                f.write("    healthcheck:\n")
+                f.write('      test: ["CMD", "true"]\n')
+                f.write("      interval: 1s\n")
+                f.write("      timeout: 1s\n")
+                f.write("      retries: 1\n")
+
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)
+
+        docker_ps = mender_device.run("docker ps")
+        logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
+        assert "test-container-image1" in docker_ps
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifests_dir = os.path.join(temp_dir, "manifests")
+            images_dir = os.path.join(temp_dir, "images")
+            os.makedirs(manifests_dir)
+            os.makedirs(images_dir)
+
+            # Build and save the image
+            dockerfile = os.path.join(temp_dir, "Dockerfile.test2")
+            with open(dockerfile, "w") as f:
+                f.write(
+                    f'FROM busybox:latest\nRUN echo "{uuid.uuid4()}" > /image_id\nCMD ["sleep", "infinity"]\n'
+                )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "build",
+                    "-t",
+                    "test-container-image2",
+                    "-f",
+                    dockerfile,
+                    temp_dir,
+                ]
+            )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "save",
+                    "-o",
+                    os.path.join(images_dir, "test-container-image2.tar"),
+                    "test-container-image2",
+                ]
+            )
+
+            # Create manifest with failing healthcheck
+            with open(os.path.join(manifests_dir, "docker-compose.yml"), "w") as f:
+                f.write("services:\n")
+                f.write("  test2:\n")
+                f.write("    image: test-container-image2\n")
+                f.write("    network_mode: bridge\n")
+                f.write("    healthcheck:\n")
+                f.write('      test: ["CMD", "false"]\n')
+                f.write("      interval: 1s\n")
+                f.write("      timeout: 1s\n")
+                f.write("      retries: 1\n")
+
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "failure", 1)
+
+        # Verify rollback occurred - original service should still be running
+        docker_ps = mender_device.run("docker ps")
+        logger.info(
+            f"docker ps output after failed healthcheck deployment:\n{docker_ps}"
+        )
+        assert "test-container-image1" in docker_ps
+        assert "test-container-image2" not in docker_ps

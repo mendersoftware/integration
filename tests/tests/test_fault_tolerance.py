@@ -96,31 +96,45 @@ class BasicTestFaultTolerance(MenderTesting):
                 hide=True,
             )
 
-    def wait_for_download_retry_attempts(self, device, search_string):
+    def wait_for_download_retry_attempts(
+        self, device, search_string, num_retries=2, timeout=10
+    ):
         """ Block until logs contain messages related to failed download attempts """
 
-        timeout_time = int(time.time()) + (10 * 60)
+        timeout_time = int(time.time()) + (
+            timeout * 90
+        )  # 90s per each 60s retry to give time for a connection timeout to occur each time
+        start_time = int(time.time())
+        num_retries_attempted = 0
 
         while int(time.time()) < timeout_time:
             output = device.run(
-                f"journalctl --unit mender-updated --full --no-pager | grep -E 'msg=\".*{search_string}' | wc -l",
+                f'journalctl --unit mender-updated --full --no-pager | grep -E \'name="http_resumer:client" msg=".*{search_string}\' | wc -l',
                 hide=True,
             )
             time.sleep(2)
-            if int(output) >= 2:  # check that some retries have occurred
+            if int(output) >= num_retries:  # check that some retries have occurred
                 logger.info(
-                    "Looks like the download was retried 2 times, restoring download functionality"
+                    f"Looks like the download was retried {num_retries} times, restoring download functionality"
                 )
+                num_retries_attempted = int(output)
                 break
+            num_retries_attempted = int(output)
 
-        if timeout_time <= int(time.time()):
-            pytest.fail("timed out waiting for download retries")
+        # if num_retries expected is smaller then timeout, we expect success.
+        # if it's bigger, then we expect a timeout
+        if num_retries < timeout:
+            if timeout_time <= int(time.time()):
+                pytest.fail("timed out waiting for download retries")
+            # make sure that retries happen after 'num_retries' minutes have passed
+            assert (
+                int(time.time()) - start_time
+                > (num_retries - 1)
+                * 60  # need to decrease by 1 becasue the first retry happens almost immediately, not after a minute
+            ), f"Ooops, looks like the retry happened within less than {num_retries} minutes"
 
-        # make sure that retries happen after 2 minutes have passed
-        assert (
-            timeout_time - int(time.time()) >= 2 * 60
-        ), "Ooops, looks like the retry happened within less than 5 minutes"
         logger.info("Waiting for system to finish download")
+        return num_retries_attempted
 
     def do_test_update_image_breaks_networking(
         self, env, broken_network_image,
@@ -258,6 +272,130 @@ class BasicTestFaultTolerance(MenderTesting):
             assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
             reboot.verify_reboot_not_performed()
 
+    def do_test_image_download_retry_download_count(
+        self,
+        env,
+        valid_image_with_mender_conf,
+        max_retries,
+        unsuccessful_retries,
+        success,
+    ):
+        """
+        Install an update, and block storage connection when we detect it's
+        being copied over to the inactive partition - parametrized number of times equal to "unsuccessful_retries"
+
+        The test should result in a successful download retry if "max_retries" >= "unsuccessful_retries".
+
+        NOTE: storage and gateway share an ip, so disabling connectivity
+        is tricky - we must alternate between blocking by the whole ip and blocking
+        just by domain
+        """
+
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        # modify device config with our number of retries
+        try:
+            tmpdir = tempfile.mkdtemp()
+            # retrieve the original configuration file
+            output = mender_device.run("cat /etc/mender/mender.conf")
+            config = json.loads(output)
+            # add RetryDownloadCount value, modifying the default "10"
+            config["RetryDownloadCount"] = max_retries
+            mender_conf = os.path.join(tmpdir, "mender.conf")
+            with open(mender_conf, "w") as fd:
+                json.dump(config, fd)
+            env.device.put(
+                os.path.basename(mender_conf),
+                local_path=os.path.dirname(mender_conf),
+                remote_path="/etc/mender",
+            )
+        finally:
+            shutil.rmtree(tmpdir)
+
+        # start the Mender client
+        logger.info("Restarting the client with updated configuration.")
+        env.device.run("systemctl restart mender-updated")
+        # end of client config modification
+
+        # make tcp timeout quicker, none persistent changes
+        mender_device.run("echo 2 > /proc/sys/net/ipv4/tcp_keepalive_time")
+        mender_device.run("echo 2 > /proc/sys/net/ipv4/tcp_keepalive_intvl")
+        mender_device.run("echo 3 > /proc/sys/net/ipv4/tcp_syn_retries")
+
+        # to speed up timeouting client connection
+        mender_device.run("echo 1 > /proc/sys/net/ipv4/tcp_keepalive_probes")
+
+        active_part = mender_device.get_active_partition()
+        inactive_part = mender_device.get_passive_partition()
+        old_yocto_id = mender_device.yocto_id_installed_on_machine()
+
+        host_ip = env.get_virtual_network_host_ip()
+
+        blocked_service = None
+
+        with mender_device.get_reboot_detector(host_ip) as reboot:
+            # Block after we start the download.
+            mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+            deployment_id, new_yocto_id = common_update_procedure(
+                valid_image_with_mender_conf(mender_conf),
+                devauth=devauth,
+                deploy=deploy,
+            )
+            mender_device.run(
+                "start=$(date -u +%s);"
+                + 'output="";'
+                + 'while [ -z "$output" ]; do '
+                + "sleep 0.1;"
+                + 'output="$(fuser -mv %s)";' % inactive_part
+                + "now=$(date -u +%s);"
+                + "if [ $(($now - $start)) -gt 600 ]; then "
+                + "exit 1;"
+                + "fi;"
+                + "done",
+                wait=10 * 60,
+            )
+
+            # storage must be blocked by ip to kill an ongoing connection
+            # so block the whole gateway
+            blocked_service = "docker.mender.io"
+
+            self.manipulate_network_connectivity(
+                mender_device, False, hosts=[blocked_service]
+            )
+
+            # re-enable connectivity after "unsuccessful_retries" retries
+            # wait for >= unusccessful_retries retries. If max_retries is smaller, it will timeout as expected
+            retries_attempted = self.wait_for_download_retry_attempts(
+                mender_device,
+                "Resuming download after",
+                unsuccessful_retries,
+                max_retries,
+            )
+            if max_retries > unsuccessful_retries:
+                assert retries_attempted == unsuccessful_retries
+            else:
+                assert retries_attempted == max_retries
+
+            self.manipulate_network_connectivity(
+                mender_device, True, hosts=[blocked_service]
+            )
+
+            if success:
+                reboot.verify_reboot_performed()
+                deploy.check_expected_status("finished", deployment_id)
+
+                assert mender_device.get_active_partition() == inactive_part
+                assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
+                reboot.verify_reboot_not_performed()
+            else:
+                reboot.verify_reboot_not_performed()
+                deploy.check_expected_status("inprogress", deployment_id)
+
+                assert mender_device.get_active_partition() == active_part
+                assert mender_device.yocto_id_installed_on_machine() == old_yocto_id
+
     def do_test_image_download_retry_hosts_broken(
         self, env, valid_image_with_mender_conf,
     ):
@@ -285,8 +423,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
             self.wait_for_download_retry_attempts(
-                mender_device,
-                "Failed to perform the SSL handshake: certificate verify failed",
+                mender_device, "Resuming download after ",
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
@@ -377,6 +514,33 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
     ):
         self.do_test_image_download_retry_timeout(
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        )
+
+    @pytest.mark.parametrize(
+        "max_retries, unsuccessful_retries, success",
+        [(5, 2, True), (5, 7, False), (15, 12, True), (11, 15, False)],
+        ids=[
+            "reducedRetriesSuccess",
+            "reducedRetriesFailure",
+            "increasedRetriesSuccess",
+            "increasedRetriesFailure",
+        ],
+    )
+    @MenderTesting.slow
+    def test_image_download_retry_download_count(
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
+        max_retries,
+        unsuccessful_retries,
+        success,
+    ):
+        self.do_test_image_download_retry_download_count(
+            standard_setup_one_client_bootstrapped,
+            valid_image_with_mender_conf,
+            max_retries,
+            unsuccessful_retries,
+            success,
         )
 
     @MenderTesting.slow

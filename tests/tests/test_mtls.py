@@ -186,7 +186,8 @@ activate = 1
                 remote_path="/var/lib/mender",
             )
 
-        env.device.run("systemctl stop mender-authd")
+        # Stop also mender-updated to prevent dbus-daemon to automatically start mender-authd
+        env.device.run("systemctl stop mender-authd mender-updated")
         tmpdir = tempfile.mkdtemp()
 
         ssl_engine_id = ""
@@ -246,7 +247,7 @@ activate = 1
         # start the Mender client
         logger.info("starting the client.")
         env.device.run("systemctl daemon-reload")
-        env.device.run("systemctl start mender-authd")
+        env.device.run("systemctl start mender-authd mender-updated")
 
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa", "ec256", "ed25519"])

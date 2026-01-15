@@ -1541,7 +1541,8 @@ class TestMonitorClientEnterprise:
         )
 
         # Stop mender-auth so that mender-monitor cannot send alerts
-        mender_device.run("systemctl stop mender-authd")
+        # Stop also mender-updated to prevent dbus-daemon to automatically start mender-authd
+        mender_device.run("systemctl stop mender-authd mender-updated")
 
         mender_device.run(
             "sed -i.backup -e 's/ALERT_STORE_MAX_RECORD_AGE_S=.*/ALERT_STORE_MAX_RECORD_AGE_S="

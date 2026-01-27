@@ -16,16 +16,11 @@ test:integration:generator:
   script:
   - apt-get update && apt-get install -y gettext-base
   - |
-    MANTRA_PROJECT_NAME="full_integration"
-
-    # Export for envsubst
-    export MANTRA_PROJECT_NAME
-
   - touch gitlab-ci-full-integration-jobs.yml
   - CI_NODE_TOTAL=$CI_JOBS_IN_PARALLEL_INTEGRATION
   - export CI_NODE_TOTAL CI_NODE_INDEX
   - for CI_NODE_INDEX in $(seq $CI_JOBS_IN_PARALLEL_INTEGRATION); do
-  -   envsubst '$CI_NODE_TOTAL,$CI_NODE_INDEX,$MANTRA_PROJECT_NAME' < .gitlab-ci-full-integration-template.yml >> gitlab-ci-full-integration-jobs.yml
+  -   envsubst '$CI_NODE_TOTAL,$CI_NODE_INDEX' < .gitlab-ci-full-integration-template.yml >> gitlab-ci-full-integration-jobs.yml
   - done
   artifacts:
     paths:

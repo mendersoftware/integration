@@ -68,7 +68,7 @@ test:integration:$CI_NODE_INDEX:
 
   after_script:
     # Post results to Mantra
-    - export MANTRA_PROJECT_NAME=full_integration
+    - MANTRA_PROJECT_NAME=full_integration
     - !reference [.mantra-push-results]
 
   artifacts:

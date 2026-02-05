@@ -69,6 +69,11 @@ test:integration:$CI_NODE_INDEX:
   after_script:
     # Post results to Mantra
     - MANTRA_PROJECT_NAME=full_integration
+    # Override CI_PIPELINE_SOURCE for the script to interpret this run as "nightly"
+    - if [ "$PARENT_CI_PIPELINE_SOURCE" = "schedule" ]; then
+    -   CI_PIPELINE_SOURCE=$PARENT_CI_PIPELINE_SOURCE
+    -   CI_PIPELINE_ID=$PARENT_CI_PIPELINE_ID
+    - fi
     - !reference [.mantra-push-results]
 
   artifacts:

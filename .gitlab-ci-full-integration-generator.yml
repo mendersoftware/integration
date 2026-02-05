@@ -28,6 +28,9 @@ test:integration:generator:
 
 test:integration:trigger:
   stage: test
+  variables:
+    PARENT_CI_PIPELINE_ID: $CI_PIPELINE_ID
+    PARENT_CI_PIPELINE_SOURCE: $CI_PIPELINE_SOURCE
   trigger:
     strategy: depend
     include:

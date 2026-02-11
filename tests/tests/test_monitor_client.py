@@ -1613,11 +1613,7 @@ class TestMonitorClientEnterprise:
         # T8: mender-monitor started
         time.sleep(alert_resend_interval_s)
         time.sleep(alert_resend_interval_s)
-
-        # Shift by 1s to avoid race condition when checking
-        time.sleep(1)
-
-        # T16+1: key1, key2 expired
+        # T16: key1, key2 expired
         output = mender_device.run(
             "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
             + "keys_nolock | wc -l;'"
@@ -1627,7 +1623,7 @@ class TestMonitorClientEnterprise:
 
         time.sleep(alert_resend_interval_s)
         time.sleep(alert_resend_interval_s)
-        # T24+1: key3, key4 expired
+        # T24 key3, key4 expired
         output = mender_device.run(
             "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
             + "keys_nolock | wc -l;'"

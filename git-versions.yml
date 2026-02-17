@@ -8,22 +8,22 @@ services:
     # Mender Client LTS
     #
     mender:
-        image: mendersoftware/mender:5.0.x
+        image: mendersoftware/mender:5.0.4
 
     mender-connect:
-        image: mendersoftware/mender-connect:2.3.x
+        image: mendersoftware/mender-connect:2.3.2
 
     mender-configure-module:
-        image: mendersoftware/mender-configure-module:1.1.x
+        image: mendersoftware/mender-configure-module:1.1.4
 
     monitor-client:
-        image: mendersoftware/monitor-client:1.4.x
+        image: mendersoftware/monitor-client:1.4.4
 
     mender-binary-delta:
-        image: mendersoftware/mender-binary-delta:1.5.x
+        image: mendersoftware/mender-binary-delta:1.5.3
 
     mender-flash:
-        image: mendersoftware/mender-flash:master
+        image: mendersoftware/mender-flash:1.0.2
 
     #
     # Independent repositories

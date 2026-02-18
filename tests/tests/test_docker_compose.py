@@ -34,7 +34,7 @@ def artifact_gen_script():
     with tempfile.TemporaryDirectory() as temp_dir:
         script_path = os.path.join(temp_dir, "gen_docker-compose")
 
-        tag_pattern = re.compile(r"^\d+\.\d+\.\d+$")
+        tag_pattern = re.compile(r"^\d+\.\d+\.\d+(?:-build\d+)?$")
         version = os.environ.get("MENDER_CONTAINER_MODULES_VERSION", "main")
 
         base_url = "https://raw.githubusercontent.com/mendersoftware/mender-container-modules/refs"

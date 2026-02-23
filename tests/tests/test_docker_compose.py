@@ -133,6 +133,7 @@ def make_docker_compose_artifact(
     return make_artifact
 
 
+@pytest.mark.min_mender_client_version("6.0.0")
 class TestDockerCompose(MenderTesting):
     def test_successful_rollback(self, standard_setup_extended, artifact_gen_script):
         env = standard_setup_extended

@@ -14,6 +14,7 @@
 
 import logging
 import os
+import re
 import subprocess
 import shutil
 import tempfile
@@ -428,22 +429,30 @@ def verify_sane_test_environment():
         )
 
 
+def version_is_minimum(version, min_version):
+    # Handle maintenance branch patterns like "5.0.x"
+    # Replace .x with 99 to ensure that we run correct tests on maintenance branches
+    version_normalized = re.sub(r"\.x\b", ".99", version)
+    try:
+        version_parsed = packaging.version.Version(version_normalized)
+    except packaging.version.InvalidVersion:
+        # Indicates that 'version' is likely a branch name like "master"
+        # Always consider them higher than the minimum version.
+        return True
+
+    return version_parsed >= packaging.version.Version(min_version)
+
+
 @pytest.fixture(autouse=True)
 def min_mender_client_version(request):
-    version_marker = request.node.get_closest_marker("min_mender_client_version")
-    if version_marker is None:
-        # No marker, assume it shall run for all versions
+    # Mark a test with minimum Mender Client version
+    min_version_mark = request.node.get_closest_marker("min_mender_client_version")
+    if min_version_mark is None:
         return
-
-    mender_client_version = (
-        subprocess.check_output([RELEASE_TOOL, "--version-of", "mender"])
-        .decode()
-        .strip()
-    )
-    min_required_version = version_marker.args[0]
-
-    if not version_is_minimum(mender_client_version, min_required_version):
-        pytest.skip("Test requires Mender client %s or newer" % min_required_version)
+    version = os.environ.get("MENDER_CLIENT_VERSION", "main")
+    if not version_is_minimum(version, min_version_mark.args[0]):
+        pytest.skip(f"Test requires Mender client {min_version_mark} or newer")
+    return True
 
 
 @pytest.fixture(autouse=True)
@@ -453,14 +462,3 @@ def mender_client_version():
         .decode()
         .strip()
     )
-
-
-def version_is_minimum(version, min_version):
-    try:
-        version_parsed = packaging.version.Version(version)
-    except packaging.version.InvalidVersion:
-        # Indicates that 'version' is likely a string (branch name).
-        # Always consider them higher than the minimum version.
-        return True
-
-    return version_parsed >= packaging.version.Version(min_version)

@@ -52,7 +52,7 @@ class ProtoShell:
         msg = self.protomsg.encode(data)
         self.ws.send(msg)
 
-    def recvOutput(self, timeout=5):
+    def recvOutput(self, timeout=55):
         body = b""
         try:
             while True:

@@ -41,7 +41,7 @@ def put(local_path, remote_path, rootfs, remote_path_mkdir_p=False):
         ["debugfs", "-w", rootfs], stdin=subprocess.PIPE, stderr=subprocess.STDOUT
     )
     if remote_path_mkdir_p:
-        # Create parent directories sequencially, to simulate a "mkdir -p" on the final dir
+        # Create parent directories sequentially, to simulate a "mkdir -p" on the final dir
         parent_dirs = list(PurePath(remote_path).parents)[::-1][1:]
         for parent in parent_dirs:
             proc.stdin.write(("mkdir %s\n" % parent).encode())

@@ -12,7 +12,7 @@ services:
     mender-create-artifact-worker:
         image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/create-artifact-worker:${MENDER_SERVER_TAG}
 
-    # subsitute services with 'enterprise' versions
+    # substitute services with 'enterprise' versions
     mender-deployments:
         image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/deployments${MENDER_LEGACY_IMAGE:+-enterprise}:${MENDER_SERVER_TAG}
         environment:

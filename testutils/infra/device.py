@@ -108,7 +108,7 @@ class Connection:
 class MenderDevice:
     """SSH accessible device with Mender client
 
-    This class presents a convinient interface for tests and helpers to perform
+    This class presents a convenient interface for tests and helpers to perform
     remote commands execution or sending/receiving files.
     """
 

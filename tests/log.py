@@ -29,7 +29,7 @@ except OSError as e:
     if e.errno != errno.EEXIST:
         raise
 
-# Default logger deafult level to DEBUG
+# Default logger default level to DEBUG
 logging.getLogger().setLevel(logging.DEBUG)
 
 

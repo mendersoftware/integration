@@ -674,7 +674,7 @@ class TestMonitorClientEnterprise:
         max_start_stop_iterations = 32
         not_running_time = 2.2
         logger.info(
-            "test_monitorclient_flapping: running stop/start for %s, %d interations, sleep in-between: %.1fs"
+            "test_monitorclient_flapping: running stop/start for %s, %d iterations, sleep in-between: %.1fs"
             % (service_name, max_start_stop_iterations, not_running_time)
         )
         while max_start_stop_iterations > 0:

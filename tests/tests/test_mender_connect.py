@@ -44,7 +44,6 @@ container_factory = factory.get_factory()
 
 
 class _TestRemoteTerminalBase:
-    @flaky(max_runs=3)
     def test_regular_protocol_commands(self, docker_env_flaky_test):
         """
         Ticket: QA-504
@@ -59,19 +58,45 @@ class _TestRemoteTerminalBase:
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
             receive_timeout_s = 16
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+            shell_ready = False
+            for i in range(1, 8):
+                try:
+                    shell = proto_shell.ProtoShell(ws)
+                    body = shell.startShell()
+                    if shell.protomsg.props["status"] != protomsg.PROP_STATUS_NORMAL:
+                        raise TypeError("status is not PROP_STATUS_NORMAL")
+                    assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+                    if body != proto_shell.MSG_BODY_SHELL_STARTED:
+                        raise TypeError("body is not MSG_BODY_SHELL_STARTED")
+                    assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
-            # Drain any initial output from the prompt. It should end in either "# "
-            # (root) or "$ " (user).
-            output = shell.recvOutput(receive_timeout_s)
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert output[-2:].decode() in [
-                "# ",
-                "$ ",
-            ], "Could not detect shell prompt."
+                    # Drain any initial output from the prompt. It should end in either "# "
+                    # (root) or "$ " (user).
+                    output = shell.recvOutput(receive_timeout_s)
+                    if shell.protomsg.props["status"] != protomsg.PROP_STATUS_NORMAL:
+                        raise TypeError("status is not PROP_STATUS_NORMAL")
+                    assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+                    if not output[-2:].decode() in [
+                        "# ",
+                        "$ ",
+                    ]:
+                        raise TypeError(
+                            "shell output " + output[-2:].decode() + " is not expected"
+                        )
+                    assert output[-2:].decode() in [
+                        "# ",
+                        "$ ",
+                    ], "Could not detect shell prompt."
+                    shell_ready = True
+                    break
+                except TypeError as e:
+                    ws = docker_env_flaky_test.devconnect.get_websocket()
+                    time.sleep(receive_timeout_s)
+                    continue
+                if shell_ready:
+                    break
+            if not shell_ready:
+                raise RuntimeError("shell is not ready")
 
             # Starting the shell again should be a no-op. It should return that
             # it is already started, as long as the shell limit is 1. MEN-4240.

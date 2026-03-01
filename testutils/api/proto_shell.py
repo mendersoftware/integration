@@ -11,6 +11,7 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+import time
 
 from . import protomsg
 
@@ -35,7 +36,10 @@ class ProtoShell:
         msg = self.protomsg.encode(b"")
         self.ws.send(msg)
 
-        msg = self.ws.recv()
+        msg = "ping"
+        while msg == "ping":
+            msg = self.ws.recv()
+            time.sleep(1)
         body = self.protomsg.decode(msg)
         assert self.protomsg.protoType == PROTO_TYPE_SHELL
         assert self.protomsg.typ == MSG_TYPE_SPAWN_SHELL, (

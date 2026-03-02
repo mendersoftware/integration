@@ -21,6 +21,10 @@ compare_versions() {
     return 0
   fi
 
+  if [ "$VERSION_MAJOR" == "5" ]; then
+    return 0
+  fi
+
   if [ "$VERSION_MAJOR" != "1" ]; then
     echo "ERROR: Unsupported major version: $VERSION_MAJOR"
     return 1

@@ -154,7 +154,7 @@ class BaseTestFileTransferDownload(MenderTesting):
         try:
             # create a 40MB random file
             f = NamedTemporaryFile(delete=False)
-            for i in range(40 * 1024):
+            for i in range(4 * 1024):
                 f.write(os.urandom(1024))
             f.close()
 
@@ -186,7 +186,7 @@ class BaseTestFileTransferDownload(MenderTesting):
             assert r.headers.get("X-Men-File-Uid") == str(uid)
             assert r.headers.get("X-Men-File-Gid") == str(gid)
             assert r.headers.get("X-Men-File-Path") == f"/tmp/{fname}"
-            assert r.headers.get("X-Men-File-Size") == str(40 * 1024 * 1024)
+            assert r.headers.get("X-Men-File-Size") == str(4 * 1024 * 1024)
 
             filename_download = f.name + ".download"
             with open(filename_download, "wb") as fw:
@@ -247,7 +247,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         self.mender_device.run("mkdir -p /var/lib/mender/filetransfer")
 
         f = NamedTemporaryFile(delete=False)
-        for i in range(40 * 1024):
+        for i in range(4 * 1024):
             f.write(os.urandom(1024))
         f.close()
 

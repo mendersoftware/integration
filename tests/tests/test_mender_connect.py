@@ -54,11 +54,18 @@ class _TestRemoteTerminalBase:
                 (see MEN-6137) while many other things timeout.
         """
 
+        receive_timeout_s = 16
         self.assert_env(docker_env_flaky_test)
+        docker_env_flaky_test.device.run(
+            "rm -f /usr/share/mender/inventory/mender-inventory-intervals /usr/share/mender/inventory/mender-inventory-mender-configure"
+        )
+        docker_env_flaky_test.device.run(
+            "killall -TERM mender-auth mender-update dbus-monitor"
+        )
+        time.sleep(2 * receive_timeout_s)
 
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
-            receive_timeout_s = 16
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL

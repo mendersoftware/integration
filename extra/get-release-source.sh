@@ -42,7 +42,7 @@ for repo in $(${release_tool} --list); do
 done
 
 echo
-echo "Donwloaded source tarballs:"
+echo "Downloaded source tarballs:"
 ls -1 mender-${RELEASE_VERSION}-src
 
 echo

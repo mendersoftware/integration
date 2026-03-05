@@ -157,7 +157,7 @@ done
             assert mender_device.get_active_partition() == active_part
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
-        # do the next update, this time succesful
+        # do the next update, this time successful
         update_image(
             mender_device,
             host_ip,

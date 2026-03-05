@@ -34,7 +34,7 @@ from .mendertesting import MenderTesting
 class BaseTestSecurity(MenderTesting):
     def do_test_token_token_expiration(self, env, valid_image_with_mender_conf):
         """verify that an expired token is handled correctly (client gets a new, valid one)
-        and that deployments are still recieved by the client
+        and that deployments are still received by the client
         """
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)

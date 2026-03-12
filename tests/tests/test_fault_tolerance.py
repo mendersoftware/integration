@@ -130,7 +130,7 @@ class BasicTestFaultTolerance(MenderTesting):
             assert (
                 int(time.time()) - start_time
                 > (num_retries - 1)
-                * 60  # need to decrease by 1 becasue the first retry happens almost immediately, not after a minute
+                * 60  # need to decrease by 1 because the first retry happens almost immediately, not after a minute
             ), f"Ooops, looks like the retry happened within less than {num_retries} minutes"
 
         logger.info("Waiting for system to finish download")

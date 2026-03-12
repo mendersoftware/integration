@@ -297,7 +297,7 @@ def make_accepted_device(
     aset.status = "accepted"
 
     # TODO: very bad workaround for Azure IoT Hub backend test; following part is responsible for creating
-    # TODO: additonal, unnecessary auth set which causes Azure test to fail
+    # TODO: additional, unnecessary auth set which causes Azure test to fail
     if test_type == "regular":
         # obtain auth token
         body, sighdr = deviceauth.auth_req(
@@ -516,9 +516,9 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
 
         # Additional handling for mender-api-gateway initialization: Make sure we have routings from
         # dynamic configuration in mender-api-gateway loaded before starting any tests.
-        # Without it, we can have mender-api-gateway not initalized fully and see errors e.g. on
+        # Without it, we can have mender-api-gateway not initialized fully and see errors e.g. on
         # connecting to /useradm/auth/login, which is unintuitive. In the past, if starting too many
-        # containers simultanously, mender-api-gateway has run out of limit on open files, which
+        # containers simultaneously, mender-api-gateway has run out of limit on open files, which
         # caused configuration not to be loaded.
         if service.startswith("mender-api-gateway"):
             wait_for_api_gateway(container_ip, router_to_check="useradm@file")

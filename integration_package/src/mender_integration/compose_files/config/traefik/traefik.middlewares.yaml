@@ -1,0 +1,55 @@
+http:
+  middlewares:
+
+    # {{ with (env "ALLOWED_HOSTS") }}
+    check-hostname:
+      headers:
+        customResponseHeaders:
+          X-Allowed-Hosts: "{{replace " " "" .}}"
+        allowedHosts: # {{ range ( splitList "," (replace " " "" .)) }}
+          - "{{.}}" # {{end}}
+    # {{end}}
+
+    circuit-breaker:
+      circuitBreaker:
+        expression: >-
+          ResponseCodeRatio(500, 600, 0, 600) > 0.25 ||
+          NetworkErrorRatio() > 0.10
+  
+    sec-headers:
+      headers: # {{- if (env "MENDER_DEMO") }}
+        stsSeconds: 0
+        isDevelopment: true
+        # {{ else }}
+        stsSeconds: 31536000
+        # {{ end }}
+        forceSTSHeader: true
+        stsPreload: true
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        customRequestHeaders:
+          "X-Forwarded-Proto": "https"
+  
+    compression:
+      compress: true
+  
+    devauth:
+      forwardAuth:
+        address: "http://mender-device-auth:8080/api/internal/v1/devauth/tokens/verify"
+        authResponseHeaders: "X-MEN-RequestID"
+  
+    userauth:
+      forwardAuth:
+        address: "http://mender-useradm:8080/api/internal/v1/useradm/auth/verify"
+        authResponseHeaders: "X-MEN-RequestID,X-MEN-RBAC-Inventory-Groups,X-MEN-RBAC-Deployments-Groups,X-MEN-RBAC-Releases-Tags"
+
+    inventoryV1-replacepathregex:
+      replacepathregex:
+        regex: "^/api/devices/v1/inventory/(.*)"
+        replacement: "/api/0.1.0/attributes"
+  
+    inventoryMgmtV1-replacepathregex:
+      replacepathregex:
+        regex: "^/api/management/v1/inventory/(.*)"
+        replacement: "/api/0.1.0/$1"

@@ -1,0 +1,19 @@
+services:
+  #
+  # mender-client
+  #
+  mender-client:
+    image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_IMAGE}:${MENDER_CLIENT_QEMU_TAG}
+    networks:
+      - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      SERVER_URL:
+      TENANT_TOKEN:
+    blkio_config:
+      weight: 100
+
+networks:
+  mender: {}

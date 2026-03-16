@@ -1,0 +1,20 @@
+http:
+  routers:
+    minio:
+      entrypoints: https
+      # Use sprig flavored Go template
+      rule: >-
+        {{with env "STORAGE_URL" | default "s3.docker.mender.io" -}}
+        Host(`{{.}}`)||Header(`X-Forwarded-Host`,`{{.}}`) ||
+        HeaderRegexp(`X-Amz-Date`, `.+`) ||
+        PathPrefix(`/mender-artifact-storage`)
+        {{- end}}
+      tls: true
+      service: minio
+
+  services:
+    minio:
+      loadBalancer:
+        servers:
+        - url: "http://minio:9000"
+

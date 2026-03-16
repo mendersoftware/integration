@@ -1,0 +1,8 @@
+services:
+
+    #
+    # mender-client
+    #
+    mender-client:
+        volumes:
+            - ./extra/signed-artifact-client-testing/config/artifact-verify-key.pem:/mnt/config/artifact-verify-key.pem:ro

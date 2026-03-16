@@ -1,0 +1,8 @@
+#!/home/rewan-rashid/Repos/integration/integration_package/.venv/bin/python3
+# -*- coding: utf-8 -*-
+import re
+import sys
+from mender_integration.utils.compose_helpers import install_shell_hook
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(install_shell_hook())

@@ -1,0 +1,281 @@
+# Dynamic traefik configuration
+http:
+  #
+  # Routers
+  #
+  routers:
+    #
+    # hostname-checker
+    # {{ with (env "ALLOWED_HOSTS") }}
+    hostname-checker:
+      entrypoints: https
+      middlewares:
+        - check-hostname
+      rule: >-
+        ! Host(`{{join "`,`" (splitList "," (trim .))}}`)
+      service: noop@internal
+      priority: 999
+      tls: true
+    # {{end}}
+
+    #
+    # iot-manager
+    #
+    azureiotmanagerMgmt:
+      entrypoints: https
+      middlewares: #{{- block "circuit-breaker" . -}}{{- if not (env "TESTING") }}
+        - circuit-breaker #{{- end}}{{end}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/iot-manager`)"
+      service: azureiotmanager
+      tls: true
+
+    #
+    # deployments
+    #
+    deployments:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments`)"
+      service: deployments
+      tls: true
+
+    deploymentsDL:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - sec-headers
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deployments/download`)"
+      service: deployments
+      tls: true
+
+    deploymentsMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deployments`)"
+      service: deployments
+      tls: true
+
+    #
+    # deviceauth
+    #
+    deviceauth:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/authentication`)"
+      service: deviceauth
+      tls: true
+
+    deviceauthMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/devauth`)"
+      service: deviceauth
+      tls: true
+
+    #
+    # gui
+    #
+    gui:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - sec-headers
+        - compression
+      priority: 1
+      rule: "PathPrefix(`/`)"
+      service: gui
+      tls: true
+
+    #
+    # inventory
+    #
+    inventoryV1:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - inventoryV1-replacepathregex
+        - sec-headers
+        - compression
+      rule: "PathPrefix(`/api/devices/v1/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryV2:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+      rule: "PathPrefix(`/api/devices/v2/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryMgmtV1:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - inventoryMgmtV1-replacepathregex
+        - sec-headers
+        - compression
+      rule: "PathPrefix(`/api/management/v1/inventory`)"
+      service: inventory
+      tls: true
+
+    inventoryMgmtV2:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathPrefix(`/api/management/v2/inventory`)"
+      service: inventory
+      tls: true
+
+    #
+    # reporting
+    #
+    reporting:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/reporting`)"
+      service: reporting
+      tls: true
+
+    #
+    # useradm
+    #
+    useradm:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/useradm`)"
+      service: useradm
+      tls: true
+
+    useradmNoAuth:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - sec-headers
+        - compression
+      rule: >-
+        !PathRegexp(`^/api/management/v[0-9]+/useradm/auth/logout`) &&
+        PathRegexp(`^/api/management/v[0-9]+/useradm/(auth|oauth2|oidc)`)
+      service: useradm
+      tls: true
+
+    #
+    # deviceconnect
+    #
+    deviceconnect:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+    deviceconnectMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconnect`)"
+      service: deviceconnect
+      tls: true
+
+    #
+    # deviceconfig
+    #
+    deviceconfig:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - devauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/devices/v[0-9]+/deviceconfig`)"
+      service: deviceconfig
+      tls: true
+
+    deviceconfigMgmt:
+      entrypoints: https
+      middlewares: #{{- template "circuit-breaker"}}
+        - userauth
+        - sec-headers
+        - compression
+      rule: "PathRegexp(`^/api/management/v[0-9]+/deviceconfig`)"
+      service: deviceconfig
+      tls: true
+
+  #
+  # Services
+  #
+  services:
+    azureiotmanager:
+      loadBalancer:
+        servers:
+          - url: "http://mender-iot-manager:8080"
+
+    deviceauth:
+      loadBalancer:
+        servers:
+          - url: "http://mender-device-auth:8080"
+
+    deployments:
+      loadBalancer:
+        servers:
+          - url: "http://mender-deployments:8080"
+
+    error-responder:
+      loadBalancer:
+        servers:
+          - url: "http://mender-gui:8080"
+
+    gui:
+      loadBalancer:
+        servers:
+          - url: http://mender-gui:{{ if (env "MENDER_LEGACY_IMAGE") }}80{{ else }}8090{{ end }}
+
+    inventory:
+      loadBalancer:
+        servers:
+          - url: "http://mender-inventory:8080"
+
+    reporting:
+      loadBalancer:
+        servers:
+          - url: "http://mender-reporting:8080"
+
+    useradm:
+      loadBalancer:
+        servers:
+          - url: "http://mender-useradm:8080"
+
+    deviceconnect:
+      loadBalancer:
+        servers:
+          - url: "http://mender-deviceconnect:8080"
+
+    deviceconfig:
+      loadBalancer:
+        servers:
+          - url: "http://mender-deviceconfig:8080"

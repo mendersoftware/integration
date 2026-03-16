@@ -1,0 +1,242 @@
+# This file is basically a merge of docker-compose.yml, docker-compose.demo.yml
+# and docker-compose.storage.minio.yml, as they appeared when this file was
+# written.
+
+services:
+
+    #
+    # mender-iot-manager
+    #
+    mender-iot-manager-2:
+        command: [server, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-iot-manager
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-iot-manager
+        depends_on:
+            - mender-mongo-2
+        environment:
+          IOT_MANAGER_MONGO_URL: "mongodb://mender-mongo-2"
+
+    #
+    # mender-deployments
+    #
+    mender-deployments-2:
+        command: [server, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-deployments
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-deployments
+        depends_on:
+            - mender-mongo-2
+        volumes:
+            - ./cert/cert.crt:/etc/ssl/certs/docker.mender.io.crt
+        environment:
+            DEPLOYMENTS_MONGO_URL: "mongodb://mender-mongo-2"
+            STORAGE_BACKEND_CERT: /etc/ssl/certs/docker.mender.io.crt
+            DEPLOYMENTS_AWS_AUTH_KEY: minio
+            DEPLOYMENTS_AWS_AUTH_SECRET: minio123
+            DEPLOYMENTS_AWS_URI: http://minio:9000
+            DEPLOYMENTS_AWS_EXTERNAL_URI: https://s3.docker.mender.io
+
+    #
+    # mender-gui
+    #
+    mender-gui-2:
+        extends:
+            file: docker-compose.yml
+            service: mender-gui
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-gui
+
+    #
+    # mender-api-gateway
+    #
+    mender-api-gateway-2:
+        image: traefik:v3.1
+        extends:
+            file: docker-compose.yml
+            service: mender-api-gateway
+        volumes:
+            # So that Traefik can listen to the Docker events
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            # Dynamic configuration files
+            - ./extra/failover-testing/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
+            - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
+            - ./config/traefik/traefik.minio.yaml:/etc/traefik/config/traefik.minio.yaml:ro
+            - ./config/traefik/traefik.tls.yaml:/etc/traefik/config/traefik.tls.yaml:ro
+            - ./cert/cert.crt:/etc/traefik/certs/cert.crt
+            - ./cert/private.key:/etc/traefik/certs/private.key
+        networks:
+            mender:
+                aliases:
+                    - failover.docker.mender.io
+                    - failover.s3.docker.mender.io
+            mender-failover:
+                aliases:
+                    - mender-api-gateway
+                    - docker.mender.io
+                    - s3.docker.mender.io
+        # critical - otherwise nginx may not detect
+        # these servers and exits with 'upstream server not found'
+        depends_on:
+            - mender-device-auth-2
+            - mender-gui-2
+            - mender-useradm-2
+            - mender-inventory-2
+        environment:
+            STORAGE_URL: ${STORAGE_URL:-s3.docker.mender.io}
+
+    #
+    # mender-device-auth
+    #
+    mender-device-auth-2:
+        command: [server, --automigrate]
+        volumes:
+            - ./keys/deviceauth/private.key:/etc/deviceauth/rsa/private.pem
+        environment:
+            DEVICEAUTH_MONGO: "mongodb://mender-mongo-2"
+            DEVICEAUTH_SERVER_PRIV_KEY_PATH: /etc/deviceauth/rsa/private.pem
+            DEVICEAUTH_ORCHESTRATOR_ADDR: http://mender-workflows-server:8080/
+        extends:
+            file: docker-compose.yml
+            service: mender-device-auth
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-device-auth
+        depends_on:
+            - mender-mongo-2
+            - mender-workflows-server-2
+
+    #
+    # mender-inventory
+    #
+    mender-inventory-2:
+        command: [server, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-inventory
+        environment:
+          INVENTORY_MONGO: "mongodb://mender-mongo-2"
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-inventory
+        depends_on:
+            - mender-mongo-2
+
+    #
+    # mender-useradm
+    #
+    mender-useradm-2:
+        command: [server, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-useradm
+        environment:
+          USERADM_MONGO: "mongodb://mender-mongo-2"
+          USERADM_SERVER_PRIV_KEY_PATH: /etc/useradm/rsa/private.pem
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-useradm
+        depends_on:
+            - mender-mongo-2
+        volumes:
+            - ./keys/useradm/private.key:/etc/useradm/rsa/private.pem
+
+    #
+    # mender-workflows-server
+    #
+    mender-workflows-server-2:
+        command: [server, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-workflows-server
+        environment:
+          WORKFLOWS_MONGO_URL: "mongodb://mender-mongo-2"
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-workflows-server
+        depends_on:
+            - mender-mongo-2
+            - mender-nats-2
+
+    #
+    # mender-workflows-worker
+    #
+    mender-workflows-worker-2:
+        command: [worker, --automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-workflows-worker
+        environment:
+          WORKFLOWS_MONGO_URL: "mongodb://mender-mongo-2"
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-workflows-worker
+        depends_on:
+            - mender-mongo-2
+            - mender-nats-2
+
+    #
+    # mender-create-artifact-worker
+    #
+    mender-create-artifact-worker-2:
+        command: [--automigrate]
+        extends:
+            file: docker-compose.yml
+            service: mender-create-artifact-worker
+        environment:
+          WORKFLOWS_MONGO_URL: mongodb://mender-mongo-2:27017
+          WORKFLOWS_NATS_URL: "nats://mender-nats-2"
+          CREATE_ARTIFACT_GATEWAY_URL: https://mender-api-gateway
+          CREATE_ARTIFACT_DEPLOYMENTS_URL: http://mender-deployments:8080
+          CREATE_ARTIFACT_SKIPVERIFY: "1"
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-create-artifact-worker
+        depends_on:
+            - mender-mongo-2
+            - mender-nats-2
+
+    mender-mongo-2:
+        image: mongo:8.0
+        extends:
+            file: common.yml
+            service: mender-base
+        networks:
+            mender-failover:
+                aliases:
+                    - mongo-tenantadm
+                    - mongo-deployments
+                    - mongo-device-auth
+                    - mongo-inventory
+                    - mongo-useradm
+                    - mongo-workflows
+                    - mender-mongo
+
+    mender-nats-2:
+        image: nats:2.6-alpine
+        command: -js
+        networks:
+            mender-failover:
+                aliases:
+                    - mender-nats
+
+networks:
+    mender-failover:

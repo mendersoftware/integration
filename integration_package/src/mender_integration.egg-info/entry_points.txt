@@ -1,0 +1,2 @@
+[console_scripts]
+mender-setup = mender_integration.utils.compose_helpers:install_shell_hook

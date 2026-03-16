@@ -1,0 +1,29 @@
+#
+# Traefik static file configuration
+#
+providers:
+  file:
+    directory: "/etc/traefik/config"
+    watch: true
+
+entryPoints:
+  https:
+    address: ":443"
+    transport:
+      respondingTimeouts:
+        idleTimeout: 7200
+        readTimeout: 7200
+        writeTimeout: 7200
+
+  http:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+          permanent: true
+
+accessLog:
+  format: json
+

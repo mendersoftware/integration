@@ -1,0 +1,18 @@
+services:
+
+    mender-api-gateway:
+        ports:
+            - "80:80"
+        command:
+            - --accesslog=true
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --entrypoints.http.address=:80
+            - --entrypoints.https.address=:443
+            - --entryPoints.https.transport.respondingTimeouts.idleTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.readTimeout=7200
+            - --entryPoints.https.transport.respondingTimeouts.writeTimeout=7200
+
+    mender-deployments:
+        environment:
+            DEPLOYMENTS_AWS_EXTERNAL_URI: http://s3.docker.mender.io

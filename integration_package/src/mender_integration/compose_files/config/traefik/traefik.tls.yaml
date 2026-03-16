@@ -1,0 +1,12 @@
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/traefik/certs/cert.crt
+        keyFile: /etc/traefik/certs/private.key
+  certificates:
+    - certFile: /etc/traefik/certs/cert.crt
+      keyFile: /etc/traefik/certs/private.key

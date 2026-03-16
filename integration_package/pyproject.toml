@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mender-integration"
+version = "0.1.0"
+
+dependencies = [
+  "cryptography>=46.0.5",
+  "docker>=7.1.0",
+  "filelock>=3.20.3",
+  "msgpack>=1.1.2",
+  "py3dns>=4.0.2",
+  "pymongo>=4.16.0",
+  "pytest>=9.0.2",
+  "pytest-html>=4.2.0",
+  "pytest-metadata>=3.1.1",
+  "pytest-timeout>=2.4.0",
+  "pytest-xdist>=3.8.0",
+  "redo>=3.0.0",
+  "requests>=2.32.5",
+  "urllib3>=2.6.3",
+  "websockets>=16.0",
+  "flaky>=3.8.1",
+  "stripe>=14.3.0",
+  "aiosmtpd>=1.4.6",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"mender_integration.compose_files" = [".env", "**/*.yml", "**/*.yaml", "keys/**/*", "config/**/*", "cert/**/*"]
+
+[tool.setuptools.exclude-package-data]
+"mender_integration.compose_files" = ["**/__pycache__/*", "**/*.pyc"]
+
+[project.scripts]
+mender-setup = "mender_integration.utils.compose_helpers:install_shell_hook"

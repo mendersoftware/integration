@@ -1,0 +1,10 @@
+services:
+
+    #
+    # mender-client: For local development using BUILDDIR for images.
+    #
+    mender-client:
+        volumes:
+            - ${BUILDDIR}:/mnt/build:ro
+        blkio_config:
+            weight: 100

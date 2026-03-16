@@ -1,0 +1,6 @@
+
+services:
+  mender-api-gateway:
+    ports: !reset []
+    environment:
+      TESTING: "true"

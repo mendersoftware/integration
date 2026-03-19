@@ -3202,7 +3202,7 @@ def main():
     parser.add_argument(
         "--no-multiplatform",
         action="store_true",
-        help="Force using legacy docker commands not compatbile with multiplatform images. ",
+        help="Force using legacy docker commands not compatible with multiplatform images. ",
     )
     args = parser.parse_args()
 

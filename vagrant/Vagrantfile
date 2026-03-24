@@ -1,0 +1,54 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+MACHINE_MEMORY = 8192   # at least 8 GiB required for 4-6 pytest workers
+MACHINE_CPUS   = 8      # tweak to tune the level of overload/stress
+N_TEST_WORKERS = 4
+
+# TODO: needs 'docker login registry.mender.io' first, see below
+# RUN_TESTS      = false  # it's better to do this step interactively after running 'vagrant ssh'
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/bookworm64"
+  config.vm.provider "libvirt" do |libvirt|
+    libvirt.memory = MACHINE_MEMORY
+    libvirt.cpus = MACHINE_CPUS
+  end
+  config.vm.synced_folder "../", "/integration"
+  config.vm.provision "shell", args: ["-e"], name: "Install test dependencies", inline: <<-SHELL
+  if ! test -f /.test_deps_installed; then
+    apt-get update
+    apt-get -y install passwd ca-certificates curl git make python3 python-is-python3 python3-pip
+    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    cat > /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/debian
+Suites: $(. /etc/os-release && echo "$VERSION_CODENAME")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+    apt-get update
+    apt-get -y install docker-ce docker-ce-cli docker-compose-plugin
+    usermod -G docker -a vagrant
+    pip install --break-system-packages --ignore-installed -r /integration/tests/requirements-python/python-requirements.txt pyyaml
+  else
+    echo "Test dependencies already installed"
+  fi
+  SHELL
+
+  # TODO: Needs to do
+  # $ docker login registry.mender.io
+  # before running tests.
+  # if RUN_TESTS
+  #   config.vm.provision "shell", name: "Run integration tests", inline: <<-SHELL
+  #   cd /integration/tests
+  #   echo "Running tests with #{N_TEST_WORKERS} workers..."
+  #   ./run_tests.sh -- -n #{N_TEST_WORKERS} > tests.out
+  #   if [ $? = 0 ]; then
+  #      echo "Tests ran successfully"
+  #   else
+  #      echo "Tests failed, check the /integration/tests/tests.out file for details."
+  #   fi
+  #   SHELL
+  # end
+end

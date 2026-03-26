@@ -56,8 +56,7 @@ SAMPLE_REPOS_DEPRECATED = [
 
 @pytest.fixture(scope="session")
 def is_master():
-    """Fixture to figure out if we are running the tests in master branch
-    """
+    """Fixture to figure out if we are running the tests in master branch"""
 
     with open(os.path.join(INTEGRATION_DIR, "git-versions.yml")) as fd:
         content = fd.read()
@@ -190,26 +189,46 @@ def test_version_of_with_in_integration_version(capsys):
 
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender-connect", "--in-integration-version", "3.1.0",],
+        [
+            "--version-of",
+            "mender-connect",
+            "--in-integration-version",
+            "3.1.0",
+        ],
         "1.2.0",
     )
 
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender", "--in-integration-version", "3.1.0",],
+        [
+            "--version-of",
+            "mender",
+            "--in-integration-version",
+            "3.1.0",
+        ],
         "3.1.0",
     )
 
     run_main_assert_result(
         capsys,
-        ["--version-of", "monitor-client", "--in-integration-version", "3.1.0",],
+        [
+            "--version-of",
+            "monitor-client",
+            "--in-integration-version",
+            "3.1.0",
+        ],
         "1.0.0",
     )
 
     # Ranges
     run_main_assert_result(
         capsys,
-        ["--version-of", "inventory", "--in-integration-version", "3.0.1..3.1.0",],
+        [
+            "--version-of",
+            "inventory",
+            "--in-integration-version",
+            "3.0.1..3.1.0",
+        ],
         "3.0.0..4.0.0",
     )
 
@@ -237,7 +256,12 @@ def test_version_of_with_in_integration_version(capsys):
 
     run_main_assert_result(
         capsys,
-        ["--version-of", "mender", "--in-integration-version", "3.1.0..master",],
+        [
+            "--version-of",
+            "mender",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
         "3.1.0..master",
     )
 
@@ -254,12 +278,22 @@ def test_version_of_with_in_integration_version(capsys):
 
     run_main_assert_result(
         capsys,
-        ["--version-of", "reporting", "--in-integration-version", "3.2.0..master",],
+        [
+            "--version-of",
+            "reporting",
+            "--in-integration-version",
+            "3.2.0..master",
+        ],
         "master..master",
     )
     run_main_assert_result(
         capsys,
-        ["--version-of", "reporting", "--in-integration-version", "3.1.0..master",],
+        [
+            "--version-of",
+            "reporting",
+            "--in-integration-version",
+            "3.1.0..master",
+        ],
         "master..master",
     )
 
@@ -390,7 +424,9 @@ def test_docker_compose_files_list():
 
 
 @patch("release_tool.integration_dir")
-def test_get_components_of_type(integration_dir_func,):
+def test_get_components_of_type(
+    integration_dir_func,
+):
     integration_dir_func.return_value = pathlib.Path(__file__).parent.parent.absolute()
 
     # standard query (only_release=None)
@@ -428,7 +464,9 @@ def test_get_components_of_type(integration_dir_func,):
     assert not any([r in repos_name for r in SAMPLE_REPOS_DEPRECATED])
 
 
-def test_list_repos(capsys,):
+def test_list_repos(
+    capsys,
+):
 
     # release_tool.py --list
     captured = run_main_assert_result(capsys, ["--list"], None)

@@ -134,7 +134,8 @@ def broken_network_image(valid_image):
     image = f"core-image-full-cmdline-{machine_name}-broken-network.ext4"
     shutil.copy(valid_image, image)
     return _special_image(
-        image, ["debugfs", "-w", "-R", "rm /lib/systemd/systemd-networkd", image],
+        image,
+        ["debugfs", "-w", "-R", "rm /lib/systemd/systemd-networkd", image],
     )
 
 
@@ -168,13 +169,9 @@ def add_mender_conf_to_image(image, d, mender_conf):
 
     instr_file = os.path.join(d, "write.instr")
     with open(os.path.join(d, "write.instr"), "w") as f:
-        f.write(
-            """cd /etc/mender
+        f.write("""cd /etc/mender
         rm mender.conf
-        write {local} mender.conf""".format(
-                local=mender_conf_tmp
-            )
-        )
+        write {local} mender.conf""".format(local=mender_conf_tmp))
     subprocess.run(
         ["debugfs", "-w", "-f", instr_file, new_image],
         check=True,
@@ -268,7 +265,6 @@ try:
         test_name = unique_test_name(request)
         log.setup_test_logger(test_name, worker_id)
         logger.info("%s is starting.... " % test_name)
-
 
 except ImportError:
 

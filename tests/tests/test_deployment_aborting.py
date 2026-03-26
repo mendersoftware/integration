@@ -26,7 +26,11 @@ from .mendertesting import MenderTesting
 
 class BaseTestDeploymentAborting(MenderTesting):
     def abort_deployment(
-        self, container_manager, install_image, abort_step=None, number_of_reboots=0,
+        self,
+        container_manager,
+        install_image,
+        abort_step=None,
+        number_of_reboots=0,
     ):
         """
         Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
@@ -48,7 +52,10 @@ class BaseTestDeploymentAborting(MenderTesting):
         host_ip = container_manager.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
-                install_image, verify_status=False, devauth=devauth, deploy=deploy,
+                install_image,
+                verify_status=False,
+                devauth=devauth,
+                deploy=deploy,
             )
 
             if abort_step is not None:

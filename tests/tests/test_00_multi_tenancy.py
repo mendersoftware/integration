@@ -44,7 +44,9 @@ class TestMultiTenancyEnterprise(MenderTesting):
             enterprise_no_client, "mender-client", wrong_token
         )
         mender_device.ssh_is_opened()
-        Helpers.check_log_is_unauthenticated(mender_device,)
+        Helpers.check_log_is_unauthenticated(
+            mender_device,
+        )
 
         for _ in range(5):
             time.sleep(5)
@@ -104,5 +106,7 @@ class TestMultiTenancyEnterprise(MenderTesting):
 
             host_ip = enterprise_no_client.get_virtual_network_host_ip()
             update_image(
-                mender_device, host_ip, install_image=update_image_name,
+                mender_device,
+                host_ip,
+                install_image=update_image_name,
             )

@@ -63,24 +63,20 @@ class BaseTestTcpTeardown:
         # To verify mender-authd, trigger manually a token fetch
         mender_device.run("systemctl start mender-authd")
         time.sleep(5)
-        mender_device.run(
-            """dbus-send --print-reply --system \\
+        mender_device.run("""dbus-send --print-reply --system \\
               --dest=io.mender.AuthenticationManager \\
               /io/mender/AuthenticationManager \\
-              io.mender.Authentication1.FetchJwtToken"""
-        )
+              io.mender.Authentication1.FetchJwtToken""")
         # The fetch is done async, give it some time to finish
         time.sleep(1)
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 
         # Accept the device and repeat the test. It should not make a difference
         devauth.accept_devices(1)
-        mender_device.run(
-            """dbus-send --print-reply --system \\
+        mender_device.run("""dbus-send --print-reply --system \\
               --dest=io.mender.AuthenticationManager \\
               /io/mender/AuthenticationManager \\
-              io.mender.Authentication1.FetchJwtToken"""
-        )
+              io.mender.Authentication1.FetchJwtToken""")
         time.sleep(1)
         assert get_opened_tcp_connections(mender_device, "mender-auth") == 0
 

@@ -164,8 +164,17 @@ activate = 1
         self, env, algorithm=None, use_hsm=False, use_engine=True
     ):
         # upload the certificates
-        basedir = os.path.join(os.path.dirname(__file__), "..", "..",)
-        certs = os.path.join(basedir, "extra", "mtls", "certs",)
+        basedir = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+        )
+        certs = os.path.join(
+            basedir,
+            "extra",
+            "mtls",
+            "certs",
+        )
 
         env.device.put(
             "tenant.ca.crt",
@@ -281,7 +290,9 @@ activate = 1
         )
         assert len(devices) == 1
         deployment_id = deploy.trigger_deployment(
-            "mtls-test", artifact_name="mtls-artifact", devices=devices,
+            "mtls-test",
+            artifact_name="mtls-artifact",
+            devices=devices,
         )
 
         # now just wait for the update to succeed
@@ -295,7 +306,8 @@ activate = 1
     @MenderTesting.fast
     @pytest.mark.parametrize("algorithm", ["rsa"])
     @pytest.mark.parametrize(
-        "hsm_implementation", ["engine", "provider"],
+        "hsm_implementation",
+        ["engine", "provider"],
     )
     def test_mtls_enterprise_hsm(self, setup_ent_mtls, algorithm, hsm_implementation):
         # Check if the device has SoftHSM (from yocto dunfell forward)
@@ -365,7 +377,9 @@ activate = 1
                 )
                 assert len(devices) == 1
                 deployment_id = deploy.trigger_deployment(
-                    "mtls-test", artifact_name="mtls-artifact", devices=devices,
+                    "mtls-test",
+                    artifact_name="mtls-artifact",
+                    devices=devices,
                 )
 
                 # now just wait for the update to succeed

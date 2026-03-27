@@ -41,7 +41,7 @@ class BaseCli:
     def choose_binary_and_config_paths(
         self, service_flavours: List[str], service_name: str
     ):
-        """Choose binary and configuration paths depending on service flavour. """
+        """Choose binary and configuration paths depending on service flavour."""
         for service in service_flavours:
             try:
                 self.container_manager.execute(self.cid, [service.bin_path, "--help"])
@@ -146,7 +146,7 @@ class CliDeviceauth(BaseCli):
     service_name = "mender-device-auth"
 
     def __init__(self, containers_namespace="backend-tests", container_manager=None):
-        """ Instantiate deviceauth microservice CLI class. Both open source and enterprise versions are supported. """
+        """Instantiate deviceauth microservice CLI class. Both open source and enterprise versions are supported."""
         BaseCli.__init__(
             self, self.service_name, containers_namespace, container_manager
         )

@@ -392,14 +392,12 @@ class TestDockerCompose(MenderTesting):
             with tempfile.TemporaryDirectory() as script_dir:
                 script_path = os.path.join(script_dir, "ArtifactInstall_Leave_00")
                 with open(script_path, "w") as script_file:
-                    script_file.write(
-                        """#!/bin/sh
+                    script_file.write("""#!/bin/sh
 # Block network access to simulate connection loss by redirecting to invalid IP
 echo "Blocking network connection to Mender server"
 sed -i.backup -e '$a127.0.0.1 docker.mender.io' /etc/hosts
 exit 0
-"""
-                    )
+""")
                 os.chmod(script_path, 0o755)
 
                 deployment_id, _ = common_update_procedure(

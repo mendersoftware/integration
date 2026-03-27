@@ -178,7 +178,8 @@ class TestGroupingOpenSource(BaseTestGrouping):
         self, standard_setup_two_clients_bootstrapped, valid_image_with_mender_conf
     ):
         self.do_test_update_device_group(
-            standard_setup_two_clients_bootstrapped, valid_image_with_mender_conf,
+            standard_setup_two_clients_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
 
@@ -191,5 +192,6 @@ class TestGroupingEnterprise(BaseTestGrouping):
         self, enterprise_two_clients_bootstrapped, valid_image_with_mender_conf
     ):
         self.do_test_update_device_group(
-            enterprise_two_clients_bootstrapped, valid_image_with_mender_conf,
+            enterprise_two_clients_bootstrapped,
+            valid_image_with_mender_conf,
         )

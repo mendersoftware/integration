@@ -396,7 +396,9 @@ def connected_device(env):
     cli = CliTenantadm(containers_namespace=env.name)
     tid = cli.create_org(tname, u.name, u.pwd, plan="enterprise")
     update_tenant(
-        tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+        tid,
+        addons=["troubleshoot"],
+        container_manager=get_container_manager(),
     )
     tenant = cli.get_tenant(tid)
     tenant = json.loads(tenant)

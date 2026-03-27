@@ -111,11 +111,11 @@ def update_image(
     autogenerate_delta=False,
 ):
     """
-        Perform a successful upgrade, and assert that deployment status/logs are correct.
+    Perform a successful upgrade, and assert that deployment status/logs are correct.
 
-        A reboot is performed, and running partitions have been swapped.
-        Deployment status will be set as successful for device.
-        Logs will not be retrieved, and result in 404.
+    A reboot is performed, and running partitions have been swapped.
+    Deployment status will be set as successful for device.
+    Logs will not be retrieved, and result in 404.
     """
 
     previous_inactive_part = device.get_passive_partition()
@@ -185,9 +185,9 @@ def update_image_failed(
     deploy=deploy,
 ):
     """
-        Perform a upgrade using a broken image (random data)
-        The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
-        The resulting upgrade will be considered a failure.
+    Perform a upgrade using a broken image (random data)
+    The device will reboot, uboot will detect this is not a bootable image, and revert to the previous partition.
+    The resulting upgrade will be considered a failure.
     """
 
     original_image_id = device.yocto_id_installed_on_machine()
@@ -195,7 +195,10 @@ def update_image_failed(
     previous_active_part = device.get_active_partition()
     with device.get_reboot_detector(host_ip) as reboot:
         deployment_id, _ = common_update_procedure(
-            install_image, make_artifact=make_artifact, devauth=devauth, deploy=deploy,
+            install_image,
+            make_artifact=make_artifact,
+            devauth=devauth,
+            deploy=deploy,
         )
         # It will reboot twice. Once into the failed update, which the
         # bootloader will roll back, and therefore we will end up on the

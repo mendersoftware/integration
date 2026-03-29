@@ -3,6 +3,8 @@ services:
     mender-client:
         # Needs to be built in extra/mender-client-docker-addons
         image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_DOCKER_ADDONS_IMAGE}:${MENDER_CLIENT_DOCKER_ADDONS_TAG}
+        # for iptables commands
+        privileged: true
         networks:
             - mender
         blkio_config:

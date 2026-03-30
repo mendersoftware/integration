@@ -751,15 +751,3 @@ class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
         request.cls.auth_token = auth_token
         request.cls.auth = auth
         request.cls.mender_device = mender_device
-
-
-class BaseFileTransferLegacyClient(MenderTesting):
-    def test_filetransfer_not_implemented(self, setup_mender_connect_1_0):
-        """Tests the file transfer is not implemented with mender-connect 1.0"""
-
-        env = setup_mender_connect_1_0
-
-        rsp = upload_file("/foo/bar", io.StringIO("foobar"), env.devid, env.auth_token)
-        assert rsp.status_code == 502
-        rsp = download_file("/foo/bar", env.devid, env.auth_token)
-        assert rsp.status_code == 502

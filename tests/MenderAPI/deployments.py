@@ -112,9 +112,13 @@ class Deployments:
         return deployment_id
 
     def get_logs(self, device, deployment_id, expected_status=200):
-        deployments_logs_url = self.get_deployments_base_path() + "deployments/%s/devices/%s/log" % (
-            deployment_id,
-            device,
+        deployments_logs_url = (
+            self.get_deployments_base_path()
+            + "deployments/%s/devices/%s/log"
+            % (
+                deployment_id,
+                device,
+            )
         )
         r = requests_retry().get(
             deployments_logs_url, headers=self.auth.get_auth_token(), verify=False
@@ -138,8 +142,9 @@ class Deployments:
         return json.loads(r.text)
 
     def get_statistics(self, deployment_id):
-        deployments_statistics_url = self.get_deployments_base_path() + "deployments/%s/statistics" % (
-            deployment_id
+        deployments_statistics_url = (
+            self.get_deployments_base_path()
+            + "deployments/%s/statistics" % (deployment_id)
         )
         r = requests_retry().get(
             deployments_statistics_url, headers=self.auth.get_auth_token(), verify=False
@@ -250,8 +255,9 @@ class Deployments:
             )
 
     def get_deployment_overview(self, deployment_id):
-        deployments_overview_url = self.get_deployments_base_path() + "deployments/%s/devices" % (
-            deployment_id
+        deployments_overview_url = (
+            self.get_deployments_base_path()
+            + "deployments/%s/devices" % (deployment_id)
         )
         r = requests_retry().get(
             deployments_overview_url, headers=self.auth.get_auth_token(), verify=False
@@ -297,8 +303,8 @@ class Deployments:
         return r.json()
 
     def abort(self, deployment_id):
-        deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (
-            deployment_id
+        deployment_abort_url = (
+            self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
         )
         r = requests_retry().put(
             deployment_abort_url,
@@ -310,8 +316,8 @@ class Deployments:
         assert r.status_code == requests.status_codes.codes.no_content
 
     def abort_finished_deployment(self, deployment_id):
-        deployment_abort_url = self.get_deployments_base_path() + "deployments/%s/status" % (
-            deployment_id
+        deployment_abort_url = (
+            self.get_deployments_base_path() + "deployments/%s/status" % (deployment_id)
         )
         r = requests_retry().put(
             deployment_abort_url,

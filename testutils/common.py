@@ -540,7 +540,10 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
     )
     tadm = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm_host, schema="http://")
     res = tadm.call(
-        "PUT", tenantadm.URL_INTERNAL_TENANT, body=update, path_params={"tid": tid},
+        "PUT",
+        tenantadm.URL_INTERNAL_TENANT,
+        body=update,
+        path_params={"tid": tid},
     )
     assert res.status_code == 202
 

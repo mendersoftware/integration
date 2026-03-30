@@ -30,7 +30,7 @@ from ..MenderAPI import (
 )
 
 
-def prepare_env_for_connect(env):
+def prepare_env_for_connect(env, docker: bool = False):
     uuidv4 = str(uuid.uuid4())
     tname = "test.mender.io-{}".format(uuidv4)
     email = "some.user+{}@example.com".format(uuidv4)
@@ -56,7 +56,9 @@ def prepare_env_for_connect(env):
     auth.reset_auth_token()
     devauth_tenant = DeviceAuthV2(auth)
 
-    mender_device = new_tenant_client(env, "mender-client", tenant["tenant_token"])
+    mender_device = new_tenant_client(
+        env, "mender-client", tenant["tenant_token"], docker=docker
+    )
     mender_device.ssh_is_opened()
 
     devauth_tenant.accept_devices(1)

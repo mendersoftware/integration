@@ -111,18 +111,26 @@ class Deployments:
 
         return deployment_id
 
-    def get_logs(self, device, deployment_id, expected_status=200):
-        deployments_logs_url = (
-            self.get_deployments_base_path()
-            + "deployments/%s/devices/%s/log"
-            % (
-                deployment_id,
-                device,
+    def get_logs(
+        self, device, deployment_id, expected_status=200, n_tries=1, poll_gap=1
+    ):
+        while n_tries > 0:
+            n_tries -= 1
+            deployments_logs_url = (
+                self.get_deployments_base_path()
+                + "deployments/%s/devices/%s/log"
+                % (
+                    deployment_id,
+                    device,
+                )
             )
-        )
-        r = requests_retry().get(
-            deployments_logs_url, headers=self.auth.get_auth_token(), verify=False
-        )
+            r = requests_retry().get(
+                deployments_logs_url, headers=self.auth.get_auth_token(), verify=False
+            )
+            if r.status_code == expected_status:
+                break
+            else:
+                time.sleep(poll_gap)
         assert r.status_code == expected_status
 
         logger.info("Logs contain " + str(r.text))

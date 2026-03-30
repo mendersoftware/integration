@@ -131,9 +131,15 @@ class Deployments:
                 break
             else:
                 time.sleep(poll_gap)
-        assert r.status_code == expected_status
+        assert (
+            r.status_code == expected_status
+        ), f"Unexpected status {r.status_code} (after {n_tries} tries)"
 
-        logger.info("Logs contain " + str(r.text))
+        if len(r.text) > 2048:
+            logger.info("Long logs from the device, skipped in the test logs")
+        else:
+            logger.info("Logs contain " + str(r.text))
+
         return r.text
 
     def get_status(self, status=None):

@@ -32,7 +32,7 @@ class BaseTestUpdateModules(MenderTesting):
         """Test that a update for a non-existing module is rejected when such a setup isn't
         present."""
 
-        mender_device = env.device # we should use but we cannot pass args correctly
+        mender_device = env.device  # we should use but we cannot pass args correctly
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 

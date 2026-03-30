@@ -55,14 +55,12 @@ class BaseTestCorruptDeploymentLog(MenderTesting):
                 ),
                 "w",
             ) as fd:
-                fd.write(
-                    """#!/bin/sh
+                fd.write("""#!/bin/sh
     log_file=$(ls /var/lib/mender/deployments.0000.*.log)
     echo break >> $log_file
     sync $log_file
     exit 1
-    """
-                )
+    """)
 
             # Callback for our custom artifact maker
             def make_artifact(filename, artifact_name):
@@ -76,7 +74,8 @@ class BaseTestCorruptDeploymentLog(MenderTesting):
 
             # Now create the artifact, and make the deployment.
             device_id = Helpers.ip_to_device_id_map(
-                MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+                MenderDeviceGroup([mender_device.host_string]),
+                devauth=devauth,
             )[mender_device.host_string]
             deployment_id = common_update_procedure(
                 verify_status=False,
@@ -107,7 +106,8 @@ class BaseTestCorruptDeploymentLog(MenderTesting):
 
 class TestStateScriptsOpenSource(BaseTestCorruptDeploymentLog):
     def test_corrupt_deployment_log(
-        self, class_persistent_setup_client_state_scripts_update_module,
+        self,
+        class_persistent_setup_client_state_scripts_update_module,
     ):
         self.do_test_corrupt_deployment_log(
             class_persistent_setup_client_state_scripts_update_module,
@@ -116,7 +116,8 @@ class TestStateScriptsOpenSource(BaseTestCorruptDeploymentLog):
 
 class TestStateScriptsEnterprise(BaseTestCorruptDeploymentLog):
     def test_corrupt_deployment_log(
-        self, class_persistent_enterprise_setup_client_state_scripts_update_module,
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
     ):
         self.do_test_corrupt_deployment_log(
             class_persistent_enterprise_setup_client_state_scripts_update_module,

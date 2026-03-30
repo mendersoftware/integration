@@ -364,7 +364,7 @@ def enterprise_one_docker_client_bootstrapped(request):
     env.setup()
     reset_mender_api(env)
 
-    tenant = create_tenant(env) # herer no troubleshoot
+    tenant = create_tenant(env)  # herer no troubleshoot
     new_tenant_client(env, "mender-client", tenant["tenant_token"], docker=True)
     env.device_group.ssh_is_opened()
 

@@ -50,9 +50,9 @@ class Helpers:
         # Match them.
         identity_to_id = {}
         for dev in devauth_devices:
-            identity_to_id[
-                json.dumps(dev["identity_data"], separators=(",", ":"))
-            ] = dev["id"]
+            identity_to_id[json.dumps(dev["identity_data"], separators=(",", ":"))] = (
+                dev["id"]
+            )
         ip_to_device_id = {}
         for identity, ip in identity_to_ip.items():
             ip_to_device_id[ip] = identity_to_id[identity]
@@ -71,7 +71,10 @@ class Helpers:
         sleepsec = 0
         timeout = 600
         while sleepsec < timeout:
-            out = device.run(cmd + "| grep '" + message + "'", warn=True,)
+            out = device.run(
+                cmd + "| grep '" + message + "'",
+                warn=True,
+            )
             if out != "":
                 return
 

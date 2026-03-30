@@ -148,8 +148,7 @@ class TestConfigurationEnterprise(MenderTesting):
 
 
 def was_update_forced(mender_device):
-    """Check that the update was triggered by update-check
-    """
+    """Check that the update was triggered by update-check"""
 
     out = mender_device.run("journalctl --unit mender-updated --full")
     if "SIGUSR1 received, triggering deployments check" in out:
@@ -164,14 +163,17 @@ def was_update_forced(mender_device):
 
 
 def set_and_verify_config(config, devid, authtoken):
-    """ Deploy a configuration and assert it was reported back """
+    """Deploy a configuration and assert it was reported back"""
 
     configuration_url = (
         "https://%s/api/management/v1/deviceconfig/configurations/device/%s"
         % (get_container_manager().get_mender_gateway(), devid)
     )
     r = requests_retry().put(
-        configuration_url, verify=False, headers=authtoken, json=config,
+        configuration_url,
+        verify=False,
+        headers=authtoken,
+        json=config,
     )
 
     # deploy the configurations

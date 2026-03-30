@@ -17,7 +17,7 @@ import json
 import io
 import os
 import os.path
-import random
+
 import requests
 import shutil
 import tempfile
@@ -31,9 +31,8 @@ from flaky import flaky
 from tempfile import NamedTemporaryFile
 
 from ..common_setup import (
-    standard_setup_one_client,
-    enterprise_no_client_class,
-    class_persistent_standard_setup_one_client_bootstrapped,
+    enterprise_one_docker_client_bootstrapped,
+    standard_setup_one_docker_client_bootstrapped,
 )
 
 from ..MenderAPI import (
@@ -87,7 +86,7 @@ def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
     return requests.put(upload_url, verify=False, headers=authtoken, files=files)
 
 
-def set_limits(mender_device, limits, auth, devid):
+def set_limits(docker_env, mender_device, limits, auth, devid):
     tmpdir = tempfile.mkdtemp()
     try:
         # retrieve the original configuration file
@@ -108,7 +107,10 @@ def set_limits(mender_device, limits, auth, devid):
         )
     finally:
         shutil.rmtree(tmpdir)
-    mender_device.run("systemctl restart %s" % connect_service_name)
+    mender_device.run("kill -TERM `pidof %s`" % connect_service_name)
+    docker_env._docker_compose_cmd(
+        "exec -d mender-client %s daemon" % connect_service_name
+    )
     wait_for_connect(auth, devid)
     debugoutput = mender_device.run("cat /etc/mender/mender-connect.conf")
     logger.info("/etc/mender/mender-connect.conf:\n%s" % debugoutput)
@@ -132,7 +134,9 @@ class BaseTestFileTransferDownload(MenderTesting):
         assert r.headers.get("Content-Type") == "application/octet-stream"
         assert r.headers.get("X-Men-File-Gid") == "0"
         assert r.headers.get("X-Men-File-Uid") == "0"
-        assert r.headers.get("X-Men-File-Mode") == "600"
+        assert (
+            r.headers.get("X-Men-File-Mode") == "644"
+        )  # this used to be 600 but in the qemu, it is 644 in mender docker client see QA-1527
         assert r.headers.get("X-Men-File-Path") == "/etc/mender/mender.conf"
         assert r.headers.get("X-Men-File-Size") != ""
 
@@ -239,6 +243,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file outside chroot; upload forbidden"
 
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -272,6 +277,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file inside chroot; upload allowed"
 
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -302,6 +308,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_upload_limits_err_file_too_big(self, mender_device_setup):
         "File Transfer limits: file size over the limit; upload forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -333,6 +340,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_upload_limits_err_max_bytes_per_minute_exceeded(self, mender_device_setup):
         "File Transfer limits: transfers during last minute over the limit; upload forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -410,6 +418,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: preserve modes;"
 
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -451,6 +460,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: preserve owner and group;"
 
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -507,6 +517,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file outside chroot; download forbidden"
 
         set_limits(
+            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -527,6 +538,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_filetransfer_limits_download_err_max_file_size(self, mender_device_setup):
         "File Transfer limits: file over the max file size limit; download forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"MaxFileSize": 2}},
             self.auth,
@@ -545,6 +557,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
             self.auth,
@@ -566,6 +579,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: not allowed to follow a link on path part; download forbidden"
 
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
             self.auth,
@@ -586,6 +600,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": True}},
             self.auth,
@@ -599,13 +614,15 @@ class BaseTestFileTransferLimits(MenderTesting):
         r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 200, r.json()
-        assert "PATH" in str(r.content)
+        # in the mender docker client there is no PATH in the /etc/profile, but there is PS1= see QA-1527
+        assert "PS1=" in str(r.content)
 
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download_err_owner_mismatch(self, mender_device_setup):
         "File Transfer limits: file owner do not match; download forbidden"
 
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser"]}},
             self.auth,
@@ -622,6 +639,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file group do not match; download forbidden"
 
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"GroupGet": ["someothergroup"]}},
             self.auth,
@@ -638,6 +656,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: file not a regular file; download forbidden"
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"RegularFilesOnly": True}},
             self.auth,
@@ -657,6 +676,7 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: file owner match; download allowed"
         set_limits(
+            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser", "root"]}},
             self.auth,
@@ -680,16 +700,16 @@ def rerun_on_timeouts(err, *args):
 class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
     """Tests the file transfer functionality"""
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     def mender_device_setup(
-        self, request, class_persistent_standard_setup_one_client_bootstrapped
+        self, request, standard_setup_one_docker_client_bootstrapped
     ):
-
-        env = class_persistent_standard_setup_one_client_bootstrapped
+        env = standard_setup_one_docker_client_bootstrapped
 
         request.cls.auth = env.auth
         request.cls.mender_device = env.device
         request.cls.auth_token = env.auth.get_auth_token()
+        request.cls.env = env
 
         devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
@@ -705,31 +725,36 @@ class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
 class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
     """Tests the file transfer functionality for enterprise setup"""
 
-    @pytest.fixture(scope="class")
-    def mender_device_setup(self, request, enterprise_no_client_class):
+    @pytest.fixture(scope="function")
+    def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
+        env = enterprise_one_docker_client_bootstrapped
         devid, auth_token, auth, mender_device = prepare_env_for_connect(
-            enterprise_no_client_class
+            env,
+            docker=True,
+            ignore_existing=True,
         )
         request.cls.devid = devid
         request.cls.auth_token = auth_token
         request.cls.auth = auth
         request.cls.mender_device = mender_device
+        request.cls.env = env
 
 
 @flaky(rerun_filter=rerun_on_timeouts)
 class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
     """Tests the file transfer functionality"""
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     def mender_device_setup(
-        self, request, class_persistent_standard_setup_one_client_bootstrapped
+        self, request, standard_setup_one_docker_client_bootstrapped
     ):
 
-        env = class_persistent_standard_setup_one_client_bootstrapped
+        env = standard_setup_one_docker_client_bootstrapped
 
         request.cls.auth = env.auth
         request.cls.mender_device = env.device
         request.cls.auth_token = env.auth.get_auth_token()
+        request.cls.env = env
 
         devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
@@ -742,12 +767,13 @@ class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
 class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     """Tests the file transfer functionality for enterprise setup"""
 
-    @pytest.fixture(scope="class")
-    def mender_device_setup(self, request, enterprise_no_client_class):
-        devid, auth_token, auth, mender_device = prepare_env_for_connect(
-            enterprise_no_client_class
-        )
+    @pytest.fixture(scope="function")
+    def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
+        env = enterprise_one_docker_client_bootstrapped
+        devid, auth_token, auth, mender_device = prepare_env_for_connect(env)
         request.cls.devid = devid
         request.cls.auth_token = auth_token
         request.cls.auth = auth
         request.cls.mender_device = mender_device
+        request.cls.env = env
+

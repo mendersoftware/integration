@@ -549,7 +549,12 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
 
 
 def new_tenant_client(
-    test_env, name: str, tenant: str, docker: bool = False, network: str = "mender"
+    test_env,
+    name: str,
+    tenant: str,
+    docker: bool = False,
+    network: str = "mender",
+    ignore_existing: bool = False,
 ) -> MenderDevice:
     """Create new Mender client in the test environment with the given name for the given tenant.
 
@@ -565,8 +570,14 @@ def new_tenant_client(
     else:
         test_env.new_tenant_client(name, tenant)
     all_clients = set(test_env.get_mender_clients(network=network))
-    new_client = all_clients - pre_existing_clients
-    assert len(new_client) == 1
+    new_client = all_clients
+    if len(pre_existing_clients) > 0 and not ignore_existing:
+        new_client = all_clients - pre_existing_clients
+    if not ignore_existing:
+        # the docker client most of the time starts single, we know this
+        # so there is no need for this assertion, especially, that with docker we enter with one
+        # start one which stops previous one and we are on one still
+        assert len(new_client) == 1
     device = MenderDevice(new_client.pop())
     if hasattr(test_env, "device_group"):
         test_env.device_group.append(device)

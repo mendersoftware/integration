@@ -17,6 +17,8 @@ import json
 import io
 import os
 import os.path
+import pdb
+
 import requests
 import shutil
 import tempfile
@@ -702,7 +704,6 @@ class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
     def mender_device_setup(
         self, request, standard_setup_one_docker_client_bootstrapped
     ):
-
         env = standard_setup_one_docker_client_bootstrapped
 
         request.cls.auth = env.auth
@@ -730,6 +731,7 @@ class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
         devid, auth_token, auth, mender_device = prepare_env_for_connect(
             env,
             docker=True,
+            ignore_existing=True,
         )
         request.cls.devid = devid
         request.cls.auth_token = auth_token

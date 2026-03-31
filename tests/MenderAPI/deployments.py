@@ -111,21 +111,35 @@ class Deployments:
 
         return deployment_id
 
-    def get_logs(self, device, deployment_id, expected_status=200):
-        deployments_logs_url = (
-            self.get_deployments_base_path()
-            + "deployments/%s/devices/%s/log"
-            % (
-                deployment_id,
-                device,
+    def get_logs(
+        self, device, deployment_id, expected_status=200, n_tries=1, poll_gap=1
+    ):
+        while n_tries > 0:
+            n_tries -= 1
+            deployments_logs_url = (
+                self.get_deployments_base_path()
+                + "deployments/%s/devices/%s/log"
+                % (
+                    deployment_id,
+                    device,
+                )
             )
-        )
-        r = requests_retry().get(
-            deployments_logs_url, headers=self.auth.get_auth_token(), verify=False
-        )
-        assert r.status_code == expected_status
+            r = requests_retry().get(
+                deployments_logs_url, headers=self.auth.get_auth_token(), verify=False
+            )
+            if r.status_code == expected_status:
+                break
+            else:
+                time.sleep(poll_gap)
+        assert (
+            r.status_code == expected_status
+        ), f"Unexpected status {r.status_code} (after {n_tries} tries)"
 
-        logger.info("Logs contain " + str(r.text))
+        if len(r.text) > 2048:
+            logger.info("Long logs from the device, skipped in the test logs")
+        else:
+            logger.info("Logs contain " + str(r.text))
+
         return r.text
 
     def get_status(self, status=None):

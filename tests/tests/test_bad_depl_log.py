@@ -14,6 +14,7 @@
 
 import shutil
 import os
+import tempfile
 import subprocess
 
 import pytest
@@ -103,6 +104,80 @@ class BaseTestCorruptDeploymentLog(MenderTesting):
                 except:
                     pass
 
+    def do_test_large_deployment_log(self, env):
+        """Test that large deployment log is trimmed and successfully
+        uploaded to the server."""
+
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        work_dir = tempfile.mkdtemp(
+            suffix=f"test_large_depl_log.{mender_device.host_string}"
+        )
+        deployment_id = None
+        try:
+            artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
+            os.makedirs(artifact_script_dir)
+            with open(
+                os.path.join(
+                    artifact_script_dir, "ArtifactInstall_Leave_01_enlarge-depl-log"
+                ),
+                "w",
+            ) as fd:
+                fd.write("""#!/bin/sh
+    log_file=$(ls /var/lib/mender/deployments.0000.*.log)
+    for i in `seq 1 100`; do
+      for j in `seq 1 500`; do
+        echo '{"timestamp": "1970-01-01T00:00:00.000000000Z", "level": "ERROR", "message": "some useless log message here"}' >> $log_file
+      done
+    done
+    sync $log_file
+    exit 1
+    """)
+
+            # Callback for our custom artifact maker
+            def make_artifact(filename, artifact_name):
+                return image.make_module_artifact(
+                    "module-state-scripts-test",
+                    conftest.machine_name,
+                    artifact_name,
+                    filename,
+                    scripts=[artifact_script_dir],
+                )
+
+            # Now create the artifact, and make the deployment.
+            device_id = Helpers.ip_to_device_id_map(
+                MenderDeviceGroup([mender_device.host_string]),
+                devauth=devauth,
+            )[mender_device.host_string]
+            deployment_id = common_update_procedure(
+                verify_status=False,
+                devices=[device_id],
+                scripts=[artifact_script_dir],
+                make_artifact=make_artifact,
+                devauth=devauth,
+                deploy=deploy,
+            )[0]
+
+            deploy.check_expected_statistics(deployment_id, "failure", 1)
+            logs = deploy.get_logs(device_id, deployment_id, n_tries=5)
+            assert "(THE ORIGINAL LOGS WERE TOO BIG" in logs
+        except:
+            output = mender_device.run(
+                "cat /data/mender/deployment*.log | grep -v 'some useless log message here'",
+                warn_only=True,
+            )
+            logger.info(output)
+            raise
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            if deployment_id:
+                try:
+                    deploy.abort(deployment_id)
+                except:
+                    pass
+
 
 class TestStateScriptsOpenSource(BaseTestCorruptDeploymentLog):
     def test_corrupt_deployment_log(
@@ -113,6 +188,14 @@ class TestStateScriptsOpenSource(BaseTestCorruptDeploymentLog):
             class_persistent_setup_client_state_scripts_update_module,
         )
 
+    def test_large_deployment_log(
+        self,
+        class_persistent_setup_client_state_scripts_update_module,
+    ):
+        self.do_test_large_deployment_log(
+            class_persistent_setup_client_state_scripts_update_module,
+        )
+
 
 class TestStateScriptsEnterprise(BaseTestCorruptDeploymentLog):
     def test_corrupt_deployment_log(
@@ -120,5 +203,13 @@ class TestStateScriptsEnterprise(BaseTestCorruptDeploymentLog):
         class_persistent_enterprise_setup_client_state_scripts_update_module,
     ):
         self.do_test_corrupt_deployment_log(
+            class_persistent_enterprise_setup_client_state_scripts_update_module,
+        )
+
+    def test_large_deployment_log(
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
+    ):
+        self.do_test_large_deployment_log(
             class_persistent_enterprise_setup_client_state_scripts_update_module,
         )

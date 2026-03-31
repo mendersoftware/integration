@@ -565,7 +565,9 @@ def new_tenant_client(
     else:
         test_env.new_tenant_client(name, tenant)
     all_clients = set(test_env.get_mender_clients(network=network))
-    new_client = all_clients - pre_existing_clients
+    new_client = all_clients
+    if len(pre_existing_clients) > 0:
+        new_client = all_clients - pre_existing_clients
     assert len(new_client) == 1
     device = MenderDevice(new_client.pop())
     if hasattr(test_env, "device_group"):

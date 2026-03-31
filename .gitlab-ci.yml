@@ -13,6 +13,7 @@ include:
   - local: .gitlab-ci-full-integration-generator.yml
     rules:
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
+  - component: gitlab.com/renovate-bot/renovate-runner/renovate.gitlab-ci@main
 
 default:
   tags: !reference [.qa-common-default-runner, tags]
@@ -135,6 +136,34 @@ variables:
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"
     value: 4.1.0
+
+  # Renovate required variables
+  RENOVATE_PLATFORM: github
+  RENOVATE_ENDPOINT: "https://api.github.com"
+  RENOVATE_GIT_AUTHOR: "mender-test-bot <mender@northern.tech>"
+  RENOVATE_TOKEN: $GITHUB_BOT_TOKEN_REPO_FULL
+  RENOVATE_GITHUB_COM_TOKEN: $GITHUB_BOT_TOKEN_REPO_FULL
+  RENOVATE_REPOSITORIES: "mendersoftware/$CI_PROJECT_NAME"
+  RENOVATE_REQUIRE_CONFIG: "optional"
+  RENOVATE_ONBOARDING: "false"
+  RENOVATE_GIT_PRIVATE_KEY: $SSH_PRIVATE_KEY
+  RENOVATE_CONFIG_FILE: "$CI_PROJECT_DIR/renovate.json"
+  FORCE_RENOVATE_RUN:
+    description: "Force a renovate bot run"
+    value: "false"
+    options:
+      - "true"
+      - "false"
+
+# Override rules
+renovate:
+  needs: []
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $FORCE_RENOVATE_RUN == "true"'
+  stage: build
+  tags:
+    - k8s-small
 
 .publish:versions:
   stage: publish

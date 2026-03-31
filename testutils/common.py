@@ -571,7 +571,7 @@ def new_tenant_client(
         test_env.new_tenant_client(name, tenant)
     all_clients = set(test_env.get_mender_clients(network=network))
     new_client = all_clients
-    if len(pre_existing_clients) > 0:
+    if len(pre_existing_clients) > 0 and not ignore_existing :
         new_client = all_clients - pre_existing_clients
     if not ignore_existing:
         # the docker client most of the time starts single, we know this

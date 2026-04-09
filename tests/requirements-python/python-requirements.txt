@@ -48,7 +48,7 @@ py3dns==4.0.2
     # via -r python-requirements.in
 pycparser==2.21
     # via cffi
-pygments==2.19.1
+pygments==2.20.0
     # via pytest
 pymongo==4.16.0
     # via -r python-requirements.in

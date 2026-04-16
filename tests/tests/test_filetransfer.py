@@ -465,8 +465,8 @@ class BaseTestFileTransferLimits(MenderTesting):
                 "FileTransfer": {
                     "Chroot": "/var/lib/mender/filetransfer",
                     "FollowSymLinks": True,  # in the image /var/lib/mender is a symlink
+                    # PreserveOwner covers both owner and group via os.Chown(uid, gid)
                     "PreserveOwner": True,
-                    "PreserveGroup": True,
                 },
             },
             self.auth,
@@ -490,12 +490,13 @@ class BaseTestFileTransferLimits(MenderTesting):
             gid=str(gid),
         )
 
+        assert r.status_code == 201, r.json()
+
         owner_group = self.mender_device.run(
             f"ls -aln /var/lib/mender/filetransfer/{fname}.bin | cut -f 3,4 -d' '"
         )
 
         assert owner_group == str(uid) + " " + str(gid) + "\n"
-        assert r.status_code == 201
 
     def assert_forbidden(self, rsp, message):
         try:

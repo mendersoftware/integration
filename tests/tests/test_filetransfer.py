@@ -771,7 +771,11 @@ class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     @pytest.fixture(scope="function")
     def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
         env = enterprise_one_docker_client_bootstrapped
-        devid, auth_token, auth, mender_device = prepare_env_for_connect(env)
+        devid, auth_token, auth, mender_device = prepare_env_for_connect(
+            env,
+            docker=True,
+            ignore_existing=True,
+        )
         request.cls.devid = devid
         request.cls.auth_token = auth_token
         request.cls.auth = auth

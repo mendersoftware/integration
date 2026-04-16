@@ -212,7 +212,23 @@ class _TestRemoteTerminalBase:
                 "$ ",
             ], "Could not detect shell prompt."
 
-        with docker_env.devconnect.get_websocket() as ws:
+        def open_websocket_with_retry(timeout_s=180, interval_s=5):
+            # The docker-client fixture is function-scoped, so each test starts
+            # with a freshly-bootstrapped client whose deviceconnect session may
+            # not yet be established. Poll get_websocket() until it succeeds.
+            deadline = time.monotonic() + timeout_s
+            last_err = None
+            while time.monotonic() < deadline:
+                try:
+                    return docker_env.devconnect.get_websocket()
+                except Exception as e:
+                    last_err = e
+                    time.sleep(interval_s)
+            raise AssertionError(
+                f"deviceconnect websocket never became available: {last_err}"
+            )
+
+        with open_websocket_with_retry() as ws:
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
@@ -232,10 +248,11 @@ class _TestRemoteTerminalBase:
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")
-        time.sleep(30)
 
-        # mender-connect should have "healed" now and be able to start a new shell
-        with docker_env.devconnect.get_websocket() as ws:
+        # mender-connect should have "healed" now and be able to start a new shell.
+        # Poll instead of a fixed sleep — the docker-client's recovery window is
+        # variable and a 30s wait races the auth/reconnect cycle.
+        with open_websocket_with_retry() as ws:
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL

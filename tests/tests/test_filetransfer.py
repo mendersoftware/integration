@@ -86,7 +86,7 @@ def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
     return requests.put(upload_url, verify=False, headers=authtoken, files=files)
 
 
-def set_limits(docker_env, mender_device, limits, auth, devid):
+def set_limits(mender_device, limits, auth, devid):
     tmpdir = tempfile.mkdtemp()
     try:
         # retrieve the original configuration file
@@ -107,10 +107,9 @@ def set_limits(docker_env, mender_device, limits, auth, devid):
         )
     finally:
         shutil.rmtree(tmpdir)
-    mender_device.run("kill -TERM `pidof %s`" % connect_service_name)
-    docker_env._docker_compose_cmd(
-        "exec -d mender-client %s daemon" % connect_service_name
-    )
+    # Kill mender-connect and let the entrypoint's supervise loop restart
+    # it automatically with the updated config.
+    mender_device.run("kill `pidof %s` 2>/dev/null" % connect_service_name)
     wait_for_connect(auth, devid)
     debugoutput = mender_device.run("cat /etc/mender/mender-connect.conf")
     logger.info("/etc/mender/mender-connect.conf:\n%s" % debugoutput)
@@ -243,7 +242,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file outside chroot; upload forbidden"
 
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -277,7 +275,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file inside chroot; upload allowed"
 
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -308,7 +305,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_upload_limits_err_file_too_big(self, mender_device_setup):
         "File Transfer limits: file size over the limit; upload forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -340,7 +336,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_upload_limits_err_max_bytes_per_minute_exceeded(self, mender_device_setup):
         "File Transfer limits: transfers during last minute over the limit; upload forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -418,7 +413,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: preserve modes;"
 
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -460,7 +454,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: preserve owner and group;"
 
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -517,7 +510,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file outside chroot; download forbidden"
 
         set_limits(
-            self.env,
             self.mender_device,
             {
                 "Enabled": True,
@@ -538,7 +530,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     def test_filetransfer_limits_download_err_max_file_size(self, mender_device_setup):
         "File Transfer limits: file over the max file size limit; download forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"MaxFileSize": 2}},
             self.auth,
@@ -557,7 +548,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
             self.auth,
@@ -579,7 +569,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: not allowed to follow a link on path part; download forbidden"
 
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": False}},
             self.auth,
@@ -600,7 +589,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"FollowSymLinks": True}},
             self.auth,
@@ -622,7 +610,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file owner do not match; download forbidden"
 
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser"]}},
             self.auth,
@@ -639,7 +626,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         "File Transfer limits: file group do not match; download forbidden"
 
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"GroupGet": ["someothergroup"]}},
             self.auth,
@@ -656,7 +642,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: file not a regular file; download forbidden"
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"RegularFilesOnly": True}},
             self.auth,
@@ -676,7 +661,6 @@ class BaseTestFileTransferLimits(MenderTesting):
     ):
         "File Transfer limits: file owner match; download allowed"
         set_limits(
-            self.env,
             self.mender_device,
             {"Enabled": True, "FileTransfer": {"OwnerGet": ["someotheruser", "root"]}},
             self.auth,
@@ -771,7 +755,11 @@ class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     @pytest.fixture(scope="function")
     def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
         env = enterprise_one_docker_client_bootstrapped
-        devid, auth_token, auth, mender_device = prepare_env_for_connect(env)
+        devid, auth_token, auth, mender_device = prepare_env_for_connect(
+            env,
+            docker=True,
+            ignore_existing=True,
+        )
         request.cls.devid = devid
         request.cls.auth_token = auth_token
         request.cls.auth = auth

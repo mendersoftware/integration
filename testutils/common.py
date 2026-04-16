@@ -523,6 +523,28 @@ def wait_until_healthy(compose_project: str = "", timeout: int = 60):
         if service.startswith("mender-api-gateway"):
             wait_for_api_gateway(container_ip, router_to_check="useradm@file")
 
+    # Wait for containers that define a Docker HEALTHCHECK (e.g. mender-client)
+    # but are not covered by the HTTP path_map above.
+    for container in containers:
+        service = container.labels.get(
+            "com.docker.compose.service", container.name
+        ).split("-enterprise")[0]
+        if service in path_map or service.startswith("mender-workflows-server"):
+            continue  # already checked via HTTP above
+        health = container.attrs.get("State", {}).get("Health")
+        if health is None:
+            continue  # no HEALTHCHECK defined, nothing to wait for
+        for _ in redo.retrier(attempts=timeout, sleeptime=1):
+            container.reload()
+            status = container.attrs["State"]["Health"]["Status"]
+            if status == "healthy":
+                logger.info(f"Container '{service}' is healthy")
+                break
+        else:
+            raise TimeoutError(
+                f"Timed out waiting for container '{service}' to become healthy (status: {status})"
+            )
+
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):
     """Call internal PUT tenantadm/tenants/{tid}"""

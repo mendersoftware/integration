@@ -210,16 +210,14 @@ class Deployments:
         while time.time() <= timeout:
             data = self.get_status(status=expected_status)
 
-            for deployment in data:
-                if deployment["id"] == deployment_id:
-                    time.sleep(polling_frequency)
-                    continue
-            else:
+            found = any(d["id"] == deployment_id for d in data)
+            if not found:
                 logger.info(
                     "left deployment status (%s) as expected for: %s"
                     % (expected_status, deployment_id)
                 )
                 return
+            time.sleep(polling_frequency)
 
         pytest.fail(
             "Never left status: %s for %s after %d seconds"
@@ -238,8 +236,6 @@ class Deployments:
         seen = set()
 
         while time.time() <= timeout:
-            time.sleep(polling_frequency)
-
             data = self.get_statistics(deployment_id)
             seen.add(str(data))
 
@@ -260,13 +256,12 @@ class Deployments:
 
             if data[expected_status] == expected_count:
                 return
-            continue
+            time.sleep(polling_frequency)
 
-        if time.time() > timeout:
-            pytest.fail(
-                "Never found: %s:%s, only seen: %s after %d seconds"
-                % (expected_status, expected_count, str(seen), max_wait)
-            )
+        pytest.fail(
+            "Never found: %s:%s, only seen: %s after %d seconds"
+            % (expected_status, expected_count, str(seen), max_wait)
+        )
 
     def get_deployment_overview(self, deployment_id):
         deployments_overview_url = (
@@ -326,7 +321,6 @@ class Deployments:
             headers=self.auth.get_auth_token(),
             json={"status": "aborted"},
         )
-        time.sleep(5)
         assert r.status_code == requests.status_codes.codes.no_content
 
     def abort_finished_deployment(self, deployment_id):
@@ -339,7 +333,6 @@ class Deployments:
             headers=self.auth.get_auth_token(),
             json={"status": "aborted"},
         )
-        time.sleep(5)
         assert r.status_code == requests.status_codes.codes.unprocessable_entity
 
     def patch_deployment(self, deployment_id, update_control_map):

@@ -115,8 +115,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def standard_setup_one_docker_client_bootstrapped(request):
+def standard_setup_one_docker_client_bootstrapped_impl(request):
     env = container_factory.get_docker_client_setup()
     request.addfinalizer(env.teardown)
 
@@ -130,6 +129,16 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
     env.auth = auth
     return env
+
+
+@pytest.fixture(scope="function")
+def standard_setup_one_docker_client_bootstrapped(request):
+    return standard_setup_one_docker_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_standard_setup_one_docker_client_bootstrapped(request):
+    return standard_setup_one_docker_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")
@@ -356,8 +365,7 @@ def enterprise_two_clients_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def enterprise_one_docker_client_bootstrapped(request):
+def enterprise_one_docker_client_bootstrapped_impl(request):
     env = container_factory.get_enterprise_docker_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
@@ -374,6 +382,16 @@ def enterprise_one_docker_client_bootstrapped(request):
     assert 1 == len(devices)
 
     return env
+
+
+@pytest.fixture(scope="function")
+def enterprise_one_docker_client_bootstrapped(request):
+    return enterprise_one_docker_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_enterprise_one_docker_client_bootstrapped(request):
+    return enterprise_one_docker_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")

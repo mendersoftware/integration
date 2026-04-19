@@ -18,8 +18,6 @@ import socket
 import subprocess
 import time
 
-from testutils.common import wait_until_healthy
-
 from .docker_compose_base_manager import DockerComposeBaseNamespace, docker_lock
 
 logger = logging.getLogger("root")
@@ -102,11 +100,7 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     ]
 
     def setup(self):
-        self._docker_compose_cmd("up -d")
-        self._wait_for_containers()
-
-    def _wait_for_containers(self):
-        wait_until_healthy(self.name, timeout=60 * 5)
+        self._docker_compose_up()
 
     def teardown_exclude(self, exclude=[]):
         """
@@ -135,8 +129,7 @@ class DockerComposeStandardSetup(DockerComposeNamespace):
         super().__init__(name, self.QEMU_CLIENT_FILES)
 
     def setup(self):
-        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
-        self._wait_for_containers()
+        self._docker_compose_up(f"--scale mender-client={self.num_clients}")
 
 
 class DockerComposeExtendedSetup(DockerComposeNamespace):
@@ -145,8 +138,7 @@ class DockerComposeExtendedSetup(DockerComposeNamespace):
         super().__init__(name, self.QEMU_EXTENDED_FILES)
 
     def setup(self):
-        self._docker_compose_cmd("up -d --scale mender-client=%d" % self.num_clients)
-        self._wait_for_containers()
+        self._docker_compose_up(f"--scale mender-client={self.num_clients}")
 
     def get_mender_clients(self, network="mender"):
         return super().get_mender_clients(
@@ -167,11 +159,9 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
             )
 
     def setup(self, recreate=True, env=None):
-        cmd = "up -d"
-        if not recreate:
-            cmd += " --no-recreate"
-        self._docker_compose_cmd(cmd, env=env)
-        self._wait_for_containers()
+        args = "" if recreate else "--no-recreate"
+        self._docker_compose_up(args, env)
+
 
     def new_tenant_client(self, name, tenant):
         if not self.MONITOR_CLIENT_COMMERCIAL_FILES[0] in self.docker_compose_files:
@@ -276,15 +266,13 @@ class DockerComposeEnterpriseSetup(DockerComposeNamespace):
             DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES)
 
     def setup(self, recreate=True, env=None):
-        cmd = "up -d"
-        if any(
-            ["client" in compose_file for compose_file in self.docker_compose_files]
-        ):
-            cmd += " --scale mender-client=%d" % self.num_clients
+        args = ""
+        if any("client" in cf for cf in self.docker_compose_files):
+            args += f"--scale mender-client={self.num_clients}"
         if not recreate:
-            cmd += " --no-recreate"
-        self._docker_compose_cmd(cmd, env=env)
-        self._wait_for_containers()
+            args += " --no-recreate"
+        self._docker_compose_up(args, env)
+
 
     def new_tenant_client(self, name, tenant):
         if not self.MT_CLIENT_FILES[0] in self.docker_compose_files:
@@ -417,17 +405,15 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
             )
 
     def setup(self):
-        compose_args = "up -d --scale mender-client=0"
-        self._docker_compose_cmd(compose_args)
-        self._wait_for_containers()
+        self._docker_compose_up("--scale mender-client=0")
+
 
     def new_tenant_docker_client(self, name, tenant):
         logger.info("creating docker client connected to tenant: " + tenant)
-        self._docker_compose_cmd(
-            "up -d --scale mender-client=1",
-            env={"TENANT_TOKEN": "%s" % tenant},
+        self._docker_compose_up(
+            "--scale mender-client=1",
+            {"TENANT_TOKEN": "%s" % tenant},
         )
-        time.sleep(5)
 
 
 class DockerComposeMTLSSetup(DockerComposeNamespace):
@@ -437,11 +423,11 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
 
     def setup(self):
         host_ip = socket.gethostbyname(socket.gethostname())
-        self._docker_compose_cmd(
-            "up -d --scale mtls-gateway=0 --scale mender-client=0",
-            env={"HOST_IP": host_ip},
+        self._docker_compose_up(
+            "--scale mtls-gateway=0 --scale mender-client=0",
+            {"HOST_IP": host_ip},
         )
-        self._wait_for_containers()
+
 
     def start_api_gateway(self):
         self._docker_compose_cmd("start mender-api-gateway")
@@ -450,8 +436,8 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         self._docker_compose_cmd("stop mender-api-gateway")
 
     def start_mtls_gateway(self):
-        self._docker_compose_cmd("up -d --scale mtls-gateway=1 mtls-gateway")
-        self._wait_for_containers()
+        self._docker_compose_up("--scale mtls-gateway=1 mtls-gateway")
+
 
     def new_mtls_client(self, name, tenant):
         self._docker_compose_cmd(

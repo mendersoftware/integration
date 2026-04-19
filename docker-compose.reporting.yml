@@ -43,9 +43,14 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-opensearch
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/reporting/health"
+            mender-opensearch:
+                condition: service_healthy
+        healthcheck:
+            test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/reporting/health || exit 1"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
     #
     # mender-reporting-indexer
@@ -61,7 +66,8 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-opensearch
+            mender-opensearch:
+                condition: service_healthy
 
     #
     # mender-opensearch
@@ -77,3 +83,9 @@ services:
             - "discovery.type=single-node"
             - "plugins.security.disabled=true"
             - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        healthcheck:
+            test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -Eq '\"status\":\"(green|yellow)\"'"]
+            interval: 15s
+            timeout: 5s
+            retries: 10
+            start_period: 30s

@@ -12,6 +12,12 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/iot-manager", "--config", "/etc/iot-manager/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-deployments
@@ -26,6 +32,12 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/deployments", "--config", "/etc/deployments/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-gui
@@ -117,7 +129,13 @@ services:
       mender-mongo:
         condition: service_healthy
       mender-workflows-server:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/deviceauth", "--config", "/etc/deviceauth/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-inventory
@@ -134,6 +152,12 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/inventory", "--config", "/etc/inventory/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-useradm
@@ -148,6 +172,12 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/useradm", "--config", "/etc/useradm/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-workflows-server
@@ -166,6 +196,12 @@ services:
         condition: service_healthy
       mender-nats:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/workflows", "--config", "/etc/workflows/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-workflows-worker
@@ -230,6 +266,12 @@ services:
         condition: service_healthy
       mender-nats:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/deviceconnect", "--config", "/etc/deviceconnect/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-deviceconfig
@@ -245,6 +287,12 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/bin/deviceconfig", "--config", "/etc/deviceconfig/config.yaml", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   mender-mongo:
     image: mongo:8.0

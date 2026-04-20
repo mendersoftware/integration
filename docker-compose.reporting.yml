@@ -45,6 +45,12 @@ services:
         depends_on:
             mender-opensearch:
                 condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/usr/bin/reporting", "--config", "/etc/reporting/config.yaml", "healthcheck"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
     #
     # mender-reporting-indexer

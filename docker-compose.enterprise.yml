@@ -57,6 +57,12 @@ services:
         depends_on:
             mender-mongo:
                 condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/usr/bin/tenantadm", "--config", "/etc/tenantadm/config.yaml", "healthcheck"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
     # configure the rest
     mender-device-auth:
@@ -88,6 +94,12 @@ services:
             mender-mongo:
                 condition: service_healthy
         command: server --automigrate
+        healthcheck:
+            test: ["CMD", "/usr/bin/auditlogs", "--config", "/etc/auditlogs/config.yaml", "healthcheck"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
     mender-api-gateway:
         volumes:
@@ -139,6 +151,12 @@ services:
         depends_on:
             mender-mongo:
                 condition: service_healthy
+        healthcheck:
+            test: ["CMD", "/usr/bin/devicemonitor", "--config", "/etc/devicemonitor/config.yaml", "healthcheck"]
+            interval: 10s
+            timeout: 3s
+            retries: 10
+            start_period: 10s
 
 networks:
     mender: null

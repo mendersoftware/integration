@@ -10,9 +10,14 @@ services:
     networks:
       - mender
     depends_on:
-      - mender-mongo
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/iot-manager/health"
+      mender-mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/iot-manager/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-deployments
@@ -24,10 +29,15 @@ services:
       service: mender-base
     networks:
       - mender
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deployments/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     depends_on:
-      - mender-mongo
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/deployments/health"
+      mender-mongo:
+        condition: service_healthy
 
   #
   # mender-gui
@@ -47,6 +57,12 @@ services:
       - MENDER_DEB_PACKAGE_VERSION
       - HAVE_DEVICECONNECT=1
       - HAVE_DEVICECONFIG=1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   #
   # mender-api-gateway
@@ -64,6 +80,8 @@ services:
     # Enables the web UI and tells Traefik to listen to docker
     command:
       - --accesslog=true
+      - --ping=true
+      - --ping.entryPoint=http
       - --entrypoints.http.address=:80
       - --entrypoints.http.http.redirections.entryPoint.scheme=https
       - --entrypoints.http.http.redirections.entryPoint.to=https
@@ -79,6 +97,12 @@ services:
       - ./config/traefik/traefik.yaml:/etc/traefik/config/traefik.yaml:ro
       - ./config/traefik/traefik.middlewares.yaml:/etc/traefik/config/traefik.middlewares.yaml:ro
 
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ping | grep -q 'OK'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       - mender
     # critical - otherwise nginx may not detect
@@ -101,11 +125,17 @@ services:
       service: mender-base
     networks:
       - mender
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/devauth/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     depends_on:
-      - mender-mongo
-      - mender-workflows-server
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/devauth/health"
+      mender-mongo:
+        condition: service_healthy
+      mender-workflows-server:
+        condition: service_healthy
 
   #
   # mender-inventory
@@ -119,10 +149,15 @@ services:
       service: mender-base
     networks:
       - mender
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/inventory/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     depends_on:
-      - mender-mongo
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/inventory/health"
+      mender-mongo:
+        condition: service_healthy
 
   #
   # mender-useradm
@@ -134,10 +169,15 @@ services:
       service: mender-base
     networks:
       - mender
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/useradm/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     depends_on:
-      - mender-mongo
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/useradm/health"
+      mender-mongo:
+        condition: service_healthy
 
   #
   # mender-workflows-server
@@ -151,11 +191,17 @@ services:
       service: mender-base
     networks:
       - mender
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     depends_on:
-      - mender-mongo
-      - mender-nats
-    labels:
-      mender.healthcheck.path: "/health"
+      mender-mongo:
+        condition: service_healthy
+      mender-nats:
+        condition: service_healthy
 
   #
   # mender-workflows-worker
@@ -178,8 +224,10 @@ services:
     networks:
       - mender
     depends_on:
-      - mender-mongo
-      - mender-nats
+      mender-mongo:
+        condition: service_healthy
+      mender-nats:
+        condition: service_healthy
 
   #
   # mender-create-artifact-worker
@@ -194,8 +242,10 @@ services:
     networks:
       - mender
     depends_on:
-      - mender-mongo
-      - mender-nats
+      mender-mongo:
+        condition: service_healthy
+      mender-nats:
+        condition: service_healthy
 
   #
   # mender-deviceconnect
@@ -208,14 +258,20 @@ services:
       service: mender-base
     networks:
       - mender
-    depends_on:
-      - mender-mongo
-      - mender-nats
     environment:
       DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
       DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/deviceconnect/health"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deviceconnect/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      mender-mongo:
+        condition: service_healthy
+      mender-nats:
+        condition: service_healthy
 
   #
   # mender-deviceconfig
@@ -227,11 +283,16 @@ services:
       service: mender-base
     networks:
       - mender
-    depends_on:
-      - mender-mongo
     command: server --automigrate
-    labels:
-      mender.healthcheck.path: "/api/internal/v1/deviceconfig/health"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deviceconfig/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      mender-mongo:
+        condition: service_healthy
 
   mender-mongo:
     image: mongo:8.0
@@ -240,6 +301,12 @@ services:
       service: mender-base
     tmpfs:
       - /data/db:size=1G
+    healthcheck:
+      test: ["CMD", "mongosh", "mongodb://localhost:27017/test", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       mender:
         aliases:
@@ -251,8 +318,14 @@ services:
           - mongo-workflows
 
   mender-nats:
-    image: nats:2.10.24-scratch
-    command: -js
+    image: nats:2.10.24-alpine
+    command: ["-js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz | grep -q 'ok'"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     networks:
       - mender
 

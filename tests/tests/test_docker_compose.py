@@ -114,7 +114,7 @@ def make_docker_compose_artifact(
             artifact_gen_script,
             "--artifact-name",
             artifact_name,
-            "--device-type",
+            "--compatible-types",
             "qemux86-64",
             "--output-path",
             filename,

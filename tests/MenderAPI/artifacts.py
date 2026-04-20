@@ -49,7 +49,7 @@ class Artifacts:
             assert os.path.exists(private_key), "private key for testing doesn't exist"
             signed_arg = "-k %s" % (private_key)
 
-        cmd = "%s %s  write rootfs-image -f %s -t %s -n %s -o %s %s %s" % (
+        cmd = "%s %s  write rootfs-image -f %s -c %s -n %s -o %s %s %s" % (
             self.artifacts_tool_path,
             global_flags,
             image,
@@ -98,7 +98,7 @@ class Artifacts:
             assert os.path.exists(private_key), "private key for testing doesn't exist"
             signed_arg = "-k %s" % (private_key)
 
-        cmd = "%s %s  write module-image -T %s -t %s -n %s -o %s %s %s %s" % (
+        cmd = "%s %s  write module-image -T %s -c %s -n %s -o %s %s %s %s" % (
             self.artifacts_tool_path,
             global_flags,
             module_type,

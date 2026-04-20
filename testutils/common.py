@@ -395,7 +395,7 @@ def get_mender_artifact(
         filename,
     ]
     for device_type in device_types:
-        args.extend(["-t", device_type])
+        args.extend(["-c", device_type])
     for depend in depends:
         args.extend(["--depends", depend])
     for provide in provides:

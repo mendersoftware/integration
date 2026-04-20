@@ -28,7 +28,7 @@ def get_script_artifact(
         logger.info(f"Script: {out}")
         script_path = tf.name
 
-        cmd = f"mender-artifact write module-image -T script -n {artifact_name} -t {device_type} -o {output_path} -f {script_path}"
+        cmd = f"mender-artifact write module-image -T script -n {artifact_name} -c {device_type} -o {output_path} -f {script_path}"
         if extra_args is not None:
             cmd += f" {extra_args}"
 

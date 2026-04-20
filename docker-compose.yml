@@ -12,12 +12,6 @@ services:
     depends_on:
       mender-mongo:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/iot-manager/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
 
   #
   # mender-deployments
@@ -29,12 +23,6 @@ services:
       service: mender-base
     networks:
       - mender
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deployments/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
@@ -125,17 +113,11 @@ services:
       service: mender-base
     networks:
       - mender
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/devauth/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
       mender-workflows-server:
-        condition: service_healthy
+        condition: service_started
 
   #
   # mender-inventory
@@ -149,12 +131,6 @@ services:
       service: mender-base
     networks:
       - mender
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/inventory/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
@@ -169,12 +145,6 @@ services:
       service: mender-base
     networks:
       - mender
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/useradm/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
@@ -191,12 +161,6 @@ services:
       service: mender-base
     networks:
       - mender
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
@@ -261,12 +225,6 @@ services:
     environment:
       DEVICECONNECT_MONGO_URL: "mongodb://mender-mongo"
       DEVICECONNECT_NATS_URI: "nats://mender-nats:4222"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deviceconnect/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy
@@ -284,12 +242,6 @@ services:
     networks:
       - mender
     command: server --automigrate
-    healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/deviceconfig/health || exit 1"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
     depends_on:
       mender-mongo:
         condition: service_healthy

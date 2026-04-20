@@ -57,12 +57,6 @@ services:
         depends_on:
             mender-mongo:
                 condition: service_healthy
-        healthcheck:
-            test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/tenantadm/health || exit 1"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
-            start_period: 10s
 
     # configure the rest
     mender-device-auth:
@@ -94,12 +88,6 @@ services:
             mender-mongo:
                 condition: service_healthy
         command: server --automigrate
-        healthcheck:
-            test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/auditlogs/health || exit 1"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
-            start_period: 10s
 
     mender-api-gateway:
         volumes:
@@ -151,12 +139,6 @@ services:
         depends_on:
             mender-mongo:
                 condition: service_healthy
-        healthcheck:
-            test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/devicemonitor/health || exit 1"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
-            start_period: 10s
 
 networks:
     mender: null

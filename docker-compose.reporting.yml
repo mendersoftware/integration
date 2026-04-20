@@ -45,12 +45,6 @@ services:
         depends_on:
             mender-opensearch:
                 condition: service_healthy
-        healthcheck:
-            test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/api/internal/v1/reporting/health || exit 1"]
-            interval: 10s
-            timeout: 3s
-            retries: 10
-            start_period: 10s
 
     #
     # mender-reporting-indexer

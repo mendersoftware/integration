@@ -24,7 +24,6 @@ import subprocess
 from contextlib import contextmanager
 from typing import List
 
-import docker
 import redo
 import requests
 
@@ -407,121 +406,6 @@ def get_mender_artifact(
     finally:
         os.unlink(filename)
         os.path.exists(artifact) and os.unlink(artifact)
-
-
-def wait_for_api_gateway(
-    api_gateway_ip: str,
-    api_gateway_port: int = 8080,
-    router_to_check: str = "useradm@file",  # one of the routers loaded from dynamic configuration
-    delay_seconds: int = 5,
-    timeout_seconds: int = 180,
-):
-    api_gateway_url = f"http://{api_gateway_ip}:{api_gateway_port}/api/http/routers"
-    start_time = time.time()
-
-    logger.debug(
-        f"Waiting for mender-api-gateway to be ready. Polling {api_gateway_url} for router '{router_to_check}'..."
-    )
-    attempt = 0
-    while True:
-        attempt += 1
-        if time.time() - start_time > timeout_seconds:
-            raise TimeoutError(
-                f"Timeout ({timeout_seconds}s) reached while waiting for mender-api-gateway. Giving up."
-            )
-
-        try:
-            rsp = requests.get(api_gateway_url, timeout=delay_seconds)
-            rsp.raise_for_status()
-            routers_data = rsp.json()
-            router_names = [router.get("name") for router in routers_data]
-
-            if router_to_check in router_names:
-                logger.info(
-                    f"mender-api-gateway is ready. Router '{router_to_check}' found after {attempt} attempts."
-                )
-                break
-            else:
-                logger.debug(
-                    f"Attempt {attempt}: Router '{router_to_check}' not yet found. Current routers: {router_names}"
-                )
-        except Exception as e:
-            logger.warning(
-                f"Attempt {attempt}: An unexpected error occurred: {e}. Retrying in {delay_seconds}s..."
-            )
-
-        time.sleep(delay_seconds)
-
-
-def wait_until_healthy(compose_project: str = "", timeout: int = 60):
-    """
-    wait_until_healthy polls all running containers health check
-    endpoints until they return a non-error status code.
-    :param compose_project: the docker-compose project ID, if empty it
-                            checks all running containers.
-    :param timeout: timeout in seconds.
-    """
-    client = docker.from_env()
-    kwargs = {}
-    if compose_project != "":
-        kwargs["filters"] = {"label": f"com.docker.compose.project={compose_project}"}
-
-    path_map = {
-        "mender-api-gateway": "/ping",
-        "mender-auditlogs": "/api/internal/v1/auditlogs/health",
-        "mender-deviceconnect": "/api/internal/v1/deviceconnect/health",
-        "mender-deviceconfig": "/api/internal/v1/deviceconfig/health",
-        "mender-device-auth": "/api/internal/v1/devauth/health",
-        "mender-deployments": "/api/internal/v1/deployments/health",
-        "mender-inventory": "/api/internal/v1/inventory/health",
-        "mender-tenantadm": "/api/internal/v1/tenantadm/health",
-        "mender-useradm": "/api/internal/v1/useradm/health",
-        "mender-workflows": "/api/v1/health",
-        "minio": "/minio/health/live",
-    }
-
-    containers = client.containers.list(all=True, **kwargs)
-    for container in containers:
-
-        container_ip = None
-        for _, net in container.attrs["NetworkSettings"]["Networks"].items():
-            container_ip = net["IPAddress"]
-            break
-        if container_ip is None or container_ip == "":
-            continue
-
-        service = container.labels.get(
-            "com.docker.compose.service", container.name
-        ).split("-enterprise")[0]
-        if service.startswith("mender-workflows-server"):
-            service = "mender-workflows"
-
-        path = path_map.get(service)
-        if path is None:
-            continue
-        port = 8080 if service != "minio" else 9000
-
-        for _ in redo.retrier(attempts=timeout, sleeptime=1):
-            try:
-                rsp = requests.request("GET", f"http://{container_ip}:{port}{path}")
-            except requests.exceptions.ConnectionError:
-                # A ConnectionError is expected if the service is not running yet
-                continue
-            if rsp.status_code < 300:
-                break
-        else:
-            raise TimeoutError(
-                f"Timed out waiting for service '{service}' to become healthy"
-            )
-
-        # Additional handling for mender-api-gateway initialization: Make sure we have routings from
-        # dynamic configuration in mender-api-gateway loaded before starting any tests.
-        # Without it, we can have mender-api-gateway not initialized fully and see errors e.g. on
-        # connecting to /useradm/auth/login, which is unintuitive. In the past, if starting too many
-        # containers simultaneously, mender-api-gateway has run out of limit on open files, which
-        # caused configuration not to be loaded.
-        if service.startswith("mender-api-gateway"):
-            wait_for_api_gateway(container_ip, router_to_check="useradm@file")
 
 
 def update_tenant(tid, addons=None, plan=None, container_manager=None):

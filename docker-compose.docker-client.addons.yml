@@ -7,8 +7,6 @@ services:
         privileged: true
         networks:
             - mender
-        blkio_config:
-            weight: 100
 
 networks:
     mender:

@@ -175,13 +175,9 @@ renovate:
     - pip3 install pyyaml
     - curl -fsSL https://deno.land/x/install/install.sh | sh
     - curl -sLO https://docs.mender.io/releases/versions.json
-    # Prepare SSH key
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add - > /dev/null
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan github.com >> ~/.ssh/known_hosts
-    # Configure git
+    # Configure git to use HTTPS with token instead of SSH
+    - git config --global url."https://mender-test-bot:${GITHUB_BOT_TOKEN_REPO_FULL}@github.com/".insteadOf "git@github.com:"
+    - git config --global --add url."https://mender-test-bot:${GITHUB_BOT_TOKEN_REPO_FULL}@github.com/".insteadOf "https://github.com/"
     - git config --global user.email "mender@northern.tech"
     - git config --global user.name "Mender Test Bot"
   script:

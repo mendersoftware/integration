@@ -19,6 +19,8 @@ import random
 class BaseContainerManagerNamespace:
     """Base class to define a containers namespace"""
 
+    wait_healthy_timeout = 300
+
     def __init__(self, name=None):
         """Creates instance
 

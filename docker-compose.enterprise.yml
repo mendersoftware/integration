@@ -8,6 +8,12 @@ services:
             service: mender-base
         networks:
             - mender
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 5
+            start_period: 5s
 
     mender-create-artifact-worker:
         image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/create-artifact-worker:${MENDER_SERVER_TAG}
@@ -49,7 +55,8 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo
+            mender-mongo:
+                condition: service_healthy
 
     # configure the rest
     mender-device-auth:
@@ -78,10 +85,9 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo
+            mender-mongo:
+                condition: service_healthy
         command: server --automigrate
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/auditlogs/health"
 
     mender-api-gateway:
         volumes:
@@ -117,8 +123,10 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo
-            - mender-nats
+            mender-mongo:
+                condition: service_healthy
+            mender-nats:
+                condition: service_healthy
 
     mender-devicemonitor:
         image: ${MENDER_SERVER_ENTERPRISE_REGISTRY}/${MENDER_SERVER_ENTERPRISE_REPOSITORY}/devicemonitor:${MENDER_SERVER_TAG}
@@ -129,9 +137,8 @@ services:
         networks:
             - mender
         depends_on:
-            - mender-mongo
-        labels:
-            mender.healthcheck.path: "/api/internal/v1/devicemonitor/health"
+            mender-mongo:
+                condition: service_healthy
 
 networks:
     mender: null

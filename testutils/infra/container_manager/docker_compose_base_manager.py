@@ -125,10 +125,16 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 len(gateway), self.name
             )
 
+    def _docker_compose_up(self, extra_args="", env=None):
+        cmd = f"up -d --wait --wait-timeout {self.wait_healthy_timeout}"
+        if extra_args:
+            cmd += f" {extra_args}"
+        return self._docker_compose_cmd(cmd, env=env)
+
     def restart_service(self, service):
         """Restarts a service."""
         self._docker_compose_cmd(f"up -d --scale {service}=0 {service}")
-        self._docker_compose_cmd(f"up -d --scale {service}=1 {service}")
+        self._docker_compose_up(f"--scale {service}=1 {service}")
 
     def get_file(self, container_name, path):
         container_id = super().getid([container_name])
@@ -175,22 +181,19 @@ class DockerComposeBaseNamespace(DockerNamespace):
         raise Exception("failed to start docker compose (called: %s)" % cmd)
 
     def _stop_docker_compose(self):
-        with docker_lock:
-            stop_sleep_seconds = 15
-            retry_attempts = 8
+        stop_sleep_seconds = 15
+        retry_attempts = 8
 
-            # Take down all docker instances in this namespace.
-            while retry_attempts > 0:
-                logger.info(
-                    "(attempts left: %d) trying to stop all containers in %s"
-                    % (retry_attempts, self.name)
-                )
-                try:
-                    self._docker_compose_cmd(
-                        "down -v --remove-orphans", fail_early=False
-                    )
-                    break
-                except Exception as e:
-                    time.sleep(stop_sleep_seconds)
-                    logger.error(e)
-                    retry_attempts = retry_attempts - 1
+        # Take down all docker instances in this namespace.
+        while retry_attempts > 0:
+            logger.info(
+                "(attempts left: %d) trying to stop all containers in %s"
+                % (retry_attempts, self.name)
+            )
+            try:
+                self._docker_compose_cmd("down -v --remove-orphans", fail_early=False)
+                break
+            except Exception as e:
+                time.sleep(stop_sleep_seconds)
+                logger.error(e)
+                retry_attempts = retry_attempts - 1

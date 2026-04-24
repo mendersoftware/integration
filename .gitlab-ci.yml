@@ -46,13 +46,13 @@ variables:
     description: |
       Number of parallel CI jobs for integration tests.
       Tests in parallel = CI_JOBS_IN_PARALLEL_INTEGRATION x XDIST_JOBS_IN_PARALLEL_INTEGRATION
-    value: 4
+    value: 1
 
   XDIST_JOBS_IN_PARALLEL_INTEGRATION:
     description: |
       Number of parallel xdist jobs per CI job for integration tests.
       Tests in parallel = CI_JOBS_IN_PARALLEL_INTEGRATION x XDIST_JOBS_IN_PARALLEL_INTEGRATION
-    value: 4
+    value: 1
 
   DOCKER_VERSION:
     description: "Docker version to use in jobs"

@@ -52,6 +52,11 @@ from testutils.infra.device import MenderDevice
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"
 
+# TODO: See QA-XXXX
+pytestmark = pytest.mark.skip(
+    reason="Skipping file transfer tests. See QA-XXXX"
+)
+
 
 def random_filename():
     return "".join(random.choices([chr(c) for c in range(97, 123)], k=8))

@@ -52,7 +52,7 @@ pygments==2.20.0
     # via pytest
 pymongo==4.16.0
     # via -r python-requirements.in
-pytest==9.0.2
+pytest==9.0.3
     # via
     #   -r python-requirements.in
     #   pytest-html

@@ -228,7 +228,11 @@ class _TestRemoteTerminalBase:
         )
 
         # Plenty of time for the session to mess up
-        time.sleep(60)
+        # see also QA-1591: the DROP will not cause ICMP response so we rely on the
+        # TCP RTO which means sometimes we need additional time to sleep.
+        # this was exposed by the move to docker client in those tests, as the
+        # network stack acts differently
+        time.sleep(128)
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")

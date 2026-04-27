@@ -228,7 +228,7 @@ class _TestRemoteTerminalBase:
         )
 
         # Plenty of time for the session to mess up
-        time.sleep(60)
+        time.sleep(128)
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")

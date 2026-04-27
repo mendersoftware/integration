@@ -224,7 +224,7 @@ class _TestRemoteTerminalBase:
         docker_env.device.run("apt-get update")
         docker_env.device.run("apt-get install -y iptables")
         docker_env.device.run(
-            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
+            "iptables -A OUTPUT -j REJECT --destination docker.mender.io"
         )
 
         # Plenty of time for the session to mess up

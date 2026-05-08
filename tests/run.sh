@@ -72,7 +72,7 @@ function get_requirements() {
     (
         test -z "$MENDER_ARTIFACT_VERSION" && source ../.env
         curl --fail \
-            "https://downloads.mender.io/repos/debian/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
+            "https://downloads.mender.io/repos/workstation-tools/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
             -o "$EXTRACT_DIR/mender-artifact.deb"
     )
     if [ $? -ne 0 ]; then

@@ -13,6 +13,8 @@
 #    limitations under the License.
 
 import json
+import subprocess
+
 import pytest
 import time
 import uuid
@@ -222,10 +224,16 @@ class _TestRemoteTerminalBase:
             is_shell_working(shell)
 
         docker_env.device.run("apt-get update")
-        docker_env.device.run("apt-get install -y iptables")
-        docker_env.device.run(
-            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
-        )
+        docker_env.device.run("apt-get install -y iptables screen netcat-openbsd")
+        # docker_env.device.run(
+        #     "iptables -A OUTPUT -j DROP --destination docker.mender.io"
+        # )
+        # here instead of that iptables drop on the _host_ ith -i docker0 or equivalent in the FORWARD chain
+        mender_client_ip=docker_env._docker_compose_cmd("docker compose ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-client")
+        api_gateway_ip=docker_env._docker_compose_cmd("docker compose ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-api-gateway")
+        cmd="iptables -I FORWARD -i docker0 -s "+mender_client_ip+"/32 -d "+api_gateway_ip+"/32 -j DROP"
+        subprocess.run(cmd.split(" "))
+        # docker_env._docker_compose_cmd("exec -d mender-client %s daemon" % connect_service_name)
 
         # Plenty of time for the session to mess up
         # see also QA-1591: the DROP will not cause ICMP response so we rely on the
@@ -235,7 +243,9 @@ class _TestRemoteTerminalBase:
         time.sleep(128)
 
         # Re-enable a good connection
-        docker_env.device.run("iptables -D OUTPUT 1")
+        # docker_env.device.run("iptables -D OUTPUT 1")
+        cmd="iptables -D FORWARD -i docker0 -s "+mender_client_ip+"/32 -d "+api_gateway_ip+"/32 -j DROP"
+        subprocess.run(cmd.split(" "))
         time.sleep(30)
 
         # mender-connect should have "healed" now and be able to start a new shell

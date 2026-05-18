@@ -229,8 +229,8 @@ class _TestRemoteTerminalBase:
         #     "iptables -A OUTPUT -j DROP --destination docker.mender.io"
         # )
         # here instead of that iptables drop on the _host_ ith -i docker0 or equivalent in the FORWARD chain
-        mender_client_ip=docker_env._docker_compose_cmd("docker compose ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-client")
-        api_gateway_ip=docker_env._docker_compose_cmd("docker compose ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-api-gateway")
+        mender_client_ip=docker_env._docker_compose_cmd("ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-client")
+        api_gateway_ip=docker_env._docker_compose_cmd("ps % --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'"%"mender-api-gateway")
         cmd="iptables -I FORWARD -i docker0 -s "+mender_client_ip+"/32 -d "+api_gateway_ip+"/32 -j DROP"
         subprocess.run(cmd.split(" "))
         # docker_env._docker_compose_cmd("exec -d mender-client %s daemon" % connect_service_name)

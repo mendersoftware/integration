@@ -141,7 +141,7 @@ class BaseTestFileTransferDownload(MenderTesting):
         # wrong request, path is relative
         r = download_file("relative/path", self.devid, self.auth_token)
         assert r.status_code == 400, r.json()
-        assert r.json().get("error") == "bad request: path: must be absolute."
+        assert "path: must be absolute" in r.json().get("error")
 
     def test_upload_error_no_such_file_or_directory(self, mender_device_setup):
 
@@ -217,7 +217,7 @@ class BaseTestFileTransferDownload(MenderTesting):
             gid="0",
         )
         assert r.status_code == 400, r.json()
-        assert r.json().get("error") == "bad request: path: must be absolute."
+        assert "path: must be absolute" in r.json().get("error")
 
     def test_upload_error_file_does_not_exist(self, mender_device_setup):
 

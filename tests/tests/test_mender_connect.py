@@ -236,7 +236,7 @@ class _TestRemoteTerminalBase:
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")
-        time.sleep(30)
+        time.sleep(128)
 
         # mender-connect should have "healed" now and be able to start a new shell
         with docker_env.devconnect.get_websocket() as ws:

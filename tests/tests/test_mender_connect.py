@@ -16,6 +16,8 @@ import json
 import pytest
 import time
 import uuid
+import os.path
+import os
 
 from flaky import flaky
 
@@ -39,6 +41,12 @@ from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
 
 container_factory = factory.get_factory()
+
+def bp(index):
+    f="/tmp/bp"+str(index)
+    while not os.path.exists(f):
+        time.sleep(0.1)
+    os.remove(f)
 
 
 class _TestRemoteTerminalBase:

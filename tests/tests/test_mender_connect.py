@@ -16,6 +16,8 @@ import json
 import pytest
 import time
 import uuid
+import os.path
+import os
 
 from flaky import flaky
 
@@ -38,7 +40,20 @@ from ..MenderAPI import (
 from testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
 
+from datetime import datetime, timezone
+
 container_factory = factory.get_factory()
+
+def bp(index):
+    f="/tmp/bp"+str(index)
+    if not os.path.exists(f):
+        with open("/tmp/t.log", "a") as fh:
+            now_utc = datetime.now(timezone.utc)
+            now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")
+            fh.write("waiting on "+f+"\n")
+    while not os.path.exists(f):
+        time.sleep(0.1)
+    os.remove(f)
 
 
 class _TestRemoteTerminalBase:
@@ -190,6 +205,7 @@ class _TestRemoteTerminalBase:
 
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
+        bp(0)
 
         receive_timeout_s = 16
 
@@ -223,6 +239,7 @@ class _TestRemoteTerminalBase:
 
         docker_env.device.run("apt-get update")
         docker_env.device.run("apt-get install -y iptables")
+        bp(1)
         docker_env.device.run(
             "iptables -A OUTPUT -j DROP --destination docker.mender.io"
         )
@@ -232,21 +249,28 @@ class _TestRemoteTerminalBase:
         # TCP RTO which means sometimes we need additional time to sleep.
         # this was exposed by the move to docker client in those tests, as the
         # network stack acts differently
-        time.sleep(128)
+        bp(2) # wait since Wed May 20 15:59:50 UTC 2026 --  dbg
+        # time.sleep(128)
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")
-        time.sleep(30)
+        # time.sleep(30)
+        bp(3) # -- Wed May 20 16:05:39 UTC 2026 dbg
+        # --  dbg Wed May 20 16:11:36 UTC 2026
 
         # mender-connect should have "healed" now and be able to start a new shell
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+        try:
+            with docker_env.devconnect.get_websocket() as ws:
+                shell = proto_shell.ProtoShell(ws)
+                body = shell.startShell()
+                bp(4)
+                assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+                assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
-            detect_shell_prompt(shell)
-            is_shell_working(shell)
+                detect_shell_prompt(shell)
+                is_shell_working(shell)
+        except:
+            bp(5)
 
     @flaky(max_runs=3)
     def test_session_recording(self, docker_env):

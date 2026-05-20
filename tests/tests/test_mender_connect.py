@@ -232,7 +232,7 @@ class _TestRemoteTerminalBase:
 
         docker_env.device.run("apt-get update")
         docker_env.device.run("apt-get install -y iptables")
-        bp(0)
+        bp(1)
         docker_env.device.run(
             "iptables -A OUTPUT -j DROP --destination docker.mender.io"
         )
@@ -242,27 +242,27 @@ class _TestRemoteTerminalBase:
         # TCP RTO which means sometimes we need additional time to sleep.
         # this was exposed by the move to docker client in those tests, as the
         # network stack acts differently
-        bp(0)
+        bp(2)
         time.sleep(128)
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")
         time.sleep(30)
-        bp(0)
+        bp(3)
 
         # mender-connect should have "healed" now and be able to start a new shell
         try:
             with docker_env.devconnect.get_websocket() as ws:
                 shell = proto_shell.ProtoShell(ws)
                 body = shell.startShell()
-                bp(0)
+                bp(4)
                 assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
                 assert body == proto_shell.MSG_BODY_SHELL_STARTED
 
                 detect_shell_prompt(shell)
                 is_shell_working(shell)
         except:
-            bp(0)
+            bp(5)
 
     @flaky(max_runs=3)
     def test_session_recording(self, docker_env):

@@ -44,6 +44,9 @@ container_factory = factory.get_factory()
 
 def bp(index):
     f="/tmp/bp"+str(index)
+    if not os.path.exists(f):
+        with open("/tmp/t.log", "a") as fh:
+            fh.write("waiting on "+f)
     while not os.path.exists(f):
         time.sleep(0.1)
     os.remove(f)

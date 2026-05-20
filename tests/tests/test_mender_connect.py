@@ -46,7 +46,7 @@ def bp(index):
     f="/tmp/bp"+str(index)
     if not os.path.exists(f):
         with open("/tmp/t.log", "a") as fh:
-            fh.write("waiting on "+f)
+            fh.write("waiting on "+f+"\n")
     while not os.path.exists(f):
         time.sleep(0.1)
     os.remove(f)

@@ -49,8 +49,7 @@ def bp(index):
     if not os.path.exists(f):
         with open("/tmp/t.log", "a") as fh:
             now_utc = datetime.now(timezone.utc)
-            now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")
-            fh.write("waiting on "+f+"\n")
+            fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" waiting on "+f+"\n")
     while not os.path.exists(f):
         time.sleep(0.1)
     os.remove(f)

@@ -304,17 +304,10 @@ class TestMonitorClientEnterprise:
 
         devauth_tenant.accept_devices(1)
 
-        devices = list(
-            set(
-                [
-                    device["id"]
-                    for device in devauth_tenant.get_devices_status("accepted")
-                ]
-            )
-        )
+        devices = devauth_tenant.get_devices_status("accepted")
         assert 1 == len(devices)
 
-        devid = devices[0]
+        devid = devices[0]["id"]
         authtoken = auth.get_auth_token()
 
         logger.info("%s: env ready.", inspect.stack()[1].function)
@@ -338,6 +331,22 @@ class TestMonitorClientEnterprise:
             ):
                 alerts = inventory_item["value"]
         return alerts, alert_count
+
+    def poll_for_alert_state(
+        self, inventory, devid, expected_alerts, expected_count, timeout=60
+    ):
+        alerts = alert_count = None
+        for _ in range(timeout // 5):
+            alerts, alert_count = self.get_alerts_and_alert_count_for_device(
+                inventory, devid
+            )
+            if alerts == expected_alerts and alert_count == expected_count:
+                return alerts, alert_count
+            time.sleep(5)
+        assert False, (
+            f"timed out waiting for alerts={expected_alerts} count={expected_count}, "
+            f"got alerts={alerts} count={alert_count}"
+        )
 
     def test_monitorclient_alert_email(self, monitor_commercial_setup_no_client):
         """Tests the monitor client email alerting"""
@@ -363,7 +372,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (True, 1) == (alerts, alert_count)
+        assert alerts, f"expected alert=True, got {alerts}"
+        assert alert_count == 1, f"expected alert_count=1, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -389,7 +399,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (False, 0) == (alerts, alert_count)
+        assert alerts is False, f"expected alert=False, got {alerts}"
+        assert alert_count == 0, f"expected alert_count=0, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 2
@@ -613,7 +624,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (True, 1) == (alerts, alert_count)
+        assert alerts, f"expected alert=True, got {alerts}"
+        assert alert_count == 1, f"expected alert_count=1, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -643,7 +655,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (False, 0) == (alerts, alert_count)
+        assert alerts is False, f"expected alert=False, got {alerts}"
+        assert alert_count == 0, f"expected alert_count=0, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 2
@@ -756,7 +769,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (True, 1) == (alerts, alert_count)
+        assert alerts, f"expected alert=True, got {alerts}"
+        assert alert_count == 1, f"expected alert_count=1, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -783,7 +797,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (False, 0) == (alerts, alert_count)
+        assert alerts is False, f"expected alert=False, got {alerts}"
+        assert alert_count == 0, f"expected alert_count=0, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 2
@@ -1114,7 +1129,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (True, 2) == (alerts, alert_count)
+        assert alerts, f"expected alert=True, got {alerts}"
+        assert alert_count == 2, f"expected alert_count=2, got {alert_count}"
 
         for service_name in ["crond", "mender-connect"]:
             mender_device.run("systemctl start %s" % service_name)
@@ -1126,7 +1142,8 @@ class TestMonitorClientEnterprise:
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (False, 0) == (alerts, alert_count)
+        assert alerts is False, f"expected alert=False, got {alerts}"
+        assert alert_count == 0, f"expected alert_count=0, got {alert_count}"
 
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email_n(
@@ -1298,12 +1315,7 @@ class TestMonitorClientEnterprise:
             log_pattern,
             use_ctl=True,
         )
-        time.sleep(2 * wait_for_alert_interval_s)
-
-        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
-            inventory, devid
-        )
-        assert (True, 1) == (alerts, alert_count)
+        self.poll_for_alert_state(inventory, devid, True, 1)
 
         _, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1362,12 +1374,7 @@ class TestMonitorClientEnterprise:
             "echo -ne 'a new session opened for user root now\nsome line 5\n' >> "
             + log_file
         )
-        time.sleep(2 * wait_for_alert_interval_s)
-
-        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
-            inventory, devid
-        )
-        assert (True, 1) == (alerts, alert_count)
+        self.poll_for_alert_state(inventory, devid, True, 1)
 
         _, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1863,15 +1870,8 @@ done
         """Tests the monitor client docker events subsystem"""
         user_name, devid, mender_device, inventory = setup_dockerevents
         mender_device.run("touch /tmp/docker_restart")
-        logger.info(
-            "restarted %s, sleeping %ds." % (container_name, wait_for_alert_interval_s)
-        )
-        time.sleep(2 * wait_for_alert_interval_s)
-
-        alerts, alert_count = self.get_alerts_and_alert_count_for_device(
-            inventory, devid
-        )
-        assert (True, 1) == (alerts, alert_count)
+        logger.info("restarted %s, polling for alert." % container_name)
+        alerts, alert_count = self.poll_for_alert_state(inventory, devid, True, 1)
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1899,7 +1899,8 @@ done
         alerts, alert_count = self.get_alerts_and_alert_count_for_device(
             inventory, devid
         )
-        assert (False, 0) == (alerts, alert_count)
+        assert alerts is False, f"expected alert=False, got {alerts}"
+        assert alert_count == 0, f"expected alert_count=0, got {alert_count}"
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1

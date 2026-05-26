@@ -340,13 +340,7 @@ activate = 1
                 artifact = make_script_artifact(
                     "mtls-artifact", conftest.machine_name, tf.name
                 )
-
-                # prepare a test artifact
-                with tempfile.NamedTemporaryFile() as tf:
-                    artifact = make_script_artifact(
-                        "mtls-artifact", conftest.machine_name, tf.name
-                    )
-                    deploy.upload_image(artifact)
+                deploy.upload_image(artifact)
 
                 for device in devauth.get_devices_status("pending"):
                     devauth.decommission(device["id"])
@@ -355,26 +349,17 @@ activate = 1
                 while i > 0:
                     i = i - 1
                     time.sleep(1)
-                    devices = list(
-                        set(
-                            [
-                                device["id"]
-                                for device in devauth.get_devices_status("accepted")
-                            ]
-                        )
-                    )
+                    devices = [
+                        device["id"]
+                        for device in devauth.get_devices_status("accepted")
+                    ]
                     if len(devices) > 0:
                         break
 
                 # deploy the update to the device
-                devices = list(
-                    set(
-                        [
-                            device["id"]
-                            for device in devauth.get_devices_status("accepted")
-                        ]
-                    )
-                )
+                devices = [
+                    device["id"] for device in devauth.get_devices_status("accepted")
+                ]
                 assert len(devices) == 1
                 deployment_id = deploy.trigger_deployment(
                     "mtls-test",

@@ -29,10 +29,8 @@ container_factory = factory.get_factory()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client(request):
+def standard_setup_one_client():
     env = container_factory.get_standard_setup(num_clients=1)
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -41,14 +39,13 @@ def standard_setup_one_client(request):
     reset_mender_api(env)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_extended(request):
+def standard_setup_extended():
     env = container_factory.get_extended_setup(num_clients=1)
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -58,24 +55,21 @@ def standard_setup_extended(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def monitor_commercial_setup_no_client(request):
+def monitor_commercial_setup_no_client():
     env = container_factory.get_monitor_commercial_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
+    yield env
+    env.teardown()
 
-    return env
 
-
-def standard_setup_one_client_bootstrapped_impl(request):
+def standard_setup_one_client_bootstrapped_impl():
     env = container_factory.get_standard_setup(num_clients=1)
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -85,24 +79,23 @@ def standard_setup_one_client_bootstrapped_impl(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_one_client_bootstrapped(request):
-    return standard_setup_one_client_bootstrapped_impl(request)
+def standard_setup_one_client_bootstrapped():
+    yield from standard_setup_one_client_bootstrapped_impl()
 
 
 @pytest.fixture(scope="class")
-def class_persistent_standard_setup_one_client_bootstrapped(request):
-    return standard_setup_one_client_bootstrapped_impl(request)
+def class_persistent_standard_setup_one_client_bootstrapped():
+    yield from standard_setup_one_client_bootstrapped_impl()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_one_rofs_client_bootstrapped(request):
+def standard_setup_one_rofs_client_bootstrapped():
     env = container_factory.get_rofs_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -112,14 +105,13 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_one_docker_client_bootstrapped(request):
+def standard_setup_one_docker_client_bootstrapped():
     env = container_factory.get_docker_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -129,14 +121,13 @@ def standard_setup_one_docker_client_bootstrapped(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_two_clients_bootstrapped(request):
+def standard_setup_two_clients_bootstrapped():
     env = container_factory.get_standard_setup(num_clients=2)
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device_group = MenderDeviceGroup(env.get_mender_clients())
@@ -146,22 +137,21 @@ def standard_setup_two_clients_bootstrapped(request):
     devauth.accept_devices(2)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_without_client(request):
+def standard_setup_without_client():
     env = container_factory.get_standard_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
-
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def setup_with_legacy_v1_client(request):
+def setup_with_legacy_v1_client():
     # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
     # it when running other platforms.
     if conftest.machine_name != "qemux86-64":
@@ -170,8 +160,6 @@ def setup_with_legacy_v1_client(request):
         )
 
     env = container_factory.get_legacy_v1_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -181,14 +169,13 @@ def setup_with_legacy_v1_client(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def setup_with_legacy_v3_client(request):
+def setup_with_legacy_v3_client():
     env = container_factory.get_legacy_v3_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -198,14 +185,13 @@ def setup_with_legacy_v3_client(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_with_signed_artifact_client(request):
+def standard_setup_with_signed_artifact_client():
     env = container_factory.get_signed_artifact_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -216,14 +202,13 @@ def standard_setup_with_signed_artifact_client(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def standard_setup_with_short_lived_token(request):
+def standard_setup_with_short_lived_token():
     env = container_factory.get_short_lived_token_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
 
     env.device = MenderDevice(env.get_mender_clients()[0])
@@ -234,14 +219,13 @@ def standard_setup_with_short_lived_token(request):
     devauth.accept_devices(1)
 
     env.auth = auth
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def setup_failover(request):
+def setup_failover():
     env = container_factory.get_failover_server_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -251,51 +235,41 @@ def setup_failover(request):
     auth.reset_auth_token()
     devauth.accept_devices(1)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def running_custom_production_setup(request):
+def running_custom_production_setup():
     conftest.production_setup_lock.acquire()
-
     env = container_factory.get_custom_setup()
-
-    def fin():
-        env.teardown()
-        conftest.production_setup_lock.release()
-
-    request.addfinalizer(fin)
-
     reset_mender_api(env)
+    yield env
+    env.teardown()
+    conftest.production_setup_lock.release()
 
-    return env
 
-
-def enterprise_no_client_impl(request):
+def enterprise_no_client_impl():
     env = container_factory.get_enterprise_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
-
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_no_client(request):
-    return enterprise_no_client_impl(request)
+def enterprise_no_client():
+    yield from enterprise_no_client_impl()
 
 
 @pytest.fixture(scope="class")
-def enterprise_no_client_class(request):
-    return enterprise_no_client_impl(request)
+def enterprise_no_client_class():
+    yield from enterprise_no_client_impl()
 
 
 @pytest.fixture(scope="function")
-def enterprise_one_client(request):
+def enterprise_one_client():
     env = container_factory.get_enterprise_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -303,13 +277,12 @@ def enterprise_one_client(request):
     new_tenant_client(env, "mender-client", tenant["tenant_token"])
     env.device_group.ssh_is_opened()
 
-    return env
+    yield env
+    env.teardown()
 
 
-def enterprise_one_client_bootstrapped_impl(request):
+def enterprise_one_client_bootstrapped_impl():
     env = container_factory.get_enterprise_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -322,24 +295,23 @@ def enterprise_one_client_bootstrapped_impl(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_one_client_bootstrapped(request):
-    return enterprise_one_client_bootstrapped_impl(request)
+def enterprise_one_client_bootstrapped():
+    yield from enterprise_one_client_bootstrapped_impl()
 
 
 @pytest.fixture(scope="class")
-def class_persistent_enterprise_one_client_bootstrapped(request):
-    return enterprise_one_client_bootstrapped_impl(request)
+def class_persistent_enterprise_one_client_bootstrapped():
+    yield from enterprise_one_client_bootstrapped_impl()
 
 
 @pytest.fixture(scope="function")
-def enterprise_two_clients_bootstrapped(request):
+def enterprise_two_clients_bootstrapped():
     env = container_factory.get_enterprise_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -353,14 +325,13 @@ def enterprise_two_clients_bootstrapped(request):
     devices = devauth_tenant.get_devices_status("accepted", expected_devices=2)
     assert 2 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_one_docker_client_bootstrapped(request):
+def enterprise_one_docker_client_bootstrapped():
     env = container_factory.get_enterprise_docker_client_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -373,14 +344,13 @@ def enterprise_one_docker_client_bootstrapped(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_one_rofs_client_bootstrapped(request):
+def enterprise_one_rofs_client_bootstrapped():
     env = container_factory.get_enterprise_rofs_client_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -393,14 +363,13 @@ def enterprise_one_rofs_client_bootstrapped(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_one_rofs_commercial_client_bootstrapped(request):
+def enterprise_one_rofs_commercial_client_bootstrapped():
     env = container_factory.get_enterprise_rofs_commercial_client_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -413,7 +382,8 @@ def enterprise_one_rofs_commercial_client_bootstrapped(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 def create_tenant(env):
@@ -439,10 +409,8 @@ def create_tenant(env):
 
 
 @pytest.fixture(scope="function")
-def enterprise_with_signed_artifact_client(request):
+def enterprise_with_signed_artifact_client():
     env = container_factory.get_enterprise_signed_artifact_client_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -455,14 +423,13 @@ def enterprise_with_signed_artifact_client(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_with_short_lived_token(request):
+def enterprise_with_short_lived_token():
     env = container_factory.get_enterprise_short_lived_token_setup()
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -475,14 +442,13 @@ def enterprise_with_short_lived_token(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_with_legacy_v1_client(request):
+def enterprise_with_legacy_v1_client():
     env = container_factory.get_enterprise_legacy_v1_client_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -495,14 +461,13 @@ def enterprise_with_legacy_v1_client(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()
 
 
 @pytest.fixture(scope="function")
-def enterprise_with_legacy_v3_client(request):
+def enterprise_with_legacy_v3_client():
     env = container_factory.get_enterprise_legacy_v3_client_setup(num_clients=0)
-    request.addfinalizer(env.teardown)
-
     env.setup()
     reset_mender_api(env)
 
@@ -515,4 +480,5 @@ def enterprise_with_legacy_v3_client(request):
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
 
-    return env
+    yield env
+    env.teardown()

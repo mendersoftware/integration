@@ -35,9 +35,8 @@ container_factory = factory.get_factory()
 
 
 @pytest.fixture(scope="function")
-def setup_ent_mtls(request):
+def setup_ent_mtls():
     env = container_factory.get_mtls_setup()
-    request.addfinalizer(env.teardown)
     env.setup()
 
     mtls_username = "mtls@mender.io"
@@ -67,7 +66,8 @@ def setup_ent_mtls(request):
     env.device = MenderDevice(env.get_mender_clients()[0])
     env.device.ssh_is_opened()
 
-    return env
+    yield env
+    env.teardown()
 
 
 def make_script_artifact(artifact_name, device_type, output_path):

@@ -43,7 +43,6 @@ class DockerComposeBaseNamespace(DockerNamespace):
         return self.BASE_FILES + self.extra_files
 
     def teardown(self):
-        self._debug_log_containers_logs()
         self._stop_docker_compose()
 
     def get_mender_clients(self, network="mender", client_service_name="mender-client"):

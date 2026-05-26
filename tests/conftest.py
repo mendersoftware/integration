@@ -292,6 +292,7 @@ def pytest_exception_interact(node, call, report):
             ]
         if len(env_candidates) > 0:
             env = env_candidates[0]
+            env._debug_log_containers_logs()
             dev_candidates = [
                 getattr(env, attr)
                 for attr in dir(env)

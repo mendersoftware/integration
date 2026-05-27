@@ -1593,30 +1593,41 @@ class TestMonitorClientEnterprise:
         )
         mender_device.run("systemctl start mender-monitor")
 
-        # T8: mender-monitor started
-        time.sleep(alert_resend_interval_s)
-        time.sleep(alert_resend_interval_s)
+        def count_alert_keys():
+            output = mender_device.run(
+                "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
+                + "keys_nolock | wc -l;'"
+            )
+            return int(output.strip())
 
-        # Shift by 1s to avoid race condition when checking
-        time.sleep(1)
+        def wait_for_alert_count(expected, max_wait_s):
+            # mender-monitor purges expired records on a periodic loop
+            # (DEFAULT_ALERT_STORE_RESEND_INTERVAL_S) whose restart latency
+            # varies, so poll for the expected count instead of reading once at a
+            # fixed offset, which races the purge cycle. The store drains
+            # monotonically (4 -> 2 -> 0), so 1s polling reliably observes each
+            # plateau. (QA-1527)
+            deadline = time.monotonic() + max_wait_s
+            count = None
+            while time.monotonic() < deadline:
+                count = count_alert_keys()
+                logger.info(
+                    "test_monitorclient_remove_old_alerts: %d keys in store" % count
+                )
+                if count == expected:
+                    return
+                time.sleep(1)
+            assert count == expected, "expected %d alert keys in store, got %s" % (
+                expected,
+                count,
+            )
 
-        # T16+1: key1, key2 expired
-        output = mender_device.run(
-            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
-            + "keys_nolock | wc -l;'"
-        )
-        logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
-        assert output == "2\n"
+        # key1, key2 expire at alert_max_age, ~8s before key3, key4 (inserted 8s
+        # later), leaving a wide window where exactly 2 keys remain.
+        wait_for_alert_count(2, max_wait_s=2 * alert_max_age)
 
-        time.sleep(alert_resend_interval_s)
-        time.sleep(alert_resend_interval_s)
-        # T24+1: key3, key4 expired
-        output = mender_device.run(
-            "bash -c 'cd /usr/share/mender-monitor && . lib/fixlenstore-lib.sh;"
-            + "keys_nolock | wc -l;'"
-        )
-        logger.info("test_monitorclient_remove_old_alerts got %s keys" % output)
-        assert output == "0\n"
+        # key3, key4 expire ~8s after key1, key2, draining the store completely.
+        wait_for_alert_count(0, max_wait_s=2 * alert_max_age)
 
         mender_device.run(
             "mv /usr/share/mender-monitor/config/config.sh.backup /usr/share/mender-monitor/config/config.sh"

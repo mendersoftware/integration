@@ -115,8 +115,7 @@ def standard_setup_one_rofs_client_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def standard_setup_one_docker_client_bootstrapped(request):
+def standard_setup_one_docker_client_bootstrapped_impl(request):
     env = container_factory.get_docker_client_setup()
     request.addfinalizer(env.teardown)
 
@@ -130,6 +129,16 @@ def standard_setup_one_docker_client_bootstrapped(request):
 
     env.auth = auth
     return env
+
+
+@pytest.fixture(scope="function")
+def standard_setup_one_docker_client_bootstrapped(request):
+    return standard_setup_one_docker_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_standard_setup_one_docker_client_bootstrapped(request):
+    return standard_setup_one_docker_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")
@@ -157,30 +166,6 @@ def standard_setup_without_client(request):
     env.setup()
     reset_mender_api(env)
 
-    return env
-
-
-@pytest.fixture(scope="function")
-def setup_with_legacy_v1_client(request):
-    # The legacy 1.7.0 client was only built for qemux86-64, so skip tests using
-    # it when running other platforms.
-    if conftest.machine_name != "qemux86-64":
-        pytest.skip(
-            "Test only works with qemux86-64, and this is %s" % conftest.machine_name
-        )
-
-    env = container_factory.get_legacy_v1_client_setup()
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-
-    env.device = MenderDevice(env.get_mender_clients()[0])
-    env.device.ssh_is_opened()
-
-    reset_mender_api(env)
-    devauth.accept_devices(1)
-
-    env.auth = auth
     return env
 
 
@@ -356,8 +341,7 @@ def enterprise_two_clients_bootstrapped(request):
     return env
 
 
-@pytest.fixture(scope="function")
-def enterprise_one_docker_client_bootstrapped(request):
+def enterprise_one_docker_client_bootstrapped_impl(request):
     env = container_factory.get_enterprise_docker_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
@@ -374,6 +358,16 @@ def enterprise_one_docker_client_bootstrapped(request):
     assert 1 == len(devices)
 
     return env
+
+
+@pytest.fixture(scope="function")
+def enterprise_one_docker_client_bootstrapped(request):
+    return enterprise_one_docker_client_bootstrapped_impl(request)
+
+
+@pytest.fixture(scope="class")
+def class_persistent_enterprise_one_docker_client_bootstrapped(request):
+    return enterprise_one_docker_client_bootstrapped_impl(request)
 
 
 @pytest.fixture(scope="function")
@@ -461,26 +455,6 @@ def enterprise_with_signed_artifact_client(request):
 @pytest.fixture(scope="function")
 def enterprise_with_short_lived_token(request):
     env = container_factory.get_enterprise_short_lived_token_setup()
-    request.addfinalizer(env.teardown)
-
-    env.setup()
-    reset_mender_api(env)
-
-    tenant = create_tenant(env)
-    new_tenant_client(env, "mender-client", tenant["tenant_token"])
-    env.device_group.ssh_is_opened()
-
-    devauth_tenant = DeviceAuthV2(env.auth)
-    devauth_tenant.accept_devices(1)
-    devices = devauth_tenant.get_devices_status("accepted")
-    assert 1 == len(devices)
-
-    return env
-
-
-@pytest.fixture(scope="function")
-def enterprise_with_legacy_v1_client(request):
-    env = container_factory.get_enterprise_legacy_v1_client_setup(num_clients=0)
     request.addfinalizer(env.teardown)
 
     env.setup()

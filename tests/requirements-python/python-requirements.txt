@@ -69,6 +69,8 @@ pytest-timeout==2.4.0
     # via -r python-requirements.in
 pytest-xdist==3.8.0
     # via -r python-requirements.in
+pytest-order==1.1.0
+    # via -r python-requirements.in
 redo==3.0.0
     # via -r python-requirements.in
 requests==2.33.1

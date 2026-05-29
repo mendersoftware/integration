@@ -145,6 +145,7 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
 fi
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
+    --dist=loadfile \
     --verbose \
     --junitxml=results.xml \
     $HTML_REPORT \

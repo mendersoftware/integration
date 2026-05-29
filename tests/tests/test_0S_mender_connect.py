@@ -377,6 +377,26 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
             assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
 
 
+class TestZRemoteTerminalOpenSource(
+    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
+):
+    @pytest.fixture(scope="function")
+    def docker_env(self, standard_setup_one_docker_client_bootstrapped):
+        env = standard_setup_one_docker_client_bootstrapped
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
+        yield env
+
+    @pytest.fixture(scope="function")
+    def docker_env_flaky_test(
+        self, request, standard_setup_one_docker_client_bootstrapped
+    ):
+        env = standard_setup_one_docker_client_bootstrapped
+        auth = Authentication()
+        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
+        yield env
+
+
 def connected_device(env):
     uuidv4 = str(uuid.uuid4())
     tname = "test.mender.io-{}".format(uuidv4)
@@ -410,36 +430,3 @@ def connected_device(env):
     devconn = DeviceConnect(auth, devauth)
 
     return device, devconn
-
-
-class TestRemoteTerminalEnterprise(
-    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
-):
-    @pytest.fixture(scope="function")
-    def docker_env(self, enterprise_one_docker_client_bootstrapped):
-        """Class-level customized docker_env (MT, 1 device, "enterprise" plan).
-
-        The min. plan for most RT features is 'os', but we're also
-        testing session logging - which is 'enterprise', so we need highest
-        common denominator.
-        """
-
-        env = enterprise_one_docker_client_bootstrapped
-
-        device, devconn = connected_device(env)
-
-        env.device = device
-        env.devconnect = devconn
-
-        yield env
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(self, enterprise_one_docker_client_bootstrapped):
-        env = enterprise_one_docker_client_bootstrapped
-
-        device, devconn = connected_device(env)
-
-        env.device = device
-        env.devconnect = devconn
-
-        yield env

@@ -188,6 +188,7 @@ class _TestRemoteTerminalBase:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
+    @pytest.mark.order(-1)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
@@ -375,26 +376,6 @@ class _TestRemoteTerminalBaseBogusProtoMessage:
             assert rsp.typ == "error"
             body = rsp.body
             assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
-
-
-class TestRemoteTerminalOpenSource(
-    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
-):
-    @pytest.fixture(scope="function")
-    def docker_env(self, standard_setup_one_docker_client_bootstrapped):
-        env = standard_setup_one_docker_client_bootstrapped
-        auth = Authentication()
-        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
-        yield env
-
-    @pytest.fixture(scope="function")
-    def docker_env_flaky_test(
-        self, request, standard_setup_one_docker_client_bootstrapped
-    ):
-        env = standard_setup_one_docker_client_bootstrapped
-        auth = Authentication()
-        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
-        yield env
 
 
 def connected_device(env):

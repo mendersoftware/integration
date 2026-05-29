@@ -49,9 +49,11 @@ test:integration:$CI_NODE_INDEX:
       fi
     # Increase system limits to make sure the tests are not limited while
     # running with high parallelism on a single VM
+    - sysctl net.ipv4.tcp_retries1
+    - sysctl net.ipv4.tcp_retries2
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
-    - sysctl -w net.ipv4.tcp_retries2=5
+    - sysctl -w net.ipv4.tcp_retries2=8
     - ulimit -n 524288
 
   script:

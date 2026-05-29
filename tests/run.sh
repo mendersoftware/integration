@@ -143,7 +143,6 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
   fi
   export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
-sysctl -w net.ipv4.tcp_retries2=5
 python3 -m pytest \
     $EXTRA_TEST_ARGS \
     --dist=loadfile \

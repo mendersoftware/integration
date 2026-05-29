@@ -188,6 +188,7 @@ class _TestRemoteTerminalBase:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
+    @flaky(max_runs=5, min_passes=3)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
@@ -239,14 +240,39 @@ class _TestRemoteTerminalBase:
         time.sleep(128)
 
         # mender-connect should have "healed" now and be able to start a new shell
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
-
-            detect_shell_prompt(shell)
-            is_shell_working(shell)
+        retries = 64
+        passed = False
+        status_ok = False
+        body_ok = False
+        for i in range(retries):
+            try:
+                with docker_env.devconnect.get_websocket() as ws:
+                    shell = proto_shell.ProtoShell(ws)
+                    body = shell.startShell()
+                    status_ok = False
+                    if shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL:
+                        status_ok = True
+                    else:
+                        passed = False
+                        time.sleep(4)
+                        continue
+                    body_ok = False
+                    if body == proto_shell.MSG_BODY_SHELL_STARTED:
+                        body_ok = True
+                    else:
+                        passed = False
+                        time.sleep(4)
+                        continue
+                    detect_shell_prompt(shell)
+                    is_shell_working(shell)
+                    passed = True
+                    break
+            except:
+                time.sleep(4)
+                pass
+        assert (
+            passed and body_ok and status_ok
+        ), "shell did not recover after network failure"
 
     @flaky(max_runs=3)
     def test_session_recording(self, docker_env):

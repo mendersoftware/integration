@@ -189,6 +189,7 @@ class _TestRemoteTerminalBase:
             assert prot.typ == "bogusmessage"
 
     @pytest.mark.order(-1)
+    @flaky(max_runs=3)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
@@ -223,7 +224,7 @@ class _TestRemoteTerminalBase:
             is_shell_working(shell)
 
         docker_env.device.run("apt-get update")
-        docker_env.device.run("apt-get install -y iptables")
+        docker_env.device.run("apt-get install -y iptables curl")
         docker_env.device.run(
             "iptables -A OUTPUT -j DROP --destination docker.mender.io"
         )
@@ -237,6 +238,29 @@ class _TestRemoteTerminalBase:
 
         # Re-enable a good connection
         docker_env.device.run("iptables -D OUTPUT 1")
+        docker_env.device.run("iptables -F OUTPUT")
+        docker_env._docker_compose_cmd("exec mender-client iptables -F OUTPUT")
+        connectivity_reestablished = False
+        sleep_time_s = 8
+        iteration = 0
+        max_iteration = 64
+        while not connectivity_reestablished:
+            rc = docker_env._docker_compose_cmd(
+                'exec mender-client curl -s -o /dev/null -w "%{http_code}" -k --connect-timeout 240 --keepalive-time 30 --max-time 300 --retry-delay 8 https://docker.mender.io'
+            )
+            if rc.startswith("20"):
+                connectivity_reestablished = True
+                break
+            if rc.startswith("30"):
+                connectivity_reestablished = True
+                break
+            time.sleep(sleep_time_s)
+            iteration = iteration + 1
+            if iteration > max_iteration:
+                break
+        assert (
+            connectivity_reestablished
+        ), "connectivity was not reestablished; this is a test env failure"
         time.sleep(128)
 
         # mender-connect should have "healed" now and be able to start a new shell

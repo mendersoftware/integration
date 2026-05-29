@@ -188,6 +188,66 @@ class _TestRemoteTerminalBase:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
+    def test_in_poor_network_environment(self, docker_env):
+        self.assert_env(docker_env)
+
+        receive_timeout_s = 16
+
+        def is_shell_working(shell):
+            # Test if a simple command works.
+            shell.sendInput("ls /\n".encode())
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            output = output.decode()
+            assert "usr" in output
+            assert "etc" in output
+
+        def detect_shell_prompt(shell):
+            # Drain any initial output from the prompt. It should end in either "# "
+            # (root) or "$ " (user).
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert output[-2:].decode() in [
+                "# ",
+                "$ ",
+            ], "Could not detect shell prompt."
+
+        with docker_env.devconnect.get_websocket() as ws:
+            shell = proto_shell.ProtoShell(ws)
+            body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+
+            detect_shell_prompt(shell)
+            is_shell_working(shell)
+
+        docker_env.device.run("apt-get update")
+        docker_env.device.run("apt-get install -y iptables")
+        docker_env.device.run(
+            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
+        )
+
+        # Plenty of time for the session to mess up
+        # see also QA-1591: the DROP will not cause ICMP response so we rely on the
+        # TCP RTO which means sometimes we need additional time to sleep.
+        # this was exposed by the move to docker client in those tests, as the
+        # network stack acts differently
+        time.sleep(128)
+
+        # Re-enable a good connection
+        docker_env.device.run("iptables -D OUTPUT 1")
+        time.sleep(128)
+
+        # mender-connect should have "healed" now and be able to start a new shell
+        with docker_env.devconnect.get_websocket() as ws:
+            shell = proto_shell.ProtoShell(ws)
+            body = shell.startShell()
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert body == proto_shell.MSG_BODY_SHELL_STARTED
+
+            detect_shell_prompt(shell)
+            is_shell_working(shell)
+
     @flaky(max_runs=3)
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)
@@ -403,63 +463,3 @@ class TestRemoteTerminalEnterprise(
         env.devconnect = devconn
 
         yield env
-
-    def test_in_poor_network_environment(self, docker_env):
-        self.assert_env(docker_env)
-
-        receive_timeout_s = 16
-
-        def is_shell_working(shell):
-            # Test if a simple command works.
-            shell.sendInput("ls /\n".encode())
-            output = shell.recvOutput(receive_timeout_s)
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            output = output.decode()
-            assert "usr" in output
-            assert "etc" in output
-
-        def detect_shell_prompt(shell):
-            # Drain any initial output from the prompt. It should end in either "# "
-            # (root) or "$ " (user).
-            output = shell.recvOutput(receive_timeout_s)
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert output[-2:].decode() in [
-                "# ",
-                "$ ",
-            ], "Could not detect shell prompt."
-
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
-
-            detect_shell_prompt(shell)
-            is_shell_working(shell)
-
-        docker_env.device.run("apt-get update")
-        docker_env.device.run("apt-get install -y iptables")
-        docker_env.device.run(
-            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
-        )
-
-        # Plenty of time for the session to mess up
-        # see also QA-1591: the DROP will not cause ICMP response so we rely on the
-        # TCP RTO which means sometimes we need additional time to sleep.
-        # this was exposed by the move to docker client in those tests, as the
-        # network stack acts differently
-        time.sleep(128)
-
-        # Re-enable a good connection
-        docker_env.device.run("iptables -D OUTPUT 1")
-        time.sleep(128)
-
-        # mender-connect should have "healed" now and be able to start a new shell
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
-
-            detect_shell_prompt(shell)
-            is_shell_working(shell)

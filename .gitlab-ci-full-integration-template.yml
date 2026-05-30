@@ -51,7 +51,8 @@ test:integration:$CI_NODE_INDEX:
     # running with high parallelism on a single VM
     - sysctl -w fs.inotify.max_user_instances=1024
     - sysctl -w fs.file-max=600000
-    - ulimit -n 524288
+    - sysctl -w net.ipv4.tcp_retries2=8
+    - ulimit -a unlimited
 
   script:
     - cd tests

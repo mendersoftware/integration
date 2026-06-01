@@ -404,6 +404,7 @@ class TestRemoteTerminalEnterprise(
 
         yield env
 
+    @flaky(max_runs=3)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 

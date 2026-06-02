@@ -1,4 +1,4 @@
-cryptography==47.0.0
+cryptography==48.0.0
 docker==7.1.0
 filelock==3.29.0
 msgpack==1.1.2
@@ -10,9 +10,9 @@ pytest-metadata==3.1.1
 pytest-timeout==2.4.0
 pytest-xdist==3.8.0
 redo==3.0.0
-requests==2.33.1
-urllib3==2.6.3
+requests==2.34.2
+urllib3==2.7.0
 websockets==16.0
 flaky==3.8.1
-stripe==15.1.0
+stripe==15.2.0
 aiosmtpd==1.4.6

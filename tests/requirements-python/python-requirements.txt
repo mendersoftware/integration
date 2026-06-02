@@ -16,7 +16,7 @@ cffi==2.0.0
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==47.0.0
+cryptography==48.0.0
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
@@ -71,12 +71,12 @@ pytest-xdist==3.8.0
     # via -r python-requirements.in
 redo==3.0.0
     # via -r python-requirements.in
-requests==2.33.1
+requests==2.34.2
     # via
     #   -r python-requirements.in
     #   docker
     #   stripe
-stripe==15.1.0
+stripe==15.2.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
@@ -84,7 +84,7 @@ typing-extensions==4.15.0
     # via
     #   cryptography
     #   stripe
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r python-requirements.in
     #   docker

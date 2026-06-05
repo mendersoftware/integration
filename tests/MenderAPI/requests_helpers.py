@@ -17,8 +17,8 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
 
-# Will retry on 500 Server error
-def requests_retry(status_forcelist=[500, 502]):
+# Will retry on server errors (5xx)
+def requests_retry(status_forcelist=[500, 502, 503, 504]):
     s = requests.Session()
     retries = Retry(
         total=5,

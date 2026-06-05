@@ -30,19 +30,16 @@ container_factory = factory.get_factory()
 
 
 @pytest.fixture(scope="class")
-def initial_os_setup(request):
+def initial_os_setup():
     """Start the minimum OS setup, create some uses and devices.
     Return {"os_devs": [...], "os_users": [...]}
     """
     os_env = container_factory.get_standard_setup(num_clients=0)
-    # We will later re-create other environments, but this one (or any, really) will be
-    # enough for the teardown if we keep using the same namespace.
-    request.addfinalizer(os_env.teardown)
-
     os_env.setup()
     os_env.init_data = initialize_os_setup(os_env)
 
-    return os_env
+    yield os_env
+    os_env.teardown()
 
 
 @pytest.fixture(scope="class")

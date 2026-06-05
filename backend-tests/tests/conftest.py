@@ -24,7 +24,6 @@ from testutils.common import wait_until_healthy
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 from testutils.api.client import get_free_tcp_port, wait_for_port
 
-
 urllib3.disable_warnings()
 
 wait_until_healthy("backend-tests")

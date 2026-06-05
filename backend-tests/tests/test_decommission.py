@@ -220,7 +220,8 @@ class TestDeviceDecomissioning(TestDeviceDecomissioningBase):
 
 
 @pytest.mark.skipif(
-    useExistingTenant(), reason="not feasible to test with existing tenant",
+    useExistingTenant(),
+    reason="not feasible to test with existing tenant",
 )
 class TestDeviceDecomissioningEnterprise(TestDeviceDecomissioningBase):
     def test_ok(self, tenants_users_devices):

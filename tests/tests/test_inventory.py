@@ -65,7 +65,9 @@ class BaseTestInventory(MenderTesting):
             # deploy the artifact above
             device_ids = [device["id"] for device in devauth.get_devices()]
             deployment_id = deploy.trigger_deployment(
-                artifact_name, artifact_name=artifact_name, devices=device_ids,
+                artifact_name,
+                artifact_name=artifact_name,
+                devices=device_ids,
             )
 
             # now just wait for the update to succeed
@@ -261,7 +263,9 @@ class BaseTestInventory(MenderTesting):
             # deploy the artifact above
             device_ids = [device["id"] for device in devauth.get_devices()]
             deployment_id = deploy.trigger_deployment(
-                artifact_name, artifact_name=artifact_name, devices=device_ids,
+                artifact_name,
+                artifact_name=artifact_name,
+                devices=device_ids,
             )
 
             # now just wait for the update to succeed

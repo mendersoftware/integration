@@ -43,14 +43,19 @@ def compare_keys(a, b):
 
 def get_keypair_rsa(public_exponent=65537, key_size=1024):
     private_key = rsa.generate_private_key(
-        public_exponent=public_exponent, key_size=key_size, backend=default_backend(),
+        public_exponent=public_exponent,
+        key_size=key_size,
+        backend=default_backend(),
     )
 
     return keypair_pem(private_key, private_key.public_key())
 
 
 def get_keypair_ec(curve):
-    private_key = ec.generate_private_key(curve=curve, backend=default_backend(),)
+    private_key = ec.generate_private_key(
+        curve=curve,
+        backend=default_backend(),
+    )
     return keypair_pem(private_key, private_key.public_key())
 
 
@@ -83,14 +88,17 @@ def auth_req_sign_rsa(data, private_key):
 
 def auth_req_sign_ec(data, private_key):
     signature = private_key.sign(
-        data if isinstance(data, bytes) else data.encode(), ec.ECDSA(hashes.SHA256()),
+        data if isinstance(data, bytes) else data.encode(),
+        ec.ECDSA(hashes.SHA256()),
     )
     # signature is already an ANSI-X9-62 DER sequence (as bytes)
     return b64encode(signature).decode()
 
 
 def auth_req_sign_ed(data, private_key):
-    signature = private_key.sign(data if isinstance(data, bytes) else data.encode(),)
+    signature = private_key.sign(
+        data if isinstance(data, bytes) else data.encode(),
+    )
     return b64encode(signature).decode()
 
 

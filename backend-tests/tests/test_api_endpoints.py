@@ -51,14 +51,17 @@ def get_api_docs(repo):
             tag_match = re.match(r"^[0-9]+\.[0-9]+\.[0-9]+(?:-build[0-9]+)?", ref_name)
             if tag_match:
                 subprocess.check_output(
-                    ["git", "checkout", "-b", "prtest", ref_name], cwd=tmp_repo,
+                    ["git", "checkout", "-b", "prtest", ref_name],
+                    cwd=tmp_repo,
                 )
             else:
                 subprocess.check_output(
-                    ["git", "fetch", "origin", ref_name + ":prtest"], cwd=tmp_repo,
+                    ["git", "fetch", "origin", ref_name + ":prtest"],
+                    cwd=tmp_repo,
                 )
                 subprocess.check_output(
-                    ["git", "checkout", "prtest"], cwd=tmp_repo,
+                    ["git", "checkout", "prtest"],
+                    cwd=tmp_repo,
                 )
         files = glob.glob(os.path.join(tmp_repo, "docs", "*.yml"))
         for file in files:
@@ -171,7 +174,8 @@ class TestAPIEndpoints(BaseTestAPIEndpoints):
         reason="SSH_PRIVATE_KEY not provided",
     )
     @pytest.mark.parametrize(
-        "kind,returns_401,method,scheme,host,path", get_all_api_endpoints(REPOS),
+        "kind,returns_401,method,scheme,host,path",
+        get_all_api_endpoints(REPOS),
     )
     def test_api_endpoints(
         self, kind, returns_401, method, scheme, host, path, get_endpoint_url
@@ -201,7 +205,8 @@ class TestAPIEndpointsEnterprise(BaseTestAPIEndpoints):
         reason="SSH_PRIVATE_KEY not provided",
     )
     @pytest.mark.parametrize(
-        "kind,returns_401,method,scheme,host,path", get_all_api_endpoints(REPOS),
+        "kind,returns_401,method,scheme,host,path",
+        get_all_api_endpoints(REPOS),
     )
     def test_api_endpoints(
         self, kind, returns_401, method, scheme, host, path, get_endpoint_url

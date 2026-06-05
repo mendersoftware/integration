@@ -33,7 +33,11 @@ class _TestWorkflowsBase:
         r = (
             self.workflows_workflow.with_header("Content-Type", "application/json")
             .with_header("X-Workflows-Min-Version", version)
-            .call("POST", "/" + name, req,)
+            .call(
+                "POST",
+                "/" + name,
+                req,
+            )
         )
         return r
 

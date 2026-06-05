@@ -69,7 +69,11 @@ A total of 2864 lines added, 1149 removed (delta 1715)
     # vary with updating the gitdm module.
     try:
         updated_rendered_output = subprocess.check_output(
-            ["./extra/statistics-generator", "--repo", "2.5.0..2.6.0",]
+            [
+                "./extra/statistics-generator",
+                "--repo",
+                "2.5.0..2.6.0",
+            ]
         )
         assert (
             updated_rendered_output.decode("utf-8") == prerendered_output

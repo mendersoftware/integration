@@ -42,7 +42,7 @@ class KubernetesNamespace(DockerComposeBaseNamespace):
         pass
 
     def execute(self, pod_id: str, cmd: List[str]) -> str:
-        """Perform kubectl exec command on given pod. """
+        """Perform kubectl exec command on given pod."""
         ws_client = stream(
             self.v1.connect_get_namespaced_pod_exec,
             pod_id,

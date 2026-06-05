@@ -434,7 +434,10 @@ class TestMonitorClientEnterprise:
 
         service_name = "mylog"
         prepare_log_monitoring(
-            mender_device, service_name, log_file, log_pattern,
+            mender_device,
+            service_name,
+            log_file,
+            log_pattern,
         )
         time.sleep(2 * wait_for_alert_interval_s)
         mender_device.run("echo 'some line 1' >> " + log_file)
@@ -734,7 +737,9 @@ class TestMonitorClientEnterprise:
 
         time.sleep(2 * wait_for_alert_interval_s)
         mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, messages_count_flapping + 1,
+            monitor_commercial_setup_no_client,
+            user_name,
+            messages_count_flapping + 1,
         )
         assert messages_count_flapping + 1 <= len(messages)
         assert_valid_alert(
@@ -984,7 +989,10 @@ class TestMonitorClientEnterprise:
 
         service_name = "mylog"
         prepare_log_monitoring(
-            mender_device, service_name, log_file, log_pattern,
+            mender_device,
+            service_name,
+            log_file,
+            log_pattern,
         )
         mender_device.run("touch '" + log_file + "'")
         logger.info(
@@ -1317,7 +1325,11 @@ class TestMonitorClientEnterprise:
                 "echo 'some long line of logs number: " + str(n) + "' >> " + log_file
             )
         prepare_log_monitoring(
-            mender_device, service_name + "-pcre", log_file, log_pattern, use_ctl=True,
+            mender_device,
+            service_name + "-pcre",
+            log_file,
+            log_pattern,
+            use_ctl=True,
         )
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -1431,7 +1443,10 @@ class TestMonitorClientEnterprise:
 
         service_name = "mylog"
         prepare_log_monitoring(
-            mender_device, service_name, log_file, log_pattern,
+            mender_device,
+            service_name,
+            log_file,
+            log_pattern,
         )
 
         # The file needs to exist beforehand, otherwise the monitoring will just exit with a ERRNOEXIST
@@ -1762,7 +1777,9 @@ class TestMonitorClientEnterprise:
         time.sleep(8 * wait_for_alert_interval_s)
 
         mail, messages = get_and_parse_email_n(
-            monitor_commercial_setup_no_client, user_name, expected_alerts_count,
+            monitor_commercial_setup_no_client,
+            user_name,
+            expected_alerts_count,
         )
         assert len(messages) >= expected_alerts_count
 

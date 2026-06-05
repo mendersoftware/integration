@@ -82,7 +82,10 @@ class TestCreateArtifactBase:
         artifact = None
         for i in range(15):
             time.sleep(1)
-            r = api_client.call("GET", artifact_url,)
+            r = api_client.call(
+                "GET",
+                artifact_url,
+            )
             if r.status_code == 200:
                 artifact = r.json()
                 break

@@ -112,7 +112,9 @@ def _manipulate_ext4(img, rootfs, write):
 
 def update_config(rootfs, key, value, filename="mender.conf"):
     get(
-        local_path=filename, remote_path="/etc/mender/" + filename, rootfs=rootfs,
+        local_path=filename,
+        remote_path="/etc/mender/" + filename,
+        rootfs=rootfs,
     )
     with open(filename) as fd:
         conf = json.load(fd)
@@ -120,7 +122,9 @@ def update_config(rootfs, key, value, filename="mender.conf"):
     with open(filename, "w") as fd:
         json.dump(conf, fd, indent=4, sort_keys=True)
     put(
-        local_path=filename, remote_path="/etc/mender/" + filename, rootfs=rootfs,
+        local_path=filename,
+        remote_path="/etc/mender/" + filename,
+        rootfs=rootfs,
     )
     os.unlink(filename)
 
@@ -167,15 +171,12 @@ def main():
 
     if args.docker_ip:
         with open("mender-inventory-docker-ip", "w") as fd:
-            fd.write(
-                """#!/bin/sh
+            fd.write("""#!/bin/sh
 cat <<EOF
 network_interfaces=docker
 ipv4_docker=%s
 EOF
-"""
-                % args.docker_ip
-            )
+""" % args.docker_ip)
         os.chmod(
             "mender-inventory-docker-ip",
             stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH,

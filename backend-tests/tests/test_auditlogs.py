@@ -449,7 +449,8 @@ def make_deployment(token: str, tenant_token: str) -> Tuple[Dict, Dict]:
     name = "dep-" + uuidv4
 
     with get_mender_artifact(
-        artifact_name=artifact_name, device_types=["arm1"],
+        artifact_name=artifact_name,
+        device_types=["arm1"],
     ) as artifact:
         r = depl_v1.with_auth(token).call(
             "POST",
@@ -471,7 +472,9 @@ def make_deployment(token: str, tenant_token: str) -> Tuple[Dict, Dict]:
     # reason, we need the device to be provisioned correctly both
     # in deviceauth and inventory
     dev = make_device_with_inventory(
-        [{"name": "foo", "value": "foo"}], token, tenant_token,
+        [{"name": "foo", "value": "foo"}],
+        token,
+        tenant_token,
     )
 
     request_body = {
@@ -539,7 +542,11 @@ def make_user(token: str, email: str, pwd: str) -> Optional[str]:
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(token)
-        .call("POST", useradm.URL_USERS, {"email": email, "password": pwd},)
+        .call(
+            "POST",
+            useradm.URL_USERS,
+            {"email": email, "password": pwd},
+        )
     )
     assert res.status_code == 201
     return res.headers["Location"].split("/")[1]
@@ -555,7 +562,7 @@ def evt_user_create(actor_user: User, newid: str, email: str) -> Dict:
 
 
 def delete_user(actor_user: User, uid: str):
-    """Send request to useradm service to delete given user. """
+    """Send request to useradm service to delete given user."""
     res = (
         ApiClient(useradm.URL_MGMT)
         .with_auth(actor_user.token)

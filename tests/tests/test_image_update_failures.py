@@ -24,7 +24,9 @@ from ..MenderAPI import DeviceAuthV2, Deployments
 class BaseTestFailures(MenderTesting):
     @MenderTesting.slow
     def do_test_update_image_id_already_installed(
-        self, env, valid_image_with_mender_conf,
+        self,
+        env,
+        valid_image_with_mender_conf,
     ):
         """Test that an image with the same ID as the already installed image does not install anew"""
 
@@ -81,7 +83,9 @@ class BaseTestFailures(MenderTesting):
 class TestFailuresOpenSource(BaseTestFailures):
     @MenderTesting.slow
     def test_update_image_id_already_installed(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_image_id_already_installed(
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
@@ -99,7 +103,9 @@ class TestFailuresOpenSource(BaseTestFailures):
 class TestFailuresOpenEnterprise(BaseTestFailures):
     @MenderTesting.slow
     def test_update_image_id_already_installed(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_image_id_already_installed(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf

@@ -1222,7 +1222,10 @@ def report_release_state(state, tag_avail):
     fmt_str = "%-27s %-10s %-16s %-20s"
     print(fmt_str % ("REPOSITORY", "VERSION", "PICK NEXT BUILD", "BUILD TAG"))
     print(fmt_str % ("", "", "TAG FROM", ""))
-    for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
+    for repo in sorted(
+        Component.get_components_of_type("git"),
+        key=repo_sort_key,
+    ):
         if tag_avail[repo.git()]["already_released"]:
             tag = state[repo.git()]["version"]
             # Report released tags as following themselves, even though behind
@@ -1291,7 +1294,7 @@ def find_prev_version(tag_list, version):
         return None
 
     for tag in tag_list:
-        (tag_major, tag_minor, tag_patch, tag_beta) = version_components(tag)
+        tag_major, tag_minor, tag_patch, tag_beta = version_components(tag)
 
         if tag_major < version_major:
             return tag
@@ -1328,7 +1331,7 @@ def find_patch_version(
 
     last_version = prev_version
     while True:
-        (major, minor, patch, beta) = version_components(last_version)
+        major, minor, patch, beta = version_components(last_version)
         if beta is not None:
             new_version = "%d.%d.%d" % (major, minor, patch)
         else:
@@ -1461,7 +1464,10 @@ def tag_and_push(state, tag_avail, next_tag_avail, final):
         changelogs = []
 
         # Modify docker tags in docker-compose file.
-        for repo in sorted(Component.get_components_of_type("git"), key=repo_sort_key,):
+        for repo in sorted(
+            Component.get_components_of_type("git"),
+            key=repo_sort_key,
+        ):
 
             # Set git version.
             set_component_version_to(
@@ -1630,7 +1636,9 @@ def trigger_build(state, tag_avail):
             for param in extra_buildparams.keys():
                 if state_value(state, ["extra_buildparams", param]) is None:
                     update_state(
-                        state, ["extra_buildparams", param], extra_buildparams[param],
+                        state,
+                        ["extra_buildparams", param],
+                        extra_buildparams[param],
                     )
 
         if params is None:
@@ -1640,7 +1648,8 @@ def trigger_build(state, tag_avail):
 
             # Populate parameters with build tags for each repository.
             for repo in sorted(
-                Component.get_components_of_type("git"), key=repo_sort_key,
+                Component.get_components_of_type("git"),
+                key=repo_sort_key,
             ):
                 if tag_avail[repo.git()].get("build_tag") is None:
                     print("%s doesn't have a build tag yet!" % repo.git())
@@ -1660,8 +1669,7 @@ def trigger_build(state, tag_avail):
             trigger_gitlab_build(params, extra_buildparams)
             return
 
-        reply = ask(
-            """Do you want to change any of the parameters?
+        reply = ask("""Do you want to change any of the parameters?
 Y = Yes
 N = No (Quit)
 E = Open in editor
@@ -1676,8 +1684,7 @@ EP = Enable all platforms
 DP = Disable all platforms
 ER = Enable automatic publishing of the release (and release platforms)
 DR = Disable automatic publishing of the release
-? """
-        ).upper()
+? """).upper()
         if reply.startswith("Y"):
             substr = ask("Which one (substring is ok as long as it's unique)? ")
             found = 0
@@ -1911,7 +1918,10 @@ def purge_build_tags(state, tag_avail):
         remote_tag_list = [
             re.match(r".*refs/tags/(.*)", line).group(1)
             for line in execute_git(
-                state, repo.git(), ["ls-remote", "--tags", remote], capture=True,
+                state,
+                repo.git(),
+                ["ls-remote", "--tags", remote],
+                capture=True,
             ).split("\n")
             if line
         ]
@@ -1973,19 +1983,17 @@ def merge_release_tag(state, tag_avail, repo):
         # Merge the tag into it.
         git_list = [
             (
-                (
-                    state,
-                    tmpdir,
-                    [
-                        "merge",
-                        "-s",
-                        "ours",
-                        "-m",
-                        "Merge tag %s into %s using 'ours' merge strategy."
-                        % (tag_avail[repo.git()]["build_tag"], branch),
-                        tag_avail[repo.git()]["build_tag"],
-                    ],
-                )
+                state,
+                tmpdir,
+                [
+                    "merge",
+                    "-s",
+                    "ours",
+                    "-m",
+                    "Merge tag %s into %s using 'ours' merge strategy."
+                    % (tag_avail[repo.git()]["build_tag"], branch),
+                    tag_avail[repo.git()]["build_tag"],
+                ],
             )
         ]
         if not query_execute_git_list(git_list):
@@ -1999,11 +2007,9 @@ def merge_release_tag(state, tag_avail, repo):
         upstream = find_upstream_remote(state, repo.git())
         git_list = [
             (
-                (
-                    state,
-                    repo.git(),
-                    ["push", upstream, "FETCH_HEAD:refs/heads/%s" % branch],
-                )
+                state,
+                repo.git(),
+                ["push", upstream, "FETCH_HEAD:refs/heads/%s" % branch],
             )
         ]
         if not query_execute_git_list(git_list):
@@ -2097,14 +2103,24 @@ def push_latest_docker_tags(state, tag_avail, args):
                     [
                         "docker",
                         "pull",
-                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                        "%s/%s:%s"
+                        % (
+                            prefix,
+                            image.docker_image(),
+                            build_tag,
+                        ),
                     ]
                 )
                 exec_list.append(
                     [
                         "docker",
                         "tag",
-                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                        "%s/%s:%s"
+                        % (
+                            prefix,
+                            image.docker_image(),
+                            build_tag,
+                        ),
                         "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                     ]
                 )
@@ -2121,7 +2137,12 @@ def push_latest_docker_tags(state, tag_avail, args):
                         "regctl",
                         "image",
                         "copy",
-                        "%s/%s:%s" % (prefix, image.docker_image(), build_tag,),
+                        "%s/%s:%s"
+                        % (
+                            prefix,
+                            image.docker_image(),
+                            build_tag,
+                        ),
                         "%s/%s:%s" % (prefix, image.docker_image(), new_version),
                     ]
                 )
@@ -2230,8 +2251,7 @@ def do_git_version_branches_from_follows(state):
             "-asm",
             """chore: Update branch references for %s.
 
-Changelog: None"""
-            % bare_branch,
+Changelog: None""" % bare_branch,
         ]
         if not query_execute_git_list([(state, checkout, cmd)]):
             return
@@ -2347,7 +2367,7 @@ def determine_version_bump(state, repo, from_v, to_v):
         state, repo.git(), ["rev-list", "%s..%s" % (from_v, to_v)], capture=True
     ).split("\n")
 
-    (major, minor, patch, _) = version_components(from_v)
+    major, minor, patch, _ = version_components(from_v)
     version_mask = [False, False, False]
 
     for sha in revlist:
@@ -2388,10 +2408,8 @@ def determine_version_to_include_in_release(state, repo):
     # Is there already a version in the same series? Look at integration.
     tag_list = sorted_final_version_list(integration_dir())
     prev_of_integration = find_prev_version(tag_list, state["version"])
-    (overall_major, overall_minor, _, overall_beta) = version_components(
-        state["version"]
-    )
-    (prev_major, prev_minor, _, _) = version_components(prev_of_integration)
+    overall_major, overall_minor, _, overall_beta = version_components(state["version"])
+    prev_major, prev_minor, _, _ = version_components(prev_of_integration)
 
     prev_of_repo = None
     prev_of_repo_independent = None
@@ -2400,10 +2418,12 @@ def determine_version_to_include_in_release(state, repo):
     if overall_major == prev_major and overall_minor == prev_minor:
         # Same series. Us it as basis.
         prev_of_repo = version_of(
-            integration_dir(), repo, in_integration_version=prev_of_integration,
+            integration_dir(),
+            repo,
+            in_integration_version=prev_of_integration,
         )
         if overall_beta is not None:
-            (major, minor, patch, _) = version_components(prev_of_repo)
+            major, minor, patch, _ = version_components(prev_of_repo)
             new_repo_version = "%d.%d.%db%d" % (major, minor, patch, overall_beta)
         else:
             new_repo_version = find_patch_version(
@@ -2465,8 +2485,7 @@ def determine_version_to_include_in_release(state, repo):
                 """WARNING: %s is not the latest patch release, the latest patch release
 is %s, which does not occur in any integration version. You might want to
 double check this.
-"""
-                % (prev_of_repo, prev_of_repo_independent)
+""" % (prev_of_repo, prev_of_repo_independent)
             )
 
         reply = ask(
@@ -2592,10 +2611,14 @@ def do_generate_release_notes(
         if repo.git() == "integration":
             continue
         version = version_of(
-            integration_dir(), repo, in_integration_version=version_of_integration,
+            integration_dir(),
+            repo,
+            in_integration_version=version_of_integration,
         )
         prev_version = version_of(
-            integration_dir(), repo, in_integration_version=prev_of_integration,
+            integration_dir(),
+            repo,
+            in_integration_version=prev_of_integration,
         )
         workdir = os.path.join(base_dir, repo.git())
         output_file = "release_notes_%s.txt" % repo.git()
@@ -2653,7 +2676,10 @@ def do_release(release_state_file, args):
     if input.startswith("Y") or input.startswith("y"):
         refresh_repos(state)
 
-    repos = sorted(Component.get_components_of_type("git"), key=repo_sort_key,)
+    repos = sorted(
+        Component.get_components_of_type("git"),
+        key=repo_sort_key,
+    )
     while len(repos) > 0:
         repo = repos.pop(0)
         if not determine_version_to_include_in_release(state, repo):

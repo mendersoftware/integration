@@ -18,6 +18,8 @@ import time
 import uuid
 
 from flaky import flaky
+from redo import retriable
+from websockets.exceptions import WebSocketException
 
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
@@ -123,38 +125,6 @@ class _TestRemoteTerminalBase:
                 "$ ",
             ], "Could not detect shell prompt."
 
-    @pytest.mark.skip(
-        reason="this test has been broken, and is disabled after the move to mender-docker-client see QA-1563"
-    )
-    def test_dbus_reconnect(self, docker_env):
-        self.assert_env(docker_env)
-
-        with docker_env.devconnect.get_websocket():
-            # Nothing to do, just connecting successfully is enough.
-            pass
-
-        # Test that mender-connect recovers if it initially has no DBus
-        # connection. This is important because we don't have DBus activation
-        # enabled in the systemd service file, so it's a race condition who gets
-        # to the DBus service first.
-        docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies stop mender-updated"
-        )
-        docker_env.device.run(
-            "systemctl --job-mode=ignore-dependencies restart mender-connect"
-        )
-
-        time.sleep(10)
-
-        # At this point, mender-connect will already have queried DBus.
-        docker_env.device.run(
-            f"systemctl --job-mode=ignore-dependencies start mender-updated"
-        )
-
-        with docker_env.devconnect.get_websocket():
-            # Nothing to do, just connecting successfully is enough.
-            pass
-
     def test_websocket_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
@@ -165,11 +135,23 @@ class _TestRemoteTerminalBase:
         # Test that mender-connect recovers if it loses the connection to deviceconnect.
         docker_env.restart_service("mender-deviceconnect")
 
-        time.sleep(10)
+        # mender-connect needs time to re-establish its session after
+        # deviceconnect restarts; until it does, the mgmt /connect endpoint
+        # returns HTTP 404 ("device disconnected"). Poll instead of a fixed
+        # sleep that races the reconnect. (QA-1527)
+        @retriable(
+            attempts=24,
+            sleeptime=5,
+            sleepscale=1,
+            jitter=0,
+            retry_exceptions=(WebSocketException,),
+        )
+        def assert_websocket_connects():
+            with docker_env.devconnect.get_websocket():
+                # Connecting successfully is enough.
+                pass
 
-        with docker_env.devconnect.get_websocket():
-            # Nothing to do, just connecting successfully is enough.
-            pass
+        assert_websocket_connects()
 
     def test_bogus_shell_message(self, docker_env):
         self.assert_env(docker_env)
@@ -187,6 +169,102 @@ class _TestRemoteTerminalBase:
             assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
+
+    def test_in_poor_network_environment(self, docker_env):
+        self.assert_env(docker_env)
+
+        receive_timeout_s = 16
+
+        def is_shell_working(shell):
+            # Test if a simple command works.
+            shell.sendInput("ls /\n".encode())
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            output = output.decode()
+            assert "usr" in output
+            assert "etc" in output
+
+        def detect_shell_prompt(shell):
+            # Drain any initial output from the prompt. It should end in either "# "
+            # (root) or "$ " (user).
+            output = shell.recvOutput(receive_timeout_s)
+            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+            assert output[-2:].decode() in [
+                "# ",
+                "$ ",
+            ], "Could not detect shell prompt."
+
+        # Poll the full open-and-start-shell sequence until it succeeds. After a
+        # network outage the device reconnects to deviceconnect only after
+        # connection backoff and the session can flap, so neither a fixed sleep
+        # nor polling get_websocket() (which only checks the management side)
+        # is reliable:
+        #   - the mgmt /connect endpoint returns HTTP 404 ("device
+        #     disconnected") until the device side is back, and
+        #   - a just-reconnected session may not answer startShell yet
+        #     (recv times out).
+        # Retrying the whole sequence is the only signal that proves a working
+        # shell. 48 * 5s = 240s covers the worst-case recovery after the 128s
+        # drop below; retriable re-raises the last error if it never recovers.
+        # AssertionErrors are not retried, so a genuine protocol failure still
+        # fails fast. (QA-1527)
+        @retriable(
+            attempts=48,
+            sleeptime=5,
+            sleepscale=1,
+            jitter=0,
+            retry_exceptions=(WebSocketException, TimeoutError),
+        )
+        def assert_working_shell():
+            with docker_env.devconnect.get_websocket() as ws:
+                shell = proto_shell.ProtoShell(ws)
+                body = shell.startShell()
+                if (
+                    shell.protomsg.props["status"] != protomsg.PROP_STATUS_NORMAL
+                    and body
+                    and b"already running" in body
+                ):
+                    # A shell started by a previous attempt that flapped mid-use
+                    # may not be reaped yet (the shell limit is 1 per device).
+                    # Treat it as not-ready and let the retry wait for the device
+                    # to release it instead of failing on the assert below.
+                    raise TimeoutError("shell from a previous attempt is still running")
+                assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
+                assert body == proto_shell.MSG_BODY_SHELL_STARTED
+
+                detect_shell_prompt(shell)
+                is_shell_working(shell)
+
+        assert_working_shell()
+
+        docker_env.device.run("apt-get update")
+        docker_env.device.run("apt-get install -y iptables")
+        docker_env.device.run(
+            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
+        )
+
+        # Plenty of time for the session to mess up
+        # see also QA-1591: the DROP will not cause ICMP response so we rely on the
+        # TCP RTO which means sometimes we need additional time to sleep.
+        # this was exposed by the move to docker client in those tests, as the
+        # network stack acts differently
+        time.sleep(128)
+
+        # Re-enable a good connection
+        docker_env.device.run("iptables -D OUTPUT 1")
+
+        # mender-connect's reconnect backoff escalates per-attempt and caps at
+        # 30 minutes (see connectionmanager/exponentialbackoff.go in
+        # mender-connect); after a 128s outage the backoff timer can leave the
+        # next reconnect attempt minutes away, which is not testable in a CI
+        # window. Restart mender-connect so the fresh process starts at
+        # attempts=0 and reconnects on its first cycle. The entrypoint's
+        # supervise loop respawns it; this mirrors the canonical pattern used
+        # by test_filetransfer.update_limits(). (QA-1527, QA-1591)
+        docker_env.device.run("kill -TERM `pidof mender-connect` 2>/dev/null || true")
+
+        # Poll until a working shell can be opened end-to-end.
+        assert_working_shell()
 
     @flaky(max_runs=3)
     def test_session_recording(self, docker_env):
@@ -403,64 +481,3 @@ class TestRemoteTerminalEnterprise(
         env.devconnect = devconn
 
         yield env
-
-    @flaky(max_runs=3)
-    def test_in_poor_network_environment(self, docker_env):
-        self.assert_env(docker_env)
-
-        receive_timeout_s = 16
-
-        def is_shell_working(shell):
-            # Test if a simple command works.
-            shell.sendInput("ls /\n".encode())
-            output = shell.recvOutput(receive_timeout_s)
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            output = output.decode()
-            assert "usr" in output
-            assert "etc" in output
-
-        def detect_shell_prompt(shell):
-            # Drain any initial output from the prompt. It should end in either "# "
-            # (root) or "$ " (user).
-            output = shell.recvOutput(receive_timeout_s)
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert output[-2:].decode() in [
-                "# ",
-                "$ ",
-            ], "Could not detect shell prompt."
-
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
-
-            detect_shell_prompt(shell)
-            is_shell_working(shell)
-
-        docker_env.device.run("apt-get update")
-        docker_env.device.run("apt-get install -y iptables")
-        docker_env.device.run(
-            "iptables -A OUTPUT -j DROP --destination docker.mender.io"
-        )
-
-        # Plenty of time for the session to mess up
-        # see also QA-1591: the DROP will not cause ICMP response so we rely on the
-        # TCP RTO which means sometimes we need additional time to sleep.
-        # this was exposed by the move to docker client in those tests, as the
-        # network stack acts differently
-        time.sleep(128)
-
-        # Re-enable a good connection
-        docker_env.device.run("iptables -D OUTPUT 1")
-        time.sleep(128)
-
-        # mender-connect should have "healed" now and be able to start a new shell
-        with docker_env.devconnect.get_websocket() as ws:
-            shell = proto_shell.ProtoShell(ws)
-            body = shell.startShell()
-            assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
-            assert body == proto_shell.MSG_BODY_SHELL_STARTED
-
-            detect_shell_prompt(shell)
-            is_shell_working(shell)

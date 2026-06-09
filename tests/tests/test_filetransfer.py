@@ -108,7 +108,6 @@ def set_limits(docker_env, mender_device, limits, auth, devid):
     finally:
         shutil.rmtree(tmpdir)
     mender_device.run("kill -TERM `pidof %s`" % connect_service_name)
-    time.sleep(4)
     wait_for_connect(auth, devid)
     debugoutput = mender_device.run("cat /etc/mender/mender-connect.conf")
     logger.info("/etc/mender/mender-connect.conf:\n%s" % debugoutput)

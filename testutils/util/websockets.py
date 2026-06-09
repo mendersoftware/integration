@@ -48,15 +48,15 @@ class Websocket:
             try:
                 asyncio.get_event_loop().run_until_complete(connect())
                 break
-            except websockets.InvalidStatusCode:
+            except websockets.exceptions.InvalidHandshake:
                 if self.retry_connect and attempts > 0:
                     attempts -= 1
                     logger.info(
-                        "websockets: %d retrying on InvalidStatusCode" % attempts
+                        "websockets: %d retrying on InvalidHandshake" % attempts
                     )
                     time.sleep(sleep_seconds)
                 else:
-                    logger.info("websockets: out of retries on InvalidStatusCode")
+                    logger.info("websockets: out of retries on InvalidHandshake")
                     raise
 
         return self

@@ -72,14 +72,14 @@ def prepare_env_for_connect(env):
     return devid, authtoken, auth, mender_device
 
 
-def wait_for_connect(auth, devid):
+def wait_for_connect(auth, devid, attempts=12):
     devconn = ApiClient(
         host=get_container_manager().get_mender_gateway(),
         base_url=deviceconnect.URL_MGMT,
     )
 
     connected = 0
-    for _ in redo.retrier(attempts=12, sleeptime=5):
+    for _ in redo.retrier(attempts=attempts, sleeptime=5, sleepscale=1):
         logger.info("waiting for device in deviceconnect")
         res = devconn.call(
             "GET",

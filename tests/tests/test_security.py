@@ -12,21 +12,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import subprocess
-import contextlib
-import ssl
-import socket
-import time
-
-import pytest
-
 from ..common_setup import (
-    running_custom_production_setup,
     standard_setup_with_short_lived_token,
     enterprise_with_short_lived_token,
 )
 from ..helpers import Helpers
-from ..MenderAPI import DeviceAuthV2, Deployments, logger
+from ..MenderAPI import DeviceAuthV2, Deployments
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
 

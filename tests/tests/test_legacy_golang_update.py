@@ -17,7 +17,7 @@ from ..common_setup import (
     enterprise_with_legacy_v3_client,
 )
 from .common_update import update_image, update_image_failed
-from ..MenderAPI import DeviceAuthV2, Deployments, logger
+from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
 
 

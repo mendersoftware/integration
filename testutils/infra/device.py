@@ -19,7 +19,6 @@ import os
 import redo
 import socket
 import subprocess
-import time
 from typing import Dict
 
 logger = logging.getLogger()

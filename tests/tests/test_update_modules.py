@@ -17,7 +17,6 @@ import subprocess
 import tempfile
 import shutil
 
-from .. import conftest
 from ..common_setup import (
     standard_setup_one_docker_client_bootstrapped,
     enterprise_one_docker_client_bootstrapped,

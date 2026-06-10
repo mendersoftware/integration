@@ -18,7 +18,6 @@ import random
 import time
 import string
 import tempfile
-import uuid
 import os
 import subprocess
 from contextlib import contextmanager
@@ -311,60 +310,6 @@ def make_accepted_device(
     return dev
 
 
-def make_accepted_devices(devauthd, devauthm, utoken, tenant_token="", num_devices=1):
-    """Create accepted devices.
-    returns list of Device objects."""
-    devices = []
-
-    # some 'accepted' devices, single authset
-    for _ in range(num_devices):
-        dev = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
-        devices.append(dev)
-
-    return devices
-
-
-def make_device_with_inventory(attributes, utoken, tenant_token):
-    devauthm = ApiClient(deviceauth.URL_MGMT)
-    devauthd = ApiClient(deviceauth.URL_DEVICES)
-    invm = ApiClient(inventory.URL_MGMT)
-
-    d = make_accepted_device(devauthd, devauthm, utoken, tenant_token)
-    """
-    verify that the status of the device in inventory is "accepted"
-    """
-    accepted = False
-    timeout = 10
-    for i in range(timeout):
-        r = invm.with_auth(utoken).call("GET", inventory.URL_DEVICE.format(id=d.id))
-        if r.status_code == 200:
-            dj = r.json()
-            for attr in dj["attributes"]:
-                if attr["name"] == "status" and attr["value"] == "accepted":
-                    accepted = True
-                    break
-        if accepted:
-            break
-        time.sleep(1)
-    if not accepted:
-        raise ValueError(
-            "status for device %s has not been propagated within %d seconds"
-            % (d.id, timeout)
-        )
-
-    submit_inventory(attributes, d.token)
-
-    d.attributes = attributes
-
-    return d
-
-
-def submit_inventory(attrs, token):
-    invd = ApiClient(inventory.URL_DEV)
-    r = invd.with_auth(token).call("PATCH", inventory.URL_DEVICE_ATTRIBUTES, attrs)
-    assert r.status_code == 200
-
-
 @contextmanager
 def get_mender_artifact(
     artifact_name="test",
@@ -471,91 +416,6 @@ def new_tenant_client(
             test_env.get_mender_clients(network=network)
         )
     return device
-
-
-def create_tenant_test_setup() -> Tenant:
-    """Creates a tenant and a user belonging to the tenant (both tenant and user are created with random names)."""
-    uuidv4 = str(uuid.uuid4())
-    tenant, username, password = (
-        "test.mender.io-" + uuidv4,
-        "some.user+" + uuidv4 + "@example.com",
-        "secretsecret",
-    )
-    tenant = create_org(tenant, username, password, "enterprise")
-    user = create_user(
-        "foo+" + uuidv4 + "@user.com", "correcthorsebatterystaple", tid=tenant.id
-    )
-
-    response = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(user.name, user.pwd)
-    )
-    assert response.status_code == 200
-    user.utoken = response.text
-    tenant.users = [user]
-    return tenant
-
-
-def create_user_test_setup() -> User:
-    """Create a user with random name, log user in."""
-    uuidv4 = str(uuid.uuid4())
-    user_name, password = (
-        "some.user+" + uuidv4 + "@example.com",
-        "secretsecret",
-    )
-
-    user = create_user(user_name, password)
-    useradmm = ApiClient(useradm.URL_MGMT)
-    # log in user
-    response = useradmm.call("POST", useradm.URL_LOGIN, auth=(user.name, user.pwd))
-    assert response.status_code == 200
-    user.utoken = response.text
-    return user
-
-
-def useExistingTenant() -> bool:
-    return bool(os.environ.get("USE_EXISTING_TENANT"))
-
-
-def setup_tenant_devices(tenant, device_groups):
-    """
-    setup_user_devices authenticates the user and creates devices
-    attached to (static) groups given by the proportion map from
-    the groups parameter.
-    :param users:     Users to setup devices for (list).
-    :param n_devices: Number of accepted devices created for each
-                      user (int).
-    :param groups:    Map of group names to device proportions, the
-                      sum of proportion must be less than or equal
-                      to 1 (dict[str] = float)
-    :return: Dict mapping group_name -> list(devices)
-    """
-    devauth_DEV = ApiClient(deviceauth.URL_DEVICES)
-    devauth_MGMT = ApiClient(deviceauth.URL_MGMT)
-    invtry_MGMT = ApiClient(inventory.URL_MGMT)
-    user = tenant.users[0]
-    grouped_devices = {}
-    group = None
-
-    tenant.devices = []
-    for group, dev_cnt in device_groups.items():
-        grouped_devices[group] = []
-        for i in range(dev_cnt):
-            device = make_accepted_device(
-                devauth_DEV, devauth_MGMT, user.token, tenant.tenant_token
-            )
-            if group is not None:
-                rsp = invtry_MGMT.with_auth(user.token).call(
-                    "PUT",
-                    inventory.URL_DEVICE_GROUP.format(id=device.id),
-                    body={"group": group},
-                )
-                assert rsp.status_code == 204
-
-            device.group = group
-            grouped_devices[group].append(device)
-            tenant.devices.append(device)
-
-    return grouped_devices
 
 
 @redo.retriable(sleeptime=5, attempts=3)

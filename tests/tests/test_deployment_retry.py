@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 import json
-import os
 import pytest
 import tempfile
 import uuid
@@ -111,9 +110,7 @@ class TestDeploymentRetryEnterprise(MenderTesting):
 
             deploy.upload_image(artifact)
 
-            devices = list(
-                set([device["id"] for device in devauth.get_devices_status("accepted")])
-            )
+            devices = [d["id"] for d in devauth.get_devices_status("accepted")]
             assert len(devices) == 1
 
             deployment_id = deploy.trigger_deployment(

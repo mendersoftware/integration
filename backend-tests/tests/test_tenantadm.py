@@ -304,7 +304,9 @@ class TestDeleteTenantsEnterprise:
 
         # Remove all suspended tenants this time
         cli_tenantadm(
-            "maintenance", "delete-suspended-tenants", "--threshold-days=0",
+            "maintenance",
+            "delete-suspended-tenants",
+            "--threshold-days=0",
         )
 
         # The tenant removal is processed asynchronously: poll tenantadm for 30s

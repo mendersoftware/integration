@@ -44,7 +44,6 @@ from testutils.common import (
 )
 from testutils.infra.container_manager.kubernetes_manager import isK8S
 
-
 WAITING_MULTIPLIER = 8 if isK8S() else 1
 WAITING_TIME_K8S = 5.0
 
@@ -1214,7 +1213,9 @@ class StatusVerifier:
 
         # Update device status upon successful request
         resp = self.deploymentsd.with_auth(device_token).call(
-            "PUT", deployments.URL_STATUS.format(id=deployment_id), body=body,
+            "PUT",
+            deployments.URL_STATUS.format(id=deployment_id),
+            body=body,
         )
         assert resp.status_code == status_update_error_code
 
@@ -1639,7 +1640,9 @@ def update_deployment_status(deployment_id, status, token):
     body = {"status": status}
 
     resp = api_dev_deploy.with_auth(token).call(
-        "PUT", deployments.URL_STATUS.format(id=deployment_id), body=body,
+        "PUT",
+        deployments.URL_STATUS.format(id=deployment_id),
+        body=body,
     )
     assert resp.status_code == 204
 
@@ -1662,7 +1665,9 @@ def set_status(depid, status, dtoken):
     api_dev_deploy = ApiClient(deployments.URL_DEVICES)
 
     res = api_dev_deploy.with_auth(dtoken).call(
-        "PUT", deployments.URL_STATUS.format(id=depid), body={"status": status},
+        "PUT",
+        deployments.URL_STATUS.format(id=depid),
+        body={"status": status},
     )
 
     assert res.status_code == 204
@@ -1672,7 +1677,8 @@ def get_stats(depid, token):
     api_dev_deploy = ApiClient(deployments.URL_MGMT)
 
     res = api_dev_deploy.with_auth(token).call(
-        "GET", deployments.URL_DEPLOYMENTS_STATISTICS.format(id=depid),
+        "GET",
+        deployments.URL_DEPLOYMENTS_STATISTICS.format(id=depid),
     )
 
     assert res.status_code == 200
@@ -1813,8 +1819,8 @@ class TestDynamicDeploymentsEnterprise:
         ],
     )
     def test_assignment_based_on_filters(self, clean_mongo_client, tc):
-        """ Test basic dynamic deployments characteristic:
-            - deployments match on inventory attributes via various filter predicates
+        """Test basic dynamic deployments characteristic:
+        - deployments match on inventory attributes via various filter predicates
         """
         uuidv4 = str(uuid.uuid4())
         tenant = create_tenant(
@@ -1844,8 +1850,8 @@ class TestDynamicDeploymentsEnterprise:
             assert_get_next(204, d.token)
 
     def test_unbounded_deployment_lifecycle(self, setup_tenant):
-        """ Check how a dynamic deployment (no bounds) progresses through states
-            based on device activity (status, statistics).
+        """Check how a dynamic deployment (no bounds) progresses through states
+        based on device activity (status, statistics).
         """
         user = setup_tenant.users[0]
 
@@ -1897,8 +1903,8 @@ class TestDynamicDeploymentsEnterprise:
         verify_stats(stats, {"success": 5, "failure": 5})
 
     def test_bounded_deployment_lifecycle(self, setup_tenant):
-        """ Check how a dynamic deployment with max_devices progresses through states
-            based on device activity (status, statistics).
+        """Check how a dynamic deployment with max_devices progresses through states
+        based on device activity (status, statistics).
         """
         user = setup_tenant.users[0]
 
@@ -1962,11 +1968,11 @@ class TestDynamicDeploymentsEnterprise:
         verify_stats(stats, {"success": 10})
 
     def test_deployment_ordering(self, setup_tenant):
-        """ Check that devices only get dynamic deployments fresher than the
-            latest one it finished.
+        """Check that devices only get dynamic deployments fresher than the
+        latest one it finished.
 
-            In other words, after updating its attributes the device won't accidentally
-            fall into a deployment previous to what it tried already.
+        In other words, after updating its attributes the device won't accidentally
+        fall into a deployment previous to what it tried already.
         """
 
         user = setup_tenant.users[0]
@@ -2038,8 +2044,7 @@ class TestDynamicDeploymentsEnterprise:
         ],
     )
     def test_phased_rollout(self, clean_mongo_client, tc):
-        """ Check phased rollouts with and without max_devices.
-        """
+        """Check phased rollouts with and without max_devices."""
         uuidv4 = str(uuid.uuid4())
         tenant = create_tenant(
             "test.mender.io-" + uuidv4,
@@ -2071,7 +2076,9 @@ class TestDynamicDeploymentsEnterprise:
         # a deployment with initial devs succeeds
         devs = [
             make_device_with_inventory(
-                [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
+                [{"name": "bar", "value": "bar"}],
+                user.utoken,
+                tenant.tenant_token,
             )
             for i in range(10)
         ]
@@ -2117,7 +2124,9 @@ class TestDynamicDeploymentsEnterprise:
             assert dep["status"] == "inprogress"
             extra_devs = [
                 make_device_with_inventory(
-                    [{"name": "bar", "value": "bar"}], user.utoken, tenant.tenant_token,
+                    [{"name": "bar", "value": "bar"}],
+                    user.utoken,
+                    tenant.tenant_token,
                 )
                 for i in range(10)
             ]

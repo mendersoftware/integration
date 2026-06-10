@@ -43,7 +43,10 @@ logger = logging.getLogger("testAccess")
 def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconnect"]["devices"]
     devices_collection.delete_one(
-        {"_id": device_id, "tenant_id": tenant_id,}
+        {
+            "_id": device_id,
+            "tenant_id": tenant_id,
+        }
     )
     devices_collection.insert_one(
         {
@@ -59,7 +62,10 @@ def device_connect_insert_device(mongo, device_id, tenant_id, status="connected"
 def device_config_insert_device(mongo, device_id, tenant_id, status="connected"):
     devices_collection = mongo.client["deviceconfig"]["devices"]
     devices_collection.delete_one(
-        {"_id": device_id, "tenant_id": tenant_id,}
+        {
+            "_id": device_id,
+            "tenant_id": tenant_id,
+        }
     )
     devices_collection.insert_one(
         {
@@ -89,7 +95,9 @@ class _TestAccessBase:
             f"using {auth} to call {deviceconnect.URL_MGMT_DEVICE} with devid={devid}"
         )
         res = devconn.with_auth(auth).call(
-            "GET", deviceconnect.URL_MGMT_DEVICE, path_params={"id": devid},
+            "GET",
+            deviceconnect.URL_MGMT_DEVICE,
+            path_params={"id": devid},
         )
 
         if forbid:
@@ -138,7 +146,9 @@ class _TestAccessBase:
         devconn = ApiClient(deviceconnect.URL_MGMT)
 
         res = devconn.with_auth(auth).call(
-            "GET", deviceconnect.URL_MGMT_PLAYBACK, path_params={"session_id": "foo"},
+            "GET",
+            deviceconnect.URL_MGMT_PLAYBACK,
+            path_params={"session_id": "foo"},
         )
 
         if forbid:
@@ -199,7 +209,7 @@ class TestAccess(_TestAccessBase):
 
 
 class TestAccessEnterprise(_TestAccessBase):
-    """ Full enterprise setup, with HAVE_ADDONS and MT."""
+    """Full enterprise setup, with HAVE_ADDONS and MT."""
 
     @property
     def logger(self):
@@ -220,7 +230,7 @@ class TestAccessEnterprise(_TestAccessBase):
         yield env
 
     def test_initial_restrictions(self, mongo, mt_env):
-        """ Test that existing users are in fact under new addon restrictions, to incentivize addon upgrades. """
+        """Test that existing users are in fact under new addon restrictions, to incentivize addon upgrades."""
 
         for plan in ["os", "professional", "enterprise"]:
             tenant = mt_env["tenants"][plan]
@@ -263,7 +273,8 @@ class TestAccessEnterprise(_TestAccessBase):
 
         # add troubleshoot
         update_tenant(
-            tenant.id, addons=["troubleshoot"],
+            tenant.id,
+            addons=["troubleshoot"],
         )
 
         device_connect_insert_device(mongo, tenant.device_id, tenant_id=tenant.id)
@@ -285,12 +296,15 @@ class TestAccessEnterprise(_TestAccessBase):
         self.check_access_auditlogs(tenant.auth, forbid=True)
         self.check_access_sessionlogs(tenant.auth, forbid=True)
         self.check_access_deviceconfig(
-            tenant.auth, tenant.device_id, forbid=True,
+            tenant.auth,
+            tenant.device_id,
+            forbid=True,
         )
 
         # add configure
         update_tenant(
-            tenant.id, addons=["troubleshoot", "configure"],
+            tenant.id,
+            addons=["troubleshoot", "configure"],
         )
 
         r = ApiClient(useradm.URL_MGMT).call(
@@ -312,7 +326,8 @@ class TestAccessEnterprise(_TestAccessBase):
 
         # upgrade to "enterprise" - makes audit, session logs and rbac available
         update_tenant(
-            tenant.id, plan="enterprise",
+            tenant.id,
+            plan="enterprise",
         )
         r = ApiClient(useradm.URL_MGMT).call(
             "POST",
@@ -363,7 +378,8 @@ class TestAccessEnterprise(_TestAccessBase):
         assert res.status_code == 202
 
         update_tenant(
-            tenant.id, addons=["troubleshoot", "configure"],
+            tenant.id,
+            addons=["troubleshoot", "configure"],
         )
         r = ApiClient(useradm.URL_MGMT).call(
             "POST",
@@ -401,10 +417,13 @@ def _make_tenant(plan):
     )
     tenant.users.append(create_user(username, password, tenant.id))
     update_tenant(
-        tenant.id, addons=[],
+        tenant.id,
+        addons=[],
     )
     r = ApiClient(useradm.URL_MGMT).call(
-        "POST", useradm.URL_LOGIN, auth=(username, password),
+        "POST",
+        useradm.URL_LOGIN,
+        auth=(username, password),
     )
     assert r.status_code == 200
     tenant.auth = r.text
@@ -429,7 +448,11 @@ def _make_trial_tenant():
         "plan": "enterprise",
     }
 
-    res = tadmm.call("POST", tenantadm_v2.URL_CREATE_ORG_TRIAL, body=args,)
+    res = tadmm.call(
+        "POST",
+        tenantadm_v2.URL_CREATE_ORG_TRIAL,
+        body=args,
+    )
 
     assert res.status_code == 202
 

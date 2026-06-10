@@ -54,7 +54,7 @@ class BaseTestSecurity(MenderTesting):
 
 class TestSecurityOpenSource(BaseTestSecurity):
     def test_ssl_only(self, running_custom_production_setup):
-        """ make sure we are not exposing any non-ssl connections in production environment """
+        """make sure we are not exposing any non-ssl connections in production environment"""
         done = False
         sleep_time = 2
         # start production environment

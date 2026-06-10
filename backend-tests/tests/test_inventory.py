@@ -317,7 +317,8 @@ def add_devices_to_tenant(tenant, dev_inventories):
 
 
 @pytest.mark.skipif(
-    useExistingTenant(), reason="not feasible to test with existing tenant",
+    useExistingTenant(),
+    reason="not feasible to test with existing tenant",
 )
 class TestDeviceFilteringEnterprise:
     @property
@@ -583,9 +584,11 @@ class TestDeviceFilteringEnterprise:
             rsp = invm_v2.with_auth(self.tenant_ent.api_token).call(
                 "POST", inventory_v2.URL_SEARCH, test_case["request"]
             )
-            assert rsp.status_code == test_case["status_code"], (
-                "Unexpected status code (%d) from /filters/search response: %s"
-                % (rsp.status_code, rsp.text)
+            assert (
+                rsp.status_code == test_case["status_code"]
+            ), "Unexpected status code (%d) from /filters/search response: %s" % (
+                rsp.status_code,
+                rsp.text,
             )
 
             if rsp.status_code == 200 and "response" in test_case:
@@ -594,12 +597,11 @@ class TestDeviceFilteringEnterprise:
                     body = []
                 self.logger.info(test_case["response"])
                 self.logger.info(body)
-                assert len(test_case["response"]) == len(body), (
-                    "Unexpected number of results: %s != %s"
-                    % (
-                        [dev["id"] for dev in test_case["response"]],
-                        [dev["id"] for dev in body],
-                    )
+                assert len(test_case["response"]) == len(
+                    body
+                ), "Unexpected number of results: %s != %s" % (
+                    [dev["id"] for dev in test_case["response"]],
+                    [dev["id"] for dev in body],
                 )
 
                 if len(test_case["response"]) > 0:
@@ -836,18 +838,23 @@ class TestDeviceFilteringEnterprise:
                 ),
                 test_case["request"],
             )
-            assert rsp.status_code == test_case["status_code"], (
-                "Unexpected status code (%d) from %s response: %s"
-                % (rsp.status_code, rsp.url, rsp.text)
+            assert (
+                rsp.status_code == test_case["status_code"]
+            ), "Unexpected status code (%d) from %s response: %s" % (
+                rsp.status_code,
+                rsp.url,
+                rsp.text,
             )
 
             if rsp.status_code == 200 and "response" in test_case:
                 body = rsp.json()
                 if body is None:
                     body = []
-                assert len(body) == len(test_case["response"]), (
-                    "Unexpected number of results: %s != %s"
-                    % (test_case["response"], body)
+                assert len(body) == len(
+                    test_case["response"]
+                ), "Unexpected number of results: %s != %s" % (
+                    test_case["response"],
+                    body,
                 )
 
                 if len(test_case["response"]) > 0:
@@ -888,7 +895,8 @@ class TestDeviceFilteringEnterprise:
                 "result": [
                     {"id": dev.id, "attributes": dict_to_inventoryattrs(dev.inventory)}
                     for dev in filter(
-                        lambda dev: dev.inventory["idx"] == 5, self.tenant_ent.devices,
+                        lambda dev: dev.inventory["idx"] == 5,
+                        self.tenant_ent.devices,
                     )
                 ],
             },
@@ -1059,9 +1067,12 @@ class TestDeviceFilteringEnterprise:
             rsp = invm_v2.with_auth(tenant.api_token).call(
                 "POST", inventory_v2.URL_SAVED_FILTERS, body=test_case["request"]
             )
-            assert rsp.status_code == test_case["status_codes"][0], (
-                "Unexpected status code (%d) on POST %s request; response: %s"
-                % (rsp.status_code, rsp.url, rsp.text)
+            assert (
+                rsp.status_code == test_case["status_codes"][0]
+            ), "Unexpected status code (%d) on POST %s request; response: %s" % (
+                rsp.status_code,
+                rsp.url,
+                rsp.text,
             )
             filter_url = rsp.headers.get("Location", "foobar")
             filter_id = filter_url.split("/")[-1]
@@ -1092,7 +1103,8 @@ class TestDeviceFilteringEnterprise:
 
             # Test GET /filter/{id}/search endpoint
             rsp = invm_v2.with_auth(tenant.api_token).call(
-                "GET", inventory_v2.URL_SAVED_FILTER_SEARCH.format(id=filter_id),
+                "GET",
+                inventory_v2.URL_SAVED_FILTER_SEARCH.format(id=filter_id),
             )
 
             assert rsp.status_code == test_case["status_codes"][3]
@@ -1115,9 +1127,12 @@ class TestDeviceFilteringEnterprise:
             rsp = invm_v2.with_auth(self.tenant_ent.api_token).call(
                 "DELETE", inventory_v2.URL_SAVED_FILTER.format(id=fltr["id"])
             )
-            assert rsp.status_code == 204, (
-                "Unexpected status code (%d) returned on DELETE %s. Response: %s"
-                % (rsp.status_code, rsp.url, rsp.text)
+            assert (
+                rsp.status_code == 204
+            ), "Unexpected status code (%d) returned on DELETE %s. Response: %s" % (
+                rsp.status_code,
+                rsp.url,
+                rsp.text,
             )
 
     @pytest.mark.parametrize(
@@ -1293,7 +1308,9 @@ class TestDeviceFilteringEnterprise:
         )
         tenant = create_org(tenant, username, password, "enterprise")
         rsp = usradmm.call(
-            "POST", useradm.URL_LOGIN, auth=(tenant.users[0].name, tenant.users[0].pwd),
+            "POST",
+            useradm.URL_LOGIN,
+            auth=(tenant.users[0].name, tenant.users[0].pwd),
         )
         assert rsp.status_code == 200
         tenant.api_token = rsp.text
@@ -1303,7 +1320,9 @@ class TestDeviceFilteringEnterprise:
 
         # Save test filter.
         rsp = invm_v2.with_auth(tenant.api_token).call(
-            "POST", inventory_v2.URL_SAVED_FILTERS, body=test_case["filter_req"],
+            "POST",
+            inventory_v2.URL_SAVED_FILTERS,
+            body=test_case["filter_req"],
         )
         assert rsp.status_code == 201, (
             "Failed to save filter, received status code: %d" % rsp.status_code
@@ -1380,7 +1399,9 @@ class TestDeviceFilteringEnterprise:
 
 def assert_device_attributes(dev, api_dev):
     for attr in dev["attributes"]:
-        assert attr in api_dev["attributes"], (
-            "Missing inventory attribute: %s; device attributes: %s"
-            % (attr, api_dev["attributes"])
+        assert (
+            attr in api_dev["attributes"]
+        ), "Missing inventory attribute: %s; device attributes: %s" % (
+            attr,
+            api_dev["attributes"],
         )

@@ -34,7 +34,6 @@ from .mendertesting import MenderTesting
 from ..helpers import Helpers
 from testutils.infra.device import MenderDeviceGroup
 
-
 REBOOT_MAX_WAIT = 600
 
 
@@ -71,7 +70,8 @@ def add_mender_conf_and_mender_gateway_conf(d, image, mender_conf, mender_gatewa
         write {local1} mender.conf
         write {local2} mender-gateway.conf
         """.format(
-                local1=mender_conf_tmp, local2=mender_gateway_conf_tmp,
+                local1=mender_conf_tmp,
+                local2=mender_gateway_conf_tmp,
             )
         )
     subprocess.run(
@@ -102,7 +102,8 @@ class BaseTestMenderGateway(MenderTesting):
         mender_conf = mender_device.run("cat /etc/mender/mender.conf")
 
         device_id = Helpers.ip_to_device_id_map(
-            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+            MenderDeviceGroup([mender_device.host_string]),
+            devauth=devauth,
         )[mender_device.host_string]
 
         update_image(
@@ -141,7 +142,9 @@ class BaseTestMenderGateway(MenderTesting):
         )
 
         mender_gateway_image = image_with_mender_conf_and_mender_gateway_conf(
-            gateway_image, mender_gateway_mender_conf, mender_gateway_gateway_conf,
+            gateway_image,
+            mender_gateway_mender_conf,
+            mender_gateway_gateway_conf,
         )
 
         def update_device():
@@ -241,11 +244,17 @@ class BaseTestMenderGateway(MenderTesting):
             mender_device_1
         ], mender_device_2.get_reboot_detector(host_ip) as reboot[mender_device_2]:
             deployment_id_1, expected_image_id_1 = common_update_procedure(
-                valid_image, devices=[device_id_1], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_1],
+                devauth=devauth,
+                deploy=deploy,
             )
 
             deployment_id_2, expected_image_id_2 = common_update_procedure(
-                valid_image, devices=[device_id_2], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_2],
+                devauth=devauth,
+                deploy=deploy,
             )
             reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)
             reboot[mender_device_2].verify_reboot_performed(REBOOT_MAX_WAIT)
@@ -263,7 +272,10 @@ class BaseTestMenderGateway(MenderTesting):
         deploy.check_expected_status("finished", deployment_id_2)
 
     def do_test_deployment_two_devices_parallel_updates_one_failure(
-        self, env, valid_image_with_mender_conf, broken_update_image,
+        self,
+        env,
+        valid_image_with_mender_conf,
+        broken_update_image,
     ):
         device_group = env.device_group
         mender_device_1 = device_group[0]
@@ -284,7 +296,10 @@ class BaseTestMenderGateway(MenderTesting):
             mender_device_1
         ], mender_device_2.get_reboot_detector(host_ip) as reboot[mender_device_2]:
             deployment_id_1, expected_image_id_1 = common_update_procedure(
-                valid_image, devices=[device_id_1], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_1],
+                devauth=devauth,
+                deploy=deploy,
             )
 
             deployment_id_2, expected_image_id_2 = common_update_procedure(
@@ -334,11 +349,17 @@ class BaseTestMenderGateway(MenderTesting):
             mender_device_1
         ], mender_device_2.get_reboot_detector(host_ip) as reboot[mender_device_2]:
             deployment_id_1, expected_image_id_1 = common_update_procedure(
-                valid_image, devices=[device_id_1], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_1],
+                devauth=devauth,
+                deploy=deploy,
             )
 
             deployment_id_2, expected_image_id_2 = common_update_procedure(
-                valid_image, devices=[device_id_2], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_2],
+                devauth=devauth,
+                deploy=deploy,
             )
 
             deploy.check_expected_statistics(deployment_id_2, "rebooting", 1)
@@ -385,27 +406,40 @@ class BaseTestMenderGateway(MenderTesting):
             mender_device_1
         ], mender_device_2.get_reboot_detector(host_ip) as reboot[mender_device_2]:
             deployment_id_1, expected_image_id_1 = common_update_procedure(
-                valid_image, devices=[device_id_1], devauth=devauth, deploy=deploy,
+                valid_image,
+                devices=[device_id_1],
+                devauth=devauth,
+                deploy=deploy,
             )
 
             with tempfile.NamedTemporaryFile() as tf:
                 artifact_name = "%s-script-1" % device_id_2
                 script_image = get_script_artifact(
-                    b"exit 0", artifact_name, conftest.machine_name, tf.name,
+                    b"exit 0",
+                    artifact_name,
+                    conftest.machine_name,
+                    tf.name,
                 )
                 deploy.upload_image(script_image)
                 deployment_id_2 = deploy.trigger_deployment(
-                    name="script 1", artifact_name=artifact_name, devices=[device_id_2],
+                    name="script 1",
+                    artifact_name=artifact_name,
+                    devices=[device_id_2],
                 )
 
             with tempfile.NamedTemporaryFile() as tf:
                 artifact_name = "%s-script-2" % device_id_2
                 script_image = get_script_artifact(
-                    b"exit 0", artifact_name, conftest.machine_name, tf.name,
+                    b"exit 0",
+                    artifact_name,
+                    conftest.machine_name,
+                    tf.name,
                 )
                 deploy.upload_image(script_image)
                 deployment_id_3 = deploy.trigger_deployment(
-                    name="script 2", artifact_name=artifact_name, devices=[device_id_2],
+                    name="script 2",
+                    artifact_name=artifact_name,
+                    devices=[device_id_2],
                 )
 
             reboot[mender_device_1].verify_reboot_performed(REBOOT_MAX_WAIT)

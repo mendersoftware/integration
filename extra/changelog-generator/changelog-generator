@@ -435,7 +435,10 @@ def gather_entries(repo, range, remove_cherry_picks=True):
                             "This might be a squashed commit which will not work correctly with changelogs. "
                             "Should be manually checked."
                             "\n---\n%s---"
-                            % (sha, git_query.show_commit_without_diff(repo, sha),)
+                            % (
+                                sha,
+                                git_query.show_commit_without_diff(repo, sha),
+                            )
                         )
                     exclusive_tag_seen = True
 
@@ -627,7 +630,7 @@ for repo in repos:
     others = []
     dep_bumps = []
     for entry in entry_list:
-        (entry, bucket) = extract_message_and_bucket(
+        entry, bucket = extract_message_and_bucket(
             entry, fixes, feats, others, dep_bumps
         )
         bucket.append(entry)

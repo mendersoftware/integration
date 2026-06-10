@@ -34,8 +34,7 @@ class BaseTestDBMigration(MenderTesting):
         # provide the content of the second file ourselves.
         name = os.path.join(dir, "ArtifactInstall_Enter_00_ensure_persistent_conf")
         with open(name, "w") as fd:
-            fd.write(
-                """#!/bin/sh
+            fd.write("""#!/bin/sh
 
 set -e
 
@@ -47,8 +46,7 @@ if ! [ -f /data/mender/mender.conf ]; then
     ) > /data/mender/mender.conf
 fi
 exit 0
-"""
-            )
+""")
         return name
 
     def generate_storage_device_state_scripts(self, dir):

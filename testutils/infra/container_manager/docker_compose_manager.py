@@ -198,28 +198,32 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(self, name, self.DOCKER_CLIENT_FILES)
 
 
 class DockerComposeRofsClientSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
 
 
 class DockerComposeLegacyV1ClientSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(self, name, self.LEGACY_V1_CLIENT_FILES)
 
 
 class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(self, name, self.LEGACY_V3_CLIENT_FILES)
 
@@ -235,7 +239,8 @@ class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
 
 class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(
             self, name, self.QEMU_CLIENT_FILES + self.SIGNED_ARTIFACT_CLIENT_FILES
@@ -244,7 +249,8 @@ class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
 
 class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(
             self, name, self.QEMU_CLIENT_FILES + self.SHORT_LIVED_TOKEN_FILES
@@ -253,7 +259,8 @@ class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
 
 class DockerComposeFailoverServerSetup(DockerComposeNamespace):
     def __init__(
-        self, name,
+        self,
+        name,
     ):
         DockerComposeNamespace.__init__(
             self, name, self.QEMU_CLIENT_FILES + self.FAILOVER_SERVER_FILES
@@ -335,7 +342,8 @@ class DockerComposeEnterpriseSetupWithGateway(DockerComposeEnterpriseSetup):
 
     def start_tenant_mender_gateway(self, tenant):
         self._docker_compose_cmd(
-            "up -d mender-gateway", env={"TENANT_TOKEN": "%s" % tenant},
+            "up -d mender-gateway",
+            env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(45)
 
@@ -457,7 +465,8 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
     def new_tenant_docker_client(self, name, tenant):
         logger.info("creating docker client connected to tenant: " + tenant)
         self._docker_compose_cmd(
-            "up -d --scale mender-client=1", env={"TENANT_TOKEN": "%s" % tenant},
+            "up -d --scale mender-client=1",
+            env={"TENANT_TOKEN": "%s" % tenant},
         )
         time.sleep(5)
 

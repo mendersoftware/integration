@@ -40,7 +40,9 @@ def prepare_env_for_connect(env):
 
     # FT requires "troubleshoot"
     update_tenant(
-        tid, addons=["troubleshoot"], container_manager=get_container_manager(),
+        tid,
+        addons=["troubleshoot"],
+        container_manager=get_container_manager(),
     )
 
     tenant = cli.get_tenant(tid)

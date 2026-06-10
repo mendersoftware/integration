@@ -357,17 +357,23 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
     def test_update_no_compression(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_no_compression(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+            standard_setup_one_client_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
     def test_update_zstd_compression(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_zstd_compression(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+            standard_setup_one_client_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
     def test_forced_update_check_from_client(
@@ -394,7 +400,8 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         valid_image_rofs_with_mender_conf,
     ):
         self.do_test_double_update_rofs(
-            enterprise_one_rofs_client_bootstrapped, valid_image_rofs_with_mender_conf,
+            enterprise_one_rofs_client_bootstrapped,
+            valid_image_rofs_with_mender_conf,
         )
 
     @MenderTesting.fast
@@ -419,17 +426,23 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
         )
 
     def test_update_no_compression(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_no_compression(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+            enterprise_one_client_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
     def test_update_zstd_compression(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_update_zstd_compression(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+            enterprise_one_client_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
     def test_forced_update_check_from_client(

@@ -101,7 +101,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
     def wait_for_download_retry_attempts(self, device, search_string):
-        """ Block until logs contain messages related to failed download attempts """
+        """Block until logs contain messages related to failed download attempts"""
 
         timeout_time = int(time.time()) + (10 * 60)
 
@@ -127,7 +127,9 @@ class BasicTestFaultTolerance(MenderTesting):
         logger.info("Waiting for system to finish download")
 
     def do_test_update_image_breaks_networking(
-        self, env, broken_network_image,
+        self,
+        env,
+        broken_network_image,
     ):
         """
         Install an image without systemd-networkd binary existing.
@@ -149,7 +151,9 @@ class BasicTestFaultTolerance(MenderTesting):
             deploy.check_expected_statistics(deployment_id, "failure", 1)
 
     def do_test_deployed_during_network_outage(
-        self, env, valid_image_with_mender_conf,
+        self,
+        env,
+        valid_image_with_mender_conf,
     ):
         """
         Install a valid upgrade image while there is no network availability on the device
@@ -187,7 +191,9 @@ class BasicTestFaultTolerance(MenderTesting):
         assert mender_device.yocto_id_installed_on_machine() == expected_yocto_id
 
     def do_test_image_download_retry_timeout(
-        self, env, valid_image_with_mender_conf,
+        self,
+        env,
+        valid_image_with_mender_conf,
     ):
         """
         Install an update, and block storage connection when we detect it's
@@ -263,7 +269,9 @@ class BasicTestFaultTolerance(MenderTesting):
             reboot.verify_reboot_not_performed()
 
     def do_test_image_download_retry_hosts_broken(
-        self, env, valid_image_with_mender_conf,
+        self,
+        env,
+        valid_image_with_mender_conf,
     ):
         """
         Block storage host (minio) by modifying the hosts file.
@@ -361,15 +369,20 @@ class BasicTestFaultTolerance(MenderTesting):
 class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
-        self, standard_setup_one_client_bootstrapped, broken_network_image,
+        self,
+        standard_setup_one_client_bootstrapped,
+        broken_network_image,
     ):
         self.do_test_update_image_breaks_networking(
-            standard_setup_one_client_bootstrapped, broken_network_image,
+            standard_setup_one_client_bootstrapped,
+            broken_network_image,
         )
 
     @MenderTesting.slow
     def test_deployed_during_network_outage(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_deployed_during_network_outage(
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
@@ -377,15 +390,20 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
 
     @MenderTesting.slow
     def test_image_download_retry_timeout(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_timeout(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+            standard_setup_one_client_bootstrapped,
+            valid_image_with_mender_conf,
         )
 
     @MenderTesting.slow
     def test_image_download_retry_hosts_broken(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        standard_setup_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_hosts_broken(
             standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
@@ -402,15 +420,20 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
 class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
-        self, enterprise_one_client_bootstrapped, broken_network_image,
+        self,
+        enterprise_one_client_bootstrapped,
+        broken_network_image,
     ):
         self.do_test_update_image_breaks_networking(
-            enterprise_one_client_bootstrapped, broken_network_image,
+            enterprise_one_client_bootstrapped,
+            broken_network_image,
         )
 
     @MenderTesting.slow
     def test_deployed_during_network_outage(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_deployed_during_network_outage(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf
@@ -418,7 +441,9 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
 
     @MenderTesting.slow
     def test_image_download_retry_timeout(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_timeout(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf
@@ -426,7 +451,9 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
 
     @MenderTesting.slow
     def test_image_download_retry_hosts_broken(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf,
+        self,
+        enterprise_one_client_bootstrapped,
+        valid_image_with_mender_conf,
     ):
         self.do_test_image_download_retry_hosts_broken(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf

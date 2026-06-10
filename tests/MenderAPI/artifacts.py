@@ -134,7 +134,8 @@ class Artifacts:
         conf = {}
 
         output = subprocess.check_output(
-            "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image, shell=True,
+            "debugfs -R 'cat /etc/mender/mender.conf' " + "%s" % image,
+            shell=True,
         ).decode()
         import json
 

@@ -395,7 +395,7 @@ def _ssh_prep_args_impl(device, tool):
 
 
 def _put(device, file, local_path=".", remote_path="."):
-    (scp, host, port) = _scp_prep_args(device)
+    scp, host, port = _scp_prep_args(device)
     for i in range(3):
         try:
             subprocess.check_output(

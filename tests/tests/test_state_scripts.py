@@ -573,7 +573,10 @@ class BaseTestStateScripts(MenderTesting):
     ]
 
     def do_test_reboot_recovery(
-        self, env, description, test_set,
+        self,
+        env,
+        description,
+        test_set,
     ):
 
         mender_device = env.device
@@ -622,7 +625,8 @@ class BaseTestStateScripts(MenderTesting):
 
         # Now create the artifact, and make the deployment.
         device_id = Helpers.ip_to_device_id_map(
-            MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+            MenderDeviceGroup([mender_device.host_string]),
+            devauth=devauth,
         )[mender_device.host_string]
 
         host_ip = env.get_virtual_network_host_ip()
@@ -694,7 +698,10 @@ class BaseTestStateScripts(MenderTesting):
                 )
 
     def do_test_state_scripts(
-        self, env, description, test_set,
+        self,
+        env,
+        description,
+        test_set,
     ):
         """Test that state scripts are executed in right order, and that errors
         are treated like they should."""
@@ -780,7 +787,8 @@ class BaseTestStateScripts(MenderTesting):
 
             # Now create the artifact, and make the deployment.
             device_id = Helpers.ip_to_device_id_map(
-                MenderDeviceGroup([mender_device.host_string]), devauth=devauth,
+                MenderDeviceGroup([mender_device.host_string]),
+                devauth=devauth,
             )[mender_device.host_string]
             deployment_id = common_update_procedure(
                 verify_status=False,

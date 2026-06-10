@@ -87,7 +87,10 @@ class TestContactSupportEnterprise:
 
         # and the email is properly formatted
         data = message.data.decode("utf-8")
-        match = re.search(r"Subject: ([a-z0-9\-]+)", data,)
+        match = re.search(
+            r"Subject: ([a-z0-9\-]+)",
+            data,
+        )
         subject = match.group(1)
         assert re.search(r"Subject: foo", data) is not None
         assert re.search(r"From: no-reply@hosted.mender.io", data) is not None

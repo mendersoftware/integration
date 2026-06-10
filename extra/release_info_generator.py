@@ -58,12 +58,14 @@ def determine_lts_end(tag, currentMinor, releases):
     ):
         return
     aYear = timedelta(
-        days=366
-        if (
-            (tag.datetime.month >= 3 and isleap(tag.datetime.year + 1))
-            or (tag.datetime.month < 3 and isleap(tag.datetime.year))
+        days=(
+            366
+            if (
+                (tag.datetime.month >= 3 and isleap(tag.datetime.year + 1))
+                or (tag.datetime.month < 3 and isleap(tag.datetime.year))
+            )
+            else 365
         )
-        else 365
     )
     expirationDate = tag.datetime + aYear
     if currentMinor in releases:
@@ -84,7 +86,10 @@ def collect_release_info(tag, minorRelease):
     repoList = StringIO()
     with redirect_stdout(repoList):
         do_list_repos(
-            Namespace(**args), False, False, False,
+            Namespace(**args),
+            False,
+            False,
+            False,
         )
 
     versionReposInfo = json.loads(repoList.getvalue())
@@ -143,12 +148,12 @@ for release in releases:
     if currentMinor not in releaseInformation["releases"]:
         releaseInformation["releases"][currentMinor] = {}
         if ltsEnd:
-            releaseInformation["releases"][currentMinor][
-                "supported_until"
-            ] = ltsEnd.date.strftime("%Y-%m")
-    releaseInformation["releases"][currentMinor][
-        release.version
-    ] = collect_release_info(release, releaseInformation["releases"][currentMinor])
+            releaseInformation["releases"][currentMinor]["supported_until"] = (
+                ltsEnd.date.strftime("%Y-%m")
+            )
+    releaseInformation["releases"][currentMinor][release.version] = (
+        collect_release_info(release, releaseInformation["releases"][currentMinor])
+    )
 
 releaseInformation["releases"] = dict(
     sorted(releaseInformation["releases"].items(), reverse=True)

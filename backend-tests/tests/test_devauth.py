@@ -180,7 +180,9 @@ class TestPreauthBase:
 
         # all devices appear in device list as 'preauthorized'
         r = devauthm.with_auth(utoken).call(
-            "GET", deviceauth.URL_DEVICES_COUNT, qs_params={"status": "preauthorized"},
+            "GET",
+            deviceauth.URL_DEVICES_COUNT,
+            qs_params={"status": "preauthorized"},
         )
         assert r.status_code == 200
         new_count = r.json()["count"]
@@ -386,8 +388,8 @@ class TestPreauthEnterprise(TestPreauthBase):
 
 
 def make_devs_with_authsets(user, tenant_token=""):
-    """ create a good number of devices, some with >1 authsets, with different statuses.
-        returns DevWithAuthsets objects."""
+    """create a good number of devices, some with >1 authsets, with different statuses.
+    returns DevWithAuthsets objects."""
     useradmm = ApiClient(useradm.URL_MGMT)
 
     # log in user
@@ -910,7 +912,8 @@ class TestDeviceMgmt(TestDeviceMgmtBase):
 
 class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
     @pytest.mark.skipif(
-        useExistingTenant(), reason="not feasible to test with existing tenant",
+        useExistingTenant(),
+        reason="not feasible to test with existing tenant",
     )
     def test_ok_get_devices(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
@@ -931,7 +934,8 @@ class TestDeviceMgmtEnterprise(TestDeviceMgmtBase):
             self.do_test_delete_device_not_found(t.devices, t.users[0])
 
     @pytest.mark.skipif(
-        useExistingTenant(), reason="not feasible to test with existing tenant",
+        useExistingTenant(),
+        reason="not feasible to test with existing tenant",
     )
     def test_device_count(self, tenants_devs_authsets):
         for t in tenants_devs_authsets:
@@ -1323,7 +1327,9 @@ class TestAuthsetMgmtBase:
 
         # not found: bogus device
         r = devauthm.with_auth(utoken).call(
-            "DELETE", deviceauth.URL_AUTHSET, path_params={"did": "foo", "aid": "bar"},
+            "DELETE",
+            deviceauth.URL_AUTHSET,
+            path_params={"did": "foo", "aid": "bar"},
         )
         assert r.status_code == 404
 
@@ -1735,7 +1741,10 @@ class TestAuthReqBase:
 
         for d in devs:
             body, sighdr = deviceauth.auth_req(
-                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
+                d["id_data"],
+                d["keypair"][1],
+                d["keypair"][0],
+                tenant_token,
             )
 
             r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
@@ -1766,7 +1775,10 @@ class TestAuthReqBase:
             )
 
             body, sighdr = deviceauth.auth_req(
-                d["id_data"], d["keypair"][1], d["keypair"][0], tenant_token,
+                d["id_data"],
+                d["keypair"][1],
+                d["keypair"][0],
+                tenant_token,
             )
 
             r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)
@@ -1799,7 +1811,8 @@ class TestAuthReq(TestAuthReqBase):
 
 class TestAuthReqEnterprise(TestAuthReqBase):
     @pytest.mark.skipif(
-        useExistingTenant(), reason="not feasible to test with existing tenant",
+        useExistingTenant(),
+        reason="not feasible to test with existing tenant",
     )
     def test_submit_accept(self, tenants_with_plans):
         for tenant in tenants_with_plans:
@@ -1829,7 +1842,10 @@ class TestDevAuthCliBase:
             dev = {"id_data": rand_id_data(), "keypair": crypto.get_keypair_rsa()}
 
             body, sighdr = deviceauth.auth_req(
-                dev["id_data"], dev["keypair"][1], dev["keypair"][0], tenant_token,
+                dev["id_data"],
+                dev["keypair"][1],
+                dev["keypair"][0],
+                tenant_token,
             )
 
             r = devauthd.call("POST", deviceauth.URL_AUTH_REQS, body, headers=sighdr)

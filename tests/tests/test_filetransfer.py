@@ -50,7 +50,6 @@ from .mendertesting import MenderTesting
 from testutils.infra.container_manager import factory
 from testutils.infra.device import MenderDevice
 
-
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"
 
@@ -75,7 +74,10 @@ def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
         ("mode", (None, mode)),
         ("uid", (None, uid)),
         ("gid", (None, gid)),
-        ("file", (os.path.basename(path), file, "application/octet-stream"),),
+        (
+            "file",
+            (os.path.basename(path), file, "application/octet-stream"),
+        ),
     )
     deviceconnect_url = (
         "https://%s/api/management/v1/deviceconnect"
@@ -200,7 +202,8 @@ class BaseTestFileTransferDownload(MenderTesting):
                 os.unlink(f.name + ".download")
 
     def test_upload_error_path_is_relative(
-        self, mender_device_setup,
+        self,
+        mender_device_setup,
     ):
 
         # wrong request, path is relative
@@ -253,7 +256,10 @@ class BaseTestFileTransferLimits(MenderTesting):
 
         fname = random_filename()
         r = upload_file(
-            f"/usr/{fname}", open(f.name, "rb"), self.devid, self.auth_token,
+            f"/usr/{fname}",
+            open(f.name, "rb"),
+            self.devid,
+            self.auth_token,
         )
 
         assert r.status_code == 400, r.json()
@@ -312,7 +318,10 @@ class BaseTestFileTransferLimits(MenderTesting):
 
         fname = random_filename()
         r = upload_file(
-            f"/tmp/{fname}", open(f.name, "rb"), self.devid, self.auth_token,
+            f"/tmp/{fname}",
+            open(f.name, "rb"),
+            self.devid,
+            self.auth_token,
         )
 
         assert r.status_code == 400, r.json()
@@ -343,10 +352,16 @@ class BaseTestFileTransferLimits(MenderTesting):
 
         fname = random_filename()
         upload_file(
-            f"/tmp/{fname}-0.bin", open(f.name, "rb"), self.devid, self.auth_token,
+            f"/tmp/{fname}-0.bin",
+            open(f.name, "rb"),
+            self.devid,
+            self.auth_token,
         )
         upload_file(
-            f"/tmp/{fname}-1.bin", open(f.name, "rb"), self.devid, self.auth_token,
+            f"/tmp/{fname}-1.bin",
+            open(f.name, "rb"),
+            self.devid,
+            self.auth_token,
         )
         logger.info("-- testcase: File Transfer limits: sleeping to gather the avg")
 
@@ -380,7 +395,10 @@ class BaseTestFileTransferLimits(MenderTesting):
         f.close()
         # upload a file
         r = upload_file(
-            f"/tmp/{fname}-a.bin", open(f.name, "rb"), self.devid, self.auth_token,
+            f"/tmp/{fname}-a.bin",
+            open(f.name, "rb"),
+            self.devid,
+            self.auth_token,
         )
         self.mender_device.run(
             "kill -USR1 `pidof mender-connect`"
@@ -522,7 +540,8 @@ class BaseTestFileTransferLimits(MenderTesting):
 
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download_err_not_allowed_to_follow_link(
-        self, mender_device_setup,
+        self,
+        mender_device_setup,
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(
@@ -541,7 +560,8 @@ class BaseTestFileTransferLimits(MenderTesting):
 
     @pytest.mark.xfail(raises=NotImplementedError, reason="MEN-4659")
     def test_filetransfer_limits_download_err_not_allowed_to_follow_link_on_path_part(
-        self, mender_device_setup,
+        self,
+        mender_device_setup,
     ):
         "File Transfer limits: not allowed to follow a link on path part; download forbidden"
 
@@ -561,7 +581,8 @@ class BaseTestFileTransferLimits(MenderTesting):
         self.assert_forbidden(r, "access denied: forbidden to follow the link")
 
     def test_filetransfer_limits_download_ok_allowed_to_follow_symlink(
-        self, mender_device_setup,
+        self,
+        mender_device_setup,
     ):
         "File Transfer limits: not allowed to follow a link; download forbidden"
         set_limits(

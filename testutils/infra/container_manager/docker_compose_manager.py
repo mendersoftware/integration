@@ -54,12 +54,6 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     DOCKER_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.docker-client.addons.yml",
     ]
-    LEGACY_V1_CLIENT_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.client.yml",
-        COMPOSE_FILES_PATH + "/extra/legacy-clients-testing/legacy-v1-client.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.yml",
-        COMPOSE_FILES_PATH + "/storage-proxy/docker-compose.storage-proxy.testing.yml",
-    ]
     LEGACY_V3_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/extra/legacy-clients-testing/legacy-v3-client.yml",
     ]
@@ -199,14 +193,6 @@ class DockerComposeRofsClientSetup(DockerComposeNamespace):
         DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
 
 
-class DockerComposeLegacyV1ClientSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
-        DockerComposeNamespace.__init__(self, name, self.LEGACY_V1_CLIENT_FILES)
-
-
 class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
     def __init__(
         self,
@@ -316,19 +302,6 @@ class DockerComposeEnterpriseShortLivedTokenSetup(DockerComposeEnterpriseSetup):
         else:
             DockerComposeNamespace.__init__(
                 self, name, self.ENTERPRISE_FILES + self.SHORT_LIVED_TOKEN_FILES
-            )
-
-
-class DockerComposeEnterpriseLegacyV1ClientSetup(DockerComposeEnterpriseSetup):
-    def __init__(self, name, num_clients=0):
-        self.num_clients = num_clients
-        if self.num_clients > 0:
-            raise NotImplementedError(
-                "Clients not implemented on setup time, use new_tenant_client"
-            )
-        else:
-            DockerComposeNamespace.__init__(
-                self, name, self.ENTERPRISE_FILES + self.LEGACY_V1_CLIENT_FILES
             )
 
 

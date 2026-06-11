@@ -33,6 +33,8 @@ from tempfile import NamedTemporaryFile
 from ..common_setup import (
     enterprise_one_docker_client_bootstrapped,
     standard_setup_one_docker_client_bootstrapped,
+    class_persistent_enterprise_one_docker_client_bootstrapped,
+    class_persistent_standard_setup_one_docker_client_bootstrapped,
 )
 
 from ..MenderAPI import (
@@ -108,7 +110,6 @@ def set_limits(docker_env, mender_device, limits, auth, devid):
     finally:
         shutil.rmtree(tmpdir)
     mender_device.run("kill -TERM `pidof %s`" % connect_service_name)
-    time.sleep(4)
     wait_for_connect(auth, devid)
     debugoutput = mender_device.run("cat /etc/mender/mender-connect.conf")
     logger.info("/etc/mender/mender-connect.conf:\n%s" % debugoutput)
@@ -465,8 +466,8 @@ class BaseTestFileTransferLimits(MenderTesting):
                 "FileTransfer": {
                     "Chroot": "/var/lib/mender/filetransfer",
                     "FollowSymLinks": True,  # in the image /var/lib/mender is a symlink
+                    # PreserveOwner covers both owner and group via os.Chown(uid, gid)
                     "PreserveOwner": True,
-                    "PreserveGroup": True,
                 },
             },
             self.auth,
@@ -490,12 +491,13 @@ class BaseTestFileTransferLimits(MenderTesting):
             gid=str(gid),
         )
 
+        assert r.status_code == 201, r.json()
+
         owner_group = self.mender_device.run(
             f"ls -aln /var/lib/mender/filetransfer/{fname}.bin | cut -f 3,4 -d' '"
         )
 
         assert owner_group == str(uid) + " " + str(gid) + "\n"
-        assert r.status_code == 201
 
     def assert_forbidden(self, rsp, message):
         try:
@@ -699,11 +701,11 @@ def rerun_on_timeouts(err, *args):
 class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
     """Tests the file transfer functionality"""
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture(scope="class")
     def mender_device_setup(
-        self, request, standard_setup_one_docker_client_bootstrapped
+        self, request, class_persistent_standard_setup_one_docker_client_bootstrapped
     ):
-        env = standard_setup_one_docker_client_bootstrapped
+        env = class_persistent_standard_setup_one_docker_client_bootstrapped
 
         request.cls.auth = env.auth
         request.cls.mender_device = env.device
@@ -724,9 +726,11 @@ class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
 class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
     """Tests the file transfer functionality for enterprise setup"""
 
-    @pytest.fixture(scope="function")
-    def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
-        env = enterprise_one_docker_client_bootstrapped
+    @pytest.fixture(scope="class")
+    def mender_device_setup(
+        self, request, class_persistent_enterprise_one_docker_client_bootstrapped
+    ):
+        env = class_persistent_enterprise_one_docker_client_bootstrapped
         devid, auth_token, auth, mender_device = prepare_env_for_connect(
             env,
             docker=True,
@@ -743,12 +747,12 @@ class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
 class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
     """Tests the file transfer functionality"""
 
-    @pytest.fixture(scope="function")
+    @pytest.fixture(scope="class")
     def mender_device_setup(
-        self, request, standard_setup_one_docker_client_bootstrapped
+        self, request, class_persistent_standard_setup_one_docker_client_bootstrapped
     ):
 
-        env = standard_setup_one_docker_client_bootstrapped
+        env = class_persistent_standard_setup_one_docker_client_bootstrapped
 
         request.cls.auth = env.auth
         request.cls.mender_device = env.device
@@ -766,9 +770,11 @@ class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
 class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     """Tests the file transfer functionality for enterprise setup"""
 
-    @pytest.fixture(scope="function")
-    def mender_device_setup(self, request, enterprise_one_docker_client_bootstrapped):
-        env = enterprise_one_docker_client_bootstrapped
+    @pytest.fixture(scope="class")
+    def mender_device_setup(
+        self, request, class_persistent_enterprise_one_docker_client_bootstrapped
+    ):
+        env = class_persistent_enterprise_one_docker_client_bootstrapped
         devid, auth_token, auth, mender_device = prepare_env_for_connect(
             env,
             docker=True,

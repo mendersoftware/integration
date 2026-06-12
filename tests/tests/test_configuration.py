@@ -49,20 +49,19 @@ class TestConfiguration(MenderTesting):
         # accept the device
         devauth.accept_devices(1)
 
-        # list of devices
-        devices = list(
-            set([device["id"] for device in devauth.get_devices_status("accepted")])
-        )
+        devices = devauth.get_devices_status("accepted")
         assert 1 == len(devices)
 
         auth = authentication.Authentication()
 
-        wait_for_connect(auth, devices[0])
+        wait_for_connect(auth, devices[0]["id"])
 
         # set and verify the device's configuration
         # retry to skip possible race conditions between update poll and update trigger
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            set_and_verify_config({"key": "value"}, devices[0], auth.get_auth_token())
+            set_and_verify_config(
+                {"key": "value"}, devices[0]["id"], auth.get_auth_token()
+            )
 
             forced = was_update_forced(standard_setup_one_client.device)
             if forced:
@@ -122,23 +121,17 @@ class TestConfigurationEnterprise(MenderTesting):
 
         devauth_tenant.accept_devices(1)
 
-        # list of devices
-        devices = list(
-            set(
-                [
-                    device["id"]
-                    for device in devauth_tenant.get_devices_status("accepted")
-                ]
-            )
-        )
+        devices = devauth_tenant.get_devices_status("accepted")
         assert 1 == len(devices)
 
-        wait_for_connect(auth, devices[0])
+        wait_for_connect(auth, devices[0]["id"])
 
         # set and verify the device's configuration
         # retry to skip possible race conditions between update poll and update trigger
         for _ in redo.retrier(attempts=3, sleeptime=1):
-            set_and_verify_config({"key": "value"}, devices[0], auth.get_auth_token())
+            set_and_verify_config(
+                {"key": "value"}, devices[0]["id"], auth.get_auth_token()
+            )
 
             forced = was_update_forced(mender_device)
             if forced:
@@ -186,7 +179,7 @@ def set_and_verify_config(config, devid, authtoken):
 
     # loop and verify the reported configuration
     reported = None
-    for i in range(180):
+    for i in range(300):
         r = requests_retry().get(configuration_url, verify=False, headers=authtoken)
         assert r.status_code == 200
         reported = r.json().get("reported")

@@ -16,6 +16,8 @@ import logging
 import json
 import time
 
+import pytest
+
 from .MenderAPI import devauth
 
 logger = logging.getLogger()
@@ -68,9 +70,11 @@ class Helpers:
             # entries since the last service restart.
             cmd = f"systemctl status --no-pager --full --lines 100000 mender-authd"
 
-        sleepsec = 0
+        sleeptime = 2
+        max_sleeptime = 10
         timeout = 600
-        while sleepsec < timeout:
+        deadline = time.time() + timeout
+        while time.time() < deadline:
             out = device.run(
                 cmd + "| grep '" + message + "'",
                 warn=True,
@@ -78,15 +82,16 @@ class Helpers:
             if out != "":
                 return
 
-            time.sleep(10)
-            sleepsec += 10
+            waited = int(timeout - (deadline - time.time()))
             logger.info(
-                f"waiting for message '{message}' in mender-authd log, waited for: {sleepsec}"
+                f"waiting for message '{message}' in mender-authd log, waited for: {waited}s"
             )
+            time.sleep(sleeptime)
+            sleeptime = min(sleeptime * 2, max_sleeptime)
 
-        assert (
-            sleepsec <= timeout
-        ), f"timeout for waiting for message '{message}' in mender-authd log"
+        pytest.fail(
+            f"timeout ({timeout}s) waiting for message '{message}' in mender-authd log"
+        )
 
     @staticmethod
     def check_log_is_authenticated(device, since=None):

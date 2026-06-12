@@ -427,19 +427,13 @@ def _run(conn, cmd, **kw):
     result = None
     start_time = time.time()
     sleeptime = 1
+    max_sleeptime = 30  # cap to avoid multi-minute gaps between retries
     while time.time() < start_time + wait:
-        # Back off exponentially to save SSH handshakes in QEMU, which
-        # are quite expensive.
-        time.sleep(sleeptime)
-        sleeptime *= 2
-
         try:
             result = conn.run(cmd, **kw)
             break
         except ConnectionError as e:
             logger.info(f"Got SSH exception while connecting to host {conn.host}: {e}")
-            time.sleep(60)
-            continue
         except OSError as e:
             # The OSError is happening while there is no QEMU instance initialized
             logger.info(
@@ -449,12 +443,17 @@ def _run(conn, cmd, **kw):
             )
             if "Cannot assign requested address" not in str(e):
                 raise e
-            continue
         except Exception as e:
             logger.exception(
                 f"Generic exception happened while connecting to host {conn.host}"
             )
             raise e
+
+        # Back off exponentially to save SSH handshakes in QEMU, which
+        # are quite expensive.  Capped so we never wait longer than
+        # max_sleeptime between attempts.
+        time.sleep(sleeptime)
+        sleeptime = min(sleeptime * 2, max_sleeptime)
     else:
         raise RuntimeError(
             f"Could not successfully run command after {wait} seconds on host {conn.host}: {cmd}"

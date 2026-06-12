@@ -17,6 +17,8 @@ import pytest
 import tempfile
 import time
 
+import redo
+
 from .. import conftest
 from ..common_setup import (
     standard_setup_one_client_bootstrapped,
@@ -278,10 +280,12 @@ class BaseTestInventory(MenderTesting):
             + " --provides rootfs-image.swname.custom_field:value",
         )
 
-        # Give the client a little bit of time to do the update
-        time.sleep(15)
+        post_deployment_inv_json = []
+        for _ in redo.retrier(attempts=10, sleeptime=3):
+            post_deployment_inv_json = inv.get_devices()
+            if "rootfs-image.swname.version" in str(post_deployment_inv_json):
+                break
 
-        post_deployment_inv_json = inv.get_devices()
         assert len(post_deployment_inv_json) > 0
         assert "rootfs-image.swname.version" in str(
             post_deployment_inv_json

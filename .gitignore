@@ -11,6 +11,7 @@ tags
 
 __pycache__
 .cache
+.idea
 artifacts
 core-image-full-*
 large_image.dat

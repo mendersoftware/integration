@@ -36,9 +36,9 @@ logging.getLogger().setLevel(logging.DEBUG)
 def setup_test_logger(test_name, worker_id=None):
     """Sets the default test logger
 
-    The  logger contains two handlers:
-    - An INFO level console handler
-    - A DEBUG level file handler, with a filename being an slug of the test name
+    All log output (DEBUG and above) goes to a per-test file under
+    mender_test_logs/. Nothing is written to stderr so the CI console and
+    pytest HTML report stay clean.
     """
 
     # Get the default logger and remove previous handlers
@@ -46,28 +46,12 @@ def setup_test_logger(test_name, worker_id=None):
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
 
-    # Define format. For console logging, prepend the test name
     base_log_format = "%(asctime)s [%(levelname)s]: >> %(message)s"
-    if worker_id is not None:
-        console_log_format = "[{}] {} -- {}".format(
-            worker_id, test_name, base_log_format
-        )
-    else:
-        console_log_format = "{} -- {}".format(test_name, base_log_format)
 
-    # Add console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter(console_log_format)
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-
-    # Add file handler
     filename = os.path.join(TEST_LOGS_PATH, slugify(test_name) + ".log")
     file_handler = logging.FileHandler(filename)
     file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter(base_log_format)
-    file_handler.setFormatter(file_formatter)
+    file_handler.setFormatter(logging.Formatter(base_log_format))
     logger.addHandler(file_handler)
 
 

@@ -18,6 +18,8 @@ import time
 import uuid
 
 from flaky import flaky
+from redo import retriable
+from websockets.exceptions import WebSocketException
 
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
@@ -168,11 +170,23 @@ class _TestRemoteTerminalBase:
         # Test that mender-connect recovers if it loses the connection to deviceconnect.
         docker_env.restart_service("mender-deviceconnect")
 
-        time.sleep(10)
+        # mender-connect needs time to re-establish its session after
+        # deviceconnect restarts; until it does, the mgmt /connect endpoint
+        # returns HTTP 404 ("device disconnected"). Poll instead of a fixed
+        # sleep that races the reconnect. (QA-1527)
+        @retriable(
+            attempts=24,
+            sleeptime=5,
+            sleepscale=1,
+            jitter=0,
+            retry_exceptions=(WebSocketException,),
+        )
+        def assert_websocket_connects():
+            with docker_env.devconnect.get_websocket():
+                # Connecting successfully is enough.
+                pass
 
-        with docker_env.devconnect.get_websocket():
-            # Nothing to do, just connecting successfully is enough.
-            pass
+        assert_websocket_connects()
 
     def test_bogus_shell_message(self, docker_env):
         self.assert_env(docker_env)

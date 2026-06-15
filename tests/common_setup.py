@@ -248,11 +248,6 @@ def enterprise_no_client():
     yield from enterprise_no_client_impl()
 
 
-@pytest.fixture(scope="class")
-def enterprise_no_client_class():
-    yield from enterprise_no_client_impl()
-
-
 @pytest.fixture(scope="function")
 def enterprise_one_client():
     env = container_factory.get_enterprise_setup(num_clients=0)

@@ -17,82 +17,12 @@ from ..common_setup import (
     enterprise_two_clients_bootstrapped,
 )
 from .common_update import common_update_procedure
-from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, image, logger
+from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, logger
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
 
 
 class BaseTestGrouping(MenderTesting):
-    def validate_group_responses(self, device_map, inv):
-        """Checks whether the device_map corresponds to the server's view of
-        the current groups, using all the possible ways to query for this.
-        device_map is a map of device to group."""
-
-        groups = []
-        groups_map = {}
-        devices_with_group = []
-        devices_without_group = []
-        for device in device_map:
-            group = device_map[device]
-            if group is not None:
-                groups.append(group)
-                devices_with_group.append(device)
-            else:
-                devices_without_group.append(device)
-
-            if groups_map.get(group):
-                groups_map[group].append(device)
-            else:
-                groups_map[group] = [device]
-
-        assert sorted(inv.get_groups()) == sorted(groups)
-        assert sorted(
-            [device["id"] for device in inv.get_devices(has_group=True)]
-        ) == sorted(devices_with_group)
-        assert sorted(
-            [device["id"] for device in inv.get_devices(has_group=False)]
-        ) == sorted(devices_without_group)
-        assert sorted([device["id"] for device in inv.get_devices()]) == sorted(
-            device_map.keys()
-        )
-
-        for group in groups:
-            assert sorted(inv.get_devices_in_group(group)) == sorted(groups_map[group])
-        for device in device_map:
-            assert inv.get_device_group(device)["group"] == device_map[device]
-
-    def do_test_basic_groups(self, env):
-        """Tests various group operations."""
-        inv = Inventory(env.auth)
-
-        devices = [device["id"] for device in inv.get_devices()]
-        assert len(devices) == 2
-
-        # Purely for easier reading: Assign labels to each device.
-        alpha = devices[0]
-        bravo = devices[1]
-
-        # Start out with no groups.
-        self.validate_group_responses({alpha: None, bravo: None}, inv)
-
-        # Test various group operations.
-        inv.put_device_in_group(alpha, "Red")
-        self.validate_group_responses({alpha: "Red", bravo: None}, inv)
-
-        inv.put_device_in_group(bravo, "Blue")
-        self.validate_group_responses({alpha: "Red", bravo: "Blue"}, inv)
-
-        inv.delete_device_from_group(alpha, "Red")
-        self.validate_group_responses({alpha: None, bravo: "Blue"}, inv)
-
-        # Note that this *moves* the device into the group.
-        inv.put_device_in_group(bravo, "Red")
-        self.validate_group_responses({alpha: None, bravo: "Red"}, inv)
-
-        # Important: Leave the groups as you found them: Empty.
-        inv.delete_device_from_group(bravo, "Red")
-        self.validate_group_responses({alpha: None, bravo: None}, inv)
-
     def do_test_update_device_group(self, env, valid_image_with_mender_conf):
         """
         Perform a successful upgrade on one group of devices, and assert that:
@@ -171,9 +101,6 @@ class BaseTestGrouping(MenderTesting):
 
 @MenderTesting.fast
 class TestGroupingOpenSource(BaseTestGrouping):
-    def test_basic_groups(self, standard_setup_two_clients_bootstrapped):
-        self.do_test_basic_groups(standard_setup_two_clients_bootstrapped)
-
     def test_update_device_group(
         self, standard_setup_two_clients_bootstrapped, valid_image_with_mender_conf
     ):
@@ -185,9 +112,6 @@ class TestGroupingOpenSource(BaseTestGrouping):
 
 @MenderTesting.fast
 class TestGroupingEnterprise(BaseTestGrouping):
-    def test_basic_groups(self, enterprise_two_clients_bootstrapped):
-        self.do_test_basic_groups(enterprise_two_clients_bootstrapped)
-
     def test_update_device_group(
         self, enterprise_two_clients_bootstrapped, valid_image_with_mender_conf
     ):

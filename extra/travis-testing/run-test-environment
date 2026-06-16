@@ -1,0 +1,94 @@
+#!/bin/bash
+
+set -e
+
+SELFDIR=$(readlink -f $(dirname $0))
+
+usage() {
+    echo "usage: $(basename $0) <test type> <path-to-integration> <path-to-acceptance-compose-file>]"
+    echo
+    echo "  <test type> can be either 'acceptance' or 'integration'"
+    echo
+    echo "  "Acceptance testing sets up tests environment and runs tests defined"
+    echo "   in directory:"
+    echo "      $SELFDIR"
+    echo
+    echo "  "Integration testing sets up integration environment and runs tests"
+    echo
+    echo
+    echo "Environment variables:"
+    echo "   NO_CLEANUP - test environment will not be removed if NO_CLEANUP"
+    echo "                is not empty"
+
+}
+
+[ "$1" = "-h" -o "$1" = "--help" ] && {
+    usage
+    exit 0
+}
+
+TEST_TYPE=$1
+
+[ -z "$TEST_TYPE" -o ! -d "$TEST_TYPE" -a "$TEST_TYPE" != "acceptance" -a "$TEST_TYPE" != "integration" ] && {
+    echo "set the test type to either acceptance or integration"
+    usage
+    exit 1
+}
+shift
+
+INTEGRATION_PATH=$1
+
+[ -z "$INTEGRATION_PATH" -o ! -d "$INTEGRATION_PATH" ] && {
+    echo "integration repository path not provided"
+    usage
+    exit 1
+}
+shift
+
+TESTS_COMPOSE_PATH=$1
+
+[ -z "$TESTS_COMPOSE_PATH" -o ! -f "$TESTS_COMPOSE_PATH" ] && {
+    echo "tests compose path not provided"
+    usage
+    exit 1
+}
+shift
+
+
+[ "$TEST_TYPE" == "acceptance" ] && {
+    COMPOSE_CMD="docker-compose -p acceptance-tests -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.storage.minio.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
+    TEST_SERVICE=${TEST_SERVICE:-"acceptance"}
+    # technically we could use 'docker-compose run' here, but it doesn't preserve the acceptance service name,
+    # which is needed e.g. for predictably running the tenantadm mock
+    # use 'up instead
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH up ${TEST_SERVICE} || failed=1
+    # try to find the container now
+    contid=$(docker ps --filter status=exited --filter label=com.docker.compose.service=${TEST_SERVICE} -q)
+    if [ -n "$contid" ] ; then
+        # determine its status
+        status=$(docker inspect --format '{{.State.ExitCode}}' ${contid})
+        [ "$status" == "0" ] || failed=1
+    else
+        echo "cannot find acceptance container's ID"
+        failed=1
+    fi
+}
+
+[ "$TEST_TYPE" == "integration" ] && {
+    ( cd "$INTEGRATION_PATH" ; bash up -n )
+    COMPOSE_CMD="docker-compose -f $INTEGRATION_PATH/docker-compose.yml -f $INTEGRATION_PATH/docker-compose.client.yml -f $INTEGRATION_PATH/docker-compose.demo.yml"
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH up -d || failed=1
+}
+
+echo "-- compose command: $COMPOSE_CMD -f $TESTS_COMPOSE_PATH"
+
+if [ -n "$failed" ]; then
+    tmppath=$(mktemp ${SELFDIR}/acceptance.XXXXXX)
+    echo "-- tests failed, dumping logs to $tmppath"
+    $COMPOSE_CMD -f $TESTS_COMPOSE_PATH logs > $tmppath
+fi
+
+# fold everything
+[ -z "$NO_CLEANUP" ] && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH down -v && $COMPOSE_CMD -f $TESTS_COMPOSE_PATH rm || true
+
+exit $failed

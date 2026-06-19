@@ -1,7 +1,6 @@
 
 include:
-  - project: 'Northern.tech/Mender/mendertesting'
-    file: '.gitlab-ci-check-commits.yml'
+  - component: gitlab.com/Northern.tech/Mender/mendertesting/commit-lint@master
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-license.yml'
   - project: 'Northern.tech/Mender/mendertesting'

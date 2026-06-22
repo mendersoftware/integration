@@ -11,6 +11,7 @@ iptables
 jq
 libffi-dev
 make
+m4
 openssh-client
 openssl
 py3-pip

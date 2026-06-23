@@ -18,7 +18,7 @@ import uuid
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
-from ..common_setup import standard_setup_one_client, enterprise_no_client
+from ..common_setup import standard_setup_one_docker_client, enterprise_no_client
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, devauth, inv, logger
 from ..helpers import Helpers
@@ -154,13 +154,13 @@ UwIDAQAB
 
 
 class TestPreauth(TestPreauthBase):
-    def test_ok_preauth_and_bootstrap(self, standard_setup_one_client):
-        self.do_test_ok_preauth_and_bootstrap(standard_setup_one_client)
+    def test_ok_preauth_and_bootstrap(self, standard_setup_one_docker_client):
+        self.do_test_ok_preauth_and_bootstrap(standard_setup_one_docker_client)
 
-    def test_ok_preauth_and_remove(self, standard_setup_one_client):
+    def test_ok_preauth_and_remove(self, standard_setup_one_docker_client):
         self.do_test_ok_preauth_and_remove()
 
-    def test_fail_preauth_existing(self, standard_setup_one_client):
+    def test_fail_preauth_existing(self, standard_setup_one_docker_client):
         self.do_test_fail_preauth_existing()
 
 
@@ -196,7 +196,8 @@ class Client:
     """Wraps various actions on the client, performed via SSH (inside fabric.execute())."""
 
     ID_HELPER = "/usr/share/mender/identity/mender-device-identity"
-    PRIV_KEY = "/data/mender/mender-agent.pem"
+    # /var/lib/mender works for both the docker client and qemu (symlinked to /data).
+    PRIV_KEY = "/var/lib/mender/mender-agent.pem"
 
     KEYGEN_TIMEOUT = 300
 

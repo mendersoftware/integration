@@ -44,6 +44,21 @@ def standard_setup_one_client():
 
 
 @pytest.fixture(scope="function")
+def standard_setup_one_docker_client():
+    env = container_factory.get_docker_client_setup()
+    env.setup()
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
+    reset_mender_api(env)
+
+    env.auth = auth
+    yield env
+    env.teardown()
+
+
+@pytest.fixture(scope="function")
 def standard_setup_extended():
     env = container_factory.get_extended_setup(num_clients=1)
     env.setup()
@@ -323,6 +338,20 @@ def enterprise_one_docker_client_bootstrapped_impl():
     devauth_tenant.accept_devices(1)
     devices = devauth_tenant.get_devices_status("accepted")
     assert 1 == len(devices)
+
+    yield env
+    env.teardown()
+
+
+@pytest.fixture(scope="function")
+def enterprise_one_docker_client():
+    env = container_factory.get_enterprise_docker_client_setup(num_clients=0)
+    env.setup()
+    reset_mender_api(env)
+
+    tenant = create_tenant(env)
+    new_tenant_client(env, "mender-client", tenant["tenant_token"], docker=True)
+    env.device_group.ssh_is_opened()
 
     yield env
     env.teardown()

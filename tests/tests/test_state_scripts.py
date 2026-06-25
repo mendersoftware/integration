@@ -838,8 +838,18 @@ class BaseTestStateScripts(MenderTesting):
                         'Waited too long for "Error" to appear in log:\n%s' % info
                     )
             else:
+                # The client's automatic-reboot watchdog waits up to 10 minutes
+                # (chrono::minutes(10) in update_module/v3/.../update_module_call.cpp
+                # AsyncSystemReboot) for the `reboot` to take effect before it
+                # gives up and reports a terminal status. The default 10-minute
+                # check_expected_statistics window is a dead heat with that
+                # watchdog: when a reboot is slow to fire (observed on the CI
+                # runners) the client reports the terminal status at ~600s, right
+                # as this poll gives up -> flaky "Never found <status>" timeout.
+                # Wait longer than the client watchdog so we observe the real
+                # outcome instead of racing it.
                 deploy.check_expected_statistics(
-                    deployment_id, test_set["ExpectedStatus"], 1
+                    deployment_id, test_set["ExpectedStatus"], 1, max_wait=15 * 60
                 )
 
             # Always give the client a little bit of time to settle in the base

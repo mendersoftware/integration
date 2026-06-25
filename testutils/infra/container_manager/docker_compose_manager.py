@@ -178,11 +178,12 @@ class DockerComposeMonitorCommercialSetup(DockerComposeNamespace):
 
 
 class DockerComposeDockerClientSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
+    def __init__(self, name, num_clients=1):
+        self.num_clients = num_clients
         DockerComposeNamespace.__init__(self, name, self.DOCKER_CLIENT_FILES)
+
+    def setup(self):
+        self._docker_compose_up(f"--scale mender-client={self.num_clients}")
 
 
 class DockerComposeRofsClientSetup(DockerComposeNamespace):

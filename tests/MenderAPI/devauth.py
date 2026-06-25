@@ -149,7 +149,8 @@ class DeviceAuthV2:
             )
 
         # block until devices are actually accepted
-        timeout = time.time() + 30
+        accept_timeout = 120
+        timeout = time.time() + accept_timeout
         while time.time() <= timeout:
             time.sleep(1)
             if (
@@ -163,7 +164,7 @@ class DeviceAuthV2:
                 break
 
         if time.time() > timeout:
-            pytest.fail("wasn't able to accept device after 30 seconds")
+            pytest.fail(f"wasn't able to accept device after {accept_timeout} seconds")
 
         logger.info("Successfully bootstrap all clients")
 

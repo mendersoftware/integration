@@ -19,8 +19,10 @@ import pytest
 from ..common_setup import (
     standard_setup_one_client,
     standard_setup_one_client_bootstrapped,
+    standard_setup_one_docker_client,
     enterprise_one_client,
     enterprise_one_client_bootstrapped,
+    enterprise_one_docker_client,
 )
 from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
@@ -102,8 +104,8 @@ class BaseTestBootstrapping(MenderTesting):
 
 class TestBootstrappingOpenSource(BaseTestBootstrapping):
     @MenderTesting.fast
-    def test_bootstrap(self, standard_setup_one_client):
-        self.do_test_bootstrap(standard_setup_one_client)
+    def test_bootstrap(self, standard_setup_one_docker_client):
+        self.do_test_bootstrap(standard_setup_one_docker_client)
 
     @MenderTesting.slow
     def test_reject_bootstrap(
@@ -116,8 +118,8 @@ class TestBootstrappingOpenSource(BaseTestBootstrapping):
 
 class TestBootstrappingEnterprise(BaseTestBootstrapping):
     @MenderTesting.fast
-    def test_bootstrap(self, enterprise_one_client):
-        self.do_test_bootstrap(enterprise_one_client)
+    def test_bootstrap(self, enterprise_one_docker_client):
+        self.do_test_bootstrap(enterprise_one_docker_client)
 
     @MenderTesting.slow
     def test_reject_bootstrap(self, enterprise_one_client_bootstrapped, valid_image):

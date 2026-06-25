@@ -14,6 +14,7 @@
 
 import logging
 import json
+import re
 import time
 
 import pytest
@@ -63,6 +64,47 @@ class Helpers:
 
     @staticmethod
     def _check_log_for_message(device, message, since=None):
+        # Docker client has no systemd — check auth state via D-Bus instead.
+        # Detect the running init system, not just the presence of the
+        # systemctl binary (which exists in the Docker client image too).
+        has_systemd = (
+            device.run(
+                "test -d /run/systemd/system && echo yes",
+                warn=True,
+                hide=True,
+            ).strip()
+            == "yes"
+        )
+        if not has_systemd:
+            if "Successfully received new authorization data" in message:
+                sleepsec = 0
+                timeout = 600
+                while sleepsec < timeout:
+                    out = device.run(
+                        "dbus-send --system --print-reply "
+                        "--dest=io.mender.AuthenticationManager "
+                        "/io/mender/AuthenticationManager "
+                        "io.mender.Authentication1.GetJwtToken 2>/dev/null",
+                        warn=True,
+                        hide=True,
+                    )
+                    # GetJwtToken replies with the JWT as the first 'string'
+                    # value; it is empty until the device has authenticated.
+                    token = re.search(r'string "([^"]*)"', out or "")
+                    if token and token.group(1):
+                        return
+                    time.sleep(10)
+                    sleepsec += 10
+                    logger.info(
+                        f"waiting for device to authenticate via D-Bus, waited {sleepsec}s"
+                    )
+                assert False, "timeout waiting for device to authenticate via D-Bus"
+            # Only the "authenticated" check is implemented over D-Bus. Fail
+            # loudly rather than silently passing for any other log message.
+            raise NotImplementedError(
+                "log message check not implemented for docker client: %r" % message
+            )
+
         if since:
             cmd = f"journalctl --unit mender-authd --full --since '{since}'"
         else:

@@ -39,7 +39,7 @@ class ContainerManagerFactory:
     def get_standard_setup(self, name=None, num_clients=1):
         """Standard setup consisting on all core backend services and optionally clients
 
-        The num_clients define how many QEMU Mender clients will be spawn.
+        The num_clients define how many Mender clients will be spawned.
         """
         pass
 
@@ -50,12 +50,12 @@ class ContainerManagerFactory:
         """
         pass
 
-    def get_docker_client_setup(self, name=None):
-        """Standard setup with one Docker client instead of QEMU one"""
+    def get_docker_client_setup(self, name=None, num_clients=1):
+        """Standard setup with Docker client(s) instead of QEMU"""
         pass
 
     def get_rofs_client_setup(self, name=None):
-        """Standard setup with one QEMU Read-Only FS client instead of standard R/W"""
+        """Standard setup with one QEMU Read-Only FS client (QEMU required for ROFS behavior)"""
         pass
 
     def get_legacy_v3_client_setup(self, name=None):
@@ -99,7 +99,7 @@ class ContainerManagerFactory:
         pass
 
     def get_enterprise_rofs_client_setup(self, name=None, num_clients=0):
-        """Enterprise setup with one Mender QEMU Read-Only FS client"""
+        """Enterprise setup with one QEMU Read-Only FS client (QEMU required for ROFS behavior)"""
         pass
 
     def get_enterprise_rofs_commercial_client_setup(self, name=None, num_clients=0):
@@ -129,8 +129,8 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_monitor_commercial_setup(self, name=None, num_clients=0):
         return DockerComposeMonitorCommercialSetup(name, num_clients)
 
-    def get_docker_client_setup(self, name=None):
-        return DockerComposeDockerClientSetup(name)
+    def get_docker_client_setup(self, name=None, num_clients=1):
+        return DockerComposeDockerClientSetup(name, num_clients)
 
     def get_rofs_client_setup(self, name=None):
         return DockerComposeRofsClientSetup(name)

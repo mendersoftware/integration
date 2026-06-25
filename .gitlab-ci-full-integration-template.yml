@@ -11,7 +11,10 @@ test:integration:$CI_NODE_INDEX:
   stage: test
   tags:
     - mender-qa-worker-integration-tests
-  timeout: 10h
+  # Healthy nodes finish in well under an hour (max observed ~77 min); cap hung
+  # jobs (e.g. a test that blocks forever) at 2h instead of burning the full
+  # default budget.
+  timeout: 2h
   before_script:
     # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
     # plugin to split the tests among the CI jobs. They get substituted by the generator.

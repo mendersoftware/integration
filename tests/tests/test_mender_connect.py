@@ -171,6 +171,7 @@ class _TestRemoteTerminalBase:
             assert prot.typ == "bogusmessage"
 
     @flaky(max_runs=3)
+    @pytest.mark.timeout(1200)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 

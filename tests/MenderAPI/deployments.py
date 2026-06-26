@@ -24,6 +24,26 @@ from . import get_container_manager
 from .requests_helpers import requests_retry
 
 
+# The mender-update client's automatic system-reboot watchdog: if the `reboot`
+# command does not kill the client, mender-update waits this long before giving
+# up and reporting a terminal deployment status. Hardcoded in the client as
+# chrono::minutes(10):
+#   mender/src/mender-update/update_module/v3/platform/c++17/update_module_call.cpp
+#       -> UpdateModule::AsyncSystemReboot
+# A deployment that crosses a reboot can therefore take up to this long to reach
+# a terminal status on the server. SINGLE SOURCE OF TRUTH -- if the client value
+# changes, change it here and everything derived below follows.
+CLIENT_AUTOMATIC_REBOOT_WATCHDOG = 10 * 60
+
+# Give-up deadline for a deployment that crosses a reboot. DERIVED from the
+# client watchdog with a *multiplicative* margin, deliberately NOT an independent
+# literal: a +/-1s drift on either side can never create a dead heat (the
+# 600-vs-601 / 900-vs-901 trap). Polling returns the instant the terminal status
+# is observed, so a larger value never slows a passing test -- it only bounds a
+# genuinely-stuck deployment.
+REBOOT_CROSSING_DEPLOYMENT_TIMEOUT = CLIENT_AUTOMATIC_REBOOT_WATCHDOG * 2
+
+
 class Deployments:
     # track the last statistic for a deployment id
     last_statistic = {}
@@ -258,9 +278,45 @@ class Deployments:
                 return
             time.sleep(polling_frequency)
 
+        # Self-diagnosing timeout. Dump the per-device deployment log so the real
+        # cause (a hung reboot, "Version file error", the state the client got
+        # stuck in) is visible directly in the test output -- no need to pull
+        # artifacts. Also flag the dead-heat case explicitly.
+        racing = max_wait <= CLIENT_AUTOMATIC_REBOOT_WATCHDOG
+        device_logs = ""
+        try:
+            for device in self.devauth.get_devices():
+                try:
+                    device_logs += "----- device %s -----\n%s\n\n" % (
+                        device["id"],
+                        self.get_logs(device["id"], deployment_id),
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
         pytest.fail(
-            "Never found: %s:%s, only seen: %s after %d seconds"
-            % (expected_status, expected_count, str(seen), max_wait)
+            "Never found %s:%s within %ds for deployment %s.\n"
+            "Statuses seen (in order of appearance): %s\n"
+            "%s"
+            "Device deployment log(s):\n%s"
+            % (
+                expected_status,
+                expected_count,
+                max_wait,
+                deployment_id,
+                str(seen),
+                (
+                    "WARNING: max_wait (%ds) <= client automatic-reboot watchdog "
+                    "(%ds). This poll is racing the watchdog, not testing the "
+                    "client. Pass max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT for "
+                    "any deployment that crosses a reboot.\n"
+                    % (max_wait, CLIENT_AUTOMATIC_REBOOT_WATCHDOG)
+                    if racing
+                    else ""
+                ),
+                device_logs or "(could not fetch device logs)",
+            )
         )
 
     def get_deployment_overview(self, deployment_id):

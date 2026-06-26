@@ -25,6 +25,7 @@ from ..common_setup import (
 )
 from .common_update import common_update_procedure, update_image_failed
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
+from ..MenderAPI.deployments import REBOOT_CROSSING_DEPLOYMENT_TIMEOUT
 from .mendertesting import MenderTesting
 
 
@@ -156,8 +157,10 @@ class BasicTestFaultTolerance(MenderTesting):
             deployment_id, _ = common_update_procedure(
                 broken_network_image, devauth=devauth, deploy=deploy
             )
-            reboot.verify_reboot_performed()  # since the network is broken, two reboots will be performed, and the last one will be detected
-            deploy.check_expected_statistics(deployment_id, "failure", 1)
+            reboot.verify_reboot_performed(max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT)  # since the network is broken, two reboots will be performed, and the last one will be detected
+            deploy.check_expected_statistics(
+                deployment_id, "failure", 1, max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT
+            )
 
     def do_test_deployed_during_network_outage(
         self,
@@ -194,8 +197,10 @@ class BasicTestFaultTolerance(MenderTesting):
             self.manipulate_network_connectivity(mender_device, True)
 
             logger.info("Network stabilized")
-            reboot.verify_reboot_performed()
-            deploy.check_expected_statistics(deployment_id, "success", 1)
+            reboot.verify_reboot_performed(max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT)
+            deploy.check_expected_statistics(
+                deployment_id, "success", 1, max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT
+            )
 
         assert mender_device.yocto_id_installed_on_machine() == expected_yocto_id
 
@@ -270,7 +275,7 @@ class BasicTestFaultTolerance(MenderTesting):
                 mender_device, True, hosts=[blocked_service]
             )
 
-            reboot.verify_reboot_performed()
+            reboot.verify_reboot_performed(max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT)
             deploy.check_expected_status("finished", deployment_id)
 
             assert mender_device.get_active_partition() == inactive_part
@@ -388,7 +393,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
 
             if success:
-                reboot.verify_reboot_performed()
+                reboot.verify_reboot_performed(max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT)
                 deploy.check_expected_status("finished", deployment_id)
 
                 assert mender_device.get_active_partition() == inactive_part
@@ -435,7 +440,7 @@ class BasicTestFaultTolerance(MenderTesting):
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
-            reboot.verify_reboot_performed()
+            reboot.verify_reboot_performed(max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT)
             deploy.check_expected_status("finished", deployment_id)
 
             assert mender_device.get_active_partition() == inactive_part

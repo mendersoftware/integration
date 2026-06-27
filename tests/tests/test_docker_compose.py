@@ -32,29 +32,24 @@ from testutils.common import requests_get
 @pytest.fixture(scope="session")
 def artifact_gen_script():
     with tempfile.TemporaryDirectory() as temp_dir:
-        script_path = os.path.join(temp_dir, "gen_docker-compose")
+        script_path = "src/gen_docker-compose"
 
         tag_pattern = re.compile(r"^\d+\.\d+\.\d+(?:-build\d+)?$")
         version = os.environ.get("MENDER_CONTAINER_MODULES_VERSION", "main")
 
-        base_url = "https://raw.githubusercontent.com/mendersoftware/mender-container-modules/refs"
-        file_path = "src/gen_docker-compose"
+        repo_url = "https://github.com/mendersoftware/mender-container-modules.git"
 
-        if tag_pattern.match(version):
-            ref_path = f"tags/{version}"
-        elif version.startswith("pull/"):
-            ref_path = version
-        else:
-            ref_path = f"heads/{version}"
+        subprocess.check_call(["git", "clone", repo_url, "."], cwd=temp_dir)
 
-        url = f"{base_url}/{ref_path}/{file_path}"
+        ref_path = version
+        if version.startswith("pull/"):
+            ref_path = "refs/" + version
+        subprocess.check_call(["git", "fetch", "origin", ref_path], cwd=temp_dir)
+        subprocess.check_call(["git", "checkout", "FETCH_HEAD"], cwd=temp_dir)
 
-        req = requests_get(url)
-        with open(script_path, "w") as f:
-            f.write(req.text)
+        subprocess.check_call(["make"], cwd=temp_dir)
 
-        os.chmod(script_path, 0o755)
-        yield script_path
+        yield os.path.join(temp_dir, script_path)
 
 
 @dataclass

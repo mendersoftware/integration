@@ -4,6 +4,7 @@ services:
   #
   mender-client:
     image: ${MENDER_CLIENT_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_IMAGE}:${MENDER_CLIENT_QEMU_TAG}
+    command: ["-cpu", "core2duo"]
     networks:
       - mender
     stdin_open: true

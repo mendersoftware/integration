@@ -210,6 +210,14 @@ class _TestRemoteTerminalBase:
         # drop below; retriable re-raises the last error if it never recovers.
         # AssertionErrors are not retried, so a genuine protocol failure still
         # fails fast. (QA-1527)
+        #
+        # retry_connect=False is essential here: Websocket.__enter__ otherwise
+        # retries InvalidHandshake on its own (15 * 15s = 225s) on every 404
+        # while the device is disconnected. Nested inside this 48-attempt loop
+        # that compounds to ~3h, so when the device never reconnects the test
+        # hangs until the CI job timeout instead of failing in 240s. Disabling
+        # the inner retry makes each 404 fail immediately and lets this loop be
+        # the single source of timing. (QA-1639)
         @retriable(
             attempts=48,
             sleeptime=5,
@@ -218,7 +226,7 @@ class _TestRemoteTerminalBase:
             retry_exceptions=(WebSocketException, TimeoutError),
         )
         def assert_working_shell():
-            with docker_env.devconnect.get_websocket() as ws:
+            with docker_env.devconnect.get_websocket(retry_connect=False) as ws:
                 shell = proto_shell.ProtoShell(ws)
                 body = shell.startShell()
                 if (

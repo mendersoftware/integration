@@ -37,12 +37,15 @@ class DeviceConnect:
         host_uri = "wss://" + get_container_manager().get_mender_gateway()
         return host_uri + url_path
 
-    def get_websocket(self):
+    def get_websocket(self, retry_connect=True):
         headers = {}
         headers.update(self.auth.get_auth_token())
 
         ws = websockets.Websocket(
-            self.get_websocket_url(), headers=headers, insecure=True
+            self.get_websocket_url(),
+            headers=headers,
+            insecure=True,
+            retry_connect=retry_connect,
         )
 
         return ws

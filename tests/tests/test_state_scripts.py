@@ -28,6 +28,7 @@ from ..common_setup import (
 from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import DeviceAuthV2, Deployments, logger, image
+from ..MenderAPI.deployments import REBOOT_CROSSING_DEPLOYMENT_TIMEOUT
 from .mendertesting import MenderTesting
 from testutils.infra.device import MenderDeviceGroup
 
@@ -838,8 +839,16 @@ class BaseTestStateScripts(MenderTesting):
                         'Waited too long for "Error" to appear in log:\n%s' % info
                     )
             else:
+                # Reboot-crossing failure cases (ArtifactReboot / ArtifactCommit
+                # failures and the Corrupted_script_version sets) only reach
+                # 'failure' after the client's automatic-reboot watchdog. Use the
+                # derived deadline so we never race it -- it is a function of the
+                # client watchdog, not an independent magic number.
                 deploy.check_expected_statistics(
-                    deployment_id, test_set["ExpectedStatus"], 1
+                    deployment_id,
+                    test_set["ExpectedStatus"],
+                    1,
+                    max_wait=REBOOT_CROSSING_DEPLOYMENT_TIMEOUT,
                 )
 
             # Always give the client a little bit of time to settle in the base

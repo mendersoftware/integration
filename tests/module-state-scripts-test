@@ -18,6 +18,13 @@ case "$STATE" in
         ;;
 
     ArtifactReboot|ArtifactRollbackReboot)
+        # This simulated reboot restarts the service in milliseconds. A failed
+        # corrupt-version rollback fires ArtifactReboot and ArtifactRollbackReboot
+        # back-to-back, which together with restarts from earlier deployments on the
+        # same device trips systemd's default start rate-limit (5 starts / 10s) and
+        # leaves mender-updated dead, so the deployment failure is never reported.
+        # A real reboot never hits this; reset the counter so each one behaves like it.
+        systemctl reset-failed mender-updated
         systemctl restart mender-updated
         ;;
 

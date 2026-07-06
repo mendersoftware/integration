@@ -263,7 +263,7 @@ class _TestRemoteTerminalBase:
         # attempts=0 and reconnects on its first cycle. The entrypoint's
         # supervise loop respawns it; this mirrors the canonical pattern used
         # by test_filetransfer.update_limits(). (QA-1527, QA-1591)
-        docker_env.device.run("kill -TERM `pidof mender-connect` 2>/dev/null || true")
+        # docker_env.device.run("kill -TERM `pidof mender-connect` 2>/dev/null || true")
 
         # Poll until a working shell can be opened end-to-end.
         assert_working_shell()

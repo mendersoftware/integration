@@ -157,11 +157,12 @@ class TestPreauth(TestPreauthBase):
     def test_ok_preauth_and_bootstrap(self, standard_setup_one_docker_client):
         self.do_test_ok_preauth_and_bootstrap(standard_setup_one_docker_client)
 
-    def test_ok_preauth_and_remove(self, standard_setup_one_docker_client):
-        self.do_test_ok_preauth_and_remove()
-
-    def test_fail_preauth_existing(self, standard_setup_one_docker_client):
-        self.do_test_fail_preauth_existing()
+    # test_ok_preauth_and_remove and test_fail_preauth_existing were
+    # removed: they assert pure device-auth API behavior with no real
+    # device involved, now owned by mender-server's integration:ng
+    # suite (TestPreauthFailDuplicate, TestAuthsetMgmtDeleteStatus).
+    # The enterprise variants below remain until equivalent
+    # enterprise-mode backend coverage exists.
 
 
 class TestPreauthEnterprise(TestPreauthBase):

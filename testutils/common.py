@@ -163,6 +163,11 @@ def create_user(
     return User(uid, name, pwd)
 
 
+# NOTE(test taxonomy): create_org drives tenantadm's internal API by
+# container IP. There is no public org-creation API without the signup
+# flow (recaptcha/stripe), so this remains an accepted white-box
+# FIXTURE for enterprise setups; tests must not treat org creation
+# itself as the behavior under test.
 def create_org(
     name: str,
     username: str,

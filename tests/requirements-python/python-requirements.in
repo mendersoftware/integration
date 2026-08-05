@@ -1,4 +1,4 @@
-cryptography==48.0.1
+cryptography==50.0.0
 docker==7.1.0
 filelock==3.29.0
 msgpack==1.2.1

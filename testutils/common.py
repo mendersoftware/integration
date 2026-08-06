@@ -43,7 +43,7 @@ logger = logging.getLogger()
 
 @pytest.fixture(scope="session")
 def mongo():
-    return MongoClient("mender-mongo:27017")
+    return MongoClient("mongo:27017")
 
 
 @pytest.fixture(scope="function")
@@ -365,7 +365,7 @@ def update_tenant(tid, addons=None, plan=None, container_manager=None):
     tenantadm_host = (
         tenantadm.HOST
         if container_manager is None
-        else container_manager.get_ip_of_service("mender-tenantadm")[0] + ":8080"
+        else container_manager.get_ip_of_service("tenantadm")[0] + ":8080"
     )
     tadm = ApiClient(tenantadm.URL_INTERNAL, host=tenantadm_host, schema="http://")
     res = tadm.call(
@@ -382,7 +382,7 @@ def new_tenant_client(
     name: str,
     tenant: str,
     docker: bool = False,
-    network: str = "mender",
+    network: str = "default",
     ignore_existing: bool = False,
 ) -> MenderDevice:
     """Create new Mender client in the test environment with the given name for the given tenant.

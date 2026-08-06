@@ -386,19 +386,15 @@ def test_integration_versions_including(capsys):
 
 
 def test_docker_compose_files_list():
+    # The backend composition now lives in the mender-server submodule, so the
+    # docker-compose files left in this repo are the client overlays only. The
+    # filenames below are the ones that still exist; the point of the test is the
+    # git/docker split, not the inventory.
     list_git = docker_compose_files_list(INTEGRATION_DIR, version="git")
     list_git_filenames = [os.path.basename(file) for file in list_git]
-    assert "docker-compose.client.demo.yml" not in list_git_filenames
-    assert "docker-compose.no-ssl.yml" not in list_git_filenames
-    assert "docker-compose.testing.enterprise.yml" not in list_git_filenames
-    assert "docker-compose.storage.minio.yml" not in list_git_filenames
     assert "docker-compose.client.rofs.yml" not in list_git_filenames
-    assert "docker-compose.client-dev.yml" not in list_git_filenames
     assert "docker-compose.mt.client.yml" not in list_git_filenames
-    assert "docker-compose.demo.yml" not in list_git_filenames
     assert "docker-compose.client.yml" not in list_git_filenames
-    assert "docker-compose.yml" not in list_git_filenames
-    assert "docker-compose.enterprise.yml" not in list_git_filenames
 
     assert "git-versions.yml" in list_git_filenames
     assert "git-versions-enterprise.yml" in list_git_filenames
@@ -406,17 +402,9 @@ def test_docker_compose_files_list():
 
     list_docker = docker_compose_files_list(INTEGRATION_DIR, version="docker")
     list_docker_filenames = [os.path.basename(file) for file in list_docker]
-    assert "docker-compose.client.demo.yml" in list_docker_filenames
-    assert "docker-compose.no-ssl.yml" in list_docker_filenames
-    assert "docker-compose.testing.enterprise.yml" in list_docker_filenames
-    assert "docker-compose.storage.minio.yml" in list_docker_filenames
     assert "docker-compose.client.rofs.yml" in list_docker_filenames
-    assert "docker-compose.client-dev.yml" in list_docker_filenames
     assert "docker-compose.mt.client.yml" in list_docker_filenames
-    assert "docker-compose.demo.yml" in list_docker_filenames
     assert "docker-compose.client.yml" in list_docker_filenames
-    assert "docker-compose.yml" in list_docker_filenames
-    assert "docker-compose.enterprise.yml" in list_docker_filenames
 
     assert "git-versions.yml" not in list_docker_filenames
     assert "git-versions-enterprise.yml" not in list_docker_filenames

@@ -14,9 +14,9 @@
 import json
 from typing import Dict, Tuple
 
-import testutils.util.crypto
+from ..util import crypto
 
-HOST = "mender-device-auth:8080"
+HOST = "mender-deviceauth:8080"
 
 URL_DEVICES = "/api/devices/v1/authentication"
 URL_INTERNAL = "/api/internal/v1/devauth"
@@ -53,5 +53,5 @@ def auth_req(id_data, pubkey, privkey, tenant_token="") -> Tuple[Dict, Dict]:
         "tenant_token": tenant_token,
         "pubkey": pubkey,
     }
-    signature = testutils.util.crypto.auth_req_sign(json.dumps(payload), privkey)
+    signature = crypto.auth_req_sign(json.dumps(payload), privkey)
     return payload, {"X-MEN-Signature": signature}

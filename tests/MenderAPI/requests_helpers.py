@@ -16,9 +16,15 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+from testutils.api.client import GATEWAY_HOSTNAME
+
 
 # Will retry on server errors (5xx)
-def requests_retry(status_forcelist=[500, 502, 503, 504]):
+#
+# 'host' is the value sent as the Host header. It only needs overriding when
+# talking to something other than the namespace's own gateway -- the failover
+# server, for instance, whose routers match a different hostname.
+def requests_retry(status_forcelist=[500, 502, 503, 504], host=GATEWAY_HOSTNAME):
     s = requests.Session()
     retries = Retry(
         total=5,
@@ -27,4 +33,11 @@ def requests_retry(status_forcelist=[500, 502, 503, 504]):
         allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
     )
     s.mount("https://", HTTPAdapter(max_retries=retries))
+    # Every caller addresses the gateway by container IP, and Traefik routes on
+    # the Host header, so without this nothing matches a router and every
+    # request comes back 404. Session headers apply to all requests made through
+    # this session; a per-request 'headers' kwarg still wins if one ever needs to
+    # override it.
+    if host:
+        s.headers.update({"Host": host})
     return s

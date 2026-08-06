@@ -36,10 +36,13 @@ from .docker_compose_manager import (
 
 
 class ContainerManagerFactory:
-    def get_standard_setup(self, name=None, num_clients=1):
+    def get_standard_setup(self, name=None, num_clients=1, persistent_mongo=False):
         """Standard setup consisting on all core backend services and optionally clients
 
         The num_clients define how many Mender clients will be spawned.
+
+        persistent_mongo gives Mongo a real volume instead of the default tmpfs,
+        for setups whose data has to outlive the containers.
         """
         pass
 
@@ -78,8 +81,11 @@ class ContainerManagerFactory:
         """
         pass
 
-    def get_enterprise_setup(self, name=None, num_clients=0):
-        """Setup with enterprise versions for the applicable services"""
+    def get_enterprise_setup(self, name=None, num_clients=0, persistent_mongo=False):
+        """Setup with enterprise versions for the applicable services
+
+        See get_standard_setup for persistent_mongo.
+        """
         pass
 
     def get_enterprise_signed_artifact_client_setup(self, name=None):
@@ -120,8 +126,10 @@ class ContainerManagerFactory:
 
 
 class DockerComposeManagerFactory(ContainerManagerFactory):
-    def get_standard_setup(self, name=None, num_clients=1):
-        return DockerComposeStandardSetup(name, num_clients)
+    def get_standard_setup(self, name=None, num_clients=1, persistent_mongo=False):
+        return DockerComposeStandardSetup(
+            name, num_clients, persistent_mongo=persistent_mongo
+        )
 
     def get_extended_setup(self, name=None, num_clients=1):
         return DockerComposeExtendedSetup(name, num_clients)
@@ -147,8 +155,10 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
     def get_failover_server_setup(self, name=None):
         return DockerComposeFailoverServerSetup(name)
 
-    def get_enterprise_setup(self, name=None, num_clients=0):
-        return DockerComposeEnterpriseSetup(name, num_clients)
+    def get_enterprise_setup(self, name=None, num_clients=0, persistent_mongo=False):
+        return DockerComposeEnterpriseSetup(
+            name, num_clients, persistent_mongo=persistent_mongo
+        )
 
     def get_enterprise_signed_artifact_client_setup(self, name=None):
         return DockerComposeEnterpriseSignedArtifactClientSetup(name)

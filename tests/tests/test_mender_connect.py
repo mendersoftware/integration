@@ -148,7 +148,7 @@ class _TestRemoteTerminalBase:
             pass
 
         # Test that mender-connect recovers if it loses the connection to deviceconnect.
-        docker_env.restart_service("mender-deviceconnect")
+        docker_env.restart_service("deviceconnect")
 
         # mender-connect needs time to re-establish its session after
         # deviceconnect restarts; until it does, the mgmt /connect endpoint

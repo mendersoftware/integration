@@ -1,16 +1,19 @@
 
 .cache/
-broken_update.ext4
-core-image-full-cmdline-vexpress-qemu-broken-network.ext4
-core-image-full-cmdline-vexpress-qemu.ext4
-core-image-full-cmdline-qemux86-64-broken-network.ext4
-core-image-full-cmdline-qemux86-64.ext4
-mender-image-full-cmdline-rofs-qemux86-64.ext4
-mender-image-full-cmdline-rofs-vexpress-qemu.ext4
-mender-gateway-image-full-cmdline-qemux86-64.ext4
+# Rootfs images extracted from the client containers by the 'image' fixture.
+# Globbed rather than listed: the filename carries the machine name, so a new
+# --machine-name produces a name not in any hand-maintained list.
+*.ext4
 large_image.dat
 results.xml
 report.html
 downloaded-tools
 .artifact_modification_lock
 docker_lock
+.extract_fs_lock.lock
+# Per-test logs and mongodumps written by conftest's failure handler
+mender_test_logs/
+# Per-device work dir left behind by test_state_scripts (named
+# test_state_scripts.<host>:<port>). Anchored and directory-only so it cannot
+# match tests/tests/test_state_scripts.py.
+/test_state_scripts.*/

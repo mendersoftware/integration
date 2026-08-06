@@ -15,6 +15,12 @@ test:integration:$CI_NODE_INDEX:
   # jobs (e.g. a test that blocks forever) at 2h instead of burning the full
   # default budget.
   timeout: 2h
+  variables:
+    # The backend composition comes from the mender-server submodule at
+    # tests/mender_server; without this the compose files are simply absent and
+    # every environment fails to start.
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_SUBMODULE_DEPTH: 1
   before_script:
     # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
     # plugin to split the tests among the CI jobs. They get substituted by the generator.
@@ -23,12 +29,20 @@ test:integration:$CI_NODE_INDEX:
     - echo "$REGISTRY_MENDER_IO_PASSWORD" | docker login registry.mender.io --username "$REGISTRY_MENDER_IO_USERNAME" --password-stdin
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username "$DOCKER_HUB_USERNAME" --password-stdin
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+    # apk-requirements.txt carries skopeo, e2fsprogs-extra (debugfs) and iptables,
+    # all of which conftest now checks for before collecting.
     - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
     - apk add py3-virtualenv screen
     - python -m virtualenv /.venv
     - source /.venv/bin/activate
+    # Integration keeps its own testutils, so its own requirements file is the
+    # right one -- nothing here imports from the mender_server submodule, which
+    # is used for its compose files only.
     - pip3 install -r ./tests/requirements-python/python-requirements.txt
     - pip3 install pyyaml
+    # Fail early and loudly if the submodule did not come through.
+    - test -f ./tests/mender_server/docker-compose.yml
+      || { echo "mender_server submodule missing"; exit 1; }
     # Gitlab CI tends to set these DOCKER_ variables internally.
     # dind also creates the unix socket at /var/run/docker.sock
     - unset DOCKER_HOST DOCKER_TLS_VERIFY DOCKER_CERT_PATH

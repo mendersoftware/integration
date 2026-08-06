@@ -22,5 +22,6 @@ URL_FILTERS = "/filters"
 URL_SAVED_FILTERS = "/filters"
 URL_SAVED_FILTER = "/filters/{id}"
 URL_SAVED_FILTER_SEARCH = "/filters/{id}/search"
+URL_STATISTICS = "/statistics"
 
 URL_SEARCH_INTERNAL = "/tenants/{tenant_id}/filters/search"

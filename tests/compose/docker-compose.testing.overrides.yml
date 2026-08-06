@@ -1,0 +1,40 @@
+# Test-specific changes to the mender-server composition imported by
+# docker-compose.testing.yml. Kept in a separate file and applied with its own
+# -f: compose v2 refuses to let the including file override a service it
+# imported. See the note in docker-compose.testing.yml.
+services:
+  traefik:
+    # No published host ports, so many namespaces can run side by side.
+    ports: !reset []
+    command:
+      - --api=true
+      - --api.insecure=true
+      - --ping=true
+      - --ping.entrypoint=traefik
+      - --accesslog=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.transport.respondingTimeouts.idleTimeout=7200
+      - --entrypoints.websecure.transport.respondingTimeouts.readTimeout=7200
+      - --entrypoints.websecure.transport.respondingTimeouts.writeTimeout=7200
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.asDefault=true
+      - --providers.file.directory=/etc/traefik/config
+      - --providers.docker=true
+      # Must stay explicit: Traefik defaults this to true, which would give every
+      # container in the project an auto-generated router.
+      - --providers.docker.exposedByDefault=false
+      # The Docker provider sees every container on the daemon, not just this
+      # project's. Without the constraint, a parallel namespace's services get
+      # registered under the same router names and requests round-robin into the
+      # wrong backend.
+      - --providers.docker.constraints=Label(`com.docker.compose.project`,`${COMPOSE_PROJECT_NAME}`)
+      - --providers.docker.network=${COMPOSE_PROJECT_NAME}_default
+  mongo:
+    # tmpfs rather than a volume: a clean database per test, and faster.
+    # docker-compose.persistent-mongo.yml reverses this for the one setup that
+    # needs the data to outlive the containers.
+    volumes: !reset []
+    tmpfs: ["/data/db:size=1G"]

@@ -7,7 +7,7 @@ include:
     file: '.gitlab-ci-check-python3-format.yml'
 
 variables:
-  LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./extra/gitdm.*'
+  LICENSE_HEADERS_IGNORE_FILES_REGEXP: '\./(extra/gitdm|tests/mender_server).*'
 
 test:extra-tools:
   image: "python:3"

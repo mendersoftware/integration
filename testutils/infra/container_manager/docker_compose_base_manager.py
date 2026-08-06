@@ -18,9 +18,14 @@ import subprocess
 import filelock
 import logging
 import copy
+import warnings
+
 import redo
+import requests
+from urllib3.exceptions import InsecureRequestWarning
 
 from .docker_manager import DockerNamespace
+from ...api.client import GATEWAY_HOSTNAME as _GATEWAY_HOSTNAME
 
 logger = logging.getLogger("root")
 
@@ -34,6 +39,12 @@ class DockerComposeBaseNamespace(DockerNamespace):
     )
     BASE_FILES = []
 
+    # Traefik routes on the Host header and we address it by container IP, so
+    # every request has to carry this explicitly. Single source of truth lives in
+    # testutils.api.client; exposed here so callers holding a container manager
+    # do not need a second import.
+    GATEWAY_HOSTNAME = _GATEWAY_HOSTNAME
+
     def __init__(self, name=None, extra_files=[]):
         DockerNamespace.__init__(self, name)
         self.extra_files = copy.copy(extra_files)
@@ -42,11 +53,28 @@ class DockerComposeBaseNamespace(DockerNamespace):
     def docker_compose_files(self):
         return self.BASE_FILES + self.extra_files
 
+    @property
+    def compose_env(self):
+        """Environment applied to every compose command for this namespace.
+
+        For values that have to be identical across up, down and config -- the
+        failover backend's MENDER_HOSTNAME, for instance, which selects the
+        hostname its routers match on. A per-call 'env' still takes precedence.
+        """
+        return {}
+
+    @property
+    def network_name(self):
+        """Name docker gives this namespace's default network."""
+        return "%s_default" % self.name
+
     def teardown(self):
         self._debug_log_containers_logs()
         self._stop_docker_compose()
 
-    def get_mender_clients(self, network="mender", client_service_name="mender-client"):
+    def get_mender_clients(
+        self, network="default", client_service_name="mender-client"
+    ):
         """Returns IP address(es) of mender-client container(s)"""
         clients = [
             ip + ":8822"
@@ -66,7 +94,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
 
     _re_newlines_sub = re.compile(r"[\r\n]*").sub
 
-    def get_ip_of_service(self, service, network="mender"):
+    def get_ip_of_service(self, service, network="default"):
         """Return a list of IP addresseses of `service`. `service` is the same name as
         present in docker-compose files.
         """
@@ -77,9 +105,11 @@ class DockerComposeBaseNamespace(DockerNamespace):
         )
         cmd = temp.format(project=self.name, service=service)
 
+        # 'index' rather than dotted field access: a Go template cannot parse a
+        # field name containing '-', which a project name may well have.
         output = subprocess.check_output(
             cmd + "| xargs -r "
-            "docker inspect --format='{{.NetworkSettings.Networks.%s_%s.IPAddress}}'"
+            "docker inspect --format='{{ (index .NetworkSettings.Networks \"%s_%s\").IPAddress }}'"
             % (self.name, network),
             shell=True,
         )
@@ -97,7 +127,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
             "--filter label=com.docker.compose.project={project} "
             "--filter label=com.docker.compose.service={service}"
         )
-        cmd = temp.format(project=self.name, service="mender-api-gateway")
+        cmd = temp.format(project=self.name, service="traefik")
 
         output = subprocess.check_output(
             cmd + "| head -n1 | xargs -r "
@@ -112,7 +142,7 @@ class DockerComposeBaseNamespace(DockerNamespace):
         will not be available for a while.
         """
         for _ in redo.retrier(attempts=10, sleeptime=1):
-            gateway = self.get_ip_of_service("mender-api-gateway")
+            gateway = self.get_ip_of_service("traefik")
 
             if len(gateway) != 1:
                 continue
@@ -125,16 +155,67 @@ class DockerComposeBaseNamespace(DockerNamespace):
                 len(gateway), self.name
             )
 
-    def _docker_compose_up(self, extra_args="", env=None):
-        cmd = f"up -d --wait --wait-timeout {self.wait_healthy_timeout}"
+    # An unauthenticated GET on the login route answers with one of these once
+    # the ingress routes and useradm's HTTP server is listening.
+    _READY_STATUS_CODES = (200, 401, 405)
+
+    def wait_for_backend_ready(self, attempts=60, sleeptime=2):
+        """Block until the ingress routes and useradm answers HTTP.
+
+        mender-server defines healthchecks only on traefik, mongo, nats and s3,
+        so 'up --wait' returns while the Go services are still binding their
+        ports. Without this the first API call of a test races service startup.
+        """
+        url = "https://%s/api/management/v1/useradm/auth/login" % (
+            self.get_mender_gateway()
+        )
+
+        def _check_ready():
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=InsecureRequestWarning)
+                r = requests.get(
+                    url,
+                    headers={"Host": self.GATEWAY_HOSTNAME},
+                    verify=False,
+                    timeout=10,
+                )
+            if r.status_code not in self._READY_STATUS_CODES:
+                raise ValueError("backend not ready yet, status: %d" % r.status_code)
+            return True
+
+        logger.info("waiting for the backend to become ready")
+        return redo.retry(
+            _check_ready,
+            attempts=attempts,
+            sleeptime=sleeptime,
+            max_sleeptime=sleeptime,
+            sleepscale=1,
+        )
+
+    def _docker_compose_up(self, extra_args="", env=None, wait_ready=True):
+        # --pull missing only reaches the registry when the image is absent
+        # locally, so this costs nothing on a warm cache. A plain 'compose pull'
+        # per environment would be ~20 manifest requests x every test, which at
+        # this suite's size runs into registry rate limits.
+        # --no-build turns a missing image into a hard error instead of silently
+        # building it from mender-server's build: stanzas.
+        cmd = (
+            f"up -d --wait --wait-timeout {self.wait_healthy_timeout}"
+            f" --pull missing --no-build --quiet-pull"
+        )
         if extra_args:
             cmd += f" {extra_args}"
-        return self._docker_compose_cmd(cmd, env=env)
+        output = self._docker_compose_cmd(cmd, env=env)
+        if wait_ready:
+            self.wait_for_backend_ready()
+        return output
 
     def restart_service(self, service):
         """Restarts a service."""
         self._docker_compose_cmd(f"up -d --scale {service}=0 {service}")
-        self._docker_compose_up(f"--scale {service}=1 {service}")
+        # Scaling a single service back up says nothing about the rest of the
+        # stack, which is already running.
+        self._docker_compose_up(f"--scale {service}=1 {service}", wait_ready=False)
 
     def get_file(self, container_name, path):
         container_id = super().getid([container_name])
@@ -152,11 +233,23 @@ class DockerComposeBaseNamespace(DockerNamespace):
         """
         files_args = "".join([" -f %s" % file for file in self.docker_compose_files])
 
-        cmd = "docker compose -p %s %s %s" % (self.name, files_args, arg_list)
+        # Pin the project directory to the repo root. Compose otherwise derives it
+        # from the first -f file (now under tests/compose/), which would resolve
+        # every relative bind mount and the root .env against the wrong directory.
+        cmd = "docker compose -p %s --project-directory %s %s %s" % (
+            self.name,
+            self.COMPOSE_FILES_PATH,
+            files_args,
+            arg_list,
+        )
 
         logger.info("running with: %s" % cmd)
 
         penv = dict(os.environ)
+        # The traefik Docker-provider constraint in docker-compose.testing.yml
+        # interpolates this, and it is not set when compose gets -p on the CLI.
+        penv["COMPOSE_PROJECT_NAME"] = self.name
+        penv.update(self.compose_env)
         if env:
             penv.update(env)
 

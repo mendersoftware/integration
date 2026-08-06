@@ -5,12 +5,12 @@ services:
   mender-client:
     image: ${MENDER_CLIENT_ENTERPRISE_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_MONITOR_QEMU_COMMERCIAL_IMAGE}:${MENDER_MONITOR_QEMU_COMMERCIAL_TAG}
     networks:
-      - mender
+      - default
     stdin_open: true
     tty: true
     privileged: true
     environment:
-      - SERVER_URL=$SERVER_URL
+      - SERVER_URL=https://docker.mender.io
       - TENANT_TOKEN=$TENANT_TOKEN
 networks:
-  mender: {}
+  default: {}

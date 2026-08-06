@@ -12,6 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import hashlib
 import logging
 import os
 import socket
@@ -28,11 +29,11 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     # Please note that the compose files sequence matters!
     # The same parameter in different files can have different values and
     # a value from the last yaml will be used.
+    # The import and its overrides must stay separate files: compose v2 rejects a
+    # file that both include:s a composition and overrides a service from it.
     BASE_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.storage.minio.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.demo.yml",
-        COMPOSE_FILES_PATH + "/extra/integration-testing/docker-compose.yml",
+        COMPOSE_FILES_PATH + "/tests/compose/docker-compose.testing.yml",
+        COMPOSE_FILES_PATH + "/tests/compose/docker-compose.testing.overrides.yml",
     ]
     QEMU_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
@@ -65,13 +66,23 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
         COMPOSE_FILES_PATH
         + "/extra/expired-token-testing/docker-compose.short-token.yml"
     ]
+    # Overlay for the second backend, brought up as its own compose project.
     FAILOVER_SERVER_FILES = [
-        COMPOSE_FILES_PATH
-        + "/extra/failover-testing/docker-compose.failover-server.yml"
+        COMPOSE_FILES_PATH + "/tests/compose/docker-compose.failover.yml",
+    ]
+    # Attaches the client to the failover backend's network as well as its own.
+    FAILOVER_CLIENT_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.failover.yml",
     ]
     ENTERPRISE_FILES = [
-        COMPOSE_FILES_PATH + "/docker-compose.enterprise.yml",
-        COMPOSE_FILES_PATH + "/docker-compose.testing.enterprise.yml",
+        COMPOSE_FILES_PATH + "/tests/compose/docker-compose.testing.enterprise.yml",
+        COMPOSE_FILES_PATH
+        + "/tests/compose/docker-compose.testing.enterprise.overrides.yml",
+    ]
+    # Opt-in: gives Mongo a real volume instead of the default tmpfs, for setups
+    # that have to survive the backend being torn down and replaced underneath.
+    PERSISTENT_MONGO_FILES = [
+        COMPOSE_FILES_PATH + "/tests/compose/docker-compose.persistent-mongo.yml",
     ]
     MT_CLIENT_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.yml",
@@ -118,9 +129,12 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
 
 
 class DockerComposeStandardSetup(DockerComposeNamespace):
-    def __init__(self, name, num_clients=1):
+    def __init__(self, name, num_clients=1, persistent_mongo=False):
         self.num_clients = num_clients
-        super().__init__(name, self.QEMU_CLIENT_FILES)
+        extra_files = list(self.QEMU_CLIENT_FILES)
+        if persistent_mongo:
+            extra_files += self.PERSISTENT_MONGO_FILES
+        super().__init__(name, extra_files)
 
     def setup(self):
         self._docker_compose_up(f"--scale mender-client={self.num_clients}")
@@ -134,7 +148,7 @@ class DockerComposeExtendedSetup(DockerComposeNamespace):
     def setup(self):
         self._docker_compose_up(f"--scale mender-client={self.num_clients}")
 
-    def get_mender_clients(self, network="mender"):
+    def get_mender_clients(self, network="default"):
         return super().get_mender_clients(
             network=network, client_service_name="mender-client"
         )
@@ -201,7 +215,7 @@ class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
     ):
         DockerComposeNamespace.__init__(self, name, self.LEGACY_V3_CLIENT_FILES)
 
-    def get_mender_clients(self, network="mender"):
+    def get_mender_clients(self, network="default"):
         clients = [
             ip + ":8822"
             for ip in self.get_ip_of_service(
@@ -231,25 +245,111 @@ class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
         )
 
 
+class DockerComposeFailoverBackend(DockerComposeNamespace):
+    """The second backend of the failover setup, in its own compose project.
+
+    Same composition as the primary, with only traefik's aliases overridden, so
+    there is nothing here to keep in step with mender-server.
+    """
+
+    FAILOVER_HOSTNAME = "failover.docker.mender.io"
+
+    def __init__(self, name):
+        DockerComposeNamespace.__init__(self, name, self.FAILOVER_SERVER_FILES)
+
+    @property
+    def compose_env(self):
+        # Selects the hostname every router rule in this project matches on. Has
+        # to be set for every compose command, not just 'up', so that the
+        # rendered project stays consistent.
+        return {"MENDER_HOSTNAME": self.FAILOVER_HOSTNAME}
+
+    @property
+    def GATEWAY_HOSTNAME(self):
+        return self.FAILOVER_HOSTNAME
+
+
 class DockerComposeFailoverServerSetup(DockerComposeNamespace):
+    """Two independent backends plus one client that can reach both.
+
+    Server A is this namespace and behaves normally. Server B is a second compose
+    project -- separate network, separate database -- so it genuinely does not know
+    the device until the test decommissions it from A. See
+    tests/compose/docker-compose.failover.yml for why it cannot be one project.
+    """
+
     def __init__(
         self,
         name,
     ):
         DockerComposeNamespace.__init__(
-            self, name, self.QEMU_CLIENT_FILES + self.FAILOVER_SERVER_FILES
+            self, name, self.QEMU_CLIENT_FILES + self.FAILOVER_CLIENT_FILES
         )
+        self.failover = DockerComposeFailoverBackend(self._failover_project_name())
+
+    def _failover_project_name(self):
+        """Project name for the second backend.
+
+        It must not *contain* this namespace's own name. DockerNamespace.getid
+        locates a container by grepping `docker ps` for the project name, so with
+        a name like "<self.name>_failover" every lookup in this namespace would
+        also match the failover backend's container of the same service, hand two
+        ids to `docker exec`, and fail with a misleading error. Swapping the
+        prefix keeps the two disjoint.
+        """
+        prefix = "mender"
+        if self.name.startswith(prefix):
+            candidate = "failover" + self.name[len(prefix) :]
+        else:
+            candidate = "failover" + hashlib.sha1(self.name.encode()).hexdigest()[:10]
+        assert (
+            self.name not in candidate
+        ), "failover project name %r must not contain the primary project name %r" % (
+            candidate,
+            self.name,
+        )
+        return candidate
+
+    def setup(self):
+        # B first: the client's compose file declares B's network as external, so
+        # it has to exist before A's client can be attached to it.
+        self.failover.setup()
+        self._docker_compose_up("--scale mender-client=1")
+
+    def teardown(self):
+        try:
+            super().teardown()
+        finally:
+            self.failover.teardown()
+
+    def teardown_exclude(self, exclude=[]):
+        try:
+            super().teardown_exclude(exclude)
+        finally:
+            self.failover.teardown()
+
+    @property
+    def compose_env(self):
+        # Resolves the external network in docker-compose.client.failover.yml.
+        return {"MENDER_FAILOVER_NETWORK": self.failover.network_name}
+
+    def get_failover_gateway(self):
+        """IP of the failover backend's ingress."""
+        return self.failover.get_mender_gateway()
 
 
 class DockerComposeEnterpriseSetup(DockerComposeNamespace):
-    def __init__(self, name, num_clients=0):
+    def __init__(self, name, num_clients=0, persistent_mongo=False):
         self.num_clients = num_clients
         if self.num_clients > 0:
             raise NotImplementedError(
                 "Clients not implemented on setup time, use new_tenant_client"
             )
         else:
-            DockerComposeNamespace.__init__(self, name, self.ENTERPRISE_FILES)
+            extra_files = list(self.ENTERPRISE_FILES)
+            if persistent_mongo:
+                extra_files += self.PERSISTENT_MONGO_FILES
+            DockerComposeNamespace.__init__(self, name, extra_files)
 
     def setup(self, recreate=True, env=None):
         args = ""
@@ -326,7 +426,7 @@ class DockerComposeEnterpriseLegacyV3ClientSetup(DockerComposeEnterpriseSetup):
         )
         time.sleep(45)
 
-    def get_mender_clients(self, network="mender"):
+    def get_mender_clients(self, network="default"):
         clients = [
             ip + ":8822"
             for ip in self.get_ip_of_service(
@@ -381,9 +481,11 @@ class DockerComposeEnterpriseDockerClientSetup(DockerComposeEnterpriseSetup):
 
     def new_tenant_docker_client(self, name, tenant):
         logger.info("creating docker client connected to tenant: " + tenant)
+        # The backend was already waited for in setup(); this only adds a client.
         self._docker_compose_up(
             "--scale mender-client=1",
             {"TENANT_TOKEN": "%s" % tenant},
+            wait_ready=False,
         )
 
 
@@ -400,13 +502,15 @@ class DockerComposeMTLSSetup(DockerComposeNamespace):
         )
 
     def start_api_gateway(self):
-        self._docker_compose_cmd("start mender-api-gateway")
+        self._docker_compose_cmd("start traefik")
 
     def stop_api_gateway(self):
-        self._docker_compose_cmd("stop mender-api-gateway")
+        self._docker_compose_cmd("stop traefik")
 
     def start_mtls_gateway(self):
-        self._docker_compose_up("--scale mtls-gateway=1 mtls-gateway")
+        # Must not wait on the ingress: the mTLS fixture stops it deliberately,
+        # so a readiness poll here would block until it times out.
+        self._docker_compose_up("--scale mtls-gateway=1 mtls-gateway", wait_ready=False)
 
     def new_mtls_client(self, name, tenant):
         self._docker_compose_cmd(

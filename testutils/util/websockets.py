@@ -17,6 +17,7 @@
 
 import asyncio
 import logging
+import socket
 import ssl
 import time
 import websockets
@@ -25,11 +26,21 @@ logger = logging.getLogger()
 
 
 class Websocket:
-    def __init__(self, url, headers=[], insecure=False, retry_connect=True):
+    def __init__(
+        self, url, headers=[], insecure=False, retry_connect=True, connect_to=None
+    ):
         self.url = url
         self.headers = headers
         self.insecure = insecure
         self.retry_connect = retry_connect
+        # Optional (host, port) to open the TCP connection to, instead of the
+        # host in 'url'. Needed because Traefik routes on the Host header while
+        # tests can only reach it by container IP: putting the IP in the URL
+        # would send the wrong Host, and passing Host via additional_headers
+        # emits it twice (the library already derives one from the URL).
+        # Connecting a socket ourselves keeps the URL -- and therefore both the
+        # Host header and the TLS SNI name -- canonical.
+        self.connect_to = connect_to
 
     def __enter__(self):
         ssl_context = ssl.create_default_context()
@@ -38,9 +49,15 @@ class Websocket:
             ssl_context.verify_mode = ssl.CERT_NONE
 
         async def connect():
-            self.ws = await websockets.connect(
-                self.url, additional_headers=self.headers, ssl=ssl_context
-            )
+            kwargs = {"additional_headers": self.headers, "ssl": ssl_context}
+            if self.connect_to is not None:
+                sock = socket.create_connection(self.connect_to, timeout=30)
+                sock.setblocking(False)
+                # websockets forwards 'sock' to loop.create_connection and skips
+                # its own DNS resolution; server_hostname still defaults to the
+                # URL's host, so SNI stays correct.
+                kwargs["sock"] = sock
+            self.ws = await websockets.connect(self.url, **kwargs)
 
         attempts = 15
         sleep_seconds = 15

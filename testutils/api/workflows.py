@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-HOST = "mender-workflows-server:8080"
+HOST = "mender-workflows:8080"
 
 URL_WORKFLOW = "/api/v1/workflow"
 URL_WORKFLOWS_META = "/api/v1/metadata/workflows"

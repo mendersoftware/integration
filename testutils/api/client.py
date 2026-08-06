@@ -19,15 +19,34 @@ import requests
 
 from urllib3.exceptions import InsecureRequestWarning
 
-GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "mender-api-gateway"
+# NOTE: this file intentionally diverges from
+# mender-server/backend/tests/testutils/api/client.py -- do not sync it wholesale.
+# Upstream's copy defaults GATEWAY_HOSTNAME to "traefik" and adds Kubernetes
+# port-forwarding, which needs the 'kubernetes' package and is unused here.
+# The rest of testutils/api/ is kept byte-identical to upstream.
+#
+# The name Traefik's routers match on. Every router rule is
+# (Host(`docker.mender.io`) || Host(`localhost`) || Host(`traefik`)) && PathRegexp(...),
+# so a request addressed by container IP has to carry this as its Host header or
+# no router matches and the gateway answers 404.
+GATEWAY_HOSTNAME = os.environ.get("GATEWAY_HOSTNAME") or "docker.mender.io"
 
 
 class ApiClient:
-    def __init__(self, base_url="", host=GATEWAY_HOSTNAME, schema="https://"):
+    def __init__(
+        self, base_url="", host=GATEWAY_HOSTNAME, schema="https://", host_header=None
+    ):
         self.host = host
         self.schema = schema
         self.base_url = schema + host + base_url
         self.headers = {}
+        # Pass host_header explicitly to override, or "" to send none at all --
+        # useful when talking straight to a service's internal port, which does
+        # not route on Host.
+        if host_header is None:
+            host_header = GATEWAY_HOSTNAME
+        if host_header and host != host_header:
+            self.headers["Host"] = host_header
 
     def with_auth(self, token):
         return self.with_header("Authorization", "Bearer " + token)

@@ -1,0 +1,18 @@
+services:
+  #
+  # mender-client (commercial extended image: docker/compose + delta-docker-compose module)
+  #
+  mender-client:
+    image: ${MENDER_CLIENT_ENTERPRISE_REGISTRY}/${MENDER_CLIENT_REPOSITORY}/${MENDER_CLIENT_QEMU_EXTENDED_COMMERCIAL_IMAGE}:${MENDER_CLIENT_QEMU_EXTENDED_COMMERCIAL_TAG}
+    networks:
+      - mender
+    stdin_open: true
+    tty: true
+    privileged: true
+    environment:
+      SERVER_URL:
+      TENANT_TOKEN:
+      QEMU_MEMORY: 512M
+
+networks:
+  mender: {}

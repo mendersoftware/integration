@@ -24,6 +24,20 @@ test:integration:$CI_NODE_INDEX:
     - echo "$DOCKER_HUB_PASSWORD" | docker login docker.io --username "$DOCKER_HUB_USERNAME" --password-stdin
     - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
     - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
+    # Fetch the *private* delta generator repo (mender-delta-container-modules,
+    # host-side gen_delta-docker-compose) with the mender-test-bot token -- same
+    # insteadOf mechanism as .publish:versions in .gitlab-ci.yml. Done here rather
+    # than in run.sh so local dev without the token falls back to
+    # MENDER_DELTA_CONTAINER_MODULES_PATH pointing at a local checkout.
+    - git config --global url."https://mender-test-bot:${GITHUB_BOT_TOKEN_REPO_FULL}@github.com/".insteadOf "https://github.com/"
+    - git clone --recurse-submodules https://github.com/mendersoftware/mender-delta-container-modules.git "$CI_PROJECT_DIR/mender-delta-container-modules"
+    - |
+      ( cd "$CI_PROJECT_DIR/mender-delta-container-modules"
+        ref="${MENDER_DELTA_CONTAINER_MODULES_VERSION:-main}"
+        case "$ref" in pull/*) ref="refs/$ref" ;; esac
+        git fetch -f origin "$ref" && git checkout -f FETCH_HEAD
+        git submodule update --init --recursive )
+    - export MENDER_DELTA_CONTAINER_MODULES_PATH="$CI_PROJECT_DIR/mender-delta-container-modules"
     - apk add py3-virtualenv screen
     - python -m virtualenv /.venv
     - source /.venv/bin/activate

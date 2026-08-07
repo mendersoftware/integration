@@ -18,3 +18,4 @@ py3-pip
 python3-dev
 zstd
 skopeo
+xdelta3

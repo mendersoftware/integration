@@ -1,4 +1,4 @@
-# Copyright 2022 Northern.tech AS
+# Copyright 2026 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -11,16 +11,10 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
+"""Compose setups specific to this repository.
 
-from pymongo import MongoClient as PyMongoClient
-
-
-class MongoClient:
-    def __init__(self, addr="mender-mongo:27017"):
-        self.client = PyMongoClient(addr)
-
-    def cleanup(self):
-        dbs = self.client.list_database_names()
-        dbs = [d for d in dbs if d not in ["local", "admin", "config", "workflows"]]
-        for d in dbs:
-            self.client.drop_database(d)
+These used to live under a fork of mender-server's testutils. They stayed behind
+when that fork was dropped because they encode which compose files this suite
+runs -- tests/compose/*.yml -- rather than mender-server's own, and the class set
+differs from upstream's in both directions.
+"""

@@ -41,7 +41,7 @@ from ..MenderAPI import (
 
 from testutils.api import useradm
 from testutils.api.client import ApiClient
-from testutils.infra.container_manager import factory
+from ..container_manager import factory
 from testutils.common import User, new_tenant_client
 from testutils.infra.cli import CliTenantadm
 

@@ -23,7 +23,7 @@ from websockets.exceptions import WebSocketException
 
 from testutils.api import proto_shell, protomsg
 from testutils.infra.cli import CliTenantadm
-from testutils.infra.container_manager import factory
+from ..container_manager import factory
 from testutils.infra.device import MenderDevice
 from ..common_setup import (
     standard_setup_one_docker_client_bootstrapped,

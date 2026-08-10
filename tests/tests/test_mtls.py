@@ -22,7 +22,7 @@ import tempfile
 import time
 
 from testutils.common import create_org
-from testutils.infra.container_manager import factory
+from ..container_manager import factory
 from testutils.infra.device import MenderDevice
 
 from .. import conftest

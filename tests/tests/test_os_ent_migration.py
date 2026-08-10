@@ -22,7 +22,7 @@ from testutils.infra.cli import CliTenantadm
 import testutils.api.deviceauth as deviceauth
 import testutils.api.deployments as deployments
 import testutils.api.useradm as useradm
-from testutils.infra.container_manager import factory
+from ..container_manager import factory
 
 # This test requires special manipulation of containers, so it will use
 # directly the factory to prepare fixtures instead of common_setup

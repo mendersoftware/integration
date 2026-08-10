@@ -49,7 +49,7 @@ from ..MenderAPI.requests_helpers import requests_retry
 from .common_connect import prepare_env_for_connect, wait_for_connect
 from .common import md5sum
 from .mendertesting import MenderTesting
-from testutils.infra.container_manager import factory
+from ..container_manager import factory
 from testutils.infra.device import MenderDevice
 
 container_factory = factory.get_factory()

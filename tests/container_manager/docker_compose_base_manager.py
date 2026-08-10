@@ -24,8 +24,8 @@ import redo
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
-from .docker_manager import DockerNamespace
-from ...api.client import GATEWAY_HOSTNAME as _GATEWAY_HOSTNAME
+from testutils.infra.container_manager.docker_manager import DockerNamespace
+from testutils.api.client import GATEWAY_HOSTNAME as _GATEWAY_HOSTNAME
 
 logger = logging.getLogger("root")
 
@@ -34,10 +34,16 @@ docker_lock = filelock.FileLock("docker_lock")
 
 
 class DockerComposeBaseNamespace(DockerNamespace):
+    # Repo root: this module lives at tests/container_manager/, so two levels up.
     COMPOSE_FILES_PATH = os.path.realpath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "..")
+        os.path.join(os.path.dirname(__file__), "..", "..")
     )
     BASE_FILES = []
+
+    # How long 'up --wait' is given for every container to report healthy. Used
+    # to live on testutils' BaseContainerManagerNamespace, which this repo no
+    # longer forks.
+    wait_healthy_timeout = 300
 
     # Traefik routes on the Host header and we address it by container IP, so
     # every request has to carry this explicitly. Single source of truth lives in
@@ -217,8 +223,8 @@ class DockerComposeBaseNamespace(DockerNamespace):
         # stack, which is already running.
         self._docker_compose_up(f"--scale {service}=1 {service}", wait_ready=False)
 
-    def get_file(self, container_name, path):
-        container_id = super().getid([container_name])
+    def get_file(self, service, path):
+        container_id = super().getid(service)
         return super().execute(container_id, ["cat", path])
 
     def _debug_log_containers_logs(self):

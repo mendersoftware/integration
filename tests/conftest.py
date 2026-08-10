@@ -17,10 +17,27 @@ import os
 import re
 import subprocess
 import shutil
+import sys
 import tempfile
 import packaging.version
 
 import multiprocessing
+
+# testutils comes from the mender-server submodule -- this repo no longer keeps a
+# fork of it. Both of these have to happen before the first testutils import
+# below: the path so it resolves at all, and the hostname because
+# testutils.api.client reads it into a module-level constant at import time.
+#
+# Traefik's routers match on Host as well as path, and the tests address the
+# ingress by container IP, so every request has to carry this. Upstream defaults
+# it to "traefik", which is the name its own deployments answer to.
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "mender_server", "backend", "tests"
+    ),
+)
+os.environ.setdefault("GATEWAY_HOSTNAME", "docker.mender.io")
 
 import filelock
 import pytest

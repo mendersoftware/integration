@@ -41,3 +41,14 @@ def requests_retry(status_forcelist=[500, 502, 503, 504], host=GATEWAY_HOSTNAME)
     if host:
         s.headers.update({"Host": host})
     return s
+
+
+def requests_get(url):
+    """Plain GET that raises on a non-2xx.
+
+    Moved here when this repo stopped forking mender-server's testutils; it was
+    the one helper in that fork's common.py which upstream does not have.
+    """
+    req = requests.get(url, timeout=30)
+    req.raise_for_status()
+    return req

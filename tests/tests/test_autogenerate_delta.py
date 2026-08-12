@@ -19,8 +19,8 @@ import pytest
 from .. import conftest
 from ..common_setup import enterprise_one_rofs_commercial_client_bootstrapped
 from .common_update import update_image
-from testutils.common import ApiClient
-import testutils.api.deployments as deployments
+from mender_testkit.testutils.common import ApiClient
+import mender_testkit.testutils.api.deployments as deployments
 
 from ..MenderAPI import (
     image,

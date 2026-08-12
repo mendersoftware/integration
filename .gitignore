@@ -34,3 +34,5 @@ venv
 # direnv Python virtualenv setup
 *.direnv
 *.envrc
+
+tests/mender_server/

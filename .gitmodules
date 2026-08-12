@@ -1,6 +1,3 @@
 [submodule "extra/gitdm/gitdm"]
 	path = extra/gitdm/gitdm
 	url = git://git.lwn.net/gitdm.git
-[submodule "tests/mender_server"]
-	path = tests/mender_server
-	url = https://github.com/mendersoftware/mender-server.git

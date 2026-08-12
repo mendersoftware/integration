@@ -13,8 +13,7 @@
 #    limitations under the License.
 """Compose setups specific to this repository.
 
-These used to live under a fork of mender-server's testutils. They stayed behind
-when that fork was dropped because they encode which compose files this suite
-runs -- tests/compose/*.yml -- rather than mender-server's own, and the class set
-differs from upstream's in both directions.
+These used to live in the pre-migration version of integration testutils. They stayed behind
+when that version was dropped because they encode which compose files this suite
+runs -- tests/compose/*.yml --
 """

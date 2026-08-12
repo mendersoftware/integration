@@ -24,8 +24,10 @@ import redo
 import requests
 from urllib3.exceptions import InsecureRequestWarning
 
-from testutils.infra.container_manager.docker_manager import DockerNamespace
-from testutils.api.client import GATEWAY_HOSTNAME as _GATEWAY_HOSTNAME
+from mender_testkit.testutils.infra.container_manager.docker_manager import (
+    DockerNamespace,
+)
+from mender_testkit.testutils.api.client import GATEWAY_HOSTNAME as _GATEWAY_HOSTNAME
 
 logger = logging.getLogger("root")
 

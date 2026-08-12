@@ -21,7 +21,7 @@ from . import api_version
 from . import get_container_manager
 from .requests_helpers import requests_retry
 
-from testutils.infra.cli import CliUseradm, CliTenantadm
+from mender_testkit.testutils.infra.cli import CliUseradm, CliTenantadm
 
 
 class Authentication:

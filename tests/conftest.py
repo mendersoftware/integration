@@ -23,33 +23,27 @@ import packaging.version
 
 import multiprocessing
 
-# testutils comes from the mender-server submodule -- this repo no longer keeps a
-# fork of it. Both of these have to happen before the first testutils import
-# below: the path so it resolves at all, and the hostname because
-# testutils.api.client reads it into a module-level constant at import time.
-#
-# Traefik's routers match on Host as well as path, and the tests address the
-# ingress by container IP, so every request has to carry this. Upstream defaults
-# it to "traefik", which is the name its own deployments answer to.
-sys.path.insert(
-    0,
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "mender_server", "backend", "tests"
-    ),
-)
-os.environ.setdefault("GATEWAY_HOSTNAME", "docker.mender.io")
-
 import filelock
 import pytest
 from filelock import FileLock
-from testutils.infra.container_manager.base import BaseContainerManagerNamespace
-from testutils.infra.device import MenderDevice, MenderDeviceGroup
+from mender_testkit.compose import compose_dir
+from mender_testkit.testutils.infra.container_manager.base import (
+    BaseContainerManagerNamespace,
+)
+from mender_testkit.testutils.infra.device import MenderDevice, MenderDeviceGroup
 
 from . import log
 from .tests.mendertesting import MenderTesting
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RELEASE_TOOL = os.path.join(THIS_DIR, "..", "extra", "release_tool.py")
+
+# mender-server's compose files now come from the mender-testkit package rather
+# than a submodule. They are written to the path the submodule used to occupy, so
+# that the include: directives in tests/compose/*.yml -- and the project_directory
+# they set, which is what makes the relative bind mounts resolve -- keep working
+# unchanged. Gitignored; regenerated on every run.
+compose_dir(dest=os.path.join(THIS_DIR, "mender_server"))
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -62,7 +56,7 @@ production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 machine_name = None
 
-collect_ignore = ["mender_server"]
+collect_ignore = ["mender_server"]  # the materialised compose tree, not test code
 
 
 def pytest_addoption(parser):

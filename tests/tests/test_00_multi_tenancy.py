@@ -20,7 +20,7 @@ from ..helpers import Helpers
 from ..MenderAPI import auth, devauth, logger, inv
 from .common_update import update_image
 from .mendertesting import MenderTesting
-from testutils.common import new_tenant_client
+from mender_testkit.testutils.common import new_tenant_client
 from flaky import flaky
 
 

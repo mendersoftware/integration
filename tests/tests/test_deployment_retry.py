@@ -21,8 +21,8 @@ from .. import conftest
 from ..common_setup import enterprise_no_client
 from ..MenderAPI import logger, Authentication, DeviceAuthV2, Deployments
 from ..helpers import Helpers
-from testutils.infra.cli import CliTenantadm
-from testutils.common import Tenant, User, new_tenant_client
+from mender_testkit.testutils.infra.cli import CliTenantadm
+from mender_testkit.testutils.common import Tenant, User, new_tenant_client
 from .common_artifact import get_script_artifact
 from .mendertesting import MenderTesting
 

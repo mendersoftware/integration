@@ -12,8 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from testutils.util import websockets
-from testutils.api import deviceconnect
+from mender_testkit.testutils.util import websockets
+from mender_testkit.testutils.api import deviceconnect
 from . import api_version
 from . import get_container_manager
 

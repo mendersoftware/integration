@@ -40,7 +40,7 @@ from .mendertesting import MenderTesting
 from ..helpers import Helpers
 from ..MenderAPI.requests_helpers import requests_retry
 from requests.auth import HTTPBasicAuth
-from testutils.infra.cli import CliUseradm
+from mender_testkit.testutils.infra.cli import CliUseradm
 from flaky import flaky
 
 

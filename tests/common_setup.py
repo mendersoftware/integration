@@ -20,9 +20,9 @@ from . import conftest
 
 from .MenderAPI import authentication, auth, devauth, reset_mender_api, DeviceAuthV2
 
-from testutils.common import User, new_tenant_client
-from testutils.infra.cli import CliTenantadm
-from testutils.infra.device import MenderDevice, MenderDeviceGroup
+from mender_testkit.testutils.common import User, new_tenant_client
+from mender_testkit.testutils.infra.cli import CliTenantadm
+from mender_testkit.testutils.infra.device import MenderDevice, MenderDeviceGroup
 from .container_manager import factory
 
 container_factory = factory.get_factory()

@@ -49,14 +49,7 @@ variables:
     description: |
       Number of parallel xdist jobs per CI job for integration tests.
       Tests in parallel = CI_JOBS_IN_PARALLEL_INTEGRATION x XDIST_JOBS_IN_PARALLEL_INTEGRATION
-
-      Lowered from 4 to 3 for the mender-server composition: an environment is
-      now 18 containers (23 for Enterprise) rather than ~14, mostly because
-      SeaweedFS replaces MinIO with four. 3 workers was measured to run cleanly on
-      8 cores / 11 GB available; 4 was not tested and would put ~92 containers on
-      one runner for the Enterprise setups. Worth re-tuning upwards once there is
-      evidence from the actual runner.
-    value: 3
+    value: 4
 
   DOCKER_VERSION:
     description: "Docker version to use in jobs"

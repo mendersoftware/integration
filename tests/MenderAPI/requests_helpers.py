@@ -16,7 +16,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from testutils.api.client import GATEWAY_HOSTNAME
+from mender_testkit.testutils.api.client import GATEWAY_HOSTNAME
 
 
 # Will retry on server errors (5xx)

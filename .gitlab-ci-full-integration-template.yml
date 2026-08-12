@@ -16,11 +16,9 @@ test:integration:$CI_NODE_INDEX:
   # default budget.
   timeout: 2h
   variables:
-    # The backend composition comes from the mender-server submodule at
-    # tests/mender_server; without this the compose files are simply absent and
-    # every environment fails to start.
-    GIT_SUBMODULE_STRATEGY: recursive
-    GIT_SUBMODULE_DEPTH: 1
+    # No submodules needed: the backend composition arrives with the
+    # mender-testkit package, which conftest materialises before any test runs.
+    GIT_SUBMODULE_STRATEGY: none
   before_script:
     # These two variables would be set by GitLab CI "parallel" feature, and are used by our Pytest
     # plugin to split the tests among the CI jobs. They get substituted by the generator.
@@ -35,14 +33,10 @@ test:integration:$CI_NODE_INDEX:
     - apk add py3-virtualenv screen
     - python -m virtualenv /.venv
     - source /.venv/bin/activate
-    # Integration keeps its own testutils, so its own requirements file is the
-    # right one -- nothing here imports from the mender_server submodule, which
-    # is used for its compose files only.
+    # mender-testkit brings testutils, the Server facade and mender-server's
+    # compose files; this file carries everything else.
     - pip3 install -r ./tests/requirements-python/python-requirements.txt
     - pip3 install pyyaml
-    # Fail early and loudly if the submodule did not come through.
-    - test -f ./tests/mender_server/docker-compose.yml
-      || { echo "mender_server submodule missing"; exit 1; }
     # Gitlab CI tends to set these DOCKER_ variables internally.
     # dind also creates the unix socket at /var/run/docker.sock
     - unset DOCKER_HOST DOCKER_TLS_VERIFY DOCKER_CERT_PATH

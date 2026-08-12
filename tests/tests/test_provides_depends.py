@@ -22,7 +22,7 @@ from .common_update import update_image, common_update_procedure
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, devauth, deploy, logger
 
-from testutils.infra.device import MenderDevice
+from mender_testkit.testutils.infra.device import MenderDevice
 
 
 class TestProvidesDependsEnterprise(MenderTesting):

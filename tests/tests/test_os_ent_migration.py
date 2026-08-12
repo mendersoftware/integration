@@ -16,12 +16,17 @@ import json
 
 import pytest
 
-from testutils.common import create_user, make_accepted_device, User, Tenant
-from testutils.api.client import ApiClient
-from testutils.infra.cli import CliTenantadm
-import testutils.api.deviceauth as deviceauth
-import testutils.api.deployments as deployments
-import testutils.api.useradm as useradm
+from mender_testkit.testutils.common import (
+    create_user,
+    make_accepted_device,
+    User,
+    Tenant,
+)
+from mender_testkit.testutils.api.client import ApiClient
+from mender_testkit.testutils.infra.cli import CliTenantadm
+import mender_testkit.testutils.api.deviceauth as deviceauth
+import mender_testkit.testutils.api.deployments as deployments
+import mender_testkit.testutils.api.useradm as useradm
 from ..container_manager import factory
 
 # This test requires special manipulation of containers, so it will use

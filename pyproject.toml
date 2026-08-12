@@ -23,7 +23,6 @@ exclude = '''
     | build
     | dist
     | extra/gitdm
-    | tests/mender_server
   )/
 )
 '''

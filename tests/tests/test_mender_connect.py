@@ -21,10 +21,10 @@ from flaky import flaky
 from redo import retriable
 from websockets.exceptions import WebSocketException
 
-from testutils.api import proto_shell, protomsg
-from testutils.infra.cli import CliTenantadm
+from mender_testkit.testutils.api import proto_shell, protomsg
+from mender_testkit.testutils.infra.cli import CliTenantadm
 from ..container_manager import factory
-from testutils.infra.device import MenderDevice
+from mender_testkit.testutils.infra.device import MenderDevice
 from ..common_setup import (
     standard_setup_one_docker_client_bootstrapped,
     enterprise_one_docker_client_bootstrapped,
@@ -37,7 +37,7 @@ from ..MenderAPI import (
     set_container_manager,
     logger,
 )
-from testutils.common import User, update_tenant
+from mender_testkit.testutils.common import User, update_tenant
 from .common_connect import wait_for_connect
 
 container_factory = factory.get_factory()

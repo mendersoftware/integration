@@ -71,7 +71,7 @@ function get_requirements() {
     EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
     (
         test -z "$MENDER_ARTIFACT_VERSION" && source ../.env
-        curl --fail \
+        curl --fail --retry 5 --retry-all-errors \
             "https://downloads.mender.io/repos/workstation-tools/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
             -o "$EXTRACT_DIR/mender-artifact.deb"
     )
@@ -84,7 +84,7 @@ function get_requirements() {
     mv $EXTRACT_DIR/usr/bin/mender-artifact downloaded-tools/mender-artifact
     rm -rf $EXTRACT_DIR
 
-    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
+    curl --fail --retry 5 --retry-all-errors "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
          -o downloaded-tools/directory-artifact-gen \
          -z downloaded-tools/directory-artifact-gen
 
@@ -95,7 +95,7 @@ function get_requirements() {
 
     chmod +x downloaded-tools/directory-artifact-gen
 
-    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/single-file-artifact-gen" \
+    curl --fail --retry 5 --retry-all-errors "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/single-file-artifact-gen" \
          -o downloaded-tools/single-file-artifact-gen \
          -z downloaded-tools/single-file-artifact-gen
 

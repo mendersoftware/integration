@@ -5,13 +5,22 @@ include:
       - qa-common/retry.yml
   - project: "Northern.tech/Mender/mendertesting"
     file: ".gitlab-ci-github-status-updates.yml"
+    rules:
+      # A renovate schedule should produce a renovate-only pipeline.
+      - if: $RENOVATE_SCHEDULED_RUN == "true"
+        when: never
+      - when: always
   - local: .gitlab-ci-default-pipeline.yml
     rules:
+      - if: $RENOVATE_SCHEDULED_RUN == "true"
+        when: never
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
         when: never
       - when: always
   - local: .gitlab-ci-full-integration-generator.yml
     rules:
+      - if: $RENOVATE_SCHEDULED_RUN == "true"
+        when: never
       - if: $RUN_TESTS_FULL_INTEGRATION == "true"
   - component: gitlab.com/Northern.tech/Mender/mendertesting/renovate@master
     inputs:

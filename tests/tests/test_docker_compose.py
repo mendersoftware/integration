@@ -567,3 +567,106 @@ exit 0
         )
         assert "test-container-image1" in docker_ps
         assert "test-container-image2" not in docker_ps
+
+    def test_relative_bind_mount_survives_docker_restart(
+        self, standard_setup_extended, artifact_gen_script
+    ):
+        """Docker resolves relative bind-mount paths against the directory the
+        composition is started from and stores them in the created containers.
+        Restarting the docker daemon re-executes the mounts from the stored
+        paths -- the same re-bind as after a reboot/power cycle (MEN-10102)."""
+        env = standard_setup_extended
+        mender_device = env.device
+
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        devices = devauth.get_devices_status("accepted")
+        assert len(devices) == 1
+        device_id = devices[0]["id"]
+
+        config_content = str(uuid.uuid4())
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifests_dir = os.path.join(temp_dir, "manifests")
+            images_dir = os.path.join(temp_dir, "images")
+            os.makedirs(manifests_dir)
+            os.makedirs(images_dir)
+
+            # Build and save the image
+            dockerfile = os.path.join(temp_dir, "Dockerfile.test1")
+            with open(dockerfile, "w") as f:
+                f.write(
+                    f'FROM busybox:latest\nRUN echo "{uuid.uuid4()}" > /image_id\nCMD ["sleep", "infinity"]\n'
+                )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "build",
+                    "-t",
+                    "test-container-image1",
+                    "-f",
+                    dockerfile,
+                    temp_dir,
+                ]
+            )
+            subprocess.check_call(
+                [
+                    "docker",
+                    "save",
+                    "-o",
+                    os.path.join(images_dir, "test-container-image1.tar"),
+                    "test-container-image1",
+                ]
+            )
+
+            # A config file shipped next to the compose file, mounted into the
+            # container with a relative path
+            with open(os.path.join(manifests_dir, "config.txt"), "w") as f:
+                f.write(config_content)
+
+            with open(os.path.join(manifests_dir, "docker-compose.yml"), "w") as f:
+                f.write("services:\n")
+                f.write("  test1:\n")
+                f.write("    image: test-container-image1\n")
+                f.write("    network_mode: bridge\n")
+                f.write("    restart: unless-stopped\n")
+                f.write("    volumes:\n")
+                f.write("      - ./config.txt:/config.txt\n")
+
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)
+
+        docker_ps = mender_device.run("docker ps")
+        logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
+        assert "test-container-image1" in docker_ps
+
+        output = mender_device.run("docker exec test-test1-1 cat /config.txt")
+        assert config_content in output
+
+        # Restart the docker daemon: containers with a restart policy come
+        # back up with their bind mounts re-created from the stored paths
+        mender_device.run("systemctl restart docker")
+
+        for _ in range(60):
+            docker_ps = mender_device.run("docker ps", hide=True)
+            if "test-container-image1" in docker_ps:
+                break
+            time.sleep(1)
+        logger.info(f"docker ps output after docker restart:\n{docker_ps}")
+        assert "test-container-image1" in docker_ps
+
+        output = mender_device.run(
+            "docker exec test-test1-1 cat /config.txt", warn=True
+        )
+        assert config_content in output

@@ -346,6 +346,49 @@ def pytest_exception_interact(node, call, report):
                         f"database snapshot captured; import using: mongorestore --archive={log.TEST_LOGS_PATH}/{node.name}.bson"
                     )
 
+                # Capture the QEMU client's serial console. "docker compose
+                # logs" of the client works even when the device is unreachable
+                # over SSH -- which is exactly the "Device never rebooted"
+                # failure mode -- so it is the only record of what the guest
+                # actually did on reboot (the SSH-based logs below are empty
+                # when the guest is dead).
+                for svc in ("mender-client", "mender-client-docker-addons"):
+                    try:
+                        console = subprocess.run(
+                            [
+                                "docker",
+                                "compose",
+                                "-p",
+                                env.name,
+                                "logs",
+                                "--no-color",
+                                "--no-log-prefix",
+                                svc,
+                            ],
+                            env=dict(
+                                **os.environ,
+                                COMPOSE_FILE=":".join(env.docker_compose_files),
+                            ),
+                            capture_output=True,
+                            text=True,
+                            timeout=120,
+                        ).stdout
+                    except Exception as ex:
+                        logger.warning("failed to capture %s console: %s", svc, ex)
+                        continue
+                    if console.strip():
+                        console_path = (
+                            f"{log.TEST_LOGS_PATH}/{node.name}_{svc}_console.log"
+                        )
+                        with open(console_path, "w") as fh:
+                            fh.write(console)
+                        logger.info(
+                            "captured %s serial console -> %s (%d bytes)",
+                            svc,
+                            console_path,
+                            len(console),
+                        )
+
         # If we have devices (or groups) try to print deployment and systemd logs
         if devices is []:
             logger.info("Could not find devices in test environment, no printing logs")

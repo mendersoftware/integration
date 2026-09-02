@@ -23,7 +23,6 @@ default:
       - stuck_or_timeout_failure
 
 stages:
-  - renovate
   - test-gen
   - test
   - build

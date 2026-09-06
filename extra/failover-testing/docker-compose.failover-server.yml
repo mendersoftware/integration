@@ -61,7 +61,7 @@ services:
     # mender-api-gateway
     #
     mender-api-gateway-2:
-        image: traefik:v3.1
+        image: traefik:v3.7
         extends:
             file: docker-compose.yml
             service: mender-api-gateway
@@ -215,7 +215,7 @@ services:
             - mender-nats-2
 
     mender-mongo-2:
-        image: mongo:8.0
+        image: mongo:8.3
         extends:
             file: common.yml
             service: mender-base
@@ -231,7 +231,7 @@ services:
                     - mender-mongo
 
     mender-nats-2:
-        image: nats:2.6-alpine
+        image: nats:2.14-alpine
         command: -js
         networks:
             mender-failover:

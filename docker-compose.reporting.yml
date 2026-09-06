@@ -67,7 +67,7 @@ services:
     # mender-opensearch
     #
     mender-opensearch:
-        image: opensearchproject/opensearch:2.4.0
+        image: opensearchproject/opensearch:3.8.0
         extends:
             file: common.yml
             service: mender-base

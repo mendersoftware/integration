@@ -129,6 +129,13 @@ variables:
     description: "Mender Client QEMU virtualization image tag"
     value: $MENDER_VIRTUAL_DEVICE_TAG
 
+  MENDER_CLIENT_QEMU_EXTENDED_COMMERCIAL_IMAGE:
+    description: "Mender Client QEMU commercial virtualization image (extended + delta-docker-compose module)"
+    value: mender-client-qemu-extended-commercial
+  MENDER_CLIENT_QEMU_EXTENDED_COMMERCIAL_TAG:
+    description: "Mender Client QEMU commercial virtualization image tag"
+    value: $MENDER_VIRTUAL_DEVICE_TAG
+
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"
     value: 4.4.1

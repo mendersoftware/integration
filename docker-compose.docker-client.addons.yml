@@ -6,7 +6,9 @@ services:
         # for iptables commands
         privileged: true
         networks:
-            - mender
+            - default
+        environment:
+            - SERVER_URL=https://docker.mender.io
 
 networks:
-    mender:
+    default:

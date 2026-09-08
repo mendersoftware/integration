@@ -37,6 +37,8 @@ usage() {
     exit 0
 }
 
+GET_REQUIREMENTS_ONLY=""
+
 while [ -n "$1" ]; do
     case "$1" in
         -h|--help)
@@ -45,6 +47,9 @@ while [ -n "$1" ]; do
             ;;
         --no-download)
             DOWNLOAD_REQUIREMENTS=""
+            ;;
+        --get-requirements)
+            GET_REQUIREMENTS_ONLY="true"
             ;;
         -- )
             shift
@@ -105,11 +110,9 @@ function get_requirements() {
     fi
 
     chmod +x downloaded-tools/single-file-artifact-gen
-
-    export PATH=$PWD/downloaded-tools:$PATH
 }
 
-if [[ $1 == "--get-requirements" ]]; then
+if [[ -n "$GET_REQUIREMENTS_ONLY" ]]; then
     get_requirements
     exit 0
 fi
@@ -117,6 +120,40 @@ fi
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     get_requirements
 fi
+
+# Outside get_requirements on purpose: the tools live here whether or not this
+# run downloaded them, and tests shell out to directory-artifact-gen by name.
+# With --no-download (or $BUILDDIR set) the old placement left them off PATH and
+# the failure surfaced as an opaque exit 127 mid-run.
+export PATH=$PWD/downloaded-tools:$PATH
+
+# Pull the backend images up front. _docker_compose_up passes --pull missing, so
+# a cold cache would otherwise be fetched by whichever test got there first while
+# holding the global compose lock, serialising every other worker behind it. Doing
+# it here also turns a registry auth problem into an immediate, obvious failure.
+if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+    docker compose \
+        --project-directory .. \
+        -f compose/docker-compose.testing.yml \
+        -f compose/docker-compose.testing.overrides.yml \
+        -f compose/docker-compose.testing.enterprise.yml \
+        -f compose/docker-compose.testing.enterprise.overrides.yml \
+        pull --quiet --ignore-pull-failures || \
+        echo "WARNING: image pre-pull incomplete; tests will pull on demand"
+fi
+
+# Remove environments orphaned by an earlier interrupted run. A crash between
+# setup() and teardown() leaves ~20 containers per worker behind, which starves
+# the next run of resources.
+for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' \
+                 2>/dev/null | sort -u | grep -E '^mender[0-9]+$'); do
+    echo "removing orphaned test environment: $project"
+    ids=$(docker ps -aq -f "name=^${project}")
+    if [ -n "$ids" ]; then docker rm -f $ids >/dev/null 2>&1 || true; fi
+    vols=$(docker volume ls -q -f "name=^${project}_")
+    if [ -n "$vols" ]; then docker volume rm $vols >/dev/null 2>&1 || true; fi
+    docker network rm "${project}_default" >/dev/null 2>&1 || true
+done
 
 # Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
 EXTRA_TEST_ARGS=

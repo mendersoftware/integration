@@ -1,0 +1,18 @@
+# Attaches the QEMU client to the failover backend's network in addition to its
+# own, so the device can resolve both servers by name:
+#
+#   docker.mender.io           -> primary backend's traefik   (this project)
+#   failover.docker.mender.io  -> failover backend's traefik  (external project)
+#
+# The failover backend runs as a separate compose project, so its network is
+# external from here. DockerComposeFailoverServerSetup supplies the name.
+services:
+  mender-client:
+    networks:
+      - default
+      - mender_failover
+
+networks:
+  mender_failover:
+    external: true
+    name: ${MENDER_FAILOVER_NETWORK:-mender_failover_default}

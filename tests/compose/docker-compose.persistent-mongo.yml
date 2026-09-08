@@ -1,0 +1,20 @@
+# Restores a real volume for Mongo, undoing the tmpfs override in
+# docker-compose.testing.yml.
+#
+# The base overlay puts /data/db on tmpfs, which is a large speed win for the
+# ~190 tests that want a clean database per test. The OS -> Enterprise migration
+# test is the exception: it tears the backend down and brings a different one up
+# over the same database, twice, to prove operational data survives the switch.
+# On tmpfs that data dies with the container and the test would either fail on
+# missing users/devices or, worse, pass while asserting on nothing.
+#
+# The base file's `volumes: !reset []` also drops the top-level volume
+# declaration, so it has to be declared again here.
+services:
+  mongo:
+    tmpfs: !reset []
+    volumes:
+      - mongo:/data/db
+
+volumes:
+  mongo: {}

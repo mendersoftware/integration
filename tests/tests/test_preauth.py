@@ -22,7 +22,7 @@ from ..common_setup import standard_setup_one_docker_client, enterprise_no_clien
 from .mendertesting import MenderTesting
 from ..MenderAPI import auth, devauth, inv, logger
 from ..helpers import Helpers
-from testutils.infra.device import MenderDevice
+from mender_testkit.testutils.infra.device import MenderDevice
 
 
 class TestPreauthBase(MenderTesting):

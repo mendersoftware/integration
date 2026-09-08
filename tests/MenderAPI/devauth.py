@@ -31,6 +31,19 @@ class DeviceAuthV2:
         # Reset all temporary values.
         pass
 
+    @property
+    def gateway_host(self):
+        """Value to send as the Host header.
+
+        Traefik routes on it and we address the gateway by container IP, so it has
+        to be the name that gateway's routers match. Overridden by subclasses that
+        talk to a second backend, such as the failover server.
+        """
+        return get_container_manager().GATEWAY_HOSTNAME
+
+    def _session(self):
+        return requests_retry(host=self.gateway_host)
+
     def get_devauth_base_path(self):
         return "https://%s/api/management/v2/devauth/" % (
             get_container_manager().get_mender_gateway()
@@ -38,7 +51,7 @@ class DeviceAuthV2:
 
     def get_device(self, device_id):
         url = self.get_devauth_base_path() + device_id
-        return requests_retry().get(
+        return self._session().get(
             url, verify=False, headers=self.auth.get_auth_token()
         )
 
@@ -60,7 +73,7 @@ class DeviceAuthV2:
             # Linear backoff
             sleeptime += 5
             logger.info("getting all devices from: %s" % (device_status_path))
-            devices = requests_retry().get(
+            devices = self._session().get(
                 device_status_path, headers=self.auth.get_auth_token(), verify=False
             )
             if (
@@ -99,7 +112,7 @@ class DeviceAuthV2:
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        r = requests_retry().put(
+        r = self._session().put(
             self.get_devauth_base_path()
             + "devices/%s/auth/%s/status" % (device_id, auth_set_id),
             verify=False,
@@ -176,7 +189,7 @@ class DeviceAuthV2:
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        return requests_retry().post(
+        return self._session().post(
             path, data=json.dumps(req), headers=headers, verify=False
         )
 
@@ -190,13 +203,13 @@ class DeviceAuthV2:
         headers = {"Content-Type": "application/json"}
         headers.update(self.auth.get_auth_token())
 
-        return requests_retry().delete(path, headers=headers, verify=False)
+        return self._session().delete(path, headers=headers, verify=False)
 
     def decommission(self, deviceID, expected_http_code=204):
         decommission_path_url = (
             self.get_devauth_base_path() + "devices/" + str(deviceID)
         )
-        r = requests_retry().delete(
+        r = self._session().delete(
             decommission_path_url, verify=False, headers=self.auth.get_auth_token()
         )
         assert r.status_code == expected_http_code

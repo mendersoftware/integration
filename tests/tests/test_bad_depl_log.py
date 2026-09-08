@@ -24,7 +24,7 @@ from .common_update import common_update_procedure
 from ..helpers import Helpers
 from ..MenderAPI import DeviceAuthV2, Deployments, logger, image
 from .mendertesting import MenderTesting
-from testutils.infra.device import MenderDeviceGroup
+from mender_testkit.testutils.infra.device import MenderDeviceGroup
 
 from ..common_setup import (
     class_persistent_standard_setup_one_client_bootstrapped,

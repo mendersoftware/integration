@@ -40,6 +40,9 @@ class DockerComposeNamespace(DockerComposeBaseNamespace):
     QEMU_EXTENDED_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.client.extended.yml",
     ]
+    QEMU_EXTENDED_COMMERCIAL_FILES = [
+        COMPOSE_FILES_PATH + "/docker-compose.client.extended.commercial.yml",
+    ]
     MONITOR_CLIENT_COMMERCIAL_FILES = [
         COMPOSE_FILES_PATH + "/docker-compose.monitor-client.commercial.yml",
     ]
@@ -130,6 +133,23 @@ class DockerComposeExtendedSetup(DockerComposeNamespace):
     def __init__(self, name, num_clients=1):
         self.num_clients = num_clients
         super().__init__(name, self.QEMU_EXTENDED_FILES)
+
+    def setup(self):
+        self._docker_compose_up(f"--scale mender-client={self.num_clients}")
+
+    def get_mender_clients(self, network="mender"):
+        return super().get_mender_clients(
+            network=network, client_service_name="mender-client"
+        )
+
+
+class DockerComposeExtendedCommercialSetup(DockerComposeNamespace):
+    """Like the extended setup, but using the commercial extended image which
+    additionally ships the proprietary delta-docker-compose Update Module."""
+
+    def __init__(self, name, num_clients=1):
+        self.num_clients = num_clients
+        super().__init__(name, self.QEMU_EXTENDED_COMMERCIAL_FILES)
 
     def setup(self):
         self._docker_compose_up(f"--scale mender-client={self.num_clients}")

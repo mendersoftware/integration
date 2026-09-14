@@ -81,12 +81,19 @@ def create_test_manifest(services):
                 subprocess.check_call(
                     ["docker", "build", "-t", service.image, "-f", dockerfile, temp_dir]
                 )
+                image_path = os.path.join(images_dir, f"{service.image}.tar")
+                try:
+                    # Make sure the image file doesn't exist already from a
+                    # previous run
+                    os.remove(image_path)
+                except FileNotFoundError:
+                    pass
                 subprocess.check_call(
                     [
                         "docker",
                         "save",
                         "-o",
-                        os.path.join(images_dir, f"{service.image}.tar"),
+                        image_path,
                         service.image,
                     ]
                 )
@@ -191,6 +198,83 @@ class TestDockerCompose(MenderTesting):
         assert "test-container-image2" in docker_ps
         assert not "non-existing-image" in docker_ps
         assert not "test-container-image3" in docker_ps
+
+    def test_successful_rollback_updated_image(
+        self, standard_setup_extended, artifact_gen_script
+    ):
+        """Test a rollback with a new deployment shipping a new version of an image (using the same tag)"""
+
+        env = standard_setup_extended
+        mender_device = env.device
+
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        devices = devauth.get_devices_status("accepted")
+        assert len(devices) == 1
+        device_id = devices[0]["id"]
+
+        services = [
+            DockerService(name="test1", image="test-container-image1"),
+            DockerService(name="test2", image="test-container-image2"),
+        ]
+
+        with create_test_manifest(services) as (manifests_dir, images_dir):
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "success", 1)
+
+        docker_ps = mender_device.run("docker ps")
+        logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
+        assert "test-container-image1" in docker_ps
+        assert "test-container-image2" in docker_ps
+
+        image1_id = mender_device.run(
+            'docker images --format "{{json .ID}}" test-container-image1'
+        )
+        assert image1_id != ""
+
+        # Trigger a rollback by providing a non-existing image, but use a new
+        # version of test-container-image1 (the rollback should assign the tag
+        # to the old version)
+        services = [
+            DockerService(name="test1", image="test-container-image1"),
+            DockerService(name="test2", image="non-existing-image", build_image=False),
+        ]
+
+        with create_test_manifest(services) as (manifests_dir, images_dir):
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "failure", 1)
+
+        docker_ps = mender_device.run("docker ps")
+        logger.info(f"docker ps output after rollback:\n{docker_ps}")
+        assert "test-container-image1" in docker_ps
+        assert "test-container-image2" in docker_ps
+        assert not "non-existing-image" in docker_ps
+
+        new_image1_id = mender_device.run(
+            'docker images --format "{{json .ID}}" test-container-image1'
+        )
+        assert image1_id == new_image1_id
 
     def test_invalid_manifest(self, standard_setup_extended, artifact_gen_script):
         env = standard_setup_extended

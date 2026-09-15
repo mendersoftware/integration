@@ -16,13 +16,18 @@ import json
 
 import pytest
 
-from testutils.common import create_user, make_accepted_device, User, Tenant
-from testutils.api.client import ApiClient
-from testutils.infra.cli import CliTenantadm
-import testutils.api.deviceauth as deviceauth
-import testutils.api.deployments as deployments
-import testutils.api.useradm as useradm
-from testutils.infra.container_manager import factory
+from mender_testkit.testutils.common import (
+    create_user,
+    make_accepted_device,
+    User,
+    Tenant,
+)
+from mender_testkit.testutils.api.client import ApiClient
+from mender_testkit.testutils.infra.cli import CliTenantadm
+import mender_testkit.testutils.api.deviceauth as deviceauth
+import mender_testkit.testutils.api.deployments as deployments
+import mender_testkit.testutils.api.useradm as useradm
+from ..container_manager import factory
 
 # This test requires special manipulation of containers, so it will use
 # directly the factory to prepare fixtures instead of common_setup
@@ -34,7 +39,10 @@ def initial_os_setup():
     """Start the minimum OS setup, create some uses and devices.
     Return {"os_devs": [...], "os_users": [...]}
     """
-    os_env = container_factory.get_standard_setup(num_clients=0)
+    # persistent_mongo: this test replaces the backend twice over the same
+    # database to prove operational data survives the OS -> Enterprise switch.
+    # The default tmpfs /data/db would be discarded with the containers.
+    os_env = container_factory.get_standard_setup(num_clients=0, persistent_mongo=True)
     os_env.setup()
     os_env.init_data = initialize_os_setup(os_env)
 
@@ -47,11 +55,11 @@ def initial_enterprise_setup(initial_os_setup):
     """
     Start ENT for the first time (no tenant yet).
     """
-    initial_os_setup.teardown_exclude(["mender-mongo"])
+    initial_os_setup.teardown_exclude(["mongo"])
 
     # Create a new env reusing the same namespace
     ent_no_tenant_env = container_factory.get_enterprise_setup(
-        initial_os_setup.name, num_clients=0
+        initial_os_setup.name, num_clients=0, persistent_mongo=True
     )
     ent_no_tenant_env.setup()
 
@@ -68,11 +76,11 @@ def migrated_enterprise_setup(initial_enterprise_setup):
     ent_data = migrate_ent_setup(initial_enterprise_setup)
 
     # preserve the user/tenant created before restart
-    initial_enterprise_setup.teardown_exclude(["mender-mongo"])
+    initial_enterprise_setup.teardown_exclude(["mongo"])
 
     # Create a new env reusing the same namespace
     ent_with_tenant_env = container_factory.get_enterprise_setup(
-        initial_enterprise_setup.name, num_clients=0
+        initial_enterprise_setup.name, num_clients=0, persistent_mongo=True
     )
     ent_with_tenant_env.setup(
         recreate=False,

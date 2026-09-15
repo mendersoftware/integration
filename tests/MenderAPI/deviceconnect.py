@@ -12,8 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-from testutils.util import websockets
-from testutils.api import deviceconnect
+from mender_testkit.testutils.util import websockets
+from mender_testkit.testutils.api import deviceconnect
 from . import api_version
 from . import get_container_manager
 
@@ -28,13 +28,21 @@ class DeviceConnect:
         # Reset all temporary values.
         pass
 
+    def _gateway_address(self):
+        """(host, port) of the ingress, for the websocket to dial directly.
+
+        The URL keeps the canonical hostname so that the Host header and the TLS
+        SNI name are what Traefik's routers expect; only the TCP target differs.
+        """
+        return (get_container_manager().get_mender_gateway(), 443)
+
     def get_websocket_url(self):
         auth_json = self.devauth.get_devices()
         dev_id = auth_json[0]["id"]
         url_path = deviceconnect.URL_MGMT + deviceconnect.URL_MGMT_CONNECT.format(
             id=dev_id
         )
-        host_uri = "wss://" + get_container_manager().get_mender_gateway()
+        host_uri = "wss://" + get_container_manager().GATEWAY_HOSTNAME
         return host_uri + url_path
 
     def get_websocket(self):
@@ -42,7 +50,10 @@ class DeviceConnect:
         headers.update(self.auth.get_auth_token())
 
         ws = websockets.Websocket(
-            self.get_websocket_url(), headers=headers, insecure=True
+            self.get_websocket_url(),
+            headers=headers,
+            insecure=True,
+            connect_to=self._gateway_address(),
         )
 
         return ws
@@ -51,7 +62,7 @@ class DeviceConnect:
         url_path = deviceconnect.URL_MGMT + deviceconnect.URL_MGMT_PLAYBACK.format(
             session_id=session_id
         )
-        host_uri = "wss://" + get_container_manager().get_mender_gateway()
+        host_uri = "wss://" + get_container_manager().GATEWAY_HOSTNAME
         url = host_uri + url_path
         if sleep_ms is not None:
             url += "?sleep_ms=%d" % sleep_ms
@@ -62,6 +73,9 @@ class DeviceConnect:
         headers.update(self.auth.get_auth_token())
 
         ws = websockets.Websocket(
-            self.get_playback_url(session_id, sleep_ms), headers=headers, insecure=True
+            self.get_playback_url(session_id, sleep_ms),
+            headers=headers,
+            insecure=True,
+            connect_to=self._gateway_address(),
         )
         return ws

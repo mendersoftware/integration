@@ -1,8 +1,0 @@
-services:
-
-    #
-    # mender-client
-    #
-    mender-client:
-        ports:
-            - "85:85"

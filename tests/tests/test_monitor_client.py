@@ -39,11 +39,11 @@ from ..MenderAPI import (
     logger,
 )
 
-from testutils.api import useradm
-from testutils.api.client import ApiClient
-from testutils.infra.container_manager import factory
-from testutils.common import User, new_tenant_client
-from testutils.infra.cli import CliTenantadm
+from mender_testkit.testutils.api import useradm
+from mender_testkit.testutils.api.client import ApiClient
+from ..container_manager import factory
+from mender_testkit.testutils.common import User, new_tenant_client
+from mender_testkit.testutils.infra.cli import CliTenantadm
 
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"

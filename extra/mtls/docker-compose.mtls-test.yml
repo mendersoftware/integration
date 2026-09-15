@@ -2,13 +2,17 @@ services:
   mtls-gateway:
     image: ${MENDER_GATEWAY_REGISTRY}/${MENDER_GATEWAY_REPOSITORY}/${MENDER_GATEWAY_IMAGE}:${MENDER_GATEWAY_TAG}
     networks:
-      - mender
+      - default
     volumes:
       - ${MTLS_CERT:-./extra/mtls/certs/server/server.crt}:/etc/mtls/certs/server/server.crt:ro
       - ${MTLS_KEY:-./extra/mtls/certs/server/server.key}:/etc/mtls/certs/server/server.key:ro
       - ${MTLS_TENANT_CA:-./extra/mtls/certs/tenant-ca/tenant.ca.crt}:/etc/mtls/certs/tenant-ca/tenant.ca.crt:ro
     environment:
-      UPSTREAM_SERVER_URL: "https://mender-api-gateway"
+      # docker.mender.io rather than a service name: it is a network alias on
+      # mender-server's traefik, and it is the hostname every router rule matches
+      # on. The gateway forwards with the upstream host in the Host header, so a
+      # name traefik does not recognise would 404 every proxied request.
+      UPSTREAM_SERVER_URL: "https://docker.mender.io"
       MTLS_ENABLED: "true"
       HTTPS_ENABLED: "true"
       HTTPS_LISTEN: ":8080"

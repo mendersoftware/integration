@@ -1,8 +1,5 @@
 services:
 
-    mender-tenantadm:
+    tenantadm:
         environment:
             TENANTADM_RECAPTCHA_SECRET: 6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe
-
-networks:
-    mender:

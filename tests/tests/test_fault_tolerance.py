@@ -34,7 +34,7 @@ class BasicTestFaultTolerance(MenderTesting):
         self,
         device,
         accessible,
-        hosts=["mender-artifact-storage.localhost", "mender-api-gateway"],
+        hosts=["mender-artifact-storage.localhost", "traefik"],
     ):
         try:
             for h in hosts:

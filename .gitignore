@@ -7,7 +7,12 @@ tags
 /release-state.yml
 /mender-demo-artifact.mender
 
-/docker-compose.testing.yml
+# Lock file created by the container manager when compose is driven from the
+# repo root rather than tests/
+/docker_lock
+
+# Output of the old 'keygen' script, removed along with the demo composition
+/keys-generated/
 
 __pycache__
 .cache
@@ -29,3 +34,5 @@ venv
 # direnv Python virtualenv setup
 *.direnv
 *.envrc
+
+tests/mender_server/

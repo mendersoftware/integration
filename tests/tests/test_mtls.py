@@ -21,9 +21,9 @@ import shutil
 import tempfile
 import time
 
-from testutils.common import create_org
-from testutils.infra.container_manager import factory
-from testutils.infra.device import MenderDevice
+from mender_testkit.testutils.common import create_org
+from ..container_manager import factory
+from mender_testkit.testutils.infra.device import MenderDevice
 
 from .. import conftest
 from ..MenderAPI import reset_mender_api, auth, deploy, devauth, logger

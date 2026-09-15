@@ -38,16 +38,69 @@ from ..MenderAPI import (
 )
 from .mendertesting import MenderTesting
 from ..helpers import Helpers
+from ..MenderAPI.requests_helpers import requests_retry
+from requests.auth import HTTPBasicAuth
+from mender_testkit.testutils.infra.cli import CliUseradm
 from flaky import flaky
 
 
+class FailoverAuth:
+    """Admin credentials for the failover backend.
+
+    Server B cannot accept a token issued by server A. useradm's Verify looks up
+    both the user id and the token id in its *own* database, so sharing the JWT
+    signing key is not enough -- B has neither record. B therefore needs a user
+    of its own. This says nothing about the device behaviour under test; it is
+    only how the test authenticates to inspect B.
+    """
+
+    username = "failover@mender.io"
+    password = "correcthorse123"
+
+    def __init__(self, env):
+        self.env = env
+        self.auth_header = None
+
+    def get_auth_token(self):
+        if self.auth_header is not None:
+            return self.auth_header
+
+        CliUseradm(containers_namespace=self.env.failover.name).create_user(
+            self.username, self.password
+        )
+        r = requests_retry(host=self.env.failover.GATEWAY_HOSTNAME).post(
+            "https://%s/api/management/v1/useradm/auth/login"
+            % self.env.get_failover_gateway(),
+            verify=False,
+            auth=HTTPBasicAuth(self.username, self.password),
+        )
+        assert r.status_code == 200, "failover login failed: %s %s" % (
+            r.status_code,
+            r.text,
+        )
+        self.auth_header = {"Authorization": "Bearer " + r.text}
+        return self.auth_header
+
+
 class DeviceAuthFailover(DeviceAuthV2):
-    def __init__(self, devauth):
-        self.auth = devauth.auth
+    """Talks to the failover backend (server B) instead of the primary.
+
+    B runs as its own compose project with its own ingress, reachable only by
+    container IP from here -- and its routers match a different hostname, so the
+    Host header has to change along with the address.
+    """
+
+    def __init__(self, env):
+        self.env = env
+        self.auth = FailoverAuth(env)
+
+    @property
+    def gateway_host(self):
+        return self.env.failover.GATEWAY_HOSTNAME
 
     def get_devauth_base_path(self):
         return "https://%s/api/management/v2/devauth/" % (
-            get_container_manager().get_ip_of_service("mender-api-gateway-2")[0]
+            self.env.get_failover_gateway()
         )
 
 
@@ -314,7 +367,7 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             time.sleep(1)
             date = mender_device.run('date "+%Y-%m-%d %H:%M:%S"').strip()
 
-            devauth_failover = DeviceAuthFailover(devauth)
+            devauth_failover = DeviceAuthFailover(setup_failover)
 
             devices = devauth_failover.get_devices_status(status="pending")
             assert len(devices) == 1

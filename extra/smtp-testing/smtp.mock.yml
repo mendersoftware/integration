@@ -8,6 +8,4 @@ services:
         ports:
             - "1025"
         networks:
-            - mender
-networks:
-    mender:
+            - default

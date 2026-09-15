@@ -45,11 +45,12 @@ from ..MenderAPI import (
     logger,
     devauth,
 )
+from ..MenderAPI.requests_helpers import requests_retry
 from .common_connect import prepare_env_for_connect, wait_for_connect
 from .common import md5sum
 from .mendertesting import MenderTesting
-from testutils.infra.container_manager import factory
-from testutils.infra.device import MenderDevice
+from ..container_manager import factory
+from mender_testkit.testutils.infra.device import MenderDevice
 
 container_factory = factory.get_factory()
 connect_service_name = "mender-connect"
@@ -66,7 +67,14 @@ def download_file(path, devid, authtoken):
     )
     download_url = "%s/devices/%s/download" % (deviceconnect_url, devid)
     download_url_with_path = download_url + "?path=" + urllib.parse.quote(path)
-    return requests.get(download_url_with_path, verify=False, headers=authtoken)
+    # requests_retry() rather than bare requests, for the Host header Traefik
+    # routes on -- but with status retries off. These helpers are used by tests
+    # that assert on error responses, and deviceconnect currently answers user
+    # restriction errors with 500 (MEN-4659). Retrying those would turn the
+    # response the caller needs to inspect into a RetryError.
+    return requests_retry(status_forcelist=[]).get(
+        download_url_with_path, verify=False, headers=authtoken
+    )
 
 
 def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
@@ -85,7 +93,10 @@ def upload_file(path, file, devid, authtoken, mode="600", uid="0", gid="0"):
         % get_container_manager().get_mender_gateway()
     )
     upload_url = "%s/devices/%s/upload" % (deviceconnect_url, devid)
-    return requests.put(upload_url, verify=False, headers=authtoken, files=files)
+    # Status retries off, same reason as download_file above.
+    return requests_retry(status_forcelist=[]).put(
+        upload_url, verify=False, headers=authtoken, files=files
+    )
 
 
 def set_limits(docker_env, mender_device, limits, auth, devid):

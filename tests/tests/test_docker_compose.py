@@ -26,7 +26,7 @@ from ..common_setup import standard_setup_extended
 from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
-from testutils.common import requests_get
+from ..MenderAPI.requests_helpers import requests_get
 
 
 @pytest.fixture(scope="session")

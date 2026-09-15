@@ -5,7 +5,7 @@ services:
     #
     mender-client:
         networks:
-            - mender
+            - default
         environment:
-            - SERVER_URL=$SERVER_URL
+            - SERVER_URL=https://docker.mender.io
             - TENANT_TOKEN=$TENANT_TOKEN

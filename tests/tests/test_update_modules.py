@@ -60,6 +60,8 @@ class BaseTestUpdateModules(MenderTesting):
             output = mender_device.run("mender-update show-artifact").strip()
             assert output == "original"
 
+            # 'mender-client', not 'client': the latter is mender-server's own
+            # docker-addons service, which our compositions leave at scale 0.
             output = env.get_logs_of_service("mender-client")
             assert "Update Module not found for given artifact type" in output
             assert (

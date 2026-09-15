@@ -1,0 +1,9 @@
+# Enterprise overlay, applied on top of docker-compose.testing.yml (which the
+# container manager supplies via BASE_FILES -- do not include it again here).
+#
+# Import only; the overrides live in docker-compose.testing.enterprise.overrides.yml
+# and are passed as a separate -f. See the note in docker-compose.testing.yml for
+# why the two cannot share a file.
+include:
+  - path: tests/mender_server/compose/docker-compose.enterprise.yml
+    project_directory: tests/mender_server

@@ -17,11 +17,11 @@ import json
 import redo
 import uuid
 
-import testutils.api.deviceconnect as deviceconnect
-from testutils.common import User, update_tenant, new_tenant_client
-from testutils.infra.cli import CliTenantadm
+import mender_testkit.testutils.api.deviceconnect as deviceconnect
+from mender_testkit.testutils.common import User, update_tenant, new_tenant_client
+from mender_testkit.testutils.infra.cli import CliTenantadm
 
-from testutils.api.client import ApiClient
+from mender_testkit.testutils.api.client import ApiClient
 from ..MenderAPI import (
     authentication,
     get_container_manager,

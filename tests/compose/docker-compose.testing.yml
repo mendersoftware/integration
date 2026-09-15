@@ -1,0 +1,16 @@
+# Base backend for the integration tests: mender-server's composition, pulled in
+# from the submodule.
+#
+# This file only imports. The test-specific overrides live alongside in
+# docker-compose.testing.overrides.yml and are passed as a separate -f, because
+# docker compose v2 rejects a file that both include:s a composition and
+# overrides a service from it ("services.<name> conflicts with imported
+# resource"). Overriding via -f layering is fine. Compose v5 permits both, so
+# this only shows up against the version in the CI image -- keep them separate.
+#
+# The path is resolved against the *project directory*, which _docker_compose_cmd
+# pins to the integration repo root. The nested project_directory keeps
+# mender-server's own relative bind mounts resolving inside the submodule.
+include:
+  - path: tests/mender_server/docker-compose.yml
+    project_directory: tests/mender_server

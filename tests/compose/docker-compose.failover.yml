@@ -1,0 +1,26 @@
+# Overlay for the *second* backend in the failover test, applied on top of
+# docker-compose.testing.yml in its own compose project.
+#
+# The whole composition is reused unchanged -- there are no duplicated "-2"
+# services. Two backends can only be separate compose projects, not two halves of
+# one: mender-server's traefik discovers backends through the Docker provider, and
+# the constraint that keeps it from picking up other namespaces' containers is
+# scoped by compose project. Two gateways in one project each register both sets
+# of backends under identical router names and requests round-robin into the wrong
+# stack.
+#
+# The caller must also set MENDER_HOSTNAME=failover.docker.mender.io for this
+# project, which rewrites every router rule to match that name. The aliases below
+# are what makes the name resolve; without the override this traefik would answer
+# to docker.mender.io as well and collide with the primary backend on the client's
+# DNS, since the device is attached to both networks.
+#
+# The demo certificate covers *.docker.mender.io, so failover.docker.mender.io
+# needs no new certificate.
+services:
+  traefik:
+    networks:
+      default:
+        aliases: !override
+          - failover.docker.mender.io
+          - s3.failover.docker.mender.io

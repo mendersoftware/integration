@@ -19,120 +19,175 @@ DOWNLOAD_REQUIREMENTS="true"
 
 export PYTHONDONTWRITEBYTECODE=1
 
-usage() {
-    echo "Usage: $ run.sh [-h|--help] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
-    echo
-    echo "    -h                               Display help"
-    echo "    --no-download                    Do not download the external dependencies"
-    echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
-    echo "    --                               Separates 'run.sh' arguments from pytest arguments"
-    echo "    <pytest-args>                    Passes these arguments along to pytest"
-    echo "    tests/<testfile.py>              Name the test-file to run"
-    echo "    -k TestNameToRun                 Name of the test class, method, or module to run"
+# mender-server's compose files select the backend image tag with MENDER_IMAGE_TAG,
+# but the pipeline schedules that test released server versions were written
+# against this repo's older MENDER_SERVER_TAG. Map one to the other here rather
+# than renaming the variable, so the existing schedules keep pinning without
+# needing to be edited.
+#
+# An empty MENDER_IMAGE_TAG does not fall through to the
+# default in mender-testkit's .env, it falls through to the compose file's
+# ${MENDER_IMAGE_TAG:-latest} so an empty variable would test :latest
+# rather than :main. Set MENDER_IMAGE_TAG directly.
+export MENDER_IMAGE_TAG="${MENDER_IMAGE_TAG:-${MENDER_SERVER_TAG:-main}}"
 
-    echo
-    echo "Recognized Environment Variables:"
-    echo
-    echo "XDIST_JOBS_IN_PARALLEL_INTEGRATION   The number of parallel jobs for pytest-xdist"
-    exit 0
+usage() {
+  echo "Usage: $ run.sh [-h|--help] [--no-download] [--get-requirements] [ -- [<pytest-args>] [tests/<testfile.py>] ]"
+  echo
+  echo "    -h                               Display help"
+  echo "    --no-download                    Do not download the external dependencies"
+  echo "    --get-requirements               Download the external binary requirements into ./downloaded-tools and exit"
+  echo "    --                               Separates 'run.sh' arguments from pytest arguments"
+  echo "    <pytest-args>                    Passes these arguments along to pytest"
+  echo "    tests/<testfile.py>              Name the test-file to run"
+  echo "    -k TestNameToRun                 Name of the test class, method, or module to run"
+
+  echo
+  echo "Recognized Environment Variables:"
+  echo
+  echo "XDIST_JOBS_IN_PARALLEL_INTEGRATION   The number of parallel jobs for pytest-xdist"
+  exit 0
 }
 
+GET_REQUIREMENTS_ONLY=""
+
 while [ -n "$1" ]; do
-    case "$1" in
-        -h|--help)
-            set +x
-            usage
-            ;;
-        --no-download)
-            DOWNLOAD_REQUIREMENTS=""
-            ;;
-        -- )
-            shift
-            # Pass on the rest of the arguments un-touched to pytest
-            break ;;
-    esac
+  case "$1" in
+  -h | --help)
+    set +x
+    usage
+    ;;
+  --no-download)
+    DOWNLOAD_REQUIREMENTS=""
+    ;;
+  --get-requirements)
+    GET_REQUIREMENTS_ONLY="true"
+    ;;
+  --)
     shift
+    # Pass on the rest of the arguments un-touched to pytest
+    break
+    ;;
+  esac
+  shift
 done
 
 function get_requirements() {
-    # Download what we need.
-    mkdir -p downloaded-tools
+  # Download what we need.
+  mkdir -p downloaded-tools
 
-    # Detect the branches from where to download the tools
-    MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
-    if [[ $? -ne 0 ]]; then
-        echo "Failed to determine mender version using release_tool.py"
-        exit 1
-    fi
+  # Detect the branches from where to download the tools
+  MENDER_BRANCH=$(../extra/release_tool.py --version-of mender)
+  if [[ $? -ne 0 ]]; then
+    echo "Failed to determine mender version using release_tool.py"
+    exit 1
+  fi
 
-    echo "Detected Mender branch: $MENDER_BRANCH"
+  echo "Detected Mender branch: $MENDER_BRANCH"
 
-    # Download the tools
-    EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
-    (
-        test -z "$MENDER_ARTIFACT_VERSION" && source ../.env
-        curl --fail \
-            "https://downloads.mender.io/repos/workstation-tools/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
-            -o "$EXTRACT_DIR/mender-artifact.deb"
-    )
-    if [ $? -ne 0 ]; then
-        echo "failed to download mender-artifact"
-        exit 1
-    fi
+  # Download the tools
+  EXTRACT_DIR=$(mktemp -d mender-artifact.XXXXXX)
+  (
+    test -z "$MENDER_ARTIFACT_VERSION" && source ../.env
+    curl --fail \
+      "https://downloads.mender.io/repos/workstation-tools/pool/main/m/mender-artifact/mender-artifact_${MENDER_ARTIFACT_VERSION}-1%2bubuntu%2bnoble_amd64.deb" \
+      -o "$EXTRACT_DIR/mender-artifact.deb"
+  )
+  if [ $? -ne 0 ]; then
+    echo "failed to download mender-artifact"
+    exit 1
+  fi
 
-    dpkg -x "$EXTRACT_DIR/mender-artifact.deb" "$EXTRACT_DIR"
-    mv $EXTRACT_DIR/usr/bin/mender-artifact downloaded-tools/mender-artifact
-    rm -rf $EXTRACT_DIR
+  dpkg -x "$EXTRACT_DIR/mender-artifact.deb" "$EXTRACT_DIR"
+  mv $EXTRACT_DIR/usr/bin/mender-artifact downloaded-tools/mender-artifact
+  rm -rf $EXTRACT_DIR
 
-    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
-         -o downloaded-tools/directory-artifact-gen \
-         -z downloaded-tools/directory-artifact-gen
+  curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/directory-artifact-gen" \
+    -o downloaded-tools/directory-artifact-gen \
+    -z downloaded-tools/directory-artifact-gen
 
-    if [ $? -ne 0 ]; then
-        echo "failed to download directory-artifact-gen"
-        exit 1
-    fi
+  if [ $? -ne 0 ]; then
+    echo "failed to download directory-artifact-gen"
+    exit 1
+  fi
 
-    chmod +x downloaded-tools/directory-artifact-gen
+  chmod +x downloaded-tools/directory-artifact-gen
 
-    curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/single-file-artifact-gen" \
-         -o downloaded-tools/single-file-artifact-gen \
-         -z downloaded-tools/single-file-artifact-gen
+  curl --fail "https://raw.githubusercontent.com/mendersoftware/mender/${MENDER_BRANCH}/support/modules-artifact-gen/single-file-artifact-gen" \
+    -o downloaded-tools/single-file-artifact-gen \
+    -z downloaded-tools/single-file-artifact-gen
 
-    if [ $? -ne 0 ]; then
-        echo "failed to download single-file-artifact-gen"
-        exit 1
-    fi
+  if [ $? -ne 0 ]; then
+    echo "failed to download single-file-artifact-gen"
+    exit 1
+  fi
 
-    chmod +x downloaded-tools/single-file-artifact-gen
-
-    export PATH=$PWD/downloaded-tools:$PATH
+  chmod +x downloaded-tools/single-file-artifact-gen
 }
 
-if [[ $1 == "--get-requirements" ]]; then
-    get_requirements
-    exit 0
+if [[ -n "$GET_REQUIREMENTS_ONLY" ]]; then
+  get_requirements
+  exit 0
 fi
 
 if [[ -z "$BUILDDIR" ]] && [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
-    get_requirements
+  get_requirements
 fi
+
+# Outside get_requirements on purpose: the tools live here whether or not this
+# run downloaded them, and tests shell out to directory-artifact-gen by name.
+# With --no-download (or $BUILDDIR set) the old placement left them off PATH and
+# the failure surfaced as an opaque exit 127 mid-run.
+export PATH=$PWD/downloaded-tools:$PATH
+
+# Pull the backend images up front. _docker_compose_up passes --pull missing, so
+# a cold cache would otherwise be fetched by whichever test got there first while
+# holding the global compose lock, serialising every other worker behind it. Doing
+# it here also surfaces a registry or credentials problem up front, as a warning
+# against this block rather than an opaque stall mid-run.
+if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
+  # Materialise mender-testkit's mender_server here, conftest also does it, but too late
+  # which results in a 'no such directory error'.
+  python3 -c 'from mender_testkit.compose import compose_dir; compose_dir(dest="mender_server")'
+
+  docker compose \
+    --project-directory .. \
+    -f compose/docker-compose.testing.yml \
+    -f compose/docker-compose.testing.overrides.yml \
+    -f compose/docker-compose.testing.enterprise.yml \
+    -f compose/docker-compose.testing.enterprise.overrides.yml \
+    pull --quiet ||
+    echo "WARNING: image pre-pull incomplete; tests will pull on demand"
+fi
+
+# Remove environments orphaned by an earlier interrupted run. A crash between
+# setup() and teardown() leaves ~20 containers per worker behind, which starves
+# the next run of resources.
+for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' \
+  2>/dev/null | sort -u | grep -E '^mender[0-9]+$'); do
+  echo "removing orphaned test environment: $project"
+  ids=$(docker ps -aq -f "name=^${project}")
+  if [ -n "$ids" ]; then docker rm -f $ids >/dev/null 2>&1 || true; fi
+  vols=$(docker volume ls -q -f "name=^${project}_")
+  if [ -n "$vols" ]; then docker volume rm $vols >/dev/null 2>&1 || true; fi
+  docker network rm "${project}_default" >/dev/null 2>&1 || true
+done
 
 # Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
 EXTRA_TEST_ARGS=
 HTML_REPORT="--html=report.html --self-contained-html"
 
 if ! python3 -m pip show pytest-xdist >/dev/null; then
-    EXTRA_TEST_ARGS="--maxfail=1"
-    echo "WARNING: install pytest-xdist for running tests in parallel"
+  EXTRA_TEST_ARGS="--maxfail=1"
+  echo "WARNING: install pytest-xdist for running tests in parallel"
 else
-    # run all tests when running in parallel
-    EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_JOBS_IN_PARALLEL_INTEGRATION:-auto}}"
+  # run all tests when running in parallel
+  EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_JOBS_IN_PARALLEL_INTEGRATION:-auto}}"
 fi
 
 if ! python3 -m pip show pytest-html >/dev/null; then
-    HTML_REPORT=""
-    echo "WARNING: install pytest-html for html results report"
+  HTML_REPORT=""
+  echo "WARNING: install pytest-html for html results report"
 fi
 
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
@@ -144,8 +199,8 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
   export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
 python3 -m pytest \
-    $EXTRA_TEST_ARGS \
-    --verbose \
-    --junitxml=results.xml \
-    $HTML_REPORT \
-    "$@"
+  $EXTRA_TEST_ARGS \
+  --verbose \
+  --junitxml=results.xml \
+  $HTML_REPORT \
+  "$@"

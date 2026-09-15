@@ -17,6 +17,7 @@ import os
 import re
 import subprocess
 import shutil
+import sys
 import tempfile
 import packaging.version
 
@@ -25,14 +26,24 @@ import multiprocessing
 import filelock
 import pytest
 from filelock import FileLock
-from testutils.infra.container_manager.base import BaseContainerManagerNamespace
-from testutils.infra.device import MenderDevice, MenderDeviceGroup
+from mender_testkit.compose import compose_dir
+from mender_testkit.testutils.infra.container_manager.base import (
+    BaseContainerManagerNamespace,
+)
+from mender_testkit.testutils.infra.device import MenderDevice, MenderDeviceGroup
 
 from . import log
 from .tests.mendertesting import MenderTesting
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 RELEASE_TOOL = os.path.join(THIS_DIR, "..", "extra", "release_tool.py")
+
+# mender-server's compose files now come from the mender-testkit package rather
+# than a submodule. They are written to the path the submodule used to occupy, so
+# that the include: directives in tests/compose/*.yml -- and the project_directory
+# they set, which is what makes the relative bind mounts resolve -- keep working
+# unchanged. Gitignored; regenerated on every run.
+compose_dir(dest=os.path.join(THIS_DIR, "mender_server"))
 
 logging.getLogger("requests").setLevel(logging.CRITICAL)
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
@@ -44,6 +55,8 @@ logger = logging.getLogger()
 production_setup_lock = filelock.FileLock(".exposed_ports_lock")
 
 machine_name = None
+
+collect_ignore = ["mender_server"]  # the materialised compose tree, not test code
 
 
 def pytest_addoption(parser):
@@ -310,7 +323,7 @@ def pytest_exception_interact(node, call, report):
                             "-p",
                             env.name,
                             "exec",
-                            "mender-mongo",
+                            "mongo",
                             "mongodump",
                             f"--archive=/{node.name}.bson",
                         ],
@@ -332,7 +345,7 @@ def pytest_exception_interact(node, call, report):
                             "-p",
                             env.name,
                             "cp",
-                            f"mender-mongo:/{node.name}.bson",
+                            f"mongo:/{node.name}.bson",
                             f"{log.TEST_LOGS_PATH}/{node.name}.bson",
                         ],
                         env=dict(
@@ -411,12 +424,28 @@ def pytest_exception_interact(node, call, report):
 
 
 def verify_sane_test_environment():
-    # check if required tools are in PATH, add any other checks here
-    if shutil.which("mender-artifact") is None:
-        raise SystemExit("mender-artifact not found in PATH")
-
-    if shutil.which("docker") is None:
-        raise SystemExit("docker not found in PATH")
+    # Tools the suite shells out to by name. Each of these has been observed
+    # failing deep inside a test rather than up front: a missing skopeo surfaces
+    # as gen_docker-compose exiting 1, and a directory-artifact-gen that is not on
+    # PATH as a bare exit 127 -- both minutes into a run and neither naming the
+    # real cause. Check them here instead.
+    required_tools = {
+        "mender-artifact": "installed by run.sh into tests/downloaded-tools",
+        "directory-artifact-gen": "installed by run.sh into tests/downloaded-tools; "
+        "if present there, PATH is not set -- run via run.sh",
+        "docker": "required to bring up the test environments",
+        "skopeo": "required by the container-update artifact generator; "
+        "see tests/requirements-system/",
+        "debugfs": "from e2fsprogs; used to modify rootfs images",
+        "iptables": "used by the network fault-tolerance tests",
+    }
+    missing = [
+        f"  {tool}: {hint}"
+        for tool, hint in required_tools.items()
+        if shutil.which(tool) is None
+    ]
+    if missing:
+        raise SystemExit("required tools not found in PATH:\n" + "\n".join(missing))
 
     ret = subprocess.call("docker ps > /dev/null", shell=True)
     if ret != 0:

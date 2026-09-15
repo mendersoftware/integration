@@ -1,0 +1,15 @@
+# Test-specific changes to the Enterprise services imported by
+# docker-compose.testing.enterprise.yml. Separate file and separate -f, for the
+# same compose v2 reason described in docker-compose.testing.yml.
+services:
+  deviceauth:
+    environment:
+      DEVICEAUTH_DEFAULT_TENANT_TOKEN: ${DEFAULT_TENANT_TOKEN:-}
+
+  generate-delta-worker:
+    environment:
+      # mender-server's enterprise overlay omits this; the delta tests deploy
+      # unsigned artifacts, so signature verification has to be off.
+      GENERATE_DELTA_SKIPVERIFY: "true"
+      # Works around the GENERATE_DELTA_DELPOYMENTS_URL typo upstream.
+      GENERATE_DELTA_DEPLOYMENTS_URL: http://deployments:8080

@@ -6,23 +6,22 @@
 
 - [Mender Integration Testing](#mender-integration-testing)
     - [Getting Started](#getting-started)
+        - [What mender-testkit provides](#what-mender-testkit-provides)
     - [Installing Dependencies](#installing-dependencies)
         - [Isolating Python Dependencies (Optional, but recommended)](#isolating-python-dependencies-optional-but-recommended)
-            - [Install](#install)
             - [Initialize the Virtual Environment](#initialize-the-virtual-environment)
-                - [(Optional) -- Select Python Version](#optional----select-python-version)
             - [Activate the Virtual Environment](#activate-the-virtual-environment)
-        - [Local Dependencies](#local-dependencies)
-        - [Debian](#debian)
-        - [Alpine Linux](#alpine-linux)
-        - [Python3](#python3)
+        - [System Dependencies](#system-dependencies)
+            - [Alpine Linux](#alpine-linux)
+            - [Debian](#debian)
+        - [Python](#python)
     - [Running the Tests Locally](#running-the-tests-locally)
         - [Running the Tests](#running-the-tests)
-    - [Modifying the Docker Images Employed](#modifying-the-docker-images-employed)
-        - [Example -- Running with a Custom Backend Service](#example----running-with-a-custom-backend-service)
-        - [Example -- Running with a Custom Client](#example----running-with-a-custom-client)
+        - [Selecting the Server Version](#selecting-the-server-version)
+    - [Running with Custom Images](#running-with-custom-images)
+        - [A Custom Backend Service](#a-custom-backend-service)
+        - [A Custom Client](#a-custom-client)
     - [Known Issues](#known-issues)
-        - [SSH](#ssh)
         - [OS X](#os-x)
     - [Tips and Tricks](#tips-and-tricks)
 
@@ -36,88 +35,91 @@ The dependencies for the integration tests are collected and organized in
 dependency files in the `./requirements-*` folders, and separated into
 
 
-| Debian                 | Alpine                 | Python                    |
-| :-------------:        | :-------------:        | :-----:                   |
-| *requirements-system/deb-requirements.txt* | *requirements-system/apt-requirements.txt* | *requirements-python/python-requirements.txt* |
+| Alpine                                     | Debian                                     | Python                                        |
+| :----------------------------------------: | :----------------------------------------: | :-------------------------------------------: |
+| *requirements-system/apk-requirements.txt* | *requirements-system/deb-requirements.txt* | *requirements-python/python-requirements.txt* |
+
+### What mender-testkit provides
+
+The server side of the test bed does not live in this repository. The Python
+requirements pin [mender-testkit](https://pypi.org/project/mender-testkit/),
+which supplies three things vendored from a pinned mender-server commit:
+
+- `testutils` -- the API clients, container manager and device helpers
+- the `Server` facade the fixtures build on
+- mender-server's docker compose files
+
+`tests/conftest.py` writes that compose tree to `tests/mender_server/` on every
+run, which is the path a git submodule used to occupy, so the `include:`
+directives in `tests/compose/*.yml` keep working unchanged. **The directory is
+generated and gitignored -- do not edit it or check it in.** To change anything
+in it, change mender-testkit and release a new version.
 
 ## Installing Dependencies
 
 ### Isolating Python Dependencies (Optional, but recommended)
 
 In order to avoid dependency mismanagement due to Python packages differing from
-one test environment to the other, it is recommended to use a python virtual
-environment. The "de-facto" standard is
-[virtualenv](https://packaging.python.org/guides/installing-using-pip-and-virtual-environments/).
-
-#### Install
-
-```bash
-$ pip install virtualenv
-```
-
-> Make sure that you are using the correct version of pip (In this case, pip3).
+one test environment to the other, it is recommended to use a Python virtual
+environment.
 
 #### Initialize the Virtual Environment
 
 ```bash
-$ cd <integration-dir>/tests
-$ virtualenv <name-of-virtualenv-folder>
-```
-
-##### (Optional) -- Select Python Version
-```bash
-$ python -m venv <name-of-virtualenv-folder>
+cd <integration-dir>/tests
+python3 -m venv <name-of-virtualenv-folder>
 ```
 
 #### Activate the Virtual Environment
 
 ```bash
-$ source <name-of-virtualenv-folder>/bin/activate
+source <name-of-virtualenv-folder>/bin/activate
 ```
 
 This now means that you have a clean Python environment, and no packages you
 have previously installed outside of this virtual environment will be
 discoverable by Python.
 
-Verify the virtual-environment through running
+Verify the virtual environment through running
 
 ```bash
-$ python3 --version
-  python 3.7.x
-$ which python3
-  /path/to/current/dir/venv/bin/python
+python3 --version
+Python 3.12.x
+which python3
+/path/to/current/dir/venv/bin/python3
 ```
+
+mender-testkit requires Python 3.10 or newer. 
 
 Once you are done, the virtual environment is deactivated with
 
 ```bash
-$ deactivate
+deactivate
 ```
 
-### Local Dependencies
+### System Dependencies
 
-### Debian
+#### Alpine Linux
 
 ```bash
-$ apt install -yyq $(cat requirements-system/deb-requirements.txt)
+apk --update add $(cat requirements-system/apk-requirements.txt)
 ```
 
-### Alpine Linux
+#### Debian
 
 ```bash
-$ apk --update add $(cat requirements-system/apk-requirements.txt)
+apt install -yq $(cat requirements-system/deb-requirements.txt)
 ```
 
-### Python3
+### Python
 
 ```bash
-$ pip3  install  -r requirements-python/python-requirements.txt
+pip3 install -r requirements-python/python-requirements.txt
 ```
 
-> The Python install works the same whether or not a Python virtual-environment
-> is active. But with a virtual-environment active, the dependencies will keep
-> your native Python environment clean. Also remember that the virtual
-> environment is only enabled for Python3 with this setup.
+> The Python install works the same whether or not a Python virtual environment
+> is active. But with a virtual environment active, the dependencies will keep
+> your native Python environment clean.
 
 
 -------------------------------------------------------------------------------
@@ -127,7 +129,7 @@ $ pip3  install  -r requirements-python/python-requirements.txt
 
 > The tests can be run locally without any further involvement as long as all
 > the dependencies have been installed and are at the correct version. However,
-> managing dependencies, especially with Python can be a hassle. Therefore it is
+> managing dependencies, especially with Python, can be a hassle. Therefore it is
 > recommended to add a virtual Python environment to isolate the dependencies
 > needed for running the integration tests.
 
@@ -136,115 +138,142 @@ $ pip3  install  -r requirements-python/python-requirements.txt
 Next, run all the tests (Open-Source and Enterprise) with the `run.sh` script.
 
 ```bash
-$ ./run.sh
+./run.sh
 ```
 
 Run only the Open-Source tests with
 
 ```bash
-$ ./run.sh -- -k 'not Enterprise'
+./run.sh -- -k 'not Enterprise'
 ```
 
 And Enterprise only
 
 ```bash
-$  ./run.sh -- -k 'Enterprise'
+./run.sh -- -k 'Enterprise'
 ```
 
-**NOTE**: This is dependent upon having a functioning Docker environment, and being
-logged in to `registry.mender.io`.
+**NOTE**: This is dependent upon having a functioning Docker environment, and
+being logged in to `registry.mender.io` for the Enterprise tests.
 
-## Modifying the Docker Images Employed
+`run.sh --help` lists the rest. The two flags worth knowing:
 
-In order to run the integration tests with the local changes made to some Mender
-service, it is necessary to build the container, and tag it with the matching
-tag employed in the integration repository. This can be found in the
-`docker-compose.yml` file in the root directory, under the `image:` key.
+| Flag                 | Effect                                                                        |
+| :------------------- | :---------------------------------------------------------------------------- |
+| `--no-download`      | Skip downloading `mender-artifact` and the artifact-gen scripts, and skip the up-front `docker compose pull` of the backend images |
+| `--get-requirements` | Download those tools into `./downloaded-tools` and exit                        |
 
-#### Example -- Running with a Custom Backend Service
+Parallelism comes from pytest-xdist; `XDIST_JOBS_IN_PARALLEL_INTEGRATION` sets
+the worker count (default `auto`).
 
-For the backend services there exists a `Dockerfile` in the root repository, and
-as such a new image can be built and tagged by
+### Selecting the Server Version
+
+`MENDER_IMAGE_TAG` picks the tag of every backend image, and defaults to `main`:
 
 ```bash
-$ cd /path/to/<service>/
-$ docker build . -t mendersoftware/<service>:master
+MENDER_IMAGE_TAG=v4.1.3 ./run.sh
 ```
 
-And for an Enterprise repository the steps would be
+`MENDER_SERVER_TAG` is accepted as an alias for it, so the older pipeline
+schedules that pin released server versions keep working. Set one or the other,
+not an empty value -- an empty `MENDER_IMAGE_TAG` falls through to the compose
+file's own `${MENDER_IMAGE_TAG:-latest}` and would test `:latest` rather than
+`:main`.
+
+## Running with Custom Images
+
+### A Custom Backend Service
+
+The backend services are built in the
+[mender-server](https://github.com/mendersoftware/mender-server) repository, not
+this one. Its Makefile takes the same `MENDER_IMAGE_TAG` variable the compose
+files do, so building and running against your own build is a matter of agreeing
+on a tag:
 
 ```bash
-$ cd /path/to/<enterprise-service>/
-$ docker build . -t registry.mender.io/mendersoftware/<service>:master
+cd /path/to/mender-server
+MENDER_IMAGE_TAG=my-build make -C backend docker
 ```
-
-#### Example -- Running with a Custom Client
-
-For building a custom client the approach is a little different, due to the fact
-that the client comes bundles with a Yocto image. Therefore, in order to build
-and run a custom client with the integration test setup, first build a Yocto
-image, containing the custom client. Then, build a Docker image containing this
-client by
 
 ```bash
-$ cd /path/to/yocto/dir
-$ source oe-init-build-env
-$ bitbake core-image-full-cmdline
-$ cd /path/to/meta-mender
-$ cd meta-mender-qemu/docker
-$ ./build-docker qemux86-64 -t mendersoftware/mender-client-qemu:master
+cd /path/to/integration/tests
+MENDER_IMAGE_TAG=my-build ./run.sh --no-download
 ```
 
-Also remember to add the custom sources to the yocto `conf/local.conf` file,
+Two things to note. `MENDER_IMAGE_TAG` applies to *every* backend image, so all
+of them have to exist locally at that tag -- hence `make docker` rather than a
+single `<service>-docker` target. And `--no-download` is what stops `run.sh`
+from trying to pull that tag from the registry before the run.
+
+The Enterprise overlay already defaults to
+`registry.mender.io/mender-server-enterprise`, so an Enterprise build needs
+nothing beyond the same tag. Override `MENDER_IMAGE_REGISTRY` and
+`MENDER_IMAGE_REPOSITORY` only if you built under different coordinates.
+
+### A Custom Client
+
+Client images are still selected from this repository, by the `MENDER_CLIENT_*`
+variables in the root [`.env`](../.env) file. For building a custom client the
+approach is a little different from the backend, due to the fact that the client
+comes bundled with a Yocto image. Therefore, in order to build and run a custom
+client with the integration test setup, first build a Yocto image containing the
+custom client, then build a Docker image containing that client:
+
+```bash
+cd /path/to/yocto/dir
+source oe-init-build-env
+bitbake core-image-full-cmdline
+cd /path/to/meta-mender
+cd meta-mender-qemu/docker
+./build-docker qemux86-64 -t mendersoftware/mender-client-qemu:my-build
+```
+
+Then point the tests at it:
+
+```bash
+MENDER_CLIENT_QEMU_TAG=my-build ./run.sh
+```
+
+Also remember to add the custom sources to the Yocto `conf/local.conf` file,
 which for the Mender client is
 
 > 'conf/local.conf'
 ```bash
-.
-.
-.
-PREFERRED_VERSION_pn-mender = "master-git%"
-EXTERNALSRC_pn-mender = "$GOPATH"
+PREFERRED_VERSION:pn-mender = "master-git%"
+EXTERNALSRC:pn-mender = "$GOPATH"
 ```
 
 And for Mender-Artifact
 
 > 'conf/local.conf'
 ```bash
-.
-.
-.
-PREFERRED_VERSION_pn-mender-artifact = "master-git%"
-EXTERNALSRC_pn-mender-artifact = "$GOPATH"
-PREFERRED_VERSION_pn-mender-artifact-native = "master-git%"
-EXTERNALSRC_pn-mender-artifact-native = "$GOPATH"
+PREFERRED_VERSION:pn-mender-artifact = "master-git%"
+EXTERNALSRC:pn-mender-artifact = "$GOPATH"
+PREFERRED_VERSION:pn-mender-artifact-native = "master-git%"
+EXTERNALSRC:pn-mender-artifact-native = "$GOPATH"
 ```
 
 > Remember to add your '$GOPATH' in the conf file, it is not taken from the environment.
-
 
 -------------------------------------------------------------------------------
 
 ## Known Issues
 
-#### SSH
-Since we attempting to SSH into the virtual mender device, before the OS is up
-and running, you may see errors such as:
-
-`Fatal error: Needed to prompt for a connection or sudo password (host:
-172.18.0.6:8822), but abort-on-prompts was set to True Aborting.`
-
-These can simply be ignored.
-
-
 #### OS X
 
-Currently, running integration tests on OS X is not straight forward due to:
-https://github.com/docker/docker/issues/22753
+Running the integration tests on OS X has historically not been straightforward,
+due to https://github.com/docker/docker/issues/22753. It is not covered by CI.
 
 
 ## Tips and Tricks
 
-Before running the tests in the VM, remove the leftover `pycache` and `pyc`
-files, before testing.
+An interrupted run leaves roughly twenty containers per xdist worker behind,
+under compose projects named `mender<N>`. `run.sh` sweeps those up on the next
+start; to see what is still lying around:
 
+```bash
+docker ps -a --format '{{.Label "com.docker.compose.project"}}' | sort -u | grep -E '^mender[0-9]+$'
+```
+
+Per-test logs and mongodumps from failures land in `mender_test_logs/`, and the
+HTML summary in `report.html`.

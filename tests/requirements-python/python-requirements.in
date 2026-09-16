@@ -16,4 +16,4 @@ websockets==16.0
 flaky==3.8.1
 stripe==15.2.0
 aiosmtpd==1.4.6
-mender-testkit @ git+https://github.com/mendersoftware/mender-testkit.git@v0.1.0
+mender-testkit==0.1.2

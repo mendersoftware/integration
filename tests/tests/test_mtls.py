@@ -86,6 +86,10 @@ exit 0
 
 
 class TestClientMTLSEnterprise:
+    # Bound setup/call/teardown (including env.teardown()) so a stuck
+    # teardown fails fast instead of silently burning the full CI job budget.
+    pytestmark = pytest.mark.timeout(1200)
+
     wait_for_device_timeout_seconds = 64
 
     def hsm_setup(self, pin, ssl_engine_id, device):

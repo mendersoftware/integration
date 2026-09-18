@@ -86,6 +86,8 @@ exit 0
 
 
 class TestClientMTLSEnterprise:
+    pytestmark = pytest.mark.timeout(1200)
+
     wait_for_device_timeout_seconds = 64
 
     def hsm_setup(self, pin, ssl_engine_id, device):

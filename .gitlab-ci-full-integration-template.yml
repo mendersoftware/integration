@@ -69,6 +69,9 @@ test:integration:$CI_NODE_INDEX:
     - ./run.sh
 
   after_script:
+    - mkdir -p tests/mender_test_logs
+    - docker ps -a &> tests/mender_test_logs/docker-ps-on-exit.log || true
+    - for c in $(docker ps -aq); do docker logs "$c" &> "tests/mender_test_logs/docker-logs-${c}.log" || true; done
     # Post results to Mantra
     - MANTRA_PROJECT_NAME=full_integration
     # Override CI_PIPELINE_SOURCE for the script to interpret this run as "nightly"

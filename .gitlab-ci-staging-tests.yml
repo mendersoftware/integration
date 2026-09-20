@@ -128,7 +128,7 @@ test:staging:integration-tests:
       junit: tests/results_full_integration.xml
 
 trigger:staging:cleanup-tenants:
-  image: alpine:3.16
+  image: alpine:3.24
   stage: .post
   when: always
   variables:

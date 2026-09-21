@@ -5,7 +5,6 @@ dpkg
 e2fsprogs-extra
 g++
 gcompat
-gcompat
 git
 iptables
 jq

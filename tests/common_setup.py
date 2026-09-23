@@ -75,6 +75,22 @@ def standard_setup_extended():
 
 
 @pytest.fixture(scope="function")
+def standard_setup_extended_commercial():
+    env = container_factory.get_extended_commercial_setup(num_clients=1)
+    env.setup()
+
+    env.device = MenderDevice(env.get_mender_clients()[0])
+    env.device.ssh_is_opened()
+
+    reset_mender_api(env)
+    devauth.accept_devices(1)
+
+    env.auth = auth
+    yield env
+    env.teardown()
+
+
+@pytest.fixture(scope="function")
 def monitor_commercial_setup_no_client():
     env = container_factory.get_monitor_commercial_setup(num_clients=0)
     env.setup()

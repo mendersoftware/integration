@@ -45,8 +45,7 @@ Setup notes / assumptions:
       - gen_delta-docker-compose: the *private* mender-delta-container-modules,
         provided as a checkout via MENDER_DELTA_CONTAINER_MODULES_PATH (dev-provided
         locally; cloned with a token by CI) -- the tests do not clone it.
-    Layer-delta encoding uses a system xdelta3 on PATH (see MEN-10122 re: secondary
-    compressor compatibility with the device's xdelta3).
+    Layer-delta encoding uses a system xdelta3 on PATH.
 """
 
 import hashlib

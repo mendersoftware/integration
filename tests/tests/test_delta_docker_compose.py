@@ -45,8 +45,7 @@ Setup notes / assumptions:
       - gen_delta-docker-compose: the *private* mender-delta-container-modules,
         provided as a checkout via MENDER_DELTA_CONTAINER_MODULES_PATH (dev-provided
         locally; cloned with a token by CI) -- the tests do not clone it.
-    Layer-delta encoding uses a system xdelta3 on PATH (see MEN-10122 re: secondary
-    compressor compatibility with the device's xdelta3).
+    Layer-delta encoding uses a system xdelta3 on PATH.
 """
 
 import hashlib
@@ -431,14 +430,6 @@ def _image_tar_has_empty_layer(image_tar):
 
 @pytest.mark.min_mender_client_version("6.0.0")
 class TestDeltaDockerCompose(MenderTesting):
-    @pytest.mark.skip(
-        reason="MEN-10126: gen_delta-docker-compose's prune_image_layers() relies "
-        "on GNU `find -printf` and `tar --delete`; on the Alpine/musl CI image the "
-        "former is absent (busybox find, nothing pruned) and the latter corrupts "
-        "the image tarball (musl GNU tar), so the generator either emits a "
-        "non-pruned delta or aborts (xargs exit 123). Re-enable once MEN-10126 is "
-        "fixed."
-    )
     def test_delta_update_pruned_layers(
         self, delta_device, base_gen_script, delta_gen_script
     ):

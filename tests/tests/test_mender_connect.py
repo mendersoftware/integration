@@ -268,8 +268,8 @@ class _TestRemoteTerminalBase:
 
         assert_working_shell()
 
-        docker_env.device.run("apt-get update")
-        docker_env.device.run("apt-get install -y iptables")
+        docker_env.device.run("apt-get update", timeout=120)
+        docker_env.device.run("apt-get install -y iptables", timeout=120)
         gateway_ip = docker_env.device.run(
             "getent ahosts docker.mender.io | head -n 1 | cut -d ' ' -f1 | head -c -1"
         )

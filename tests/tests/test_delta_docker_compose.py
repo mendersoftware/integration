@@ -428,7 +428,7 @@ def _image_tar_has_empty_layer(image_tar):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.min_mender_client_version("6.0.0")
+@pytest.mark.min_mender_client_version("6.1.0")
 class TestDeltaDockerCompose(MenderTesting):
     def test_delta_update_pruned_layers(
         self, delta_device, base_gen_script, delta_gen_script

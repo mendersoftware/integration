@@ -70,6 +70,7 @@ pytest==9.0.3
     #   mender-testkit
     #   pytest-html
     #   pytest-metadata
+    #   pytest-split
     #   pytest-timeout
     #   pytest-xdist
 pytest-html==4.2.0
@@ -78,6 +79,8 @@ pytest-metadata==3.1.1
     # via
     #   -r python-requirements.in
     #   pytest-html
+pytest-split==0.11.0
+    # via -r python-requirements.in
 pytest-timeout==2.4.0
     # via -r python-requirements.in
 pytest-xdist==3.8.0

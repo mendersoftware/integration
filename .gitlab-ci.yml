@@ -138,4 +138,4 @@ variables:
 
   MENDER_ARTIFACT_VERSION:
     description: "mender-artifact tool version"
-    value: 4.4.1
+    value: 4.4.2

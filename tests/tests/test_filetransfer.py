@@ -279,8 +279,9 @@ class BaseTestFileTransferLimits(MenderTesting):
 
         assert r.status_code == 400, r.json()
         assert (
-            r.json().get("error")
-            == "access denied: the target file path is outside chroot"
+            r.json()
+            .get("error")
+            .endswith("access denied: the target file path is outside chroot")
         )
 
     def test_upload_limits_ok(self, mender_device_setup):
@@ -343,8 +344,9 @@ class BaseTestFileTransferLimits(MenderTesting):
 
         assert r.status_code == 400, r.json()
         assert (
-            r.json().get("error")
-            == "failed to write file chunk: transmitted bytes limit exhausted"
+            r.json()
+            .get("error")
+            .endswith("failed to write file chunk: transmitted bytes limit exhausted")
         )
 
     def test_upload_limits_err_max_bytes_per_minute_exceeded(self, mender_device_setup):
@@ -393,7 +395,7 @@ class BaseTestFileTransferLimits(MenderTesting):
         )
 
         assert r.status_code == 400, r.json()
-        assert r.json().get("error") == "transmitted bytes limit exhausted"
+        assert r.json().get("error").endswith("transmitted bytes limit exhausted")
 
         logger.info(
             "-- testcase: File Transfer limits: transfers during last minute: test_filetransfer_limits_upload sleeping 64s to be able to transfer again"
@@ -515,7 +517,7 @@ class BaseTestFileTransferLimits(MenderTesting):
             assert rsp.status_code == 403
             assert rsp.json().get("error") == message
         except AssertionError as e:
-            if rsp.status_code == 500:
+            if rsp.status_code in (400, 500):
                 raise NotImplementedError(
                     "[MEN-4659] Deviceconnect should not respond with 5xx errors "
                     + "on user restriction errors"

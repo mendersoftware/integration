@@ -24,10 +24,7 @@
   "prHourlyLimit": 2,
   "prConcurrentLimit": 5,
 
-  // master plus 3.8.x, which is still live (last commit 2026-06-15). The older
-  // maintenance branches are dormant - 3.7.x last moved 2025-03, 3.6.x 2024-08,
-  // 3.5.x 2023-04 - so they are left out.
-  "baseBranchPatterns": ["master", "3.8.x"],
+  "baseBranchPatterns": ["master"],
 
   // Security PRs bypass the schedule and automerge when CI is green.
   "vulnerabilityAlerts": {

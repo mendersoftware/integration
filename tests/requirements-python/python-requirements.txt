@@ -98,7 +98,7 @@ stripe==15.2.0
     #   mender-testkit
 typing-extensions==4.15.0
     # via stripe
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -r python-requirements.in
     #   docker

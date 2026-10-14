@@ -190,13 +190,12 @@ if ! python3 -m pip show pytest-html >/dev/null; then
   echo "WARNING: install pytest-html for html results report"
 fi
 
+# Split tests among CI jobs by the durations in .test_durations. Each job
+# rewrites the file with the durations of its own tests only; to refresh it,
+# merge the job artifacts with 'jq -s -S --indent 4 add' and commit it.
 if test ${CI_NODE_TOTAL:-1} -gt 1; then
-  PYTEST_NODES=$(python ci-parallel-pytest-plugin.py | tr '\n' ' ')
-  if test -z "$PYTEST_NODES"; then
-    echo "No tests to run for current node"
-    exit 0
-  fi
-  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
+  export PYTEST_ADDOPTS="$PYTEST_ADDOPTS --splits $CI_NODE_TOTAL --group $CI_NODE_INDEX \
+    --splitting-algorithm least_duration --store-durations --clean-durations"
 fi
 python3 -m pytest \
   $EXTRA_TEST_ARGS \

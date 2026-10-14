@@ -102,5 +102,6 @@ test:integration:$CI_NODE_INDEX:
       - tests/mender_test_logs
       - tests/results.xml
       - tests/report.html
+      - tests/.test_durations
     reports:
       junit: tests/results.xml

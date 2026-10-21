@@ -11,7 +11,7 @@
 #
 
 test:integration:generator:
-  image: debian:12-slim
+  image: debian:13-slim
   stage: test-gen
   script:
   - apt-get update && apt-get install -y gettext-base

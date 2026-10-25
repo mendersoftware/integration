@@ -1,7 +1,7 @@
 
 services:
   azblob-container-setup:
-    image: mcr.microsoft.com/azure-cli:2.40.0
+    image: mcr.microsoft.com/azure-cli:2.91.0
     deploy:
       replicas: 0
     environment:
@@ -10,7 +10,7 @@ services:
     entrypoint: [az, storage, container, create, -o, none, --fail-on-exist, -n]
 
   azblob-container-teardown:
-    image: mcr.microsoft.com/azure-cli:2.40.0
+    image: mcr.microsoft.com/azure-cli:2.91.0
     deploy:
       replicas: 0
     environment:

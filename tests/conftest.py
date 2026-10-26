@@ -288,6 +288,12 @@ except ImportError:
         logger.info("%s is starting.... " % test_name)
 
 
+@pytest.fixture(scope="class", autouse=True)
+def classlogger(request):
+    if request.cls is not None:
+        log.setup_test_logger(request.cls.__name__ + "__setup")
+
+
 def pytest_exception_interact(node, call, report):
     if report.failed:
         logger.error(

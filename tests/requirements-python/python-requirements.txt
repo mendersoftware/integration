@@ -22,7 +22,7 @@ cryptography==48.0.1
     # via
     #   -r python-requirements.in
     #   mender-testkit
-dnspython==2.6.1
+dnspython==2.9.0
     # via pymongo
 docker==7.1.0
     # via
@@ -60,7 +60,7 @@ pycparser==2.21
     # via cffi
 pygments==2.20.0
     # via pytest
-pymongo==4.17.0
+pymongo==4.18.2
     # via
     #   -r python-requirements.in
     #   mender-testkit

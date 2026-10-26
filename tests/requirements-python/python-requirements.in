@@ -1,6 +1,6 @@
 cryptography==48.0.1
 docker==7.1.0
-filelock==3.29.0
+filelock==4.2.1
 msgpack==1.2.1
 py3dns==4.0.2
 pymongo==4.17.0

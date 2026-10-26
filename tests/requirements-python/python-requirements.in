@@ -3,7 +3,7 @@ docker==7.1.0
 filelock==3.29.0
 msgpack==1.2.1
 py3dns==4.0.2
-pymongo==4.17.0
+pymongo==4.18.2
 pytest==9.0.3
 pytest-html==4.2.0
 pytest-metadata==3.1.1

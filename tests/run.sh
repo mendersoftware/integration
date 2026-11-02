@@ -182,7 +182,7 @@ if ! python3 -m pip show pytest-xdist >/dev/null; then
   echo "WARNING: install pytest-xdist for running tests in parallel"
 else
   # run all tests when running in parallel
-  EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_JOBS_IN_PARALLEL_INTEGRATION:-auto}}"
+  EXTRA_TEST_ARGS="${XDIST_ARGS:--n ${XDIST_JOBS_IN_PARALLEL_INTEGRATION:-auto} --dist loadgroup}"
 fi
 
 if ! python3 -m pip show pytest-html >/dev/null; then

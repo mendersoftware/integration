@@ -221,6 +221,6 @@ def update_image_failed(
             assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
 
         assert device.yocto_id_installed_on_machine() == original_image_id
-        reboot.verify_reboot_not_performed()
+        reboot.verify_reboot_not_performed(wait=10)
 
     deploy.check_expected_status("finished", deployment_id)

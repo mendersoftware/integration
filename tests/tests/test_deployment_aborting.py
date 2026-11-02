@@ -27,7 +27,7 @@ class BaseTestDeploymentAborting(MenderTesting):
         self,
         container_manager,
         install_image,
-        abort_step=None,
+        abort_step,
         number_of_reboots=0,
     ):
         """
@@ -56,17 +56,13 @@ class BaseTestDeploymentAborting(MenderTesting):
                 deploy=deploy,
             )
 
-            if abort_step is not None:
-                deploy.check_expected_statistics(
-                    deployment_id, abort_step, 1, polling_frequency=0
-                )
+            deploy.check_expected_statistics(
+                deployment_id, abort_step, 1, polling_frequency=0
+            )
 
             deploy.abort(deployment_id)
 
-            # there will be abored deployment only if the deployment
-            # for the device has already started
-            if abort_step is not None:
-                deploy.check_expected_statistics(deployment_id, "aborted", 1)
+            deploy.check_expected_statistics(deployment_id, "aborted", 1)
 
             # no deployment logs are sent by the client, is this expected?
             for d in devauth.get_devices():

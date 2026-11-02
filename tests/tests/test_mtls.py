@@ -163,7 +163,7 @@ activate = 1
         device.run("mv /etc/ssl/openssl.cnf.backup /etc/ssl/openssl.cnf || true")
 
     def common_test_mtls_enterprise(
-        self, env, algorithm=None, use_hsm=False, use_engine=True
+        self, env, algorithm, use_hsm=False, use_engine=True
     ):
         # upload the certificates
         basedir = os.path.join(
@@ -185,17 +185,16 @@ activate = 1
         )
         env.device.run("update-ca-certificates")
 
-        if algorithm is not None:
-            env.device.put(
-                f"client.1.{algorithm}.crt",
-                local_path=os.path.join(certs, "client"),
-                remote_path="/var/lib/mender",
-            )
-            env.device.put(
-                f"client.1.{algorithm}.key",
-                local_path=os.path.join(certs, "client"),
-                remote_path="/var/lib/mender",
-            )
+        env.device.put(
+            f"client.1.{algorithm}.crt",
+            local_path=os.path.join(certs, "client"),
+            remote_path="/var/lib/mender",
+        )
+        env.device.put(
+            f"client.1.{algorithm}.key",
+            local_path=os.path.join(certs, "client"),
+            remote_path="/var/lib/mender",
+        )
 
         # Stop also mender-updated to prevent dbus-daemon to automatically start mender-authd
         env.device.run("systemctl stop mender-authd mender-updated")
@@ -205,7 +204,7 @@ activate = 1
         if use_engine:
             ssl_engine_id = "pkcs11"
         pin = "0001"
-        if algorithm is not None and use_hsm is True:
+        if use_hsm is True:
             self.hsm_setup(pin, ssl_engine_id, env.device)
             key_uri = self.hsm_get_key_uri(pin, ssl_engine_id, env.device)
 
@@ -219,26 +218,25 @@ activate = 1
             # replace mender.conf with an mTLS enabled one
             config["ServerURL"] = "https://mtls-gateway:8080"
             config["SkipVerify"] = True
-            if algorithm is not None:
-                if use_hsm is True:
-                    config["HttpsClient"] = {
-                        "SSLEngine": ssl_engine_id,
-                        "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
-                        "Key": key_uri,
-                    }
-                    config["Security"] = {
-                        "SSLEngine": ssl_engine_id,
-                        "AuthPrivateKey": key_uri,
-                    }
-                    logger.info('client key set to "%s"' % key_uri)
-                else:
-                    config["Security"] = {
-                        "AuthPrivateKey": f"/var/lib/mender/client.1.{algorithm}.key",
-                    }
-                    config["HttpsClient"] = {
-                        "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
-                        "Key": f"/var/lib/mender/client.1.{algorithm}.key",
-                    }
+            if use_hsm is True:
+                config["HttpsClient"] = {
+                    "SSLEngine": ssl_engine_id,
+                    "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
+                    "Key": key_uri,
+                }
+                config["Security"] = {
+                    "SSLEngine": ssl_engine_id,
+                    "AuthPrivateKey": key_uri,
+                }
+                logger.info('client key set to "%s"' % key_uri)
+            else:
+                config["Security"] = {
+                    "AuthPrivateKey": f"/var/lib/mender/client.1.{algorithm}.key",
+                }
+                config["HttpsClient"] = {
+                    "Certificate": f"/var/lib/mender/client.1.{algorithm}.crt",
+                    "Key": f"/var/lib/mender/client.1.{algorithm}.key",
+                }
             if "ArtifactVerifyKey" in config:
                 del config["ArtifactVerifyKey"]
             mender_conf = os.path.join(tmpdir, "mender.conf")

@@ -19,11 +19,7 @@ from .docker_compose_manager import (
     DockerComposeExtendedCommercialSetup,
     DockerComposeMonitorCommercialSetup,
     DockerComposeDockerClientSetup,
-    DockerComposeRofsClientSetup,
-    DockerComposeLegacyV3ClientSetup,
     DockerComposeEnterpriseDockerClientSetup,
-    DockerComposeSignedArtifactClientSetup,
-    DockerComposeShortLivedTokenSetup,
     DockerComposeFailoverServerSetup,
     DockerComposeEnterpriseSetup,
     DockerComposeEnterpriseSignedArtifactClientSetup,
@@ -56,22 +52,6 @@ class ContainerManagerFactory:
 
     def get_docker_client_setup(self, name=None, num_clients=1):
         """Standard setup with Docker client(s) instead of QEMU"""
-        pass
-
-    def get_rofs_client_setup(self, name=None):
-        """Standard setup with one QEMU Read-Only FS client (QEMU required for ROFS behavior)"""
-        pass
-
-    def get_legacy_v3_client_setup(self, name=None):
-        """Setup with one Mender bundle v3.6"""
-        pass
-
-    def get_signed_artifact_client_setup(self, name=None):
-        """Standard setup with pre-installed verification key in the client"""
-        pass
-
-    def get_short_lived_token_setup(self, name=None):
-        """Standard setup on which deviceauth has a short lived token (expire timeout = 0)"""
         pass
 
     def get_failover_server_setup(self, name=None):
@@ -143,18 +123,6 @@ class DockerComposeManagerFactory(ContainerManagerFactory):
 
     def get_docker_client_setup(self, name=None, num_clients=1):
         return DockerComposeDockerClientSetup(name, num_clients)
-
-    def get_rofs_client_setup(self, name=None):
-        return DockerComposeRofsClientSetup(name)
-
-    def get_legacy_v3_client_setup(self, name=None):
-        return DockerComposeLegacyV3ClientSetup(name)
-
-    def get_signed_artifact_client_setup(self, name=None):
-        return DockerComposeSignedArtifactClientSetup(name)
-
-    def get_short_lived_token_setup(self, name=None):
-        return DockerComposeShortLivedTokenSetup(name)
 
     def get_failover_server_setup(self, name=None):
         return DockerComposeFailoverServerSetup(name)

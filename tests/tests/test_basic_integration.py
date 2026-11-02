@@ -190,6 +190,20 @@ class BaseTestBasicIntegration(MenderTesting):
             devauth=devauth,
             deploy=deploy,
         )
+
+        # Open source inventory has its own upsert, so check what it stored
+        inv = Inventory(env.auth)
+        artifact_name = mender_device.yocto_id_installed_on_machine()
+        for _ in range(10):
+            if any(
+                attr["name"] == "artifact_name" and attr["value"] == artifact_name
+                for attr in inv.get_devices()[0]["attributes"]
+            ):
+                break
+            time.sleep(3)
+        else:
+            pytest.fail("The inventory was not updated after the update")
+
         self.check_already_installed(mender_device, devauth, deploy)
 
     def do_test_forced_update_check_from_client(

@@ -12,10 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-import pytest
-
 from ..common_setup import (
-    standard_setup_with_signed_artifact_client,
     enterprise_with_signed_artifact_client,
 )
 from .common_update import update_image, common_update_procedure
@@ -48,8 +45,8 @@ class BaseTestSignedUpdates(MenderTesting):
     ):
         """
         Make sure that an unsigned image fails, and is handled by the backend.
-        Notice that this test needs a fresh new version of the backend, since
-        we installed a signed image earlier without a verification key in mender.conf
+        Notice that this has to run before the signed update, since the signed
+        image we install has no verification key in mender.conf
         """
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
@@ -74,41 +71,13 @@ class BaseTestSignedUpdates(MenderTesting):
 # sometimes does not come back after a reboot. A flaky rerun sets up a fresh VM.
 @flaky(max_runs=3)
 @MenderTesting.fast
-class TestSignedUpdatesOpenSource(BaseTestSignedUpdates):
-    def test_signed_artifact_success(
-        self, standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
-    ):
-        self.do_test_signed_artifact_success(
-            standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
-        )
-
-    @pytest.mark.parametrize(
-        "standard_setup_with_signed_artifact_client", ["force_new"], indirect=True
-    )
-    def test_unsigned_artifact_fails_deployment(
-        self, standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
-    ):
-        self.do_test_unsigned_artifact_fails_deployment(
-            standard_setup_with_signed_artifact_client, valid_image_with_mender_conf
-        )
-
-
-@flaky(max_runs=3)
-@MenderTesting.fast
 class TestSignedUpdatesEnterprise(BaseTestSignedUpdates):
     def test_signed_artifact_success(
         self, enterprise_with_signed_artifact_client, valid_image_with_mender_conf
     ):
-        self.do_test_signed_artifact_success(
+        self.do_test_unsigned_artifact_fails_deployment(
             enterprise_with_signed_artifact_client, valid_image_with_mender_conf
         )
-
-    @pytest.mark.parametrize(
-        "enterprise_with_signed_artifact_client", ["force_new"], indirect=True
-    )
-    def test_unsigned_artifact_fails_deployment(
-        self, enterprise_with_signed_artifact_client, valid_image_with_mender_conf
-    ):
-        self.do_test_unsigned_artifact_fails_deployment(
+        self.do_test_signed_artifact_success(
             enterprise_with_signed_artifact_client, valid_image_with_mender_conf
         )

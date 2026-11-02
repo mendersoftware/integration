@@ -103,6 +103,16 @@ class DeviceAuthFailover(DeviceAuthV2):
 
 
 class BaseTestBasicIntegration(MenderTesting):
+    def check_already_installed(self, mender_device, devauth, deploy):
+        # Redeploying the installed artifact should not install it again
+        deployment_id = deploy.trigger_deployment(
+            name="Already installed",
+            artifact_name=mender_device.yocto_id_installed_on_machine(),
+            devices=[d["id"] for d in devauth.get_devices_status("accepted")],
+        )
+        deploy.check_expected_statistics(deployment_id, "already-installed", 1)
+        deploy.check_expected_status("finished", deployment_id)
+
     def do_test_double_update_rofs(self, env, valid_image_rofs_with_mender_conf):
         """Upgrade a device with two consecutive R/O images using different compression algorithms"""
 
@@ -141,6 +151,8 @@ class BaseTestBasicIntegration(MenderTesting):
         )
         mender_device.run("mount | fgrep 'on / ' | fgrep '(ro,'")
 
+        self.check_already_installed(mender_device, devauth, deploy)
+
     def do_test_update_jwt_expired(self, env, valid_image_with_mender_conf):
         """Update a device with a short lived JWT token"""
         devauth = DeviceAuthV2(env.auth)
@@ -178,6 +190,7 @@ class BaseTestBasicIntegration(MenderTesting):
             devauth=devauth,
             deploy=deploy,
         )
+        self.check_already_installed(mender_device, devauth, deploy)
 
     def do_test_forced_update_check_from_client(
         self, env, valid_image_with_mender_conf

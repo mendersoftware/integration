@@ -13,7 +13,6 @@
 #    limitations under the License.
 
 from ..common_setup import (
-    setup_with_legacy_v3_client,
     enterprise_with_legacy_v3_client,
 )
 from .common_update import update_image, update_image_failed
@@ -22,38 +21,6 @@ from .mendertesting import MenderTesting
 
 
 class BaseTestLegacyGolangUpdate(MenderTesting):
-    def do_test_migrate_from_legacy_mender_v3_success(
-        self,
-        env,
-        valid_image,
-    ):
-        """
-        Start a legacy client (3.6 bundle, the last golang client) and do two successful updates.
-        The first one to validate 3.6 to latest upgrade and the following one to validate that
-        the updated device is fully capable.
-        """
-
-        mender_device = env.device
-        host_ip = env.get_virtual_network_host_ip()
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        update_image(
-            mender_device,
-            host_ip,
-            install_image=valid_image,
-            devauth=devauth,
-            deploy=deploy,
-        )
-
-        update_image(
-            mender_device,
-            host_ip,
-            install_image=valid_image,
-            devauth=devauth,
-            deploy=deploy,
-        )
-
     def do_test_migrate_from_legacy_mender_v3_failure(
         self,
         env,
@@ -62,7 +29,8 @@ class BaseTestLegacyGolangUpdate(MenderTesting):
     ):
         """
         Start a legacy client (3.6 bundle, the last golang client) and do one failed update followed
-        but a successful one.
+        by two successful ones. The first one to validate 3.6 to latest upgrade and the following
+        one to validate that the updated device is fully capable.
         """
 
         mender_device = env.device
@@ -88,39 +56,16 @@ class BaseTestLegacyGolangUpdate(MenderTesting):
             deploy=deploy,
         )
 
-
-class TestLegacyGolangUpdateOpenSource(BaseTestLegacyGolangUpdate):
-    def test_migrate_from_legacy_mender_v3_success(
-        self, setup_with_legacy_v3_client, valid_image
-    ):
-        self.do_test_migrate_from_legacy_mender_v3_success(
-            setup_with_legacy_v3_client, valid_image
-        )
-
-    def test_migrate_from_legacy_mender_v3_failure(
-        self,
-        setup_with_legacy_v3_client,
-        valid_image,
-        broken_update_image,
-    ):
-        self.do_test_migrate_from_legacy_mender_v3_failure(
-            setup_with_legacy_v3_client,
-            valid_image,
-            broken_update_image,
+        update_image(
+            mender_device,
+            host_ip,
+            install_image=valid_image,
+            devauth=devauth,
+            deploy=deploy,
         )
 
 
 class TestLegacyGolangUpdateEnterprise(BaseTestLegacyGolangUpdate):
-    def test_migrate_from_legacy_mender_v3_success(
-        self, enterprise_with_legacy_v3_client, valid_image_with_mender_conf
-    ):
-        mender_conf = enterprise_with_legacy_v3_client.device.run(
-            "cat /etc/mender/mender.conf"
-        )
-        self.do_test_migrate_from_legacy_mender_v3_success(
-            enterprise_with_legacy_v3_client, valid_image_with_mender_conf(mender_conf)
-        )
-
     def test_migrate_from_legacy_mender_v3_failure(
         self,
         enterprise_with_legacy_v3_client,

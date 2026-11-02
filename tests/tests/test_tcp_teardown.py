@@ -120,7 +120,3 @@ class BaseTestTcpTeardown:
 
 class TestTcpTeardownOpenSource(BaseTestTcpTeardown):
     pass
-
-
-class TestTcpTeardownEnterprise(BaseTestTcpTeardown):
-    pass

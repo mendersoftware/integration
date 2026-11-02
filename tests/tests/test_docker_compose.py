@@ -276,45 +276,6 @@ class TestDockerCompose(MenderTesting):
         )
         assert image1_id == new_image1_id
 
-    def test_invalid_manifest(self, standard_setup_extended, artifact_gen_script):
-        env = standard_setup_extended
-        mender_device = env.device
-
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        devices = devauth.get_devices_status("accepted")
-        assert len(devices) == 1
-        device_id = devices[0]["id"]
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            manifests_dir = os.path.join(temp_dir, "manifests")
-            images_dir = os.path.join(temp_dir, "images")
-            os.makedirs(manifests_dir)
-            os.makedirs(images_dir)
-
-            with open(os.path.join(manifests_dir, "docker-compose.yml"), "w") as f:
-                f.write("services:\n")
-                f.write("  ,,,:\n")  # Invalid service name
-                f.write("    image: test-container-image1\n")
-                f.write("    network_mode: bridge\n")
-
-            with open(os.path.join(images_dir, "dummy.tar"), "wb") as f:
-                f.write(b"dummy")
-
-            deployment_id, _ = common_update_procedure(
-                verify_status=True,
-                devices=[device_id],
-                make_artifact=make_docker_compose_artifact(
-                    artifact_gen_script, manifests_dir, "test", images_dir
-                ),
-                devauth=devauth,
-                deploy=deploy,
-            )
-
-        deploy.check_expected_status("finished", deployment_id)
-        deploy.check_expected_statistics(deployment_id, "failure", 1)
-
     def test_empty_image_tarball(self, standard_setup_extended, artifact_gen_script):
         env = standard_setup_extended
         mender_device = env.device

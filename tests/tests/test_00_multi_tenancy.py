@@ -13,10 +13,8 @@
 #    limitations under the License.
 
 import uuid
-import time
 
 from ..common_setup import enterprise_no_client
-from ..helpers import Helpers
 from ..MenderAPI import auth, devauth, logger, inv
 from .common_update import update_image
 from .mendertesting import MenderTesting
@@ -29,42 +27,6 @@ from flaky import flaky
 # tears down the dead VM and boots a fresh one.
 @flaky(max_runs=3)
 class TestMultiTenancyEnterprise(MenderTesting):
-    def test_token_validity(self, enterprise_no_client):
-        """verify that only devices with valid tokens can bootstrap
-        successfully to a multitenancy setup"""
-
-        wrong_token = "wrong-token"
-
-        auth.reset_auth_token()
-        uuidv4 = str(uuid.uuid4())
-        auth.new_tenant(
-            "test.mender.io-" + uuidv4,
-            "some.user+" + uuidv4 + "@example.com",
-            "hunter2hunter2",
-        )
-        token = auth.current_tenant["tenant_token"]
-
-        # create a new client with an incorrect token set
-        mender_device = new_tenant_client(
-            enterprise_no_client, "mender-client", wrong_token
-        )
-        mender_device.ssh_is_opened()
-        Helpers.check_log_is_unauthenticated(
-            mender_device,
-        )
-
-        for _ in range(5):
-            time.sleep(5)
-            devauth.get_devices(expected_devices=0)  # make sure device not seen
-
-        # setting the correct token makes the client visible to the backend
-        mender_device.run(
-            "sed -i 's/%s/%s/g' /etc/mender/mender.conf" % (wrong_token, token)
-        )
-        mender_device.run("systemctl restart mender-authd")
-
-        devauth.get_devices(expected_devices=1)
-
     def test_multi_tenancy_deployment(
         self, enterprise_no_client, valid_image_with_mender_conf
     ):

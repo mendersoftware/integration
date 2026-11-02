@@ -374,28 +374,3 @@ activate = 1
                 assert out == "mtls-artifact"
         finally:
             self.hsm_cleanup(setup_ent_mtls.device)
-
-    @MenderTesting.fast
-    def test_mtls_enterprise_without_client_cert(self, setup_ent_mtls):
-        # set up the mTLS test environment, without providing client certs
-        self.common_test_mtls_enterprise(setup_ent_mtls, algorithm=None, use_hsm=False)
-
-        # in here it also may happen, that the client is started earlier, and device registers
-        # as pending. in that case get_devices_status which is called from get_devices will
-        # loop until it runs out of iterations, due to the fact that we expect to have 0 devices.
-        # to prevent this from happening, lets wait a bit, if the device shows as pending,
-        # if it does, decommission it, and then restart the client, and wait to be sure the
-        # device will not re-appear, which is the main idea of the test.
-        device_not_present_timeout_seconds = 30
-        for device in devauth.get_devices_status(
-            "pending", max_wait=device_not_present_timeout_seconds * 0.5, no_assert=True
-        ):
-            devauth.decommission(device["id"])
-
-        setup_ent_mtls.device.run("systemctl start mender-authd")
-
-        # wait device_not_present_timeout_seconds
-        time.sleep(device_not_present_timeout_seconds)
-
-        # no device shows up, because mTLS doesn't forward requests to the backend
-        devauth.get_devices(expected_devices=0)

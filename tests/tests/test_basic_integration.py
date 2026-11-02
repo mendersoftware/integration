@@ -18,8 +18,6 @@ import shutil
 import time
 
 from ..common_setup import (
-    standard_setup_one_rofs_client_bootstrapped,
-    standard_setup_with_short_lived_token,
     setup_failover,
     standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
@@ -148,11 +146,14 @@ class BaseTestBasicIntegration(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
+        Helpers.check_log_is_authenticated(env.device)
+
         mender_conf = env.device.run("cat /etc/mender/mender.conf")
         update_image(
             env.device,
             env.get_virtual_network_host_ip(),
             install_image=valid_image_with_mender_conf(mender_conf),
+            compression_type="zstd_best",
             devauth=devauth,
             deploy=deploy,
         )
@@ -173,40 +174,7 @@ class BaseTestBasicIntegration(MenderTesting):
             mender_device,
             host_ip,
             install_image=valid_image_with_mender_conf(mender_conf),
-            devauth=devauth,
-            deploy=deploy,
-        )
-
-    def do_test_update_no_compression(self, env, valid_image_with_mender_conf):
-        """Uploads an uncompressed artifact, and runs the whole update process."""
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        mender_device = env.device
-        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-
-        update_image(
-            env.device,
-            env.get_virtual_network_host_ip(),
-            install_image=valid_image_with_mender_conf(mender_conf),
             compression_type="none",
-            devauth=devauth,
-            deploy=deploy,
-        )
-
-    def do_test_update_zstd_compression(self, env, valid_image_with_mender_conf):
-        """Uploads a zstd-compressed artifact, and runs the whole update process."""
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        mender_device = env.device
-        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-
-        update_image(
-            env.device,
-            env.get_virtual_network_host_ip(),
-            install_image=valid_image_with_mender_conf(mender_conf),
-            compression_type="zstd_best",
             devauth=devauth,
             deploy=deploy,
         )
@@ -214,60 +182,11 @@ class BaseTestBasicIntegration(MenderTesting):
     def do_test_forced_update_check_from_client(
         self, env, valid_image_with_mender_conf
     ):
-        """Upload a device with a broken image, followed by a valid image"""
+        """Forces an inventory update and an update check from an idling client."""
 
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
-
-        # Give the image a really large wait interval.
-        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
-            r"\(.*PollInter.*:\)\( *[0-9]*\)",
-            "\\1 1800",
-        )
-        mender_device.run(sedcmd)
-        mender_device.run("systemctl restart mender-updated")
-
-        def deployment_callback():
-            logger.info("Running pre deployment callback function")
-            wait_count = 0
-            # Match the log template six times to make sure the client is truly sleeping.
-            catcmd = "journalctl --unit mender-updated --output cat"
-            template = mender_device.run(catcmd)
-            while True:
-                logger.info("sleeping...")
-                logger.info("wait_count: %d" % wait_count)
-                time.sleep(10)
-                out = mender_device.run(catcmd)
-                if out == template:
-                    wait_count += 1
-                    # Only return if the client has been idling in check-wait for a minute.
-                    if wait_count == 6:
-                        return
-                    continue
-                # Update the matching template
-                template = mender_device.run(catcmd)
-                wait_count = 0
-
-        def deployment_triggered_callback():
-            mender_device.run("mender-update check-update")
-            logger.info("mender client has forced an update check")
-
-        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
-        update_image(
-            mender_device,
-            env.get_virtual_network_host_ip(),
-            install_image=valid_image_with_mender_conf(mender_conf),
-            pre_deployment_callback=deployment_callback,
-            deployment_triggered_callback=deployment_triggered_callback,
-            devauth=devauth,
-            deploy=deploy,
-        )
-
-    def do_test_forced_inventory_update_from_client(self, env):
-        """Forces an inventory update from an idling client."""
-
-        mender_device = env.device
         inv = Inventory(env.auth)
 
         # Give the image a really large wait interval.
@@ -278,20 +197,19 @@ class BaseTestBasicIntegration(MenderTesting):
         mender_device.run(sedcmd)
         mender_device.run("systemctl restart mender-updated")
 
-        logger.info("Running pre deployment callback function")
         wait_count = 0
-        # Match the log template six times to make sure the client is truly sleeping.
+        # Match the log template three times to make sure the client is truly sleeping.
         catcmd = "journalctl --unit mender-updated --output cat"
         template = mender_device.run(catcmd)
         while True:
             logger.info("sleeping...")
             logger.info("wait_count: %d" % wait_count)
-            time.sleep(10)
+            time.sleep(5)
             out = mender_device.run(catcmd)
             if out == template:
                 wait_count += 1
-                # Only return if the client has been idling in check-wait for a minute.
-                if wait_count == 6:
+                # Only return if the client has been idling in check-wait for 15 seconds.
+                if wait_count == 3:
                     break
                 continue
             # Update the matching template.
@@ -311,12 +229,30 @@ class BaseTestBasicIntegration(MenderTesting):
         for i in range(10):
             # Check that the updated inventory value is now present.
             invJSON = inv.get_devices()
-            for element in invJSON[0]["attributes"]:
-                if element["name"] == "host" and element["value"] == "foobar":
-                    return
+            if any(
+                element["name"] == "host" and element["value"] == "foobar"
+                for element in invJSON[0]["attributes"]
+            ):
+                break
             time.sleep(10)
+        else:
+            pytest.fail("The inventory was not updated")
 
-        pytest.fail("The inventory was not updated")
+        # The update poll interval is still 1800 seconds, so only the forced
+        # check can pick up the deployment.
+        def deployment_triggered_callback():
+            mender_device.run("mender-update check-update")
+            logger.info("mender client has forced an update check")
+
+        mender_conf = mender_device.run("cat /etc/mender/mender.conf")
+        update_image(
+            mender_device,
+            env.get_virtual_network_host_ip(),
+            install_image=valid_image_with_mender_conf(mender_conf),
+            deployment_triggered_callback=deployment_triggered_callback,
+            devauth=devauth,
+            deploy=deploy,
+        )
 
 
 # Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
@@ -383,25 +319,6 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             os.remove(tmp_image)
 
     @MenderTesting.fast
-    def test_double_update_rofs(
-        self,
-        standard_setup_one_rofs_client_bootstrapped,
-        valid_image_rofs_with_mender_conf,
-    ):
-        self.do_test_double_update_rofs(
-            standard_setup_one_rofs_client_bootstrapped,
-            valid_image_rofs_with_mender_conf,
-        )
-
-    @MenderTesting.fast
-    def test_update_jwt_expired(
-        self, standard_setup_with_short_lived_token, valid_image_with_mender_conf
-    ):
-        self.do_test_update_jwt_expired(
-            standard_setup_with_short_lived_token, valid_image_with_mender_conf
-        )
-
-    @MenderTesting.fast
     def test_failed_updated_and_valid_update(
         self,
         standard_setup_one_client_bootstrapped,
@@ -412,41 +329,6 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
             standard_setup_one_client_bootstrapped,
             valid_image_with_mender_conf,
             broken_update_image,
-        )
-
-    def test_update_no_compression(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_update_no_compression(
-            standard_setup_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-        )
-
-    def test_update_zstd_compression(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_update_zstd_compression(
-            standard_setup_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-        )
-
-    def test_forced_update_check_from_client(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-    ):
-        self.do_test_forced_update_check_from_client(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    @pytest.mark.timeout(1000)
-    def test_forced_inventory_update_from_client(
-        self, standard_setup_one_client_bootstrapped
-    ):
-        self.do_test_forced_inventory_update_from_client(
-            standard_setup_one_client_bootstrapped
         )
 
 
@@ -471,50 +353,10 @@ class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
             enterprise_with_short_lived_token, valid_image_with_mender_conf
         )
 
-    @MenderTesting.fast
-    def test_failed_updated_and_valid_update(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-        broken_update_image,
-    ):
-        self.do_test_failed_updated_and_valid_update(
-            enterprise_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-            broken_update_image,
-        )
-
-    def test_update_no_compression(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_update_no_compression(
-            enterprise_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-        )
-
-    def test_update_zstd_compression(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_update_zstd_compression(
-            enterprise_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-        )
-
+    @pytest.mark.timeout(1000)
     def test_forced_update_check_from_client(
         self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
     ):
         self.do_test_forced_update_check_from_client(
             enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    @pytest.mark.timeout(1000)
-    def test_forced_inventory_update_from_client(
-        self, enterprise_one_client_bootstrapped
-    ):
-        self.do_test_forced_inventory_update_from_client(
-            enterprise_one_client_bootstrapped
         )

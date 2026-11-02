@@ -17,7 +17,6 @@ from ..common_setup import (
 )
 from .common_update import common_update_procedure
 from .mendertesting import MenderTesting
-from flaky import flaky
 from ..MenderAPI import DeviceAuthV2, Deployments
 
 
@@ -45,9 +44,6 @@ class BaseTestFailures(MenderTesting):
             deploy.check_expected_status("finished", deployment_id)
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after a reboot. A flaky rerun sets up a fresh VM.
-@flaky(max_runs=3)
 class TestFailuresOpenEnterprise(BaseTestFailures):
     @MenderTesting.fast
     def test_large_update_image(self, enterprise_one_client_bootstrapped, large_image):

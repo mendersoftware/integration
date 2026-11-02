@@ -17,7 +17,6 @@ import pytest
 import time
 import uuid
 
-from flaky import flaky
 from redo import retriable
 from websockets.exceptions import WebSocketException
 
@@ -59,16 +58,7 @@ SHELL_NOT_REAPED_ERRORS = (
 
 
 class _TestRemoteTerminalBase:
-    @flaky(max_runs=3)
     def test_regular_protocol_commands(self, docker_env_flaky_test):
-        """
-        Ticket: QA-504
-        Reason: The test fails due to the fact that the websocket connection is broken,
-                and the mender-connect can't recover from situation when shell could not
-                be stopped, and the session is left as empty with non-existent process
-                (see MEN-6137) while many other things timeout.
-        """
-
         self.assert_env(docker_env_flaky_test)
 
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
@@ -199,7 +189,6 @@ class _TestRemoteTerminalBase:
 
         assert_websocket_connects()
 
-    @flaky(max_runs=3)
     @pytest.mark.timeout(1200)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
@@ -323,7 +312,6 @@ class _TestRemoteTerminalBase:
         # Poll until a working shell can be opened end-to-end.
         assert_working_shell()
 
-    @flaky(max_runs=3)
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)
 

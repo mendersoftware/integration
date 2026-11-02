@@ -39,7 +39,6 @@ from ..helpers import Helpers
 from ..MenderAPI.requests_helpers import requests_retry
 from requests.auth import HTTPBasicAuth
 from mender_testkit.testutils.infra.cli import CliUseradm
-from flaky import flaky
 
 
 class FailoverAuth:
@@ -282,10 +281,6 @@ class BaseTestBasicIntegration(MenderTesting):
         )
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_update_failover_server(self, setup_failover, valid_image):
@@ -359,7 +354,6 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
 
-@flaky(max_runs=3)
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_double_update_rofs(

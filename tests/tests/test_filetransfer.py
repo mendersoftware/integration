@@ -26,7 +26,6 @@ import time
 import urllib.parse
 import random
 
-from flaky import flaky
 
 from tempfile import NamedTemporaryFile
 
@@ -704,13 +703,6 @@ class BaseTestFileTransferLimits(MenderTesting):
         assert "PS1=" in str(r.content)
 
 
-def rerun_on_timeouts(err, *args):
-    if not issubclass(err[0], AssertionError):
-        return False
-    return "408" in str(err[1])
-
-
-@flaky(rerun_filter=rerun_on_timeouts)
 class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
     """Tests the file transfer functionality"""
 
@@ -735,7 +727,6 @@ class TestFileTransferDownloadOS(BaseTestFileTransferDownload):
         super().test_download_ok(mender_device_setup, content_assertion="ServerURL")
 
 
-@flaky(rerun_filter=rerun_on_timeouts)
 class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
     """Tests the file transfer functionality for enterprise setup"""
 
@@ -756,7 +747,6 @@ class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
         request.cls.env = env
 
 
-@flaky(rerun_filter=rerun_on_timeouts)
 class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     """Tests the file transfer functionality for enterprise setup"""
 

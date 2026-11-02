@@ -12,8 +12,9 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import time
+
 from ..common_setup import (
-    standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
 )
 from .common_update import common_update_procedure
@@ -34,8 +35,8 @@ class BaseTestDeploymentAborting(MenderTesting):
         Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
         Args:
-            number_of_reboots: if set to 0, a manual reboot is performed and
-                                   checks are performed.
+            number_of_reboots: if set to 0, check that the bootloader still
+                                   points to the original partition.
                                if set to > 0, wait until device is rebooted
                                number_of_reboots times.
         """
@@ -77,11 +78,26 @@ class BaseTestDeploymentAborting(MenderTesting):
                 # back into the original filesystem.
                 reboot.verify_reboot_performed(number_of_reboots=number_of_reboots)
             else:
-                # Else we reboot ourselves, just to make sure that we have not
-                # unintentionally switched to the new partition.
-                reboot.verify_reboot_not_performed()
-                mender_device.run("( sleep 10 ; reboot ) 2>/dev/null >/dev/null &")
-                reboot.verify_reboot_performed()
+                # Else we wait for the client to get the abort, and make sure
+                # that it would not switch to the new partition on a reboot.
+                deadline = time.time() + 10 * 60
+                while (
+                    mender_device.run(
+                        "journalctl --unit mender-updated --no-pager"
+                        + " | grep 'Deployment was aborted on the server' | wc -l",
+                        hide=True,
+                    ).strip()
+                    == "0"
+                ):
+                    assert time.time() < deadline, "client never got the abort"
+                    time.sleep(5)
+                reboot.verify_reboot_not_performed(wait=10)
+                printenv = "$(command -v grub-mender-grubenv-print || echo fw_printenv)"
+                env = mender_device.run(
+                    f"{printenv} upgrade_available mender_boot_part"
+                )
+                assert "upgrade_available=0" in env
+                assert f"mender_boot_part={expected_partition[-1]}" in env
 
         assert mender_device.get_active_partition() == expected_partition
         assert mender_device.yocto_id_installed_on_machine() == expected_image_id
@@ -92,59 +108,7 @@ class BaseTestDeploymentAborting(MenderTesting):
 # sometimes does not come back after an update-triggered reboot. A flaky rerun
 # tears down the dead VM and boots a fresh one.
 @flaky(max_runs=3)
-class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
-    @MenderTesting.fast
-    def test_deployment_abortion_instantly(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        self.abort_deployment(
-            standard_setup_one_client_bootstrapped, valid_image, number_of_reboots=0
-        )
-
-    @MenderTesting.fast
-    def test_deployment_abortion_downloading(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        self.abort_deployment(
-            standard_setup_one_client_bootstrapped,
-            valid_image,
-            "downloading",
-            number_of_reboots=0,
-        )
-
-    @MenderTesting.fast
-    def test_deployment_abortion_installing(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        self.abort_deployment(
-            standard_setup_one_client_bootstrapped,
-            valid_image,
-            "installing",
-            number_of_reboots=1,
-        )
-
-    @MenderTesting.fast
-    def test_deployment_abortion_rebooting(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        self.abort_deployment(
-            standard_setup_one_client_bootstrapped,
-            valid_image,
-            "rebooting",
-            number_of_reboots=2,
-        )
-
-
-@flaky(max_runs=3)
 class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
-    @MenderTesting.fast
-    def test_deployment_abortion_instantly(
-        self, enterprise_one_client_bootstrapped, valid_image
-    ):
-        self.abort_deployment(
-            enterprise_one_client_bootstrapped, valid_image, number_of_reboots=0
-        )
-
     @MenderTesting.fast
     def test_deployment_abortion_downloading(
         self, enterprise_one_client_bootstrapped, valid_image

@@ -73,7 +73,7 @@ class _TestRemoteTerminalBase:
 
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
-            receive_timeout_s = 16
+            receive_timeout_s = 8
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
@@ -140,6 +140,37 @@ class _TestRemoteTerminalBase:
                 "$ ",
             ], "Could not detect shell prompt."
 
+        # Bogus shell message.
+        with docker_env_flaky_test.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
+
+            prot.clear()
+            prot.setTyp("bogusmessage")
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            msg = ws.recv()
+            prot.decode(msg)
+            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
+            assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
+            assert prot.typ == "bogusmessage"
+
+        # Bogus proto message.
+        with docker_env_flaky_test.devconnect.get_websocket() as ws:
+            prot = protomsg.ProtoMsg(12345)
+
+            prot.clear()
+            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
+            msg = prot.encode(b"")
+            ws.send(msg)
+
+            data = ws.recv()
+            rsp = protomsg.ProtoMsg(0xFFFF)
+            rsp.decode(data)
+            assert rsp.typ == "error"
+            body = rsp.body
+            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
+
     def test_websocket_reconnect(self, docker_env):
         self.assert_env(docker_env)
 
@@ -168,29 +199,12 @@ class _TestRemoteTerminalBase:
 
         assert_websocket_connects()
 
-    def test_bogus_shell_message(self, docker_env):
-        self.assert_env(docker_env)
-
-        with docker_env.devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(proto_shell.PROTO_TYPE_SHELL)
-
-            prot.clear()
-            prot.setTyp("bogusmessage")
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            msg = ws.recv()
-            prot.decode(msg)
-            assert prot.props["status"] == protomsg.PROP_STATUS_ERROR
-            assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
-            assert prot.typ == "bogusmessage"
-
     @flaky(max_runs=3)
     @pytest.mark.timeout(1200)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
-        receive_timeout_s = 16
+        receive_timeout_s = 8
 
         def is_shell_working(shell):
             # Test if a simple command works.
@@ -414,35 +428,11 @@ class _TestRemoteTerminalBase:
         set_container_manager(docker_env)
 
 
-class _TestRemoteTerminalBaseBogusProtoMessage:
-    def test_bogus_proto_message(self, docker_env):
-        self.assert_env(docker_env)
-
-        with docker_env.devconnect.get_websocket() as ws:
-            prot = protomsg.ProtoMsg(12345)
-
-            prot.clear()
-            prot.setTyp(proto_shell.MSG_TYPE_SPAWN_SHELL)
-            msg = prot.encode(b"")
-            ws.send(msg)
-
-            data = ws.recv()
-            rsp = protomsg.ProtoMsg(0xFFFF)
-            rsp.decode(data)
-            assert rsp.typ == "error"
-            body = rsp.body
-            assert isinstance(body.get("err"), str) and len(body.get("err")) > 0
-
-
-class TestRemoteTerminalOpenSource(
-    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
-):
-    @pytest.fixture(scope="function")
-    def docker_env(self, standard_setup_one_docker_client_bootstrapped):
-        env = standard_setup_one_docker_client_bootstrapped
-        auth = Authentication()
-        env.devconnect = DeviceConnect(auth, DeviceAuthV2(auth))
-        yield env
+class TestRemoteTerminalOpenSource(_TestRemoteTerminalBase):
+    # Open source only runs the smoke test, the rest is covered by TestRemoteTerminalEnterprise
+    test_websocket_reconnect = None
+    test_in_poor_network_environment = None
+    test_session_recording = None
 
     @pytest.fixture(scope="function")
     def docker_env_flaky_test(
@@ -489,9 +479,7 @@ def connected_device(env):
     return device, devconn
 
 
-class TestRemoteTerminalEnterprise(
-    _TestRemoteTerminalBase, _TestRemoteTerminalBaseBogusProtoMessage
-):
+class TestRemoteTerminalEnterprise(_TestRemoteTerminalBase):
     @pytest.fixture(scope="function")
     def docker_env(self, enterprise_one_docker_client_bootstrapped):
         """Class-level customized docker_env (MT, 1 device, "enterprise" plan).

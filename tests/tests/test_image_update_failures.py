@@ -41,7 +41,7 @@ class BaseTestFailures(MenderTesting):
                 deploy=deploy,
             )
             deploy.check_expected_statistics(deployment_id, "failure", 1)
-            reboot.verify_reboot_not_performed()
+            reboot.verify_reboot_not_performed(wait=10)
             deploy.check_expected_status("finished", deployment_id)
 
 

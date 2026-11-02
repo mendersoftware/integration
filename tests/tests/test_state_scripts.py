@@ -16,6 +16,7 @@ import shutil
 import time
 import os
 import subprocess
+import tempfile
 import traceback
 import pathlib
 
@@ -23,7 +24,6 @@ import pytest
 
 from .. import conftest
 from ..common_setup import (
-    class_persistent_standard_setup_one_client_bootstrapped,
     class_persistent_enterprise_one_client_bootstrapped,
 )
 from .common_update import common_update_procedure
@@ -40,20 +40,6 @@ STATE_SCRIPTS_CLEANUP_CMD = (
     + "rm -rf /data/mender/scripts && "
     + "systemctl start mender-updated"
 )
-
-
-@pytest.fixture(scope="class")
-def class_persistent_setup_client_state_scripts_update_module(
-    class_persistent_standard_setup_one_client_bootstrapped,
-):
-    device = class_persistent_standard_setup_one_client_bootstrapped.device
-    device.put(
-        "module-state-scripts-test",
-        local_path=pathlib.Path(__file__).parent.parent.absolute(),
-        remote_path="/usr/share/mender/modules/v3",
-    )
-
-    return class_persistent_standard_setup_one_client_bootstrapped
 
 
 @pytest.fixture(scope="class")
@@ -128,15 +114,6 @@ def _recover_client_if_dead(env):
                     )
     except Exception:
         logger.error("Could not recover client:\n%s", traceback.format_exc())
-
-
-@pytest.fixture
-def setup_state_scripts_vm_recovery(
-    class_persistent_setup_client_state_scripts_update_module,
-):
-    env = class_persistent_setup_client_state_scripts_update_module
-    yield env
-    _recover_client_if_dead(env)
 
 
 @pytest.fixture
@@ -926,11 +903,17 @@ class BaseTestStateScripts(MenderTesting):
                     deployment_id, test_set["ExpectedStatus"], 1
                 )
 
-            # Always give the client a little bit of time to settle in the base
-            # state after an update.
-            time.sleep(10)
+            # Wait until the client has run the last expected script, or for
+            # the error loops, enough rounds for verify_script_log_correct.
+            rounds = 1 if test_set["ExpectedStatus"] is not None else 5
+            deadline = time.time() + 5 * 60
+            while True:
+                output = mender_device.run("cat /data/test_state_scripts.log")
+                last_runs = output.split().count(test_set["ScriptOrder"][-1])
+                if last_runs >= rounds or time.time() > deadline:
+                    break
+                time.sleep(2)
 
-            output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split("\n"))
 
         except:
@@ -1016,38 +999,146 @@ class BaseTestStateScripts(MenderTesting):
             logger.error("scripts we expected = '%s'" % "\n".join(expected_order))
             raise
 
+    def do_test_corrupt_deployment_log(self, env):
+        """Test that corrupted deployment log is sanitized and successfully
+        uploaded to the server."""
 
-class TestStateScriptsOpenSource(BaseTestStateScripts):
-    # Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-    # sometimes does not come back after a reboot. The vm-recovery fixture
-    # heals the dead VM between attempts, so the rerun gets a healthy device.
-    @flaky(max_runs=2)
-    @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
-    def test_reboot_recovery(
-        self,
-        setup_state_scripts_vm_recovery,
-        description,
-        test_set,
-    ):
-        self.do_test_reboot_recovery(
-            setup_state_scripts_vm_recovery,
-            description,
-            test_set,
-        )
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
 
-    @MenderTesting.slow
-    @pytest.mark.parametrize("description,test_set", TEST_SETS)
-    def test_state_scripts(
-        self,
-        class_persistent_setup_client_state_scripts_update_module,
-        description,
-        test_set,
-    ):
-        self.do_test_state_scripts(
-            class_persistent_setup_client_state_scripts_update_module,
-            description,
-            test_set,
+        work_dir = "test_corrupt_depl_log.%s" % mender_device.host_string
+        deployment_id = None
+        try:
+            artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
+            os.makedirs(artifact_script_dir)
+            with open(
+                os.path.join(
+                    artifact_script_dir, "ArtifactInstall_Leave_01_corrupt-depl-log"
+                ),
+                "w",
+            ) as fd:
+                fd.write("""#!/bin/sh
+    log_file=$(ls /var/lib/mender/deployments.0000.*.log)
+    echo break >> $log_file
+    sync $log_file
+    exit 1
+    """)
+
+            # Callback for our custom artifact maker
+            def make_artifact(filename, artifact_name):
+                return image.make_module_artifact(
+                    "module-state-scripts-test",
+                    conftest.machine_name,
+                    artifact_name,
+                    filename,
+                    scripts=[artifact_script_dir],
+                )
+
+            # Now create the artifact, and make the deployment.
+            device_id = Helpers.ip_to_device_id_map(
+                MenderDeviceGroup([mender_device.host_string]),
+                devauth=devauth,
+            )[mender_device.host_string]
+            deployment_id = common_update_procedure(
+                verify_status=False,
+                devices=[device_id],
+                scripts=[artifact_script_dir],
+                make_artifact=make_artifact,
+                devauth=devauth,
+                deploy=deploy,
+            )[0]
+
+            deploy.check_expected_statistics(deployment_id, "failure", 1)
+            logs = deploy.get_logs(device_id, deployment_id)
+            assert "(THE ORIGINAL LOGS CONTAINED INVALID ENTRIES)" in logs
+        except:
+            output = mender_device.run(
+                "cat /data/mender/deployment*.log", warn_only=True
+            )
+            logger.info(output)
+            raise
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            if deployment_id:
+                try:
+                    deploy.abort(deployment_id)
+                except:
+                    pass
+
+    def do_test_large_deployment_log(self, env):
+        """Test that large deployment log is trimmed and successfully
+        uploaded to the server."""
+
+        mender_device = env.device
+        devauth = DeviceAuthV2(env.auth)
+        deploy = Deployments(env.auth, devauth)
+
+        work_dir = tempfile.mkdtemp(
+            suffix=f"test_large_depl_log.{mender_device.host_string}"
         )
+        deployment_id = None
+        try:
+            artifact_script_dir = os.path.join(work_dir, "artifact-scripts")
+            os.makedirs(artifact_script_dir)
+            with open(
+                os.path.join(
+                    artifact_script_dir, "ArtifactInstall_Leave_01_enlarge-depl-log"
+                ),
+                "w",
+            ) as fd:
+                fd.write("""#!/bin/sh
+    log_file=$(ls /var/lib/mender/deployments.0000.*.log)
+    for i in `seq 1 100`; do
+      for j in `seq 1 500`; do
+        echo '{"timestamp": "1970-01-01T00:00:00.000000000Z", "level": "ERROR", "message": "some useless log message here"}' >> $log_file
+      done
+    done
+    sync $log_file
+    exit 1
+    """)
+
+            # Callback for our custom artifact maker
+            def make_artifact(filename, artifact_name):
+                return image.make_module_artifact(
+                    "module-state-scripts-test",
+                    conftest.machine_name,
+                    artifact_name,
+                    filename,
+                    scripts=[artifact_script_dir],
+                )
+
+            # Now create the artifact, and make the deployment.
+            device_id = Helpers.ip_to_device_id_map(
+                MenderDeviceGroup([mender_device.host_string]),
+                devauth=devauth,
+            )[mender_device.host_string]
+            deployment_id = common_update_procedure(
+                verify_status=False,
+                devices=[device_id],
+                scripts=[artifact_script_dir],
+                make_artifact=make_artifact,
+                devauth=devauth,
+                deploy=deploy,
+            )[0]
+
+            deploy.check_expected_statistics(deployment_id, "failure", 1)
+            logs = deploy.get_logs(device_id, deployment_id, n_tries=5)
+            assert "(THE ORIGINAL LOGS WERE TOO BIG" in logs
+        except:
+            output = mender_device.run(
+                "cat /data/mender/deployment*.log | grep -v 'some useless log message here'",
+                warn_only=True,
+            )
+            logger.info(output)
+            raise
+        finally:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            if deployment_id:
+                try:
+                    deploy.abort(deployment_id)
+                except:
+                    pass
 
 
 class TestStateScriptsEnterprise(BaseTestStateScripts):
@@ -1080,4 +1171,20 @@ class TestStateScriptsEnterprise(BaseTestStateScripts):
             class_persistent_enterprise_setup_client_state_scripts_update_module,
             description,
             test_set,
+        )
+
+    def test_corrupt_deployment_log(
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
+    ):
+        self.do_test_corrupt_deployment_log(
+            class_persistent_enterprise_setup_client_state_scripts_update_module,
+        )
+
+    def test_large_deployment_log(
+        self,
+        class_persistent_enterprise_setup_client_state_scripts_update_module,
+    ):
+        self.do_test_large_deployment_log(
+            class_persistent_enterprise_setup_client_state_scripts_update_module,
         )

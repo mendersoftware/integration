@@ -104,6 +104,8 @@ def create_test_manifest(services):
                 f.write(f"  {service.name}:\n")
                 f.write(f"    image: {service.image}\n")
                 f.write(f"    network_mode: bridge\n")
+                # `sleep` as PID 1 ignores SIGTERM, don't wait 10s for it on stop
+                f.write(f"    stop_grace_period: 1s\n")
 
         yield manifests_dir, images_dir
 
@@ -563,6 +565,7 @@ exit 0
                 f.write("  test1:\n")
                 f.write("    image: test-container-image1\n")
                 f.write("    network_mode: bridge\n")
+                f.write("    stop_grace_period: 1s\n")
                 f.write("    healthcheck:\n")
                 f.write('      test: ["CMD", "true"]\n')
                 f.write("      interval: 1s\n")
@@ -625,6 +628,7 @@ exit 0
                 f.write("  test2:\n")
                 f.write("    image: test-container-image2\n")
                 f.write("    network_mode: bridge\n")
+                f.write("    stop_grace_period: 1s\n")
                 f.write("    healthcheck:\n")
                 f.write('      test: ["CMD", "false"]\n')
                 f.write("      interval: 1s\n")

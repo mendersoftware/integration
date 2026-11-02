@@ -757,29 +757,6 @@ class TestFileTransferDownloadEnterprise(BaseTestFileTransferDownload):
 
 
 @flaky(rerun_filter=rerun_on_timeouts)
-class TestFileTransferLimitsOS(BaseTestFileTransferLimits):
-    """Tests the file transfer functionality"""
-
-    @pytest.fixture(scope="class")
-    def mender_device_setup(
-        self, request, class_persistent_standard_setup_one_docker_client_bootstrapped
-    ):
-
-        env = class_persistent_standard_setup_one_docker_client_bootstrapped
-
-        request.cls.auth = env.auth
-        request.cls.mender_device = env.device
-        request.cls.auth_token = env.auth.get_auth_token()
-        request.cls.env = env
-
-        devices = devauth.get_devices_status("accepted")
-        assert 1 == len(devices)
-        request.cls.devid = devices[0]["id"]
-
-        wait_for_connect(env.auth, request.cls.devid)
-
-
-@flaky(rerun_filter=rerun_on_timeouts)
 class TestFileTransferLimitsEnterprise(BaseTestFileTransferLimits):
     """Tests the file transfer functionality for enterprise setup"""
 

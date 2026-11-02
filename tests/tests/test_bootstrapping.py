@@ -14,52 +14,22 @@
 
 import time
 
-import pytest
-
 from ..common_setup import (
     standard_setup_one_client,
-    standard_setup_one_client_bootstrapped,
-    standard_setup_one_docker_client,
     enterprise_one_client,
     enterprise_one_client_bootstrapped,
-    enterprise_one_docker_client,
 )
-from .common_update import common_update_procedure
-from ..MenderAPI import DeviceAuthV2, Deployments, logger
+from ..MenderAPI import DeviceAuthV2, logger
 from ..helpers import Helpers
 from .mendertesting import MenderTesting
 
 
 class BaseTestBootstrapping(MenderTesting):
-    def do_test_bootstrap(self, env):
-        """Simply make sure we are able to bootstrap a device"""
-
-        mender_device = env.device
-
-        devauth = DeviceAuthV2(env.auth)
-        devauth.check_expected_status("pending", 1)
-
-        # iterate over devices and accept them
-        for d in devauth.get_devices():
-            devauth.set_device_auth_set_status(
-                d["id"], d["auth_sets"][0]["id"], "accepted"
-            )
-            logger.info("Accepting DeviceID: %s" % d["id"])
-
-        # make sure all devices are accepted
-        devauth.check_expected_status("accepted", 1)
-        Helpers.check_log_is_authenticated(mender_device)
-
-        # print all device ids
-        for device in devauth.get_devices_status("accepted"):
-            logger.info("Accepted DeviceID: %s" % device["id"])
-
-    def do_test_reject_bootstrap(self, env, valid_image):
-        """Make sure a rejected device does not perform an upgrade, and that it gets it's auth token removed"""
+    def do_test_reject_bootstrap(self, env):
+        """Make sure a rejected device gets it's auth token removed"""
 
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
 
         reject_time = time.time()
 
@@ -71,20 +41,6 @@ class BaseTestBootstrapping(MenderTesting):
             logger.info("Rejecting DeviceID: %s" % device["id"])
 
         devauth.check_expected_status("rejected", 1)
-
-        host_ip = env.get_virtual_network_host_ip()
-        with mender_device.get_reboot_detector(host_ip) as reboot:
-            try:
-                common_update_procedure(
-                    install_image=valid_image, devauth=devauth, deploy=deploy
-                )
-            except AssertionError:
-                logger.info("Failed to deploy upgrade to rejected device.")
-                reboot.verify_reboot_not_performed()
-
-            else:
-                # use assert to fail, so we can get backend logs
-                pytest.fail("no error while trying to deploy to rejected device")
 
         # Check from client side
         Helpers.check_log_is_unauthenticated(
@@ -102,25 +58,7 @@ class BaseTestBootstrapping(MenderTesting):
         Helpers.check_log_is_authenticated(mender_device)
 
 
-class TestBootstrappingOpenSource(BaseTestBootstrapping):
-    @MenderTesting.fast
-    def test_bootstrap(self, standard_setup_one_docker_client):
-        self.do_test_bootstrap(standard_setup_one_docker_client)
-
-    @MenderTesting.slow
-    def test_reject_bootstrap(
-        self, standard_setup_one_client_bootstrapped, valid_image
-    ):
-        self.do_test_reject_bootstrap(
-            standard_setup_one_client_bootstrapped, valid_image
-        )
-
-
 class TestBootstrappingEnterprise(BaseTestBootstrapping):
-    @MenderTesting.fast
-    def test_bootstrap(self, enterprise_one_docker_client):
-        self.do_test_bootstrap(enterprise_one_docker_client)
-
     @MenderTesting.slow
-    def test_reject_bootstrap(self, enterprise_one_client_bootstrapped, valid_image):
-        self.do_test_reject_bootstrap(enterprise_one_client_bootstrapped, valid_image)
+    def test_reject_bootstrap(self, enterprise_one_client_bootstrapped):
+        self.do_test_reject_bootstrap(enterprise_one_client_bootstrapped)

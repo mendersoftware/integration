@@ -137,68 +137,6 @@ def make_docker_compose_artifact(
 
 @pytest.mark.min_mender_client_version("6.0.0")
 class TestDockerCompose(MenderTesting):
-    def test_successful_rollback(self, standard_setup_extended, artifact_gen_script):
-        env = standard_setup_extended
-        mender_device = env.device
-
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        devices = devauth.get_devices_status("accepted")
-        assert len(devices) == 1
-        device_id = devices[0]["id"]
-
-        services = [
-            DockerService(name="test1", image="test-container-image1"),
-            DockerService(name="test2", image="test-container-image2"),
-        ]
-
-        with create_test_manifest(services) as (manifests_dir, images_dir):
-            deployment_id, _ = common_update_procedure(
-                verify_status=True,
-                devices=[device_id],
-                make_artifact=make_docker_compose_artifact(
-                    artifact_gen_script, manifests_dir, "test", images_dir
-                ),
-                devauth=devauth,
-                deploy=deploy,
-            )
-
-        deploy.check_expected_status("finished", deployment_id)
-        deploy.check_expected_statistics(deployment_id, "success", 1)
-
-        docker_ps = mender_device.run("docker ps")
-        logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
-        assert "test-container-image1" in docker_ps
-        assert "test-container-image2" in docker_ps
-
-        # Trigger a rollback by providing a non-existing image
-        services = [
-            DockerService(name="test1", image="non-existing-image", build_image=False),
-            DockerService(name="test2", image="test-container-image3"),
-        ]
-
-        with create_test_manifest(services) as (manifests_dir, images_dir):
-            deployment_id, _ = common_update_procedure(
-                verify_status=True,
-                devices=[device_id],
-                make_artifact=make_docker_compose_artifact(
-                    artifact_gen_script, manifests_dir, "test", images_dir
-                ),
-                devauth=devauth,
-                deploy=deploy,
-            )
-
-        deploy.check_expected_status("finished", deployment_id)
-        deploy.check_expected_statistics(deployment_id, "failure", 1)
-
-        docker_ps = mender_device.run("docker ps")
-        logger.info(f"docker ps output after rollback:\n{docker_ps}")
-        assert "test-container-image1" in docker_ps
-        assert "test-container-image2" in docker_ps
-        assert not "non-existing-image" in docker_ps
-        assert not "test-container-image3" in docker_ps
-
     def test_successful_rollback_updated_image(
         self, standard_setup_extended, artifact_gen_script
     ):
@@ -249,6 +187,7 @@ class TestDockerCompose(MenderTesting):
         services = [
             DockerService(name="test1", image="test-container-image1"),
             DockerService(name="test2", image="non-existing-image", build_image=False),
+            DockerService(name="test3", image="test-container-image3"),
         ]
 
         with create_test_manifest(services) as (manifests_dir, images_dir):
@@ -270,45 +209,12 @@ class TestDockerCompose(MenderTesting):
         assert "test-container-image1" in docker_ps
         assert "test-container-image2" in docker_ps
         assert not "non-existing-image" in docker_ps
+        assert not "test-container-image3" in docker_ps
 
         new_image1_id = mender_device.run(
             'docker images --format "{{json .ID}}" test-container-image1'
         )
         assert image1_id == new_image1_id
-
-    def test_empty_image_tarball(self, standard_setup_extended, artifact_gen_script):
-        env = standard_setup_extended
-        mender_device = env.device
-
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-
-        devices = devauth.get_devices_status("accepted")
-        assert len(devices) == 1
-        device_id = devices[0]["id"]
-
-        services = [
-            DockerService(name="test1", image="test-image1"),
-        ]
-
-        with create_test_manifest(services) as (manifests_dir, images_dir):
-            # Corrupt the tarball by overwriting with empty file
-            corrupted_tar = os.path.join(images_dir, "test-image1.tar")
-            with open(corrupted_tar, "wb") as f:
-                f.write(b"")
-
-            deployment_id, _ = common_update_procedure(
-                verify_status=True,
-                devices=[device_id],
-                make_artifact=make_docker_compose_artifact(
-                    artifact_gen_script, manifests_dir, "test", images_dir
-                ),
-                devauth=devauth,
-                deploy=deploy,
-            )
-
-        deploy.check_expected_status("finished", deployment_id)
-        deploy.check_expected_statistics(deployment_id, "failure", 1)
 
     def test_consecutive_updates(self, standard_setup_extended, artifact_gen_script):
         env = standard_setup_extended
@@ -387,6 +293,37 @@ class TestDockerCompose(MenderTesting):
         assert "test-container-image3" in docker_images
         assert "test-container-image4" in docker_images
 
+        # Third deployment fails to load an empty image tarball
+        services = [
+            DockerService(name="test1", image="test-image1"),
+        ]
+
+        with create_test_manifest(services) as (manifests_dir, images_dir):
+            # Corrupt the tarball by overwriting with empty file
+            corrupted_tar = os.path.join(images_dir, "test-image1.tar")
+            with open(corrupted_tar, "wb") as f:
+                f.write(b"")
+
+            deployment_id, _ = common_update_procedure(
+                verify_status=True,
+                devices=[device_id],
+                make_artifact=make_docker_compose_artifact(
+                    artifact_gen_script, manifests_dir, "test", images_dir
+                ),
+                devauth=devauth,
+                deploy=deploy,
+            )
+
+        deploy.check_expected_status("finished", deployment_id)
+        deploy.check_expected_statistics(deployment_id, "failure", 1)
+
+        # Verify rollback occurred - second deployment's services still running
+        docker_ps = mender_device.run("docker ps")
+        logger.info(f"docker ps output after failed deployment:\n{docker_ps}")
+        assert "test-container-image3" in docker_ps
+        assert "test-container-image4" in docker_ps
+        assert "test-image1" not in docker_ps
+
     def test_rollback_with_broken_connection(
         self, standard_setup_extended, artifact_gen_script
     ):
@@ -423,6 +360,14 @@ class TestDockerCompose(MenderTesting):
         logger.info(f"docker ps output after initial deployment:\n{docker_ps}")
         assert "test-container-image1" in docker_ps
 
+        # Give up on status updates after one retry (~1 minute) instead of the
+        # default three
+        mender_device.run(
+            "jq '.RetryPollCount = 1' /etc/mender/mender.conf > /etc/mender/mender.conf.new"
+            " && mv /etc/mender/mender.conf.new /etc/mender/mender.conf"
+            " && systemctl restart mender-updated"
+        )
+
         services = [
             DockerService(name="test2", image="test-container-image2"),
         ]
@@ -453,12 +398,12 @@ exit 0
                     devauth=devauth,
                     deploy=deploy,
                 )
-        logger.info("Waiting for retry status update to fail (takes ~3 minutes)")
+        logger.info("Waiting for retry status update to fail (takes ~1 minute)")
 
         timeout = 240
         for _ in range(timeout):
             if "Giving up on sending status updates to server" in mender_device.run(
-                "systemctl status mender-updated", hide=True
+                "journalctl -u mender-updated", hide=True
             ):
                 break
             logger.debug("Waiting for status update to give up")
@@ -546,6 +491,11 @@ exit 0
         docker_ps = mender_device.run("docker ps")
         logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
         assert "test-container-image1" in docker_ps
+
+        # Don't wait the default 120 seconds for the unhealthy container
+        mender_device.run(
+            "echo WAIT_TIMEOUT=20 >> /etc/mender/mender-docker-compose.conf"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             manifests_dir = os.path.join(temp_dir, "manifests")

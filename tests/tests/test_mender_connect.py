@@ -221,6 +221,10 @@ class _TestRemoteTerminalBase:
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
             output = shell.recvOutput(receive_timeout_s)
+            if not output:
+                # The session flapped on reconnect and the prompt never came;
+                # not a protocol failure, so let the retry below re-poll.
+                raise TimeoutError("no shell prompt received")
             assert (
                 shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             ), f"unexpeted message status, received message: {shell.protomsg}"

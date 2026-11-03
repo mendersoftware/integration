@@ -926,11 +926,17 @@ class BaseTestStateScripts(MenderTesting):
                     deployment_id, test_set["ExpectedStatus"], 1
                 )
 
-            # Always give the client a little bit of time to settle in the base
-            # state after an update.
-            time.sleep(10)
+            # Wait until the client has run the last expected script, or for
+            # the error loops, enough rounds for verify_script_log_correct.
+            rounds = 1 if test_set["ExpectedStatus"] is not None else 5
+            deadline = time.time() + 5 * 60
+            while True:
+                output = mender_device.run("cat /data/test_state_scripts.log")
+                last_runs = output.split().count(test_set["ScriptOrder"][-1])
+                if last_runs >= rounds or time.time() > deadline:
+                    break
+                time.sleep(2)
 
-            output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split("\n"))
 
         except:

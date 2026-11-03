@@ -73,7 +73,7 @@ expected_from = "no-reply@hosted.mender.io"
 daemon_main_loop_sleep_s = 2
 
 
-@retriable(sleeptime=60, attempts=5)
+@retriable(sleeptime=wait_for_alert_interval_s, sleepscale=1, attempts=60)
 def get_and_parse_email_n(env, address, n):
     mail, messages = get_and_parse_email(env, address)
     assert len(messages) >= n
@@ -139,6 +139,17 @@ def assert_valid_alert(message, bcc, subject):
     assert message["Bcc"] == bcc
     assert message["From"] == expected_from
     assert message["Subject"].startswith(subject)
+
+
+def speed_up_alert_store_resend(mender_device):
+    # Resend the alert store every few seconds rather than every minute,
+    # with a short backoff
+    mender_device.run(
+        "sed -i -e 's/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S=.*/DEFAULT_ALERT_STORE_RESEND_INTERVAL_S=4/' "
+        + "-e 's/SEND_ALERT_MAX_INTERVAL_S=.*/SEND_ALERT_MAX_INTERVAL_S=4/' "
+        + "/usr/share/mender-monitor/config/config.sh"
+    )
+    mender_device.run("systemctl restart mender-monitor")
 
 
 def prepare_service_monitoring(mender_device, service_name, use_ctl=False):
@@ -665,7 +676,6 @@ class TestMonitorClientEnterprise:
 
     def test_monitorclient_flapping(self, monitor_commercial_setup_no_client):
         """Tests the monitor client flapping support"""
-        wait_for_alert_interval_s = 120
         service_name = "crond"
         user_name = "ci.email.tests+{}@mender.io".format(str(uuid.uuid4()))
         devid, _, _, mender_device = self.prepare_env(
@@ -674,7 +684,9 @@ class TestMonitorClientEnterprise:
 
         prepare_service_monitoring(mender_device, service_name)
 
-        max_start_stop_iterations = 32
+        # FLAPPING_COUNT_THRESHOLD (5) state changes within FLAPPING_INTERVAL (120s)
+        # make the service flap, so a few iterations are enough
+        max_start_stop_iterations = 8
         not_running_time = 2.2
         logger.info(
             "test_monitorclient_flapping: running stop/start for %s, %d iterations, sleep in-between: %.1fs"
@@ -687,19 +699,18 @@ class TestMonitorClientEnterprise:
             mender_device.run("systemctl start %s" % service_name)
             time.sleep(not_running_time)
 
-        logger.info(
-            "test_monitorclient_flapping: waiting for %s seconds"
-            % (2 * wait_for_alert_interval_s)
-        )
-        time.sleep(2 * wait_for_alert_interval_s)
-        mail, messages = get_and_parse_email(
-            monitor_commercial_setup_no_client, user_name
-        )
-        messages_flipping = list(
-            filter(lambda x: "going up and down" in x["Subject"], messages)
-        )
+        for _ in redo.retrier(
+            attempts=30, sleeptime=wait_for_alert_interval_s, sleepscale=1
+        ):
+            mail, messages = get_and_parse_email(
+                monitor_commercial_setup_no_client, user_name
+            )
+            messages_flipping = list(
+                filter(lambda x: "going up and down" in x["Subject"], messages)
+            )
+            if len(messages_flipping) >= 1:
+                break
         assert len(messages_flipping) >= 1
-        messages_count_flapping = messages.index(messages_flipping[-1]) + 1
         assert_valid_alert(
             messages_flipping[-1],
             user_name,
@@ -711,12 +722,13 @@ class TestMonitorClientEnterprise:
         assert "${workflow.input" not in mail
         logger.info("test_monitorclient_flapping: got CRITICAL alert email.")
 
-        logger.info(
-            "test_monitorclient_flapping: waiting for %s seconds"
-            % wait_for_alert_interval_s
-        )
-
+        # Let the alerts sent before the flapping one arrive, so that the OK
+        # below is the one sent after the flapping
         time.sleep(2 * wait_for_alert_interval_s)
+        _, messages = get_and_parse_email(monitor_commercial_setup_no_client, user_name)
+        messages_count_flapping = len(messages)
+
+        # The OK is sent once the state changes fall out of FLAPPING_INTERVAL
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client,
             user_name,
@@ -1026,7 +1038,7 @@ class TestMonitorClientEnterprise:
         # See test_dbus_bus_filter for comparison, where filtering with DBUS_WATCH_EXPRESSION
         # reliably sends an alert with a single trigger.
         # Try in a loop for the same amount of time that get_and_parse_email_n would retry
-        tries_left = 10
+        tries_left = 60
         while tries_left > 0:
             # Call FetchJwtToken to trigger the signal (string "JwtTokenStateChange")
             mender_device.run(
@@ -1037,8 +1049,11 @@ class TestMonitorClientEnterprise:
             )
             if len(messages) > 0:
                 break
-            logger.info("test_dbus_pattern_match: got no alerts, retrying in 30s")
-            time.sleep(30)
+            logger.info(
+                "test_dbus_pattern_match: got no alerts, retrying in %ds"
+                % wait_for_alert_interval_s
+            )
+            time.sleep(wait_for_alert_interval_s)
             tries_left = tries_left - 1
         else:
             pytest.fail("Did not receive any messages")
@@ -1235,7 +1250,7 @@ class TestMonitorClientEnterprise:
                 + devid,
             )
 
-        fds_count_timeout_s = 64
+        fds_count_timeout_s = 16
         max_fds_count_diff = 3
         logger.info(
             "test_monitorclient_logs_and_services: checking open file descriptors"
@@ -1280,17 +1295,18 @@ class TestMonitorClientEnterprise:
 
         lines_before_count = 64
         lines_after_count = 64
-        for n in range(lines_before_count - 1):
-            mender_device.run(
-                "echo 'some long line of logs number: " + str(n) + "' >> " + log_file
-            )
         mender_device.run(
-            "echo 'a new session opened for user root now' >> " + log_file
-        )
-        for n in range(lines_after_count - 1):
-            mender_device.run(
-                "echo 'some long line of logs number: " + str(n) + "' >> " + log_file
+            'for n in $(seq 0 %d); do echo "some long line of logs number: $n"; done >> %s;'
+            "echo 'a new session opened for user root now' >> %s;"
+            'for n in $(seq 0 %d); do echo "some long line of logs number: $n"; done >> %s'
+            % (
+                lines_before_count - 2,
+                log_file,
+                log_file,
+                lines_after_count - 2,
+                log_file,
             )
+        )
         prepare_log_monitoring(
             mender_device,
             service_name + "-pcre",
@@ -1418,7 +1434,7 @@ class TestMonitorClientEnterprise:
 
         # The file needs to exist beforehand, otherwise the monitoring will just exit with a ERRNOEXIST
         mender_device.run("touch " + log_file_name)
-        mender_device.run("systemctl restart mender-monitor")
+        speed_up_alert_store_resend(mender_device)
         time.sleep(2 * wait_for_alert_interval_s)
 
         mender_device.run("echo 'some line 1' >> " + log_file_name)
@@ -1450,7 +1466,7 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_send_saved_alerts_on_network_issues: waiting for alerts to come."
         )
-        time.sleep(wait_for_alert_interval_s * 10)
+        time.sleep(4 * wait_for_alert_interval_s)
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client, user_name, 1
@@ -1643,6 +1659,7 @@ class TestMonitorClientEnterprise:
             monitor_commercial_setup_no_client, user_name
         )
 
+        speed_up_alert_store_resend(mender_device)
         prepare_service_monitoring(mender_device, service_name)
         time.sleep(2 * wait_for_alert_interval_s)
 
@@ -1700,7 +1717,19 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_store_discard_http_400: waiting for alerts (not) to come."
         )
-        time.sleep(8 * wait_for_alert_interval_s)
+        for _ in redo.retrier(
+            attempts=16, sleeptime=wait_for_alert_interval_s, sleepscale=1
+        ):
+            num_alerts_after_discard = mender_device.run(
+                "bash -c '"
+                "cd /usr/share/mender-monitor;"
+                ". lib/fixlenstore-lib.sh;"
+                "fixlenstore_count;"
+                "'"
+            ).strip()
+            if int(num_alerts_after_discard) == 0:
+                break
+        time.sleep(2 * wait_for_alert_interval_s)
 
         _, messages = get_and_parse_email(monitor_commercial_setup_no_client, user_name)
         assert len(messages) == 0
@@ -1708,13 +1737,6 @@ class TestMonitorClientEnterprise:
             "test_monitorclient_alert_store_discard_http_400: got no alerts, were they discarded?"
         )
 
-        num_alerts_after_discard = mender_device.run(
-            "bash -c '"
-            "cd /usr/share/mender-monitor;"
-            ". lib/fixlenstore-lib.sh;"
-            "fixlenstore_count;"
-            "'"
-        ).strip()
         assert int(num_alerts_after_discard) == 0
         logger.info(
             "test_monitorclient_alert_store_discard_http_400: store is empty, they were discarded!"
@@ -1755,7 +1777,6 @@ class TestMonitorClientEnterprise:
         logger.info(
             "test_monitorclient_alert_store_discard_http_400: waiting for alerts to come."
         )
-        time.sleep(8 * wait_for_alert_interval_s)
 
         mail, messages = get_and_parse_email_n(
             monitor_commercial_setup_no_client,

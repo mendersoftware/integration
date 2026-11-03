@@ -73,7 +73,7 @@ class _TestRemoteTerminalBase:
 
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
-            receive_timeout_s = 16
+            receive_timeout_s = 8
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
@@ -190,7 +190,7 @@ class _TestRemoteTerminalBase:
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
-        receive_timeout_s = 16
+        receive_timeout_s = 8
 
         def is_shell_working(shell):
             # Test if a simple command works.

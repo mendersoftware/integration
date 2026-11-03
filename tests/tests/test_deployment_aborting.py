@@ -21,7 +21,6 @@ from ..common_setup import (
 from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments
 from .mendertesting import MenderTesting
-from flaky import flaky
 
 
 class BaseTestDeploymentAborting(MenderTesting):
@@ -112,10 +111,6 @@ class BaseTestDeploymentAborting(MenderTesting):
         deploy.check_expected_status("finished", deployment_id)
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
     @MenderTesting.fast
     def test_deployment_abortion_instantly(
@@ -159,7 +154,6 @@ class TestDeploymentAbortingOpenSource(BaseTestDeploymentAborting):
         )
 
 
-@flaky(max_runs=3)
 class TestDeploymentAbortingEnterprise(BaseTestDeploymentAborting):
     @MenderTesting.fast
     def test_deployment_abortion_instantly(

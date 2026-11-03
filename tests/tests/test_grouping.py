@@ -19,7 +19,6 @@ from ..common_setup import (
 from .common_update import common_update_procedure
 from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, logger
 from .mendertesting import MenderTesting
-from flaky import flaky
 from ..helpers import Helpers
 
 
@@ -100,9 +99,6 @@ class BaseTestGrouping(MenderTesting):
         inv.delete_device_from_group(id_alpha, "Update")
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after a reboot. A flaky rerun sets up a fresh VM.
-@flaky(max_runs=3)
 @MenderTesting.fast
 class TestGroupingOpenSource(BaseTestGrouping):
     def test_update_device_group(
@@ -114,7 +110,6 @@ class TestGroupingOpenSource(BaseTestGrouping):
         )
 
 
-@flaky(max_runs=3)
 @MenderTesting.fast
 class TestGroupingEnterprise(BaseTestGrouping):
     def test_update_device_group(

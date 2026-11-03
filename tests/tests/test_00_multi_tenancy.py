@@ -21,13 +21,8 @@ from ..MenderAPI import auth, devauth, logger, inv
 from .common_update import update_image
 from .mendertesting import MenderTesting
 from mender_testkit.testutils.common import new_tenant_client
-from flaky import flaky
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestMultiTenancyEnterprise(MenderTesting):
     def test_token_validity(self, enterprise_no_client):
         """verify that only devices with valid tokens can bootstrap

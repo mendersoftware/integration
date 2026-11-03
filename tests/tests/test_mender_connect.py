@@ -17,7 +17,6 @@ import pytest
 import time
 import uuid
 
-from flaky import flaky
 from redo import retriable
 from websockets.exceptions import WebSocketException
 
@@ -59,21 +58,12 @@ SHELL_NOT_REAPED_ERRORS = (
 
 
 class _TestRemoteTerminalBase:
-    @flaky(max_runs=3)
     def test_regular_protocol_commands(self, docker_env_flaky_test):
-        """
-        Ticket: QA-504
-        Reason: The test fails due to the fact that the websocket connection is broken,
-                and the mender-connect can't recover from situation when shell could not
-                be stopped, and the session is left as empty with non-existent process
-                (see MEN-6137) while many other things timeout.
-        """
-
         self.assert_env(docker_env_flaky_test)
 
         with docker_env_flaky_test.devconnect.get_websocket() as ws:
             # Start shell.
-            receive_timeout_s = 16
+            receive_timeout_s = 8
             shell = proto_shell.ProtoShell(ws)
             body = shell.startShell()
             assert shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
@@ -185,12 +175,11 @@ class _TestRemoteTerminalBase:
             assert prot.protoType == proto_shell.PROTO_TYPE_SHELL
             assert prot.typ == "bogusmessage"
 
-    @flaky(max_runs=3)
     @pytest.mark.timeout(1200)
     def test_in_poor_network_environment(self, docker_env):
         self.assert_env(docker_env)
 
-        receive_timeout_s = 16
+        receive_timeout_s = 8
 
         def is_shell_working(shell):
             # Test if a simple command works.
@@ -207,6 +196,10 @@ class _TestRemoteTerminalBase:
             # Drain any initial output from the prompt. It should end in either "# "
             # (root) or "$ " (user).
             output = shell.recvOutput(receive_timeout_s)
+            if not output:
+                # The session flapped on reconnect and the prompt never came;
+                # not a protocol failure, so let the retry below re-poll.
+                raise TimeoutError("no shell prompt received")
             assert (
                 shell.protomsg.props["status"] == protomsg.PROP_STATUS_NORMAL
             ), f"unexpeted message status, received message: {shell.protomsg}"
@@ -305,7 +298,6 @@ class _TestRemoteTerminalBase:
         # Poll until a working shell can be opened end-to-end.
         assert_working_shell()
 
-    @flaky(max_runs=3)
     def test_session_recording(self, docker_env):
         self.assert_env(docker_env)
 

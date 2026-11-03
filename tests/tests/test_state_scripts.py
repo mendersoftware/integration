@@ -31,7 +31,6 @@ from ..helpers import Helpers
 from ..MenderAPI import DeviceAuthV2, Deployments, logger, image
 from .mendertesting import MenderTesting
 from mender_testkit.testutils.infra.device import MenderDeviceGroup
-from flaky import flaky
 
 STATE_SCRIPTS_CLEANUP_CMD = (
     "systemctl stop mender-updated && "
@@ -93,7 +92,7 @@ def _restart_client_container(env):
 
 def _recover_client_if_dead(env):
     """Heal the QEMU client if the VM died (the "Device never rebooted" infra
-    flake), so the flaky rerun and the remaining class tests get a healthy
+    flake), so the remaining class tests get a healthy
     device. Swallows its own errors: if healing fails we are no worse off.
     """
     device = env.device
@@ -926,11 +925,17 @@ class BaseTestStateScripts(MenderTesting):
                     deployment_id, test_set["ExpectedStatus"], 1
                 )
 
-            # Always give the client a little bit of time to settle in the base
-            # state after an update.
-            time.sleep(10)
+            # Wait until the client has run the last expected script, or for
+            # the error loops, enough rounds for verify_script_log_correct.
+            rounds = 1 if test_set["ExpectedStatus"] is not None else 5
+            deadline = time.time() + 5 * 60
+            while True:
+                output = mender_device.run("cat /data/test_state_scripts.log")
+                last_runs = output.split().count(test_set["ScriptOrder"][-1])
+                if last_runs >= rounds or time.time() > deadline:
+                    break
+                time.sleep(2)
 
-            output = mender_device.run("cat /data/test_state_scripts.log")
             self.verify_script_log_correct(test_set, output.split("\n"))
 
         except:
@@ -1018,10 +1023,6 @@ class BaseTestStateScripts(MenderTesting):
 
 
 class TestStateScriptsOpenSource(BaseTestStateScripts):
-    # Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-    # sometimes does not come back after a reboot. The vm-recovery fixture
-    # heals the dead VM between attempts, so the rerun gets a healthy device.
-    @flaky(max_runs=2)
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
         self,
@@ -1051,10 +1052,6 @@ class TestStateScriptsOpenSource(BaseTestStateScripts):
 
 
 class TestStateScriptsEnterprise(BaseTestStateScripts):
-    # Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-    # sometimes does not come back after a reboot. The vm-recovery fixture
-    # heals the dead VM between attempts, so the rerun gets a healthy device.
-    @flaky(max_runs=2)
     @pytest.mark.parametrize("description,test_set", REBOOT_TEST_SET)
     def test_reboot_recovery(
         self,

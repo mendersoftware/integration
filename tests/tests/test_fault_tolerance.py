@@ -26,7 +26,6 @@ from ..common_setup import (
 from .common_update import common_update_procedure, update_image_failed
 from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
-from flaky import flaky
 
 
 class BasicTestFaultTolerance(MenderTesting):
@@ -108,6 +107,11 @@ class BasicTestFaultTolerance(MenderTesting):
         num_retries_attempted = 0
 
         while int(time.time()) < timeout_time:
+            # checked first, so that the count below includes the last retry
+            gave_up = device.run(
+                "journalctl --unit mender-updated --full --no-pager | grep 'Giving up on resuming the download' | wc -l",
+                hide=True,
+            )
             output = device.run(
                 f'journalctl --unit mender-updated --full --no-pager | grep -E \'name="http_resumer:client" msg=".*{search_string}\' | wc -l',
                 hide=True,
@@ -120,6 +124,9 @@ class BasicTestFaultTolerance(MenderTesting):
                 num_retries_attempted = int(output)
                 break
             num_retries_attempted = int(output)
+            if int(gave_up) > 0:
+                logger.info("The client gave up on resuming the download")
+                break
 
         # if num_retries expected is smaller then timeout, we expect success.
         # if it's bigger, then we expect a timeout
@@ -151,6 +158,12 @@ class BasicTestFaultTolerance(MenderTesting):
         mender_device = env.device
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
+
+        # the persistent config is also used by the new image: retry the
+        # status report there once instead of three times before rolling back
+        conf = json.loads(mender_device.run("cat /data/mender/mender.conf"))
+        conf["RetryPollCount"] = 1
+        mender_device.run("echo '%s' > /data/mender/mender.conf" % json.dumps(conf))
 
         host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
@@ -396,9 +409,9 @@ class BasicTestFaultTolerance(MenderTesting):
 
                 assert mender_device.get_active_partition() == inactive_part
                 assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
-                reboot.verify_reboot_not_performed()
+                reboot.verify_reboot_not_performed(wait=10)
             else:
-                reboot.verify_reboot_not_performed()
+                reboot.verify_reboot_not_performed(wait=10)
 
                 assert mender_device.get_active_partition() == active_part
                 assert mender_device.yocto_id_installed_on_machine() == old_yocto_id
@@ -434,6 +447,7 @@ class BasicTestFaultTolerance(MenderTesting):
             self.wait_for_download_retry_attempts(
                 mender_device,
                 "Resuming download after ",
+                num_retries=1,
             )
             mender_device.run("sed -i.bak '/1.1.1.1/d' /etc/hosts")
 
@@ -442,7 +456,7 @@ class BasicTestFaultTolerance(MenderTesting):
 
             assert mender_device.get_active_partition() == inactive_part
             assert mender_device.yocto_id_installed_on_machine() == new_yocto_id
-            reboot.verify_reboot_not_performed()
+            reboot.verify_reboot_not_performed(wait=10)
 
     def do_test_rootfs_conf_missing_from_new_update(
         self, env, valid_image_with_mender_conf
@@ -501,10 +515,6 @@ class BasicTestFaultTolerance(MenderTesting):
             shutil.rmtree(tmpdir)
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
@@ -540,7 +550,7 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
 
     @pytest.mark.parametrize(
         "max_retries, unsuccessful_retries, success",
-        [(5, 2, True), (5, 7, False), (15, 12, True), (11, 15, False)],
+        [(5, 2, True), (3, 4, False), (15, 12, True), (11, 15, False)],
         ids=[
             "reducedRetriesSuccess",
             "reducedRetriesFailure",
@@ -583,7 +593,6 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
         )
 
 
-@flaky(max_runs=3)
 class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(

@@ -33,14 +33,6 @@ if __name__ == "__main__":
             break
     node_ids.sort()
 
-    n_batch = len(node_ids) // TOTAL
-    n_rest = len(node_ids) % TOTAL
-
-    offset = n_batch * (INDEX - 1)
-    if INDEX <= n_rest:
-        n_batch += 1
-        offset += INDEX - 1
-    else:
-        offset += n_rest
-
-    print("\n".join(node_ids[offset : offset + n_batch]), end="")
+    # Round-robin rather than contiguous chunks, so the slow test files spread
+    # over all jobs instead of piling up in one.
+    print("\n".join(node_ids[INDEX - 1 :: TOTAL]), end="")

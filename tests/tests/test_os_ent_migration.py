@@ -11,19 +11,17 @@
 #    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
-import time
-import json
+import subprocess
 
 import pytest
+import redo
 
 from mender_testkit.testutils.common import (
+    create_org,
     create_user,
     make_accepted_device,
-    User,
-    Tenant,
 )
 from mender_testkit.testutils.api.client import ApiClient
-from mender_testkit.testutils.infra.cli import CliTenantadm
 import mender_testkit.testutils.api.deviceauth as deviceauth
 import mender_testkit.testutils.api.deployments as deployments
 import mender_testkit.testutils.api.useradm as useradm
@@ -134,25 +132,17 @@ def migrate_ent_setup(env):
     """Migrate the ENT setup - create a tenant and user via create-org,
     substitute default token env in the ent. testing layer.
     """
-    # extra long sleep to make sure all services ran their migrations
-    # maybe conductor fails because some services are still in a migration phase,
-    # and not serving the API yet?
-    time.sleep(30)
-
-    u = User("", "baz@tenant.com", "correcthorse")
-
-    cli = CliTenantadm(containers_namespace=env.name)
-    tid = cli.create_org("tenant", u.name, u.pwd)
-    time.sleep(10)
-
-    tenant = cli.get_tenant(tid)
-
-    tenant = json.loads(tenant)
-    ttoken = tenant["tenant_token"]
-
-    t = Tenant("tenant", tid, ttoken)
-    t.users.append(u)
-
+    # Some services may still be starting up, retry until create-org succeeds.
+    # create_org itself waits for the new user to be able to log in.
+    t = redo.retry(
+        create_org,
+        attempts=30,
+        sleeptime=1,
+        sleepscale=1,
+        retry_exceptions=(subprocess.CalledProcessError,),
+        args=("tenant", "baz@tenant.com", "correcthorse"),
+        kwargs={"containers_namespace": env.name, "container_manager": env},
+    )
     return {"tenant": t}
 
 

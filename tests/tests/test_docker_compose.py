@@ -104,6 +104,8 @@ def create_test_manifest(services):
                 f.write(f"  {service.name}:\n")
                 f.write(f"    image: {service.image}\n")
                 f.write(f"    network_mode: bridge\n")
+                # `sleep` as PID 1 ignores SIGTERM, don't wait 10s for it on stop
+                f.write(f"    stop_grace_period: 1s\n")
 
         yield manifests_dir, images_dir
 
@@ -462,6 +464,14 @@ class TestDockerCompose(MenderTesting):
         logger.info(f"docker ps output after initial deployment:\n{docker_ps}")
         assert "test-container-image1" in docker_ps
 
+        # Give up on status updates after one retry (~1 minute) instead of the
+        # default three
+        mender_device.run(
+            "jq '.RetryPollCount = 1' /etc/mender/mender.conf > /etc/mender/mender.conf.new"
+            " && mv /etc/mender/mender.conf.new /etc/mender/mender.conf"
+            " && systemctl restart mender-updated"
+        )
+
         services = [
             DockerService(name="test2", image="test-container-image2"),
         ]
@@ -492,12 +502,12 @@ exit 0
                     devauth=devauth,
                     deploy=deploy,
                 )
-        logger.info("Waiting for retry status update to fail (takes ~3 minutes)")
+        logger.info("Waiting for retry status update to fail (takes ~1 minute)")
 
         timeout = 240
         for _ in range(timeout):
             if "Giving up on sending status updates to server" in mender_device.run(
-                "systemctl status mender-updated", hide=True
+                "journalctl -u mender-updated", hide=True
             ):
                 break
             logger.debug("Waiting for status update to give up")
@@ -563,6 +573,7 @@ exit 0
                 f.write("  test1:\n")
                 f.write("    image: test-container-image1\n")
                 f.write("    network_mode: bridge\n")
+                f.write("    stop_grace_period: 1s\n")
                 f.write("    healthcheck:\n")
                 f.write('      test: ["CMD", "true"]\n')
                 f.write("      interval: 1s\n")
@@ -585,6 +596,11 @@ exit 0
         docker_ps = mender_device.run("docker ps")
         logger.info(f"docker ps output after successful deployment:\n{docker_ps}")
         assert "test-container-image1" in docker_ps
+
+        # Don't wait the default 120 seconds for the unhealthy container
+        mender_device.run(
+            "echo WAIT_TIMEOUT=20 >> /etc/mender/mender-docker-compose.conf"
+        )
 
         with tempfile.TemporaryDirectory() as temp_dir:
             manifests_dir = os.path.join(temp_dir, "manifests")
@@ -625,6 +641,7 @@ exit 0
                 f.write("  test2:\n")
                 f.write("    image: test-container-image2\n")
                 f.write("    network_mode: bridge\n")
+                f.write("    stop_grace_period: 1s\n")
                 f.write("    healthcheck:\n")
                 f.write('      test: ["CMD", "false"]\n')
                 f.write("      interval: 1s\n")

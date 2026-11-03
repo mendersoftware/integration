@@ -41,7 +41,6 @@ from ..helpers import Helpers
 from ..MenderAPI.requests_helpers import requests_retry
 from requests.auth import HTTPBasicAuth
 from mender_testkit.testutils.infra.cli import CliUseradm
-from flaky import flaky
 
 
 class FailoverAuth:
@@ -231,18 +230,18 @@ class BaseTestBasicIntegration(MenderTesting):
         def deployment_callback():
             logger.info("Running pre deployment callback function")
             wait_count = 0
-            # Match the log template six times to make sure the client is truly sleeping.
+            # Match the log template three times to make sure the client is truly sleeping.
             catcmd = "journalctl --unit mender-updated --output cat"
             template = mender_device.run(catcmd)
             while True:
                 logger.info("sleeping...")
                 logger.info("wait_count: %d" % wait_count)
-                time.sleep(10)
+                time.sleep(5)
                 out = mender_device.run(catcmd)
                 if out == template:
                     wait_count += 1
-                    # Only return if the client has been idling in check-wait for a minute.
-                    if wait_count == 6:
+                    # Only return if the client has been idling in check-wait for 15 seconds.
+                    if wait_count == 3:
                         return
                     continue
                 # Update the matching template
@@ -280,18 +279,18 @@ class BaseTestBasicIntegration(MenderTesting):
 
         logger.info("Running pre deployment callback function")
         wait_count = 0
-        # Match the log template six times to make sure the client is truly sleeping.
+        # Match the log template three times to make sure the client is truly sleeping.
         catcmd = "journalctl --unit mender-updated --output cat"
         template = mender_device.run(catcmd)
         while True:
             logger.info("sleeping...")
             logger.info("wait_count: %d" % wait_count)
-            time.sleep(10)
+            time.sleep(5)
             out = mender_device.run(catcmd)
             if out == template:
                 wait_count += 1
-                # Only return if the client has been idling in check-wait for a minute.
-                if wait_count == 6:
+                # Only return if the client has been idling in check-wait for 15 seconds.
+                if wait_count == 3:
                     break
                 continue
             # Update the matching template.
@@ -319,10 +318,6 @@ class BaseTestBasicIntegration(MenderTesting):
         pytest.fail("The inventory was not updated")
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_update_failover_server(self, setup_failover, valid_image):
@@ -450,7 +445,6 @@ class TestBasicIntegrationOpenSource(BaseTestBasicIntegration):
         )
 
 
-@flaky(max_runs=3)
 class TestBasicIntegrationEnterprise(BaseTestBasicIntegration):
     @MenderTesting.fast
     def test_double_update_rofs(

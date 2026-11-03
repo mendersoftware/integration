@@ -294,6 +294,19 @@ def classlogger(request):
         log.setup_test_logger(request.cls.__name__ + "__setup")
 
 
+# tryfirst: xdist reads the xdist_group markers in its own collection hook.
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items):
+    # With --dist loadgroup, keep the tests of a class with a class-scoped setup
+    # on one xdist worker, so the setup runs once instead of once per worker.
+    for item in items:
+        if item.cls is None:
+            continue
+        defs = item._fixtureinfo.name2fixturedefs
+        if any(d[-1].scope == "class" and n != "classlogger" for n, d in defs.items()):
+            item.add_marker(pytest.mark.xdist_group(item.cls.__name__))
+
+
 def pytest_exception_interact(node, call, report):
     if report.failed:
         logger.error(

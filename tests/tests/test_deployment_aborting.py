@@ -12,6 +12,8 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+import time
+
 from ..common_setup import (
     standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
@@ -34,8 +36,9 @@ class BaseTestDeploymentAborting(MenderTesting):
         Trigger a deployment, and cancel it within 15 seconds, make sure no deployment is performed.
 
         Args:
-            number_of_reboots: if set to 0, a manual reboot is performed and
-                                   checks are performed.
+            number_of_reboots: if set to 0, check that the bootloader still
+                                   points to the original partition, or for an
+                                   instant abort, perform a manual reboot.
                                if set to > 0, wait until device is rebooted
                                number_of_reboots times.
         """
@@ -76,6 +79,27 @@ class BaseTestDeploymentAborting(MenderTesting):
                 # If Mender performs reboot, we need to wait for it to reboot
                 # back into the original filesystem.
                 reboot.verify_reboot_performed(number_of_reboots=number_of_reboots)
+            elif abort_step is not None:
+                # Else we wait for the client to get the abort, and make sure
+                # that it would not switch to the new partition on a reboot.
+                deadline = time.time() + 10 * 60
+                while (
+                    mender_device.run(
+                        "journalctl --unit mender-updated --no-pager"
+                        + " | grep 'Deployment was aborted on the server' | wc -l",
+                        hide=True,
+                    ).strip()
+                    == "0"
+                ):
+                    assert time.time() < deadline, "client never got the abort"
+                    time.sleep(5)
+                reboot.verify_reboot_not_performed(wait=10)
+                printenv = "$(command -v grub-mender-grubenv-print || echo fw_printenv)"
+                env = mender_device.run(
+                    f"{printenv} upgrade_available mender_boot_part"
+                )
+                assert "upgrade_available=0" in env
+                assert f"mender_boot_part={expected_partition[-1]}" in env
             else:
                 # Else we reboot ourselves, just to make sure that we have not
                 # unintentionally switched to the new partition.

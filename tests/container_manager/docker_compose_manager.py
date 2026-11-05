@@ -220,51 +220,6 @@ class DockerComposeDockerClientSetup(DockerComposeNamespace):
         self._docker_compose_up(f"--scale mender-client={self.num_clients}")
 
 
-class DockerComposeRofsClientSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
-        DockerComposeNamespace.__init__(self, name, self.QEMU_CLIENT_ROFS_FILES)
-
-
-class DockerComposeLegacyV3ClientSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
-        DockerComposeNamespace.__init__(self, name, self.LEGACY_V3_CLIENT_FILES)
-
-    def get_mender_clients(self, network="default"):
-        clients = [
-            ip + ":8822"
-            for ip in self.get_ip_of_service(
-                service="mender-client-3-6", network=network
-            )
-        ]
-        return clients
-
-
-class DockerComposeSignedArtifactClientSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
-        DockerComposeNamespace.__init__(
-            self, name, self.QEMU_CLIENT_FILES + self.SIGNED_ARTIFACT_CLIENT_FILES
-        )
-
-
-class DockerComposeShortLivedTokenSetup(DockerComposeNamespace):
-    def __init__(
-        self,
-        name,
-    ):
-        DockerComposeNamespace.__init__(
-            self, name, self.QEMU_CLIENT_FILES + self.SHORT_LIVED_TOKEN_FILES
-        )
-
-
 class DockerComposeFailoverBackend(DockerComposeNamespace):
     """The second backend of the failover setup, in its own compose project.
 

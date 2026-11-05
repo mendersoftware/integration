@@ -21,7 +21,6 @@ import redo
 
 from .. import conftest
 from ..common_setup import (
-    standard_setup_one_client_bootstrapped,
     enterprise_one_client_bootstrapped,
 )
 from ..MenderAPI import DeviceAuthV2, Deployments, Inventory, logger
@@ -50,8 +49,23 @@ class BaseTestInventory(MenderTesting):
         deploy = Deployments(env.auth, devauth)
         inv = Inventory(env.auth)
 
+        # Give the image a larger wait interval, so that inventory updates
+        # after the deployments can't come from the periodic poll.
+        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
+            r"\(InventoryPollInter.*:\)\( *[0-9]*\)",
+            "\\1 300",
+        )
+        env.device.run(sedcmd)
+        env.device.run("systemctl restart mender-updated")
+
         # Install the script update module required for this test
         Helpers.install_community_update_module(env.device, "script")
+
+        initial_inv_json = inv.get_devices()
+        assert len(initial_inv_json) > 0
+        assert "rootfs-image.swname.version" not in str(
+            initial_inv_json
+        ), "The initial inventory is not clean"
 
         def deploy_simple_artifact(artifact_name, extra_args):
             # create a simple artifact (script) which doesn't do anything
@@ -82,6 +96,17 @@ class BaseTestInventory(MenderTesting):
             + " --provides rootfs-image.swname.custom_field:value"
             + " --provides rootfs-image.custom_field:value",
         )
+
+        post_deployment_inv_json = []
+        for _ in redo.retrier(attempts=10, sleeptime=3):
+            post_deployment_inv_json = inv.get_devices()
+            if "rootfs-image.swname.version" in str(post_deployment_inv_json):
+                break
+
+        assert "rootfs-image.swname.version" in str(
+            post_deployment_inv_json
+        ), "The device has not updated the inventory after the update"
+
         deploy_simple_artifact(
             "simple-artifact-2", "--software-name swname --software-version v2"
         )
@@ -222,99 +247,8 @@ class BaseTestInventory(MenderTesting):
                 return
         raise latest_exception
 
-    def do_test_inventory_update_after_successful_deployment(self, env):
-        """
-        Test that device reports inventory after a new successful deployment,
-        and not simply after a boot.
-        """
-
-        mender_device = env.device
-        devauth = DeviceAuthV2(env.auth)
-        deploy = Deployments(env.auth, devauth)
-        inv = Inventory(env.auth)
-
-        # Give the image a larger wait interval.
-        sedcmd = "sed -i.bak 's/%s/%s/' /etc/mender/mender.conf" % (
-            r"\(InventoryPollInter.*:\)\( *[0-9]*\)",
-            "\\1 300",
-        )
-        mender_device.run(sedcmd)
-        mender_device.run("systemctl restart mender-updated")
-
-        # Install the script update module required for this test
-        Helpers.install_community_update_module(mender_device, "script")
-
-        # Get the inventory sent after first boot
-        initial_inv_json = inv.get_devices()
-        assert len(initial_inv_json) > 0
-        assert "rootfs-image.swname.version" not in str(
-            initial_inv_json
-        ), "The initial inventory is not clean"
-
-        def deploy_simple_artifact(artifact_name, extra_args):
-            # create a simple artifact (script) which doesn't do anything
-            with tempfile.NamedTemporaryFile() as tf:
-                artifact = make_script_artifact(
-                    artifact_name,
-                    conftest.machine_name,
-                    tf.name,
-                    extra_args=extra_args,
-                )
-                deploy.upload_image(artifact)
-
-            # deploy the artifact above
-            device_ids = [device["id"] for device in devauth.get_devices()]
-            deployment_id = deploy.trigger_deployment(
-                artifact_name,
-                artifact_name=artifact_name,
-                devices=device_ids,
-            )
-
-            # now just wait for the update to succeed
-            deploy.check_expected_statistics(deployment_id, "success", 1)
-            deploy.check_expected_status("finished", deployment_id)
-
-        deploy_simple_artifact(
-            "simple-artifact-1",
-            "--software-name swname --software-version v1"
-            + " --provides rootfs-image.swname.custom_field:value",
-        )
-
-        post_deployment_inv_json = []
-        for _ in redo.retrier(attempts=10, sleeptime=3):
-            post_deployment_inv_json = inv.get_devices()
-            if "rootfs-image.swname.version" in str(post_deployment_inv_json):
-                break
-
-        assert len(post_deployment_inv_json) > 0
-        assert "rootfs-image.swname.version" in str(
-            post_deployment_inv_json
-        ), "The device has not updated the inventory after the update"
-
-
-class TestInventoryOpenSource(BaseTestInventory):
-    @MenderTesting.fast
-    def test_inventory(self, standard_setup_one_client_bootstrapped):
-        self.do_test_inventory(standard_setup_one_client_bootstrapped)
-
-    @MenderTesting.fast
-    def test_inventory_update_after_successful_deployment(
-        self, standard_setup_one_client_bootstrapped
-    ):
-        self.do_test_inventory_update_after_successful_deployment(
-            standard_setup_one_client_bootstrapped
-        )
-
 
 class TestInventoryEnterprise(BaseTestInventory):
     @MenderTesting.fast
     def test_inventory(self, enterprise_one_client_bootstrapped):
         self.do_test_inventory(enterprise_one_client_bootstrapped)
-
-    @MenderTesting.fast
-    def test_inventory_update_after_successful_deployment(
-        self, enterprise_one_client_bootstrapped
-    ):
-        self.do_test_inventory_update_after_successful_deployment(
-            enterprise_one_client_bootstrapped
-        )

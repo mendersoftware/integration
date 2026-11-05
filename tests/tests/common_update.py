@@ -30,7 +30,6 @@ def common_update_procedure(
     devices=None,
     scripts=[],
     pre_upload_callback=lambda: None,
-    pre_deployment_callback=lambda: None,
     deployment_triggered_callback=lambda: None,
     make_artifact=None,
     compression_type="gzip",
@@ -73,7 +72,6 @@ def common_update_procedure(
                             ]
                         )
                     )
-                pre_deployment_callback()
                 deployment_id = deploy.trigger_deployment(
                     name="New valid update",
                     artifact_name=artifact_name,
@@ -101,7 +99,6 @@ def update_image(
     devices=None,
     scripts=[],
     pre_upload_callback=lambda: None,
-    pre_deployment_callback=lambda: None,
     deployment_triggered_callback=lambda: None,
     make_artifact=None,
     compression_type="gzip",
@@ -126,7 +123,6 @@ def update_image(
             devices=devices,
             scripts=scripts,
             pre_upload_callback=pre_upload_callback,
-            pre_deployment_callback=pre_deployment_callback,
             deployment_triggered_callback=deployment_triggered_callback,
             make_artifact=make_artifact,
             compression_type=compression_type,
@@ -221,6 +217,6 @@ def update_image_failed(
             assert expected_log_message in deploy.get_logs(d["id"], deployment_id)
 
         assert device.yocto_id_installed_on_machine() == original_image_id
-        reboot.verify_reboot_not_performed()
+        reboot.verify_reboot_not_performed(wait=10)
 
     deploy.check_expected_status("finished", deployment_id)

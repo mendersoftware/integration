@@ -18,7 +18,6 @@ import tempfile
 import shutil
 
 from ..common_setup import (
-    standard_setup_one_docker_client_bootstrapped,
     enterprise_one_docker_client_bootstrapped,
 )
 from .common_update import common_update_procedure
@@ -71,14 +70,6 @@ class BaseTestUpdateModules(MenderTesting):
 
         finally:
             shutil.rmtree(file_tree)
-
-
-class TestUpdateModulesOpenSource(BaseTestUpdateModules):
-    @MenderTesting.fast
-    def test_rootfs_image_rejected(self, standard_setup_one_docker_client_bootstrapped):
-        self.do_test_rootfs_image_rejected(
-            standard_setup_one_docker_client_bootstrapped
-        )
 
 
 class TestUpdateModulesEnterprise(BaseTestUpdateModules):

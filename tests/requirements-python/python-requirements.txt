@@ -34,8 +34,6 @@ filelock==3.29.0
     # via
     #   -r python-requirements.in
     #   mender-testkit
-flaky==3.8.1
-    # via -r python-requirements.in
 idna==3.15
     # via requests
 iniconfig==2.0.0

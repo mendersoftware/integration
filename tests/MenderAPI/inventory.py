@@ -95,12 +95,3 @@ class Inventory:
             self.get_inv_base_path() + req, data=body, headers=headers, verify=False
         )
         assert ret.status_code == requests.status_codes.codes.no_content
-
-    def delete_device_from_group(self, device, group):
-        req = "devices/%s/group/%s" % (device, group)
-        ret = requests_retry().delete(
-            self.get_inv_base_path() + req,
-            headers=self.auth.get_auth_token(),
-            verify=False,
-        )
-        assert ret.status_code == requests.status_codes.codes.no_content

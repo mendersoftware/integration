@@ -198,9 +198,6 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
   fi
   export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
-python3 -m pytest \
-  $EXTRA_TEST_ARGS \
+python3 -m pytest --pdb -n0 \
   --verbose \
-  --junitxml=results.xml \
-  $HTML_REPORT \
   "$@"

@@ -24,7 +24,7 @@ cryptography==44.0.0
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
-docker==7.1.0
+docker==7.2.0
     # via -r python-requirements.in
 durationpy==0.8
     # via kubernetes
@@ -68,32 +68,34 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
+pygments==2.21.0
+    # via pytest
 pymongo==4.10.1
     # via -r python-requirements.in
-pytest==8.3.3
+pytest==8.4.2
     # via
     #   -r python-requirements.in
     #   pytest-html
     #   pytest-metadata
     #   pytest-timeout
     #   pytest-xdist
-pytest-html==4.1.1
+pytest-html==4.2.0
     # via -r python-requirements.in
 pytest-metadata==3.1.1
     # via
     #   -r python-requirements.in
     #   pytest-html
-pytest-timeout==2.3.1
+pytest-timeout==2.4.0
     # via -r python-requirements.in
-pytest-xdist==3.6.1
+pytest-xdist==3.8.0
     # via -r python-requirements.in
 python-dateutil==2.8.2
     # via kubernetes
 pyyaml==6.0.1
     # via kubernetes
-redo==3.0.0
+redo==3.0.1
     # via -r python-requirements.in
-requests==2.32.3
+requests==2.34.2
     # via
     #   -r python-requirements.in
     #   docker
@@ -109,7 +111,7 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-stripe==11.3.0
+stripe==11.6.1
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
@@ -124,5 +126,5 @@ urllib3==1.26.20
     #   requests
 websocket-client==1.6.1
     # via kubernetes
-websockets==14.1
+websockets==14.2
     # via -r python-requirements.in

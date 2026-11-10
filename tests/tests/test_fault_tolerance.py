@@ -34,6 +34,7 @@ def bp(index):
         with open("/tmp/t.log", "a") as fh:
             now_utc = datetime.now(timezone.utc)
             fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" waiting on "+f+"\n")
+            fh.flush()
     while not os.path.exists(f):
         time.sleep(0.1)
     os.remove(f)

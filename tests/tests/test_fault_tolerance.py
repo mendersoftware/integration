@@ -40,6 +40,10 @@ def bp(index):
     while not os.path.exists(f):
         time.sleep(0.1)
     os.remove(f)
+    with open("/tmp/t.log", "a") as fh:
+        now_utc = datetime.now(timezone.utc)
+        fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" released on "+f+"\n")
+        fh.flush()
 
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(

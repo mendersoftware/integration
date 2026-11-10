@@ -28,6 +28,15 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 from flaky import flaky
 
+def bp(index):
+    f="/tmp/bp"+str(index)
+    if not os.path.exists(f):
+        with open("/tmp/t.log", "a") as fh:
+            now_utc = datetime.now(timezone.utc)
+            fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" waiting on "+f+"\n")
+    while not os.path.exists(f):
+        time.sleep(0.1)
+    os.remove(f)
 
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(
@@ -152,6 +161,7 @@ class BasicTestFaultTolerance(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
+        bp(0)
         host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(

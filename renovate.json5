@@ -23,7 +23,7 @@
   // base branch moves restarts a pipeline for every open PR on each merge.
   "rebaseWhen": "conflicted",
 
-  "baseBranchPatterns": ["master", "3.8.x"],
+  "baseBranchPatterns": ["master"],
 
   // Security PRs automerge when CI is green.
   "vulnerabilityAlerts": {

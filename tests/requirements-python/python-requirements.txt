@@ -24,7 +24,7 @@ cryptography==48.0.1
     #   mender-testkit
 dnspython==2.6.1
     # via pymongo
-docker==7.1.0
+docker==7.2.0
     # via
     #   -r python-requirements.in
     #   mender-testkit
@@ -50,9 +50,9 @@ msgpack==1.2.1
     # via
     #   -r python-requirements.in
     #   mender-testkit
-packaging==23.1
+packaging==26.3
     # via pytest
-pluggy==1.5.0
+pluggy==1.7.0
     # via pytest
 py3dns==4.0.2
     # via -r python-requirements.in
@@ -64,7 +64,7 @@ pymongo==4.17.0
     # via
     #   -r python-requirements.in
     #   mender-testkit
-pytest==9.0.3
+pytest==9.2.0
     # via
     #   -r python-requirements.in
     #   mender-testkit
@@ -82,7 +82,7 @@ pytest-timeout==2.4.0
     # via -r python-requirements.in
 pytest-xdist==3.8.0
     # via -r python-requirements.in
-redo==3.0.0
+redo==3.0.1
     # via
     #   -r python-requirements.in
     #   mender-testkit
@@ -92,7 +92,7 @@ requests==2.34.2
     #   docker
     #   mender-testkit
     #   stripe
-stripe==15.2.0
+stripe==15.6.2
     # via
     #   -r python-requirements.in
     #   mender-testkit
@@ -104,7 +104,7 @@ urllib3==2.7.0
     #   docker
     #   mender-testkit
     #   requests
-websockets==16.0
+websockets==16.1.1
     # via
     #   -r python-requirements.in
     #   mender-testkit

@@ -16,11 +16,11 @@ certifi==2024.7.4
     # via
     #   kubernetes
     #   requests
-cffi==1.15.1
+cffi==2.1.1
     # via cryptography
 charset-normalizer==2.1.1
     # via requests
-cryptography==44.0.0
+cryptography==50.0.0
     # via -r python-requirements.in
 dnspython==2.6.1
     # via pymongo
@@ -113,8 +113,10 @@ stripe==11.3.0
     # via -r python-requirements.in
 tomli==2.0.1
     # via pytest
-typing-extensions==4.7.1
-    # via stripe
+typing-extensions==4.16.0
+    # via
+    #   cryptography
+    #   stripe
 urllib3==1.26.20
     # via
     #   -r python-requirements.in

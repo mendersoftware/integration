@@ -160,6 +160,7 @@ class Deployments:
             self.get_deployments_base_path()
             + "deployments/%s/statistics" % (deployment_id)
         )
+        # fail here due to 404 but after some time does return 200
         r = requests_retry().get(
             deployments_statistics_url, headers=self.auth.get_auth_token(), verify=False
         )

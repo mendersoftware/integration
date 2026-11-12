@@ -16,4 +16,4 @@ websockets==17.4
 flaky==3.8.1
 stripe==16.1.0
 aiosmtpd==1.4.6
-mender-testkit==0.1.2
+mender-testkit==0.1.6

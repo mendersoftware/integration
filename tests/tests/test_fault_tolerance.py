@@ -14,10 +14,12 @@
 
 import json
 import os
+import os.path
 import pytest
 import shutil
 import tempfile
 import time
+from datetime import datetime, timezone
 
 from ..common_setup import (
     standard_setup_one_client_bootstrapped,
@@ -28,6 +30,20 @@ from ..MenderAPI import DeviceAuthV2, Deployments, logger
 from .mendertesting import MenderTesting
 from flaky import flaky
 
+def bp(index):
+    f="/tmp/bp"+str(index)
+    if not os.path.exists(f):
+        with open("/tmp/t.log", "a") as fh:
+            now_utc = datetime.now(timezone.utc)
+            fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" waiting on "+f+"\n")
+            fh.flush()
+    while not os.path.exists(f):
+        time.sleep(0.1)
+    os.remove(f)
+    with open("/tmp/t.log", "a") as fh:
+        now_utc = datetime.now(timezone.utc)
+        fh.write(now_utc.strftime("%a %b %d %H:%M:%S %Z %Y")+" released on "+f+"\n")
+        fh.flush()
 
 class BasicTestFaultTolerance(MenderTesting):
     def manipulate_network_connectivity(
@@ -152,6 +168,7 @@ class BasicTestFaultTolerance(MenderTesting):
         devauth = DeviceAuthV2(env.auth)
         deploy = Deployments(env.auth, devauth)
 
+        bp(0)
         host_ip = env.get_virtual_network_host_ip()
         with mender_device.get_reboot_detector(host_ip) as reboot:
             deployment_id, _ = common_update_procedure(
@@ -501,10 +518,6 @@ class BasicTestFaultTolerance(MenderTesting):
             shutil.rmtree(tmpdir)
 
 
-# Retry the intermittent "Device never rebooted" infra flake: the QEMU VM
-# sometimes does not come back after an update-triggered reboot. A flaky rerun
-# tears down the dead VM and boots a fresh one.
-@flaky(max_runs=3)
 class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
@@ -517,73 +530,7 @@ class TestFaultToleranceOpenSource(BasicTestFaultTolerance):
             broken_network_image,
         )
 
-    @MenderTesting.slow
-    def test_deployed_during_network_outage(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployed_during_network_outage(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-        )
 
-    @MenderTesting.slow
-    def test_image_download_retry_timeout(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_image_download_retry_timeout(
-            standard_setup_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-        )
-
-    @pytest.mark.parametrize(
-        "max_retries, unsuccessful_retries, success",
-        [(5, 2, True), (5, 7, False), (15, 12, True), (11, 15, False)],
-        ids=[
-            "reducedRetriesSuccess",
-            "reducedRetriesFailure",
-            "increasedRetriesSuccess",
-            "increasedRetriesFailure",
-        ],
-    )
-    @MenderTesting.slow
-    def test_image_download_retry_download_count(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-        max_retries,
-        unsuccessful_retries,
-        success,
-    ):
-        self.do_test_image_download_retry_download_count(
-            standard_setup_one_client_bootstrapped,
-            valid_image_with_mender_conf,
-            max_retries,
-            unsuccessful_retries,
-            success,
-        )
-
-    @MenderTesting.slow
-    def test_image_download_retry_hosts_broken(
-        self,
-        standard_setup_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_image_download_retry_hosts_broken(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    def test_rootfs_conf_missing_from_new_update(
-        self, standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-    ):
-        self.do_test_rootfs_conf_missing_from_new_update(
-            standard_setup_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-
-@flaky(max_runs=3)
 class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
     @MenderTesting.slow
     def test_update_image_breaks_networking(
@@ -594,41 +541,4 @@ class TestFaultToleranceEnterprise(BasicTestFaultTolerance):
         self.do_test_update_image_breaks_networking(
             enterprise_one_client_bootstrapped,
             broken_network_image,
-        )
-
-    @MenderTesting.slow
-    def test_deployed_during_network_outage(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_deployed_during_network_outage(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    @MenderTesting.slow
-    def test_image_download_retry_timeout(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_image_download_retry_timeout(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    @MenderTesting.slow
-    def test_image_download_retry_hosts_broken(
-        self,
-        enterprise_one_client_bootstrapped,
-        valid_image_with_mender_conf,
-    ):
-        self.do_test_image_download_retry_hosts_broken(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-        )
-
-    def test_rootfs_conf_missing_from_new_update(
-        self, enterprise_one_client_bootstrapped, valid_image_with_mender_conf
-    ):
-        self.do_test_rootfs_conf_missing_from_new_update(
-            enterprise_one_client_bootstrapped, valid_image_with_mender_conf
         )

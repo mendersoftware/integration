@@ -160,19 +160,6 @@ if [[ -n "$DOWNLOAD_REQUIREMENTS" ]]; then
     echo "WARNING: image pre-pull incomplete; tests will pull on demand"
 fi
 
-# Remove environments orphaned by an earlier interrupted run. A crash between
-# setup() and teardown() leaves ~20 containers per worker behind, which starves
-# the next run of resources.
-for project in $(docker ps -a --format '{{.Label "com.docker.compose.project"}}' \
-  2>/dev/null | sort -u | grep -E '^mender[0-9]+$'); do
-  echo "removing orphaned test environment: $project"
-  ids=$(docker ps -aq -f "name=^${project}")
-  if [ -n "$ids" ]; then docker rm -f $ids >/dev/null 2>&1 || true; fi
-  vols=$(docker volume ls -q -f "name=^${project}_")
-  if [ -n "$vols" ]; then docker volume rm $vols >/dev/null 2>&1 || true; fi
-  docker network rm "${project}_default" >/dev/null 2>&1 || true
-done
-
 # Contains either the arguments to xdists, or '--maxfail=1', if xdist not found.
 EXTRA_TEST_ARGS=
 HTML_REPORT="--html=report.html --self-contained-html"
@@ -198,9 +185,6 @@ if test ${CI_NODE_TOTAL:-1} -gt 1; then
   fi
   export PYTEST_ADDOPTS="$PYTEST_ADDOPTS $PYTEST_NODES"
 fi
-python3 -m pytest \
-  $EXTRA_TEST_ARGS \
+python3 -m pytest --pdb -n0 \
   --verbose \
-  --junitxml=results.xml \
-  $HTML_REPORT \
   "$@"

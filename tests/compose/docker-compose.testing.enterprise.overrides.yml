@@ -13,3 +13,22 @@ services:
       GENERATE_DELTA_SKIPVERIFY: "true"
       # Works around the GENERATE_DELTA_DELPOYMENTS_URL typo upstream.
       GENERATE_DELTA_DEPLOYMENTS_URL: http://deployments:8080
+
+  # The vendored enterprise compose (mender-testkit 0.1.3+) always declares
+  # admin-panel and admin-panel-gui, but these services exist only in some server
+  # versions. The suite runs this one compose against several MENDER_IMAGE_TAGs,
+  # and release tags such as 4.0.x / 4.1.x have no admin-panel image published -- so
+  # an ungated bring-up there tries to pull admin-panel:<tag>, fails with "manifest
+  # unknown", and errors every enterprise test at setup.
+  #
+  # An off-by-default "admin-panel" profile keeps these services out of runs whose
+  # server version lacks them; a run whose version does have the images opts in with
+  # COMPOSE_PROFILES=admin-panel. Note this gate is not removed once admin-panel
+  # ships in a release: 4.0.x/4.1.x are still tested and still lack it, so they must
+  # keep the profile off. It becomes redundant only when the compose is sourced per
+  # server tag, so the declared services always match the version under test.
+  admin-panel:
+    profiles: [admin-panel]
+
+  admin-panel-gui:
+    profiles: [admin-panel]

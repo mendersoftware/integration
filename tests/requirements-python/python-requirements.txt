@@ -30,7 +30,7 @@ docker==7.2.0
     #   mender-testkit
 execnet==2.1.1
     # via pytest-xdist
-filelock==4.2.10
+filelock==4.2.12
     # via
     #   -r python-requirements.in
     #   mender-testkit
@@ -60,7 +60,7 @@ pycparser==2.21
     # via cffi
 pygments==2.20.0
     # via pytest
-pymongo==4.19.0
+pymongo==4.20.0
     # via
     #   -r python-requirements.in
     #   mender-testkit

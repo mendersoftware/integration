@@ -682,7 +682,11 @@ class BaseTestFileTransferLimits(MenderTesting):
         r = download_file(path, self.devid, self.auth_token)
 
         assert r.status_code == 400, r.json()
-        assert r.json().get("error").endswith("only regular files are allowed")
+        assert r.json().get("error").endswith(
+            "only regular files are allowed"  # current error message
+        ) or r.json().get("error").endswith(
+            "path is not a regular file"  # previous error message
+        )
 
     def test_filetransfer_limits_download_ok_file_owner_match(
         self, mender_device_setup

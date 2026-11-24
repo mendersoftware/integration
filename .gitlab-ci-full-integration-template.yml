@@ -30,6 +30,14 @@ test:integration:$CI_NODE_INDEX:
     # apk-requirements.txt carries skopeo, e2fsprogs-extra (debugfs) and iptables,
     # all of which conftest now checks for before collecting.
     - apk add $(cat ./tests/requirements-system/apk-requirements.txt)
+    # The zstd CLI and libzstd ship as separate apk packages (zstd / zstd-libs).
+    # The dind base image preinstalls an older zstd-libs, and `apk add` won't
+    # upgrade an already-installed package whose soname (so:libzstd.so.1) is
+    # already satisfied -- so the freshly installed zstd CLI ends up linked
+    # against a stale libzstd and dies with "ZSTD_isDeterministicBuild: symbol
+    # not found" when dpkg unpacks the zstd-compressed mender-artifact .deb.
+    # Pull the lib up to the newest available (no version pin) to keep them in sync.
+    - apk upgrade zstd-libs
     # Fetch the *private* delta generator repo (mender-delta-container-modules,
     # host-side gen_delta-docker-compose) with the mender-test-bot token -- same
     # insteadOf mechanism as .publish:versions in .gitlab-ci.yml. Done here rather

@@ -92,7 +92,7 @@ requests==2.34.2
     #   docker
     #   mender-testkit
     #   stripe
-stripe==16.1.0
+stripe==17.1.0
     # via
     #   -r python-requirements.in
     #   mender-testkit
